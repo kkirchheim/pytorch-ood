@@ -5,8 +5,6 @@ import numpy as np
 from torch.utils.data import Dataset, ConcatDataset
 from torchvision.datasets.utils import download_url
 
-from oodtk.dataset import OSRDataset
-
 from oodtk.dataset.text.stop_words import stop_words
 
 log = logging.getLogger(__name__)
