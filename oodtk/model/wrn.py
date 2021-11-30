@@ -84,7 +84,7 @@ class WideResNet(nn.Module):
     """
     Wide Resnet
 
-    See https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
+    :see Implementation: https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
     """
 
     def __init__(self, depth, num_classes, widen_factor=1, drop_rate=0.0):
@@ -119,7 +119,13 @@ class WideResNet(nn.Module):
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
 
-    def forward(self, x):
+    def forward(self, x) -> torch.Tensor:
+        """
+        Forward propagate
+
+        :param x: input images
+        :return: class logits
+        """
         out = self.conv1(x)
         out = self.block1(out)
         out = self.block2(out)

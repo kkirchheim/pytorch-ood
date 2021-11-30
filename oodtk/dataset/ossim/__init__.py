@@ -2,19 +2,19 @@
 
 OpenSetSimulation
 ----------------------------------------------
-.. autoclass:: oodtk.ossim.OpenSetSimulation
+.. autoclass:: oodtk.dataset.ossim.OpenSetSimulation
    :members:
 
 
 DynamicOSS
 ----------------------------------------------
-.. autoclass:: oodtk.ossim.DynamicOSS
+.. autoclass:: oodtk.dataset.ossim.DynamicOSS
    :members:
 
 
 TargetMapping
 ----------------------------------------------
-.. autoclass:: oodtk.ossim.TargetMapping
+.. autoclass:: oodtk.dataset.ossim.TargetMapping
    :members:
 
 """

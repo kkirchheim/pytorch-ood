@@ -1,4 +1,3 @@
-
 Methods
 ==================
 
@@ -8,10 +7,12 @@ Loss Functions
 .. automodule:: oodtk.loss
    :members:
 
+
 OpenMax
 ------------------------
 
 .. automodule:: oodtk.openmax
+
 
 ODIN
 ------------------------

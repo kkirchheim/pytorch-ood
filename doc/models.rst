@@ -1,4 +1,2 @@
 
-Models
-==================
-Frequently used Neural Network based Models
+.. automodule:: oodtk.model
