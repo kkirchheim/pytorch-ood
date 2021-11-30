@@ -5,7 +5,16 @@ from torchvision.datasets import ImageFolder, VisionDataset
 
 
 class TinyImagenet(VisionDataset):
+    """
+
+    """
+
     def __init__(self, root, **kwargs):
+        """
+
+        :param root: root folder
+        :param kwargs:
+        """
         super(TinyImagenet, self).__init__(root)
 
         dataset1 = ImageFolder(root=os.path.join(root, "train"))

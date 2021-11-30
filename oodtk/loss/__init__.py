@@ -1,44 +1,33 @@
 """
-Loss functions used in OOD/OSR, implemented as ``torch.nn.Module``.
 
 ConfidenceLoss
 ----------------------------------------------
-..  autoclass:: oodtk.criterion.ConfidenceLoss
+..  autoclass:: oodtk.loss.ConfidenceLoss
     :members:
-
-CACLoss
-----------------------------------------------
-
-..  autoclass:: oodtk.criterion.CACLoss
-    :members:
-
-..  automodule:: oodtk.criterion.cac
-    :members:
-        rejection_score
 
 IILoss
 ----------------------------------------------
-..  autoclass:: oodtk.criterion.IILoss
+..  autoclass:: oodtk.loss.IILoss
     :members:
 
 CenterLoss
 ----------------------------------------------
-.. autoclass:: oodtk.criterion.CenterLoss
+.. autoclass:: oodtk.loss.CenterLoss
     :members:
 
 TripletLoss
 ----------------------------------------------
-.. autoclass:: oodtk.criterion.TripletLoss
+.. autoclass:: oodtk.loss.TripletLoss
     :members:
 
 OutlierExposureLoss
 ----------------------------------------------
-.. autoclass:: oodtk.criterion.OutlierExposureLoss
+.. autoclass:: oodtk.loss.OutlierExposureLoss
     :members:
 
 Objectosphere
 ----------------------------------------------
-.. autoclass:: oodtk.criterion.ObjectosphereLoss
+.. autoclass:: oodtk.loss.ObjectosphereLoss
     :members:
 
 """
@@ -48,5 +37,5 @@ from .center import CenterLoss
 from .conf import ConfidenceLoss
 from .objectosphere import ObjectosphereLoss
 from .oe import OutlierExposureLoss
-from triplet import TripletLoss
+from .triplet import TripletLoss
 

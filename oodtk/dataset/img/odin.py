@@ -18,6 +18,11 @@ class TinyImageNetCrop(VisionDataset):
     """
     Cropped version of the tiny imagenet
 
+    .. ignore::
+        base_folder
+        url
+        filename
+        tgz_md5
     """
 
     base_folder = "Imagenet/test/"

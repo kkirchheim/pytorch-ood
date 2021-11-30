@@ -5,7 +5,8 @@ Methods
 Loss Functions
 ------------------------
 
-.. automodule:: oodtk.criterion
+.. automodule:: oodtk.loss
+   :members:
 
 OpenMax
 ------------------------

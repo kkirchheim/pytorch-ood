@@ -1,8 +1,9 @@
 Utilities
 ==================
 
-oodtk.utils
------------------------------------------------
+:mod:`oodtk.utils` -- Utility Functions
+--------------------------------------------------
+
 .. automodule:: oodtk.utils
    :members:
       is_known,
@@ -11,4 +12,5 @@ oodtk.utils
       contains_unknown,
       contains_known_and_unknown,
       calc_openness
-
+   :undoc-members:
+   :show-inheritance:

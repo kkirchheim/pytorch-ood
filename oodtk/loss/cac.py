@@ -1,3 +1,11 @@
+"""
+CACLoss
+----------------------------------------------
+
+..  automodule:: oodtk.nn.loss.cac
+    :members: cac_rejection_score, CACLoss
+
+"""
 import torch as torch
 import torch.nn as nn
 
@@ -95,7 +103,7 @@ class CACLoss(nn.Module):
         return nn.functional.softmin(distances, dim=1)
 
 
-def rejection_score(distance):
+def cac_rejection_score(distance):
     """
     Rejection score used by the CAC loss
 
