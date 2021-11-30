@@ -1,7 +1,7 @@
 # Out-of-Distribution-Detection Toolkit
 
-Python utilities to bootstrap research in fields related to Out-of-Distribution Detection, Open Set Recognition, 
-Novelty and Anomaly Detection.
+PyTorch utilities to bootstrap research in fields related to Out-of-Distribution Detection, Open Set Recognition, 
+Novelty Detection and Anomaly Detection.
 
 
 ## Setup 

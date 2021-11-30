@@ -4,12 +4,10 @@ certifi==2021.10.8
 charset-normalizer==2.0.8
 click==8.0.3
 Cython==0.29.24
-docutils==0.17.1
 idna==3.3
 imagesize==1.3.0
 Jinja2==3.0.3
 joblib==1.1.0
-libmr==0.1.9
 MarkupSafe==2.0.1
 mypy-extensions==0.4.3
 numpy==1.21.4
