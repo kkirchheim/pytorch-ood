@@ -94,9 +94,9 @@ def estimate_class_centers(
 
     return centers
 
-
-def torch_get_squared_distances(centers, embeddings):
-    return torch_get_distances(centers, embeddings).pow(2)
+#
+# def torch_get_squared_distances(centers, embeddings):
+#     return torch_get_distances(centers, embeddings).pow(2)
 
 
 def torch_get_distances(centers, embeddings):

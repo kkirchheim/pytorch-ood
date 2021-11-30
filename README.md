@@ -3,6 +3,14 @@
 Python utilities to bootstrap research in fields related to Out-of-Distribution Detection, Open Set Recognition, 
 Novelty and Anomaly Detection.
 
+
+## Setup 
+
+### Optional Dependencies
+For OpenMax, you will have to install `libmr`, which is currently broken.
+You will have to install `cython` and `libmr` afterwards by manually.
+
+
 ## Implemented Methods
 
 - OpenMax
