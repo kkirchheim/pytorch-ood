@@ -1,26 +1,37 @@
 """
 
-ConfidenceLoss
+Unsupervised
+=====================
+
+Confidence Loss
 ----------------------------------------------
 ..  autoclass:: oodtk.loss.ConfidenceLoss
     :members:
 
-IILoss
+Class Anchor Clustering Loss
+----------------------------------------------
+..  autoclass:: oodtk.loss.CACLoss
+    :members:
+
+II Loss
 ----------------------------------------------
 ..  autoclass:: oodtk.loss.IILoss
     :members:
 
-CenterLoss
+Center Loss
 ----------------------------------------------
 .. autoclass:: oodtk.loss.CenterLoss
     :members:
 
-TripletLoss
+Triplet Loss
 ----------------------------------------------
 .. autoclass:: oodtk.loss.TripletLoss
     :members:
 
-OutlierExposureLoss
+Supervised
+=====================
+
+Outlier Exposure
 ----------------------------------------------
 .. autoclass:: oodtk.loss.OutlierExposureLoss
     :members:
