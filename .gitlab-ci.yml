@@ -3,14 +3,6 @@
 # https://hub.docker.com/r/library/python/tags/
 image: python:3.9-buster
 
-# Change pip's cache directory to be inside the project directory since we can
-# only cache local items.
-variables:
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  REPOSITORY_URL: "$CI_PROJECT_URL/-/packages/pypi"
-  PACKAGENAME: "oodtk"
-
-
 # Pip's cache doesn't store the python packages
 # https://pip.pypa.io/en/stable/reference/pip_install/#caching
 #
@@ -54,6 +46,8 @@ build:
     - echo "Building the Package"
     - pip install wheel
     - python3 setup.py bdist_wheel
+    - pip install twine
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
   artifacts:
     paths:
       - dist/*.whl
@@ -63,11 +57,14 @@ docs:
   script:
     - echo "Building the documentation for the package."
     - pip install sphinx sphinx-rtd-theme
-    - sphinx-build -b html docs/source docs/build/html/
+    - cd doc ; make html
+    - mv build/html/ ../public/
 
   artifacts:
     paths:
-      - docs/build/html/*
+      - public/
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 
 
