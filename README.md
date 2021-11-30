@@ -7,12 +7,14 @@ Novelty and Anomaly Detection.
 
 - OpenMax
 - ODIN Preprocessing
-  
-
 - Class Anchor Clustering
 - II Loss
 - CenterLoss 
 - Triplet Loss 
+
+## Datasets 
+
+
 
 ## Credits
 

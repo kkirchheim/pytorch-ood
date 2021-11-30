@@ -18,12 +18,20 @@ log = logging.getLogger(__name__)
 
 
 class Cub2011(VisionDataset):
-    base_folder = 'CUB_200_2011/images'
-    url = 'http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz'
-    filename = 'CUB_200_2011.tgz'
-    tgz_md5 = '97eceeb196236b17998738112f37df78'
+    base_folder = "CUB_200_2011/images"
+    url = "http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz"
+    filename = "CUB_200_2011.tgz"
+    tgz_md5 = "97eceeb196236b17998738112f37df78"
 
-    def __init__(self, root, train=True, transform=None, loader=default_loader, target_transform=None, download=False):
+    def __init__(
+        self,
+        root,
+        train=True,
+        transform=None,
+        loader=default_loader,
+        target_transform=None,
+        download=False,
+    ):
         self.root = os.path.expanduser(root)
         self.transforms = transform
         self.loader = loader
@@ -36,8 +44,10 @@ class Cub2011(VisionDataset):
             self._download()
 
         if not self._check_integrity():
-            raise RuntimeError('Dataset not found or corrupted.' +
-                               ' You can use download=True to download it')
+            raise RuntimeError(
+                "Dataset not found or corrupted."
+                + " You can use download=True to download it"
+            )
 
         # if target_transform is not None:
         #     mapped_targets = np.array([target_transform(l) for l in self._targets])
@@ -53,15 +63,24 @@ class Cub2011(VisionDataset):
         return np.unique(self.targets)
 
     def _load_metadata(self):
-        images = pd.read_csv(os.path.join(self.root, 'CUB_200_2011', 'images.txt'), sep=' ',
-                             names=['img_id', 'filepath'])
-        image_class_labels = pd.read_csv(os.path.join(self.root, 'CUB_200_2011', 'image_class_labels.txt'),
-                                         sep=' ', names=['img_id', 'target'])
-        train_test_split = pd.read_csv(os.path.join(self.root, 'CUB_200_2011', 'train_test_split.txt'),
-                                       sep=' ', names=['img_id', 'is_training_img'])
+        images = pd.read_csv(
+            os.path.join(self.root, "CUB_200_2011", "images.txt"),
+            sep=" ",
+            names=["img_id", "filepath"],
+        )
+        image_class_labels = pd.read_csv(
+            os.path.join(self.root, "CUB_200_2011", "image_class_labels.txt"),
+            sep=" ",
+            names=["img_id", "target"],
+        )
+        train_test_split = pd.read_csv(
+            os.path.join(self.root, "CUB_200_2011", "train_test_split.txt"),
+            sep=" ",
+            names=["img_id", "is_training_img"],
+        )
 
-        data = images.merge(image_class_labels, on='img_id')
-        self.data = data.merge(train_test_split, on='img_id')
+        data = images.merge(image_class_labels, on="img_id")
+        self.data = data.merge(train_test_split, on="img_id")
 
         if self.train:
             self.data = self.data[self.data.is_training_img == 1]

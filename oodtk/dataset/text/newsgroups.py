@@ -43,10 +43,15 @@ class NewsGroup20Base(Dataset):
     Much of the code is taken from the baseline-implementation:
     https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/20%20Newsgroups.ipynb
     """
-    train_url = "https://raw.githubusercontent.com/hendrycks/outlier-exposure/" \
-                "master/NLP_classification/20newsgroups/orig_data/20ng-train-no-short.txt"
-    test_url = "https://raw.githubusercontent.com/hendrycks/outlier-exposure/" \
-               "master/NLP_classification/20newsgroups/orig_data/20ng-test-no-short.txt"
+
+    train_url = (
+        "https://raw.githubusercontent.com/hendrycks/outlier-exposure/"
+        "master/NLP_classification/20newsgroups/orig_data/20ng-train-no-short.txt"
+    )
+    test_url = (
+        "https://raw.githubusercontent.com/hendrycks/outlier-exposure/"
+        "master/NLP_classification/20newsgroups/orig_data/20ng-test-no-short.txt"
+    )
 
     test_md5 = "978c4d8fd3bde6a12a1e8312f0031815"
     train_md5 = "4444a088dda968b44f7a6dec756698b3"
@@ -74,10 +79,12 @@ class NewsGroup20Base(Dataset):
         "talk.politics.guns",
         "talk.politics.mideast",
         "talk.politics.misc",
-        "talk.religion.misc"
+        "talk.religion.misc",
     ]
 
-    def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
+    def __init__(
+        self, root, transform=None, target_transform=None, train=True, download=True
+    ):
         """
         TODO: add support for custom loader?
         """
@@ -133,7 +140,7 @@ class NewsGroup20Base(Dataset):
         with open(filename, "r") as f:
             for line in f:
                 words = line.split()
-                text = ' '.join(word for word in words[2:] if word not in stop_words)
+                text = " ".join(word for word in words[2:] if word not in stop_words)
                 x.append(text)
                 targets.append(".".join(words[0:2]))
 

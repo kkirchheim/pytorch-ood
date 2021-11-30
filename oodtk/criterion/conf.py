@@ -43,14 +43,16 @@ class ConfidenceLoss(nn.Module):
         target_prob_dist = F.one_hot(target, num_classes=logits.size(1))
         prediction = F.softmax(logits, dim=1)
 
-        adjusted_prediction = prediction * confidence + (1 - confidence) * target_prob_dist
+        adjusted_prediction = (
+            prediction * confidence + (1 - confidence) * target_prob_dist
+        )
 
         # calculate negative log likelihood
         adjusted_prediction = adjusted_prediction.clamp(self.eps, 1.0)
         loss_nll = -torch.sum(torch.log(adjusted_prediction) * target_prob_dist)
 
         confidence = confidence.clamp(self.eps, 1.0)
-        loss_conf = - torch.log(confidence)
+        loss_conf = -torch.log(confidence)
         loss_conf *= self.lmbda
 
         # NOTE: we use mean as reduction for batches

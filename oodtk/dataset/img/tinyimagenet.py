@@ -1,12 +1,10 @@
 import os
 
 from torch.utils.data import ConcatDataset
-from torchvision.datasets import ImageFolder
-
-from oodtk.dataset.dataset import OSRVisionDataset
+from torchvision.datasets import ImageFolder, VisionDataset
 
 
-class TinyImagenet(OSRVisionDataset):
+class TinyImagenet(VisionDataset):
     def __init__(self, root, **kwargs):
         super(TinyImagenet, self).__init__(root)
 

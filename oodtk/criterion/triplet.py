@@ -29,7 +29,9 @@ class TripletLoss(torch.nn.Module):
         self.n_embedding = n_embedding
 
         # create buffer for centers. those buffers will be updated during training, and are fixed during evaluation
-        running_centers = torch.empty(size=(self.n_classes, self.n_embedding), requires_grad=False).double()
+        running_centers = torch.empty(
+            size=(self.n_classes, self.n_embedding), requires_grad=False
+        ).double()
         num_batches_tracked = torch.empty(size=(1,), requires_grad=False).double()
 
         self.register_buffer("running_centers", running_centers)
@@ -46,13 +48,15 @@ class TripletLoss(torch.nn.Module):
 
     def calculate_distances(self, embeddings):
         # FIXME: distances will be invalid if squaring is disabled (?)
-        distances = oodtk.utils.torch_get_squared_distances(self.running_centers, embeddings)
+        distances = oodtk.utils.torch_get_squared_distances(
+            self.running_centers, embeddings
+        )
         return distances
 
     def forward(self, embedding, target):
         """
         :param embedding:
-        :param target: 
+        :param target:
         """
         if self.training:
             # if training, update empirical class centers
@@ -62,21 +66,34 @@ class TripletLoss(torch.nn.Module):
                 mu = self.calculate_centers(embedding, target)
 
                 # update running mean centers
-                cma = mu[batch_classes] + self.running_centers[batch_classes] * self.num_batches_tracked
-                self.running_centers[batch_classes] = cma / (self.num_batches_tracked + 1)
+                cma = (
+                    mu[batch_classes]
+                    + self.running_centers[batch_classes] * self.num_batches_tracked
+                )
+                self.running_centers[batch_classes] = cma / (
+                    self.num_batches_tracked + 1
+                )
                 self.num_batches_tracked += 1
 
         if self.hard_mining:
             return batch_hard_triplet_loss(target, embedding, self.margin, self.squared)
         else:
-            triplet_loss, pos_triplets = batch_all_triplet_loss(target, embedding, self.margin, self.squared)
+            triplet_loss, pos_triplets = batch_all_triplet_loss(
+                target, embedding, self.margin, self.squared
+            )
             return triplet_loss
 
     def calculate_centers(self, embeddings, target):
-        mu = torch.full(size=(self.n_classes, self.n_embedding), fill_value=float('NaN'), device=embeddings.device)
+        mu = torch.full(
+            size=(self.n_classes, self.n_embedding),
+            fill_value=float("NaN"),
+            device=embeddings.device,
+        )
 
         for clazz in target.unique(sorted=False):
-            mu[clazz] = embeddings[target == clazz].mean(dim=0)  # all instances of this class
+            mu[clazz] = embeddings[target == clazz].mean(
+                dim=0
+            )  # all instances of this class
 
         return mu
 
@@ -211,7 +228,9 @@ def batch_hard_triplet_loss(labels, embeddings, margin, squared=True):
 
     # We add the maximum value in each row to the invalid negatives (label(a) == label(n))
     max_anchor_negative_dist, _ = pairwise_dist.max(1, keepdim=True)
-    anchor_negative_dist = pairwise_dist + max_anchor_negative_dist * (1.0 - mask_anchor_negative)
+    anchor_negative_dist = pairwise_dist + max_anchor_negative_dist * (
+        1.0 - mask_anchor_negative
+    )
 
     # shape (batch_size,)
     hardest_negative_dist, _ = anchor_negative_dist.min(1, keepdim=True)
@@ -263,7 +282,9 @@ def batch_all_triplet_loss(labels, embeddings, margin, squared=False):
     num_positive_triplets = valid_triplets.size(0)
     num_valid_triplets = mask.sum()
 
-    fraction_positive_triplets = num_positive_triplets / (num_valid_triplets.float() + 1e-16)
+    fraction_positive_triplets = num_positive_triplets / (
+        num_valid_triplets.float() + 1e-16
+    )
 
     # Get final mean triplet loss over the positive valid triplets
     triplet_loss = triplet_loss.sum() / (num_positive_triplets + 1e-16)

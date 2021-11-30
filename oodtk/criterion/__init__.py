@@ -45,5 +45,3 @@ from .conf import ConfidenceLoss
 from .ii import IILoss
 from .triplet import TripletLoss
 from .oe import OutlierExposureLoss
-
-

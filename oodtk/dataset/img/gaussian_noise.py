@@ -11,7 +11,9 @@ from PIL import Image
 class GaussianNoise(VisionDataset):
     """Dataset that outputs gaussian noise only"""
 
-    def __init__(self, num, size=(224, 224, 3), transform=None, target_transform=None, **kwargs):
+    def __init__(
+        self, num, size=(224, 224, 3), transform=None, target_transform=None, **kwargs
+    ):
         print(f"Noise Dataset with Size: {size}")
         self.size = size
         self.num = num
@@ -29,12 +31,12 @@ class GaussianNoise(VisionDataset):
         if img.shape[2] == 1:
             img = img.reshape((img.shape[0], img.shape[1]))
 
-        img = np.clip(img, 0, 255).astype('uint8')
+        img = np.clip(img, 0, 255).astype("uint8")
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
         img = Image.fromarray(img)
-        
+
         target = self.target
         if self.transform is not None:
             img = self.transform(img)

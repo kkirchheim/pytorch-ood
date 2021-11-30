@@ -6,7 +6,9 @@ def zero_grad(x):
         torch.fill_(x, 0)
 
 
-def odin_preprocessing(model: torch.nn.Module, criterion, x, y, eps=0.05, temperature=1000):
+def odin_preprocessing(
+    model: torch.nn.Module, criterion, x, y, eps=0.05, temperature=1000
+):
     """
     :param model: module to backprop through
     :param criterion: loss function to use. Original Implementation used NLL

@@ -25,6 +25,12 @@ setup(
     ],
     packages=["oodtk", "pytorch"],
     include_package_data=True,
-    install_requires=["scikit-learn", "libmr", "torch", "torchvision", "pandas"],
+    install_requires=[
+        "scikit-learn",
+        "torch",
+        "torchvision",
+        "pandas",
+        "numpy",
+        "scipy",
+    ],
 )
-

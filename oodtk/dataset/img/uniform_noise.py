@@ -11,7 +11,9 @@ from PIL import Image
 class UniformNoise(data.Dataset):
     """Dataset that outputs gaussian noise only"""
 
-    def __init__(self, num, size=(224, 224, 3), transform=None, target_transform=None, **kwargs):
+    def __init__(
+        self, num, size=(224, 224, 3), transform=None, target_transform=None, **kwargs
+    ):
         self.size = size
         self.num = num
         self.transform = transform
@@ -38,6 +40,6 @@ class UniformNoise(data.Dataset):
             img = self.transform(img)
 
         if self.target_transform is not None:
-           target = self.target_transform(target)
+            target = self.target_transform(target)
 
         return img, target

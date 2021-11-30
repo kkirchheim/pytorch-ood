@@ -32,7 +32,7 @@ class OutlierExposureLoss(nn.Module):
         :param logits: logit values of the model
         :param target: target label
         """
-        assert (logits.shape[1] == self.n_classes)
+        assert logits.shape[1] == self.n_classes
 
         known = utils.is_known(target)
 
@@ -45,7 +45,10 @@ class OutlierExposureLoss(nn.Module):
             loss_ce = 0
 
         if utils.contains_unknown(target):
-            unity = torch.ones(size=(logits[~known].shape[0], self.n_classes)) / self.n_classes
+            unity = (
+                torch.ones(size=(logits[~known].shape[0], self.n_classes))
+                / self.n_classes
+            )
             unity = unity.to(logits.device)
             # TODO: use crossentropy instead of KL divergence
             loss_oe = F.kl_div(logits[~known], unity, log_target=False, reduction="sum")
@@ -54,4 +57,3 @@ class OutlierExposureLoss(nn.Module):
             loss_oe = 0
 
         return loss_ce, self.lambda_ * loss_oe
-
