@@ -23,7 +23,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
     ],
-    packages=["oodtk", "pytorch"],
+    packages=["oodtk"],
     include_package_data=True,
     install_requires=[
         "scikit-learn",
