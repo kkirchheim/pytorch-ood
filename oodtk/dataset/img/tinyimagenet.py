@@ -5,9 +5,7 @@ from torchvision.datasets import ImageFolder, VisionDataset
 
 
 class TinyImagenet(VisionDataset):
-    """
-
-    """
+    """ """
 
     def __init__(self, root, **kwargs):
         """

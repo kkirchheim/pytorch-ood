@@ -5,13 +5,12 @@ import numpy as np
 from torch.utils.data import Dataset, ConcatDataset
 from torchvision.datasets.utils import download_url
 
-from oodtk.dataset import OSRDataset
 from .stop_words import stop_words
 
 log = logging.getLogger(__name__)
 
 
-class NewsGroup20(OSRDataset):
+class NewsGroup20(Dataset):
     def __init__(self, root, download=False):
         super(NewsGroup20, self).__init__()
         self._dataset1 = NewsGroup20Base(root, train=True, download=download)

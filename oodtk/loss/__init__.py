@@ -38,4 +38,3 @@ from .conf import ConfidenceLoss
 from .objectosphere import ObjectosphereLoss
 from .oe import OutlierExposureLoss
 from .triplet import TripletLoss
-

@@ -12,7 +12,7 @@ from oodtk.dataset.text.stop_words import stop_words
 log = logging.getLogger(__name__)
 
 
-class Reuters52(OSRDataset):
+class Reuters52(Dataset):
     def __init__(self, root, download=False):
         super(Reuters52, self).__init__()
         self._dataset1 = Reuters52Base(root, train=True, download=download)
