@@ -12,11 +12,12 @@ log = logging.getLogger(__name__)
 
 class Textures(VisionDataset):
     """
-    Textures dataset, as used in  Energy-based Out-of-distribution Detection
+    Textures dataset from *Describing Textures in the Wild*
 
-    From "Describing Textures in the Wild"
+    Used in
+        - Energy-based Out-of-distribution Detection
 
-    See: https://arxiv.org/abs/1311.3618v2
+    :see Paper: https://arxiv.org/abs/1311.3618v2
 
     """
 

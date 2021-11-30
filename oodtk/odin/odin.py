@@ -1,4 +1,5 @@
 import torch
+from torch.nn import functional as F
 
 
 def zero_grad(x):
@@ -7,7 +8,7 @@ def zero_grad(x):
 
 
 def odin_preprocessing(
-    model: torch.nn.Module, criterion, x, y, eps=0.05, temperature=1000
+    model: torch.nn.Module, x, y, criterion=F.nll_loss, eps=0.05, temperature=1000
 ):
     """
     :param model: module to backprop through
@@ -17,9 +18,12 @@ def odin_preprocessing(
     :param eps: size of the gradient step to take
     :param temperature: temperature to use for temperature scaling
 
-    .. note::
-        In the original implementation, the authors normalized the gradient to the image space.
+    .. warning::
+        In the original implementation, the authors normalized the gradient to the input space.
         This was not described in the paper, and we have not implemented it.
+
+    .. note::
+        This operation has the side effect of zeroing out gradients.
 
 
     :see implementation: https://github.com/facebookresearch/odin/blob/master/code/calData.py

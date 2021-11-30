@@ -1,10 +1,10 @@
 
 Datasets
-==================
+*************************
 
 
-:mod:`oodtk.dataset.img` -- Image
---------------------------------------------------
+Image
+====================================================
 
 .. automodule:: oodtk.dataset.img
    :members:
@@ -12,8 +12,8 @@ Datasets
    :show-inheritance:
 
 
-:mod:`oodtk.dataset.img` -- Text
---------------------------------------------------
+Text
+======================================================
 
 .. automodule:: oodtk.dataset.txt
    :members:
@@ -22,7 +22,7 @@ Datasets
 
 
 Open Set Simulations
-------------------------
+=====================================================
 
 .. automodule:: oodtk.dataset.ossim
 

@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 Out-of-Distribution ToolKit
-***********************************
+#############################
 
 Implementation of methods and helper functions for Out-of-Distribution Detection, Open Set Recognition,
 and related tasks.

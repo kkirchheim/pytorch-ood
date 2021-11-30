@@ -15,6 +15,8 @@ class OpenMax(object):
     """
     Implementation of the OpenMax Layer as proposed by Bendale et. al in *Towards Open Set Deep Networks*.
 
+    Requires `libmr` to be installed, which is broken at the moment.
+
     :param tailsize: length of the tail to fit the distribution to
     :param alpha: number of class activations to revise
     :param euclid_weight: weight for the euclidean distance.
