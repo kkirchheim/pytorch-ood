@@ -6,7 +6,6 @@ ConfidenceLoss
 ..  autoclass:: oodtk.criterion.ConfidenceLoss
     :members:
 
-
 CACLoss
 ----------------------------------------------
 
@@ -37,11 +36,16 @@ OutlierExposureLoss
 .. autoclass:: oodtk.criterion.OutlierExposureLoss
     :members:
 
-"""
+Objectosphere
+----------------------------------------------
+.. autoclass:: oodtk.criterion.ObjectosphereLoss
+    :members:
 
+"""
 from .cac import CACLoss
 from .center import CenterLoss
 from .conf import ConfidenceLoss
 from .ii import IILoss
 from .triplet import TripletLoss
 from .oe import OutlierExposureLoss
+from .objectosphere import ObjectosphereLoss
