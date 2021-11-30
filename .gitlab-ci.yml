@@ -27,6 +27,8 @@ before_script:
   - source venv/bin/activate
   - pip install twine
   - pip install -r requirements.txt
+  - pip install cython
+  - pip install libmr
   - pip freeze # print package versions for debugging
 
 test:

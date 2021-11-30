@@ -11,5 +11,11 @@ DynamicOSS
 .. autoclass:: oodtk.ossim.DynamicOSS
    :members:
 
+
+TargetMapping
+----------------------------------------------
+.. autoclass:: oodtk.ossim.TargetMapping
+   :members:
+
 """
-from .ossim import DynamicOSS, OpenSetSimulation
+from .ossim import DynamicOSS, OpenSetSimulation, TargetMapping

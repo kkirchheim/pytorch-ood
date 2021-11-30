@@ -42,10 +42,11 @@ Objectosphere
     :members:
 
 """
+from .ii import IILoss
 from .cac import CACLoss
 from .center import CenterLoss
 from .conf import ConfidenceLoss
-from .ii import IILoss
-from .triplet import TripletLoss
-from .oe import OutlierExposureLoss
 from .objectosphere import ObjectosphereLoss
+from .oe import OutlierExposureLoss
+from triplet import TripletLoss
+
