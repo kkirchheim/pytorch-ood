@@ -28,10 +28,22 @@ LSUNResize
 ..  autoclass:: oodtk.dataset.img.LSUNResize
     :members:
 
-TinyImages
+80M TinyImages
 ----------------------
 ..  autoclass:: oodtk.dataset.img.TinyImages
     :members:
+
+Gaussian Noise
+----------------------
+..  autoclass:: oodtk.dataset.img.GaussianNoise
+    :members:
+
+Uniform Noise
+----------------------
+
+..  autoclass:: oodtk.dataset.img.UniformNoise
+    :members:
+
 """
 from .cub200 import Cub2011
 from .stanfordcars import StanfordCars
@@ -39,3 +51,4 @@ from .tinyimagenet import TinyImagenet
 from .odin import TinyImageNetCrop, TinyImageNetResize, LSUNCrop, LSUNResize
 from .textures import Textures
 from .tinyimages import TinyImages
+from .noise import GaussianNoise, UniformNoise

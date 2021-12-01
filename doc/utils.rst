@@ -1,9 +1,6 @@
 Utilities
 ************************************
 
-:mod:`oodtk.utils` -- Utility Functions
---------------------------------------------------
-
 .. automodule:: oodtk.utils
    :members:
       is_known,

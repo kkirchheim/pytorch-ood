@@ -82,8 +82,13 @@ class NetworkBlock(nn.Module):
 
 class WideResNet(nn.Module):
     """
-    Wide Resnet
+    Resnet Architecture with large number of channels and variable depth.
 
+    Used in:
+        - Energy Based OOD
+        - Outlier Exposure
+
+    :see Paper: https://arxiv.org/pdf/1605.07146v4.pdf
     :see Implementation: https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
     """
 
@@ -135,7 +140,7 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return self.fc(out)
 
-    def intermediate_forward(self, x, layer_index):
+    def intermediate_forward(self, x):
         out = self.conv1(x)
         out = self.block1(out)
         out = self.block2(out)

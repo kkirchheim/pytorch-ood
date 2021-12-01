@@ -60,7 +60,7 @@ docs:
     - echo "Building the documentation for the package."
     - pip install sphinx sphinx-rtd-theme
     - cd doc ; make html
-    - mv doc/_build/html ../public/
+    - mv doc/_build/ ../public/
 
   artifacts:
     paths:

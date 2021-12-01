@@ -1,8 +1,6 @@
 """
-Energy Based Models
---------------------------
 
-..  autoclass: oodtk.energy.NegativeEnergyScore
+..  autoclass:: oodtk.energy.NegativeEnergyScore
     :members:
 
 """
@@ -11,12 +9,25 @@ import torch
 
 class NegativeEnergyScore(torch.nn.Module):
     """
-    Implements the Energy Based Out-of-Distribution Detection scoring method.
+    Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.
+
+    This methods calculates the negative energy for a vector of logits.
+    This value can be used as outlier score.
+
+    :param t: temperature value T
+
+    .. math::
+        E(z) = -T \\log{\\sum_i  e^{-z_i/T}}
+
+    :see Paper:
+        https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf
+
+    :see Implementation:
+        https://github.com/wetliu/energy_ood
+
     """
     def __init__(self, t: int = 1):
         """
-
-        :param t: temperature
         """
         super(NegativeEnergyScore, self).__init__()
 
@@ -24,6 +35,8 @@ class NegativeEnergyScore(torch.nn.Module):
         """
         Calculate negative energy
 
-        :return:
+        :param x: the class logits
+
+        :return: negative energy
         """
-        return - self.T * torch.logsumexp(input=x / self.T, dim=1)
+        return - self.T * torch.logsumexp(-x / self.T, dim=1)

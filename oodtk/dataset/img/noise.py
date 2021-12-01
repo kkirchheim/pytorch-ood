@@ -10,12 +10,12 @@ from torchvision.datasets import VisionDataset
 
 class GaussianNoise(VisionDataset):
     """
-    Dataset that outputs gaussian noise only
+    Dataset that outputs gaussian noise
     """
 
     def __init__(
         self,
-        samples,
+        length,
         size=(224, 224, 3),
         transform=None,
         target_transform=None,
@@ -24,16 +24,16 @@ class GaussianNoise(VisionDataset):
         **kwargs
     ):
         self.size = size
-        self.num = samples
+        self.num = length
         self.transform = transform
         self.target_transform = target_transform
-        self.loc = 128
-        self.scale = 128
+        self.loc = loc
+        self.scale = scale
 
     def __len__(self):
         return self.num
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> Image:
         img = np.random.normal(loc=self.loc, scale=self.scale, size=self.size)
 
         # if image has one channel, drop channel dimension for pillow
@@ -59,26 +59,26 @@ class GaussianNoise(VisionDataset):
 
 class UniformNoise(VisionDataset):
     """
-    Dataset that outputs gaussian noise only
+    Dataset that outputs uniform noise
     """
 
     def __init__(
         self,
-        samples,
+        length,
         size=(224, 224, 3),
         transform=None,
         target_transform=None,
         **kwargs
     ):
         self.size = size
-        self.num = samples
+        self.num = length
         self.transform = transform
         self.target_transform = target_transform
 
     def __len__(self):
         return self.num
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> Image:
         img = np.random.uniform(low=0, high=255, size=self.size).astype(dtype=np.uint8)
 
         # if image has one channel, drop channel dimension for pillow

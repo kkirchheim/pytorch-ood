@@ -11,33 +11,9 @@ log = logging.getLogger(__name__)
 
 
 class NewsGroup20(Dataset):
-    def __init__(self, root, download=False):
-        super(NewsGroup20, self).__init__()
-        self._dataset1 = NewsGroup20Base(root, train=True, download=download)
-        self._dataset2 = NewsGroup20Base(root, train=False, download=download)
-        self.dataset = ConcatDataset([self._dataset1, self._dataset2])
-
-    def __getitem__(self, item):
-        x, y = self.dataset[item]
-
-        if self.target_transform:
-            y = self.target_transform(y)
-
-        if self.transforms:
-            x = self.transforms(x)
-
-        return x, y
-
-    def __len__(self):
-        return len(self.dataset)
-
-    def unique_targets(self) -> np.ndarray:
-        return np.unique(np.concatenate(self._dataset1._labels, self._dataset2._labels))
-
-
-class NewsGroup20Base(Dataset):
     """
     Stemmed etc. version of the newsgroup dataset.
+
 
     Much of the code is taken from the baseline-implementation:
     https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/20%20Newsgroups.ipynb

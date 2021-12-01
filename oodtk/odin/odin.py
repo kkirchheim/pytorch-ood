@@ -11,12 +11,22 @@ def odin_preprocessing(
     model: torch.nn.Module, x, y, criterion=F.nll_loss, eps=0.05, temperature=1000
 ):
     """
+    ODIN is a preprocessing method for inputs that aims to increase the discriminability of
+    the softmax outputs for In- and Out-of-Distribution data.
+
+    The operation requires two forward and one backward pass.
+
+    .. math::
+        \hat{x} = x + \\epsilon \\nabla_x \\mathcal{L}(f(x) / T, \hat{y})
+
     :param model: module to backprop through
-    :param criterion: loss function to use. Original Implementation used NLL
     :param x: sample to preprocess
-    :param y: the label the model predicted for the sample
-    :param eps: size of the gradient step to take
-    :param temperature: temperature to use for temperature scaling
+    :param y: the label :math:`\hat{y}` the model predicted for the sample
+    :param criterion: loss function :math:`\mathcal{L}` to use. Original Implementation used NLL
+    :param eps: step size :math:`\\epsilon` of the gradient ascend step
+    :param temperature: temperature :math:`T` to use for scaling
+
+    :see Implementation: https://github.com/facebookresearch/odin/
 
     .. warning::
         In the original implementation, the authors normalized the gradient to the input space.
@@ -25,8 +35,6 @@ def odin_preprocessing(
     .. note::
         This operation has the side effect of zeroing out gradients.
 
-
-    :see implementation: https://github.com/facebookresearch/odin/blob/master/code/calData.py
     """
     model.apply(zero_grad)
 
