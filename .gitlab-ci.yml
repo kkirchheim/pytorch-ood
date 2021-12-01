@@ -60,14 +60,11 @@ docs:
     - echo "Building the documentation for the package."
     - pip install sphinx sphinx-rtd-theme
     - cd doc ; make html
-    - pwd 
-    - mv _build/ ../public/
+    - mv _build/html/ ../public/
 
   artifacts:
     paths:
       - public/
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
-
 
