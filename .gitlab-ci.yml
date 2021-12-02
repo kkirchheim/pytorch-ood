@@ -36,7 +36,10 @@ test:
     - echo "Calculating test coverage for the project."
     - pip install coverage
     - coverage run -m unittest discover
+    - coverage report -m
     - coverage html
+    - coverage badge
+  coverage: "/TOTAL.+ ([0-9]{1,3}%)/"
   artifacts:
     paths:
       - htmlcov/
