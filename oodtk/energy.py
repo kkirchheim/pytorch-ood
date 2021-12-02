@@ -26,10 +26,11 @@ class NegativeEnergyScore(torch.nn.Module):
         https://github.com/wetliu/energy_ood
 
     """
+
     def __init__(self, t: int = 1):
-        """
-        """
+        """"""
         super(NegativeEnergyScore, self).__init__()
+        self.t = t
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -39,4 +40,4 @@ class NegativeEnergyScore(torch.nn.Module):
 
         :return: negative energy
         """
-        return - self.T * torch.logsumexp(-x / self.T, dim=1)
+        return -self.t * torch.logsumexp(-x / self.t, dim=1)
