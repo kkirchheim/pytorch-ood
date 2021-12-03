@@ -17,12 +17,12 @@ def odin_preprocessing(
     The operation requires two forward and one backward pass.
 
     .. math::
-        \hat{x} = x + \\epsilon \\nabla_x \\mathcal{L}(f(x) / T, \hat{y})
+        \\hat{x} = x + \\epsilon \\nabla_x \\mathcal{L}(f(x) / T, \\hat{y})
 
-    :param model: module to backprop through
+    :param model: module to backpropagate through
     :param x: sample to preprocess
-    :param y: the label :math:`\hat{y}` the model predicted for the sample
-    :param criterion: loss function :math:`\mathcal{L}` to use. Original Implementation used NLL
+    :param y: the label :math:`\\hat{y}` the model predicted for the sample
+    :param criterion: loss function :math:`\\mathcal{L}` to use. Original Implementation used NLL
     :param eps: step size :math:`\\epsilon` of the gradient ascend step
     :param temperature: temperature :math:`T` to use for scaling
 

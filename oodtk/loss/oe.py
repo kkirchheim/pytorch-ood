@@ -2,10 +2,10 @@ import logging
 import typing
 
 import torch
-from torch import nn
 import torch.nn.functional as F
-from oodtk import utils
+from torch import nn
 
+from oodtk import utils
 
 log = logging.getLogger(__name__)
 
@@ -41,19 +41,16 @@ class OutlierExposureLoss(nn.Module):
         if utils.contains_known(target):
             loss_ce = F.cross_entropy(logits[known], target[known])
         else:
-            log.warning(f"No In-Distribution Samples")
+            log.warning("No In-Distribution Samples")
             loss_ce = 0
 
         if utils.contains_unknown(target):
-            unity = (
-                torch.ones(size=(logits[~known].shape[0], self.n_classes))
-                / self.n_classes
-            )
+            unity = torch.ones(size=(logits[~known].shape[0], self.n_classes)) / self.n_classes
             unity = unity.to(logits.device)
             # TODO: use crossentropy instead of KL divergence
             loss_oe = F.kl_div(logits[~known], unity, log_target=False, reduction="sum")
         else:
-            log.warning(f"No Outlier Samples")
+            log.warning("No Outlier Samples")
             loss_oe = 0
 
         return loss_ce, self.lambda_ * loss_oe

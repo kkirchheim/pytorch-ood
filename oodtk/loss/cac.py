@@ -24,9 +24,9 @@ class CACLoss(nn.Module):
     Centers are initialized as unit vectors, scaled by the magnitude.
 
 
-    :param n_classes: number of classes, equald number of class centers
+    :param n_classes: number of classes
     :param magnitude: magnitude of class anchors
-    :param lmbda: weight :math:`\lambda` for loss terms
+    :param lambda_: weight :math:`\\lambda` for loss terms
 
 
     :see Paper: https://arxiv.org/abs/2004.02434
@@ -34,12 +34,12 @@ class CACLoss(nn.Module):
 
     """
 
-    def __init__(self, n_classes, magnitude, lmbda):
+    def __init__(self, n_classes, magnitude, lambda_):
 
         super(CACLoss, self).__init__()
         self.n_classes = n_classes
         self.magnitude = magnitude
-        self.lambda_ = lmbda
+        self.lambda_ = lambda_
 
         # anchor points are fixed, so they do not require gradients
         self.anchors = nn.Parameter(torch.zeros(size=(n_classes, n_classes)))
@@ -70,17 +70,12 @@ class CACLoss(nn.Module):
         anchor_loss = d_true.mean()
 
         # calc distances to all non_target tensors
-        tmp = [
-            [i for i in range(self.n_classes) if target[x] != i]
-            for x in range(len(distances))
-        ]
+        tmp = [[i for i in range(self.n_classes) if target[x] != i] for x in range(len(distances))]
         non_target = torch.Tensor(tmp).long().to(embedding.device)
         d_other = torch.gather(distances, 1, non_target)
 
         # for numerical stability, we clamp the distance values
-        tuplet_loss = (
-            (-d_other + d_true.unsqueeze(1)).clamp(max=50).exp()
-        )  # torch.exp()
+        tuplet_loss = (-d_other + d_true.unsqueeze(1)).clamp(max=50).exp()  # torch.exp()
         tuplet_loss = torch.log(1 + torch.sum(tuplet_loss, dim=1)).mean()
 
         return self.lambda_ * anchor_loss, tuplet_loss

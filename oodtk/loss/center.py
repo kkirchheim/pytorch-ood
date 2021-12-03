@@ -48,7 +48,7 @@ class CenterLoss(nn.Module):
             torch.nn.init.normal_(self.centers)
 
             if self.magnitude != 1:
-                log.warning(f"Not applying magnitude parameter.")
+                log.warning("Not applying magnitude parameter.")
 
     def forward(self, x, labels) -> torch.Tensor:
         """
@@ -57,9 +57,7 @@ class CenterLoss(nn.Module):
         """
         batch_size = x.size(0)
         distmat = (
-            torch.pow(x, 2)
-            .sum(dim=1, keepdim=True)
-            .expand(batch_size, self.num_classes)
+            torch.pow(x, 2).sum(dim=1, keepdim=True).expand(batch_size, self.num_classes)
             + torch.pow(self.centers, 2)
             .sum(dim=1, keepdim=True)
             .expand(self.num_classes, batch_size)

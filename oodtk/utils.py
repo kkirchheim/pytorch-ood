@@ -1,4 +1,5 @@
 import logging
+
 import numpy as np
 import torch
 
@@ -116,15 +117,13 @@ def optimize_temperature(logits: torch.Tensor, y, init=1, steps=1000, device="cp
 
     :see Paper: https://arxiv.org/pdf/1706.04599.pdf
     """
-    log.info(f"Optimizing Temperature")
+    log.info("Optimizing Temperature")
 
     if contains_unknown(y):
-        raise ValueError(f"Do not optimize temperature on unknown labels")
+        raise ValueError("Do not optimize temperature on unknown labels")
 
     nll = torch.nn.NLLLoss().to(device)
-    temperature = torch.nn.Parameter(torch.ones(size=(1,)), requires_grad=True).to(
-        device
-    )
+    temperature = torch.nn.Parameter(torch.ones(size=(1,)), requires_grad=True).to(device)
     torch.fill_(temperature, init)
     logits = logits.clone().to(device)
     y = y.clone().to(device)
@@ -143,5 +142,5 @@ def optimize_temperature(logits: torch.Tensor, y, init=1, steps=1000, device="cp
             optimizer.step()
 
     best = temperature.detach().item()
-    log.info(f"Finished Optimizing Temperature")
+    log.info("Finished Optimizing Temperature")
     return best
