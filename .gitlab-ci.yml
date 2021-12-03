@@ -78,5 +78,3 @@ deploy:
     paths:
       - dist/*.whl
   when: manual
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
