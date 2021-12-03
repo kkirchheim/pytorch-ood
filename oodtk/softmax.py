@@ -7,7 +7,7 @@
 import torch
 
 
-class SoftmaxThresholding(torch.nn.Module):
+class Softmax(torch.nn.Module):
     """
     Implements the Softmax Thresholding Baseline Scoring.
 
@@ -17,7 +17,7 @@ class SoftmaxThresholding(torch.nn.Module):
 
     def __init__(self, t: int = 1):
         """"""
-        super(SoftmaxThresholding, self).__init__()
+        super(Softmax, self).__init__()
         self.t = t
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

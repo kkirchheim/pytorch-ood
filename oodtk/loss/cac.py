@@ -85,7 +85,7 @@ class CACLoss(nn.Module):
         :param embeddings: embeddings of samples
         :returns: squared euclidean distance of embeddings to anchors
         """
-        distances = oodtk.utils.torch_get_squared_distances(self.anchors, embeddings)
+        distances = oodtk.utils.pairwise_distances(self.anchors, embeddings)
         return distances
 
     def predict(self, embeddings: torch.Tensor) -> torch.Tensor:

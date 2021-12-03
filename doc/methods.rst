@@ -22,3 +22,8 @@ Negative Energy
 -------------------------------
 
 .. automodule:: oodtk.energy
+
+Mahalanobis Distance
+-------------------------------
+
+.. automodule:: oodtk.mahalanobis

@@ -7,7 +7,7 @@
 import torch
 
 
-class NegativeEnergyScore(torch.nn.Module):
+class NegativeEnergy(torch.nn.Module):
     """
     Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.
 
@@ -29,7 +29,7 @@ class NegativeEnergyScore(torch.nn.Module):
 
     def __init__(self, t: int = 1):
         """"""
-        super(NegativeEnergyScore, self).__init__()
+        super(NegativeEnergy, self).__init__()
         self.t = t
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
