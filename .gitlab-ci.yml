@@ -17,6 +17,7 @@ stages:
   - test
   - build
   - docs
+  - deploy
 
 before_script:
   - python -V # Print out python version for debugging
@@ -42,19 +43,6 @@ test:
     paths:
       - htmlcov/
 
-build:
-  stage: build
-  script:
-    - echo "Building the Package"
-    - pip install wheel
-    - python3 setup.py bdist_wheel --tag-build=dev-$CI_COMMIT_REF_SLUG
-    - pip install twine
-    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
-  allow_failure: true # gitlab does not allow to deploy the same package twice
-  artifacts:
-    paths:
-      - dist/*.whl
-
 docs:
   stage: docs
   script:
@@ -66,5 +54,29 @@ docs:
   artifacts:
     paths:
       - public/
+
+build:
+  stage: build
+  script:
+    - echo "Building the Package"
+    - pip install wheel
+    - python3 setup.py bdist_wheel
+  artifacts:
+    paths:
+      - dist/*.whl
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Building the Package"
+    - pip install wheel
+    - python3 setup.py bdist_wheel
+    - pip install twine
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+  allow_failure: true # gitlab does not allow to deploy the same package twice
+  artifacts:
+    paths:
+      - dist/*.whl
+  when: manual
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
