@@ -77,3 +77,11 @@ class TinyImages(Dataset):
 
     def __len__(self):
         return self.n_images
+
+
+class RandomImages300K(TinyImages):
+    """
+    A cleaned version of the TinyImages Dataset
+
+    :see Page: https://github.com/hendrycks/outlier-exposure
+    """
