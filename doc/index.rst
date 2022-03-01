@@ -6,11 +6,11 @@
 Out-of-Distribution ToolKit
 #############################
 
-Implementation of methods and helper functions for Out-of-Distribution Detection, Open Set Recognition,
-and related tasks.
+Implementation of methods and helper functions for Out-of-Distribution Detection, Open Set Recognition, Anomaly Detection,
+Novelty Detection, and and related tasks. Based on PyTorch.
 
-This documentation provides provides a user guide with general information on the
-underlying assumptions, as well as a structured API documentation to aid implementation.
+This documentation provides a user guide with general information on the
+assumptions, nomenclature, as well as a structured API documentation to aid implementation.
 
 .. toctree::
    :maxdepth: 5
@@ -29,6 +29,3 @@ underlying assumptions, as well as a structured API documentation to aid impleme
    data
    models
    utils
-
-
-

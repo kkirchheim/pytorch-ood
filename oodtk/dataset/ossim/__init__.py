@@ -1,7 +1,11 @@
 """
 
+Open Set Simulations are frequently used to evaluate Open Set Recognition models.
+
+
 OpenSetSimulation
 ----------------------------------------------
+
 .. autoclass:: oodtk.dataset.ossim.OpenSetSimulation
    :members:
 

@@ -2,6 +2,10 @@
 Wide Resnet
 
 See https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
+
+Pretrained weights:
+* https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt
+
 """
 import math
 
@@ -47,8 +51,8 @@ class BasicBlock(nn.Module):
             out = self.relu2(self.bn2(self.conv1(out)))
         else:
             out = self.relu2(self.bn2(self.conv1(x)))
-        # if self.droprate > 0:
-        #     out = F.dropout(out, p=self.droprate, training=self.training)
+        if self.droprate > 0:
+            out = F.dropout(out, p=self.droprate, training=self.training)
         out = self.conv2(out)
         if not self.equalInOut:
             return torch.add(self.convShortcut(x), out)
@@ -59,9 +63,7 @@ class BasicBlock(nn.Module):
 class NetworkBlock(nn.Module):
     def __init__(self, nb_layers, in_planes, out_planes, block, stride, dropRate=0.0):
         super(NetworkBlock, self).__init__()
-        self.layer = self._make_layer(
-            block, in_planes, out_planes, nb_layers, stride, dropRate
-        )
+        self.layer = self._make_layer(block, in_planes, out_planes, nb_layers, stride, dropRate)
 
     def _make_layer(self, block, in_planes, out_planes, nb_layers, stride, dropRate):
         layers = []
@@ -99,9 +101,7 @@ class WideResNet(nn.Module):
         n = (depth - 4) // 6
         block = BasicBlock
         # 1st conv before any network block
-        self.conv1 = nn.Conv2d(
-            3, nChannels[0], kernel_size=3, stride=1, padding=1, bias=False
-        )
+        self.conv1 = nn.Conv2d(3, nChannels[0], kernel_size=3, stride=1, padding=1, bias=False)
         # 1st block
         self.block1 = NetworkBlock(n, nChannels[0], nChannels[1], block, 1, drop_rate)
         # 2nd block

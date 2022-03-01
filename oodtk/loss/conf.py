@@ -15,8 +15,6 @@ class ConfidenceLoss(nn.Module):
 
         \\text{where} \\quad p_i' = c \\cdot p_i + (1-c) y_i
 
-    :param lmbda: :math:`\\lambda` used to balance terms
-    :param eps: Clipping value :math:`\\epsilon` used for numerical stability
 
     :see Paper: https://arxiv.org/abs/1802.04865.
 
@@ -24,12 +22,17 @@ class ConfidenceLoss(nn.Module):
     .. note::
         * We implemented clipping for numerical stability.
         * This implementation uses mean reduction for batches.
-        * The authors additionally use methods proposed by *Enhancing the reliability of out-of-distribution image detection in neural networks*
+        * The authors additionally used ODIN
 
 
     """
 
     def __init__(self, lmbda=1.0, eps=1e-24):
+        """
+
+        :param lmbda: :math:`\\lambda` used to balance terms
+        :param eps: Clipping value :math:`\\epsilon` used for numerical stability
+        """
         super(ConfidenceLoss, self).__init__()
         self.lmbda = lmbda
         self.eps = eps
@@ -43,9 +46,7 @@ class ConfidenceLoss(nn.Module):
         target_prob_dist = F.one_hot(target, num_classes=logits.size(1))
         prediction = F.softmax(logits, dim=1)
 
-        adjusted_prediction = (
-            prediction * confidence + (1 - confidence) * target_prob_dist
-        )
+        adjusted_prediction = prediction * confidence + (1 - confidence) * target_prob_dist
 
         # calculate negative log likelihood
         adjusted_prediction = adjusted_prediction.clamp(self.eps, 1.0)

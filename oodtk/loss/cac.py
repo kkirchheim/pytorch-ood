@@ -20,21 +20,19 @@ class CACLoss(nn.Module):
     Class Anchor Clustering Loss from
     *Class Anchor Clustering: a Distance-based Loss for Training Open Set Classifiers*
 
-
-    Centers are initialized as unit vectors, scaled by the magnitude.
-
-
-    :param n_classes: number of classes
-    :param magnitude: magnitude of class anchors
-    :param lambda_: weight :math:`\\lambda` for loss terms
-
-
     :see Paper: https://arxiv.org/abs/2004.02434
     :see Implementation: https://github.com/dimitymiller/cac-openset/
 
     """
 
     def __init__(self, n_classes, magnitude, lambda_):
+        """
+        Centers are initialized as unit vectors, scaled by the magnitude.
+
+        :param n_classes: number of classes
+        :param magnitude: magnitude of class anchors
+        :param lambda_: weight :math:`\\lambda` for loss terms
+        """
 
         super(CACLoss, self).__init__()
         self.n_classes = n_classes

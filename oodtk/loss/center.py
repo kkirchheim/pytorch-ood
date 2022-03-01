@@ -12,27 +12,36 @@ class CenterLoss(nn.Module):
     """
     Center Loss.
 
-    :param n_classes: number of classes.
-    :param n_embedding: feature dimension.
-    :param magnitude: magnitude of
-
     :see Implementation: https://github.com/KaiyangZhou/pytorch-center-loss
     :see Paper: https://ydwen.github.io/papers/WenECCV16.pdf
     """
 
     def __init__(self, n_classes, n_embedding, magnitude=1, fixed=False):
+        """
+        :param n_classes: number of classes.
+        :param n_embedding: feature dimension.
+        :param magnitude:
+        :param fixed: false if centers should be learnable
+        """
         super(CenterLoss, self).__init__()
         self.num_classes = n_classes
         self.feat_dim = n_embedding
         self.magnitude = magnitude
 
-        self.centers = nn.Parameter(torch.randn(self.num_classes, self.feat_dim))
+        self._centers = nn.Parameter(torch.randn(self.num_classes, self.feat_dim))
         if fixed:
-            self.centers.requires_grad = False
+            self._centers.requires_grad = False
 
         # In the published code, they initialize centers randomly.
         # This, however, is not a good idea if the loss is used without an additional inter-class-discriminability term
         self._init_centers()
+
+    @property
+    def centers(self) -> torch.Tensor:
+        """
+        Current class centers
+        """
+        return self._centers
 
     def _init_centers(self):
         if self.num_classes == self.feat_dim:
@@ -50,22 +59,22 @@ class CenterLoss(nn.Module):
             if self.magnitude != 1:
                 log.warning("Not applying magnitude parameter.")
 
-    def forward(self, x, labels) -> torch.Tensor:
+    def forward(self, z, labels) -> torch.Tensor:
         """
-        :param: x: feature matrix with shape (batch_size, feat_dim).
+        :param z: embeddings of samples with shape (batch_size, feat_dim).
         :param labels: ground truth labels with shape (batch_size).
         """
-        batch_size = x.size(0)
+        batch_size = z.size(0)
         distmat = (
-            torch.pow(x, 2).sum(dim=1, keepdim=True).expand(batch_size, self.num_classes)
-            + torch.pow(self.centers, 2)
+            torch.pow(z, 2).sum(dim=1, keepdim=True).expand(batch_size, self.num_classes)
+            + torch.pow(self._centers, 2)
             .sum(dim=1, keepdim=True)
             .expand(self.num_classes, batch_size)
             .t()
         )
-        distmat.addmm_(1, -2, x, self.centers.t())
+        distmat.addmm_(1, -2, z, self._centers.t())
 
-        classes = torch.arange(self.num_classes).long().to(x.device)
+        classes = torch.arange(self.num_classes).long().to(z.device)
         labels = labels.unsqueeze(1).expand(batch_size, self.num_classes)
         mask = labels.eq(classes.expand(batch_size, self.num_classes))
 
@@ -74,10 +83,11 @@ class CenterLoss(nn.Module):
 
         return loss
 
-    def calculate_distances(self, embeddings):
-        distances = oodtk.utils.torch_get_squared_distances(self.centers, embeddings)
-        return distances
+    def calculate_distances(self, z) -> torch.Tensor:
+        """
 
-    def predict(self, embeddings):
-        distances = self.calculate_distances(embeddings)
-        return nn.functional.softmin(distances, dim=1)
+        :param z: embeddings of samples
+        :return: squared distances of given embeddings to all cluster centers
+        """
+        distances = oodtk.utils.torch_get_squared_distances(self._centers, z)
+        return distances

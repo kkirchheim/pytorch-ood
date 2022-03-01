@@ -13,4 +13,5 @@ class EnergyRegularizedLoss(nn.Module):
     """"""
 
     def __init__(self):
+        """"""
         super(EnergyRegularizedLoss, self).__init__()

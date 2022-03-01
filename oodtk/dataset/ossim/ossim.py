@@ -2,7 +2,7 @@ import logging
 from typing import Iterable, Set
 
 import numpy as np
-from torch.utils.data import Subset, Dataset
+from torch.utils.data import Dataset, Subset
 
 log = logging.getLogger(__name__)
 
@@ -21,26 +21,50 @@ class OpenSetSimulation(object):
 
     @property
     def kkc(self) -> Set:
+        """
+        Known Known Classes
+        """
         pass
 
     @property
     def kuc(self) -> Set:
+        """
+        Known Unknown Classes
+        """
         pass
 
     @property
     def uuc(self) -> Set:
+        """
+        Unknown Unknown Classes
+        """
         pass
 
     def train_dataset(self, in_dist=True, out_dist=False) -> Dataset:
-        """ """
+        """
+
+        :param in_dist:
+        :param out_dist:
+        :return:
+        """
         pass
 
     def val_dataset(self, in_dist=True, out_dist=True) -> Dataset:
-        """ """
+        """
+
+        :param in_dist:
+        :param out_dist:
+        :return:
+        """
         pass
 
     def test_dataset(self, in_dist=True, out_dist=True) -> Dataset:
-        """ """
+        """
+
+        :param in_dist:
+        :param out_dist:
+        :return:
+        """
         pass
 
 
@@ -171,10 +195,7 @@ class DynamicOSS(OpenSetSimulation):
         train_out_c = perm_class[: self.out_train]
         val_out_c = perm_class[self.out_train : self.out_train + self.out_val]
         test_out_c = perm_class[
-            self.out_train
-            + self.out_val : self.out_train
-            + self.out_val
-            + self.out_test
+            self.out_train + self.out_val : self.out_train + self.out_val + self.out_test
         ]
         train_in_c = perm_class[self.out_train + self.out_val + self.out_test :]
 
@@ -269,14 +290,10 @@ class TargetMapping:
         self._map.update({clazz: index for index, clazz in enumerate(train_in_classes)})
 
         # mapping test_out classes to < -1000
-        self._map.update(
-            {clazz: (-clazz - 1000) for index, clazz in enumerate(test_out_classes)}
-        )
+        self._map.update({clazz: (-clazz - 1000) for index, clazz in enumerate(test_out_classes)})
 
         # mapping train_out classes to < 0
-        self._map.update(
-            {clazz: (-clazz) for index, clazz in enumerate(train_out_classes)}
-        )
+        self._map.update({clazz: (-clazz) for index, clazz in enumerate(train_out_classes)})
 
     def __call__(self, target):
         # log.info(f"Target: {target} known: {target in self._map}")

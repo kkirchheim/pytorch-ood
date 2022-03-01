@@ -17,6 +17,7 @@ This package provides
 - Useful Utilities
 
 Is provided in the hope to speed up research and to facilitate reproducibility.
+Where possible, functions can be GPU accelerated.
 
 
 ## Setup

@@ -1,13 +1,15 @@
 """
 
-..  autoclass:: oodtk.energy.NegativeEnergyScore
+..  autoclass:: oodtk.energy.NegativeEnergy
     :members:
 
 """
 import torch
 
+from .api import Method
 
-class NegativeEnergy(torch.nn.Module):
+
+class NegativeEnergy(Method):
     """
     Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.
 
@@ -27,12 +29,18 @@ class NegativeEnergy(torch.nn.Module):
 
     """
 
+    def fit(self, data_loader):
+        """
+        Not required.
+        """
+        pass
+
     def __init__(self, t: int = 1):
         """"""
         super(NegativeEnergy, self).__init__()
         self.t = t
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         Calculate negative energy
 

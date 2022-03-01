@@ -1,6 +1,6 @@
 """
 
-..  autoclass:: oodtk.softmax.SoftmaxThresholding
+..  autoclass:: oodtk.softmax.Softmax
     :members:
 
 """
@@ -11,12 +11,17 @@ class Softmax(torch.nn.Module):
     """
     Implements the Softmax Thresholding Baseline Scoring.
 
-    :param t: temperature value T
+    :see Paper:
+        https://arxiv.org/abs/1610.02136
+    :see Implementation:
+        https://github.com/hendrycks/error-detection
 
     """
 
     def __init__(self, t: int = 1):
-        """"""
+        """
+        :param t: temperature value T
+        """
         super(Softmax, self).__init__()
         self.t = t
 

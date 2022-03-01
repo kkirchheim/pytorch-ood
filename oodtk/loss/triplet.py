@@ -11,7 +11,7 @@ import oodtk.utils
 
 class TripletLoss(torch.nn.Module):
     """
-    Triplet loss which tracks the running mean of samples for easy predictions
+    Triplet loss which estimates class centers online for easy predictions during training.
 
     :see Implementation: https://github.com/NegatioN/OnlineMiningTripletLoss/blob/master/online_triplet_loss/losses.py
 
@@ -39,47 +39,58 @@ class TripletLoss(torch.nn.Module):
         self.reset_running_stats()
 
     @property
-    def centers(self):
+    def centers(self) -> torch.Tensor:
+        """
+        Estimates of current class centers
+
+        """
         return self.running_centers
 
-    def predict(self, embeddings):
-        distances = self.calculate_distances(embeddings)
+    def predict(self, z) -> torch.Tensor:
+        """
+        Predict class membership according to running centers
+
+        :param z: embeddings of samples
+        :return: class membership probabilities
+        """
+        distances = self.calculate_distances(z)
         return nn.functional.softmin(distances, dim=1)
 
-    def calculate_distances(self, embeddings):
+    def calculate_distances(self, z):
+        """
+        Calculates distances from embeddings to running centers
+        :param z:
+        :return:
+        """
         # FIXME: distances will be invalid if squaring is disabled (?)
-        distances = oodtk.utils.torch_get_squared_distances(
-            self.running_centers, embeddings
-        )
+        distances = oodtk.utils.torch_get_squared_distances(self.running_centers, z)
         return distances
 
-    def forward(self, embedding, target):
+    def forward(self, z, target):
         """
-        :param embedding:
-        :param target:
+        :param z: embeddings of samples
+        :param target: target labels
         """
         if self.training:
             # if training, update empirical class centers
             with torch.no_grad():
                 # calculate empirical centers
                 batch_classes = torch.unique(target, sorted=False)  # already sorted
-                mu = self.calculate_centers(embedding, target)
+                mu = self.calculate_centers(z, target)
 
                 # update running mean centers
                 cma = (
                     mu[batch_classes]
                     + self.running_centers[batch_classes] * self.num_batches_tracked
                 )
-                self.running_centers[batch_classes] = cma / (
-                    self.num_batches_tracked + 1
-                )
+                self.running_centers[batch_classes] = cma / (self.num_batches_tracked + 1)
                 self.num_batches_tracked += 1
 
         if self.hard_mining:
-            return batch_hard_triplet_loss(target, embedding, self.margin, self.squared)
+            return batch_hard_triplet_loss(target, z, self.margin, self.squared)
         else:
             triplet_loss, pos_triplets = batch_all_triplet_loss(
-                target, embedding, self.margin, self.squared
+                target, z, self.margin, self.squared
             )
             return triplet_loss
 
@@ -91,13 +102,14 @@ class TripletLoss(torch.nn.Module):
         )
 
         for clazz in target.unique(sorted=False):
-            mu[clazz] = embeddings[target == clazz].mean(
-                dim=0
-            )  # all instances of this class
+            mu[clazz] = embeddings[target == clazz].mean(dim=0)  # all instances of this class
 
         return mu
 
-    def reset_running_stats(self):
+    def reset_running_stats(self) -> None:
+        """
+        Resets the running center estimates
+        """
         init.zeros_(self.running_centers)
         init.zeros_(self.num_batches_tracked)
 
@@ -228,9 +240,7 @@ def batch_hard_triplet_loss(labels, embeddings, margin, squared=True):
 
     # We add the maximum value in each row to the invalid negatives (label(a) == label(n))
     max_anchor_negative_dist, _ = pairwise_dist.max(1, keepdim=True)
-    anchor_negative_dist = pairwise_dist + max_anchor_negative_dist * (
-        1.0 - mask_anchor_negative
-    )
+    anchor_negative_dist = pairwise_dist + max_anchor_negative_dist * (1.0 - mask_anchor_negative)
 
     # shape (batch_size,)
     hardest_negative_dist, _ = anchor_negative_dist.min(1, keepdim=True)
@@ -282,9 +292,7 @@ def batch_all_triplet_loss(labels, embeddings, margin, squared=False):
     num_positive_triplets = valid_triplets.size(0)
     num_valid_triplets = mask.sum()
 
-    fraction_positive_triplets = num_positive_triplets / (
-        num_valid_triplets.float() + 1e-16
-    )
+    fraction_positive_triplets = num_positive_triplets / (num_valid_triplets.float() + 1e-16)
 
     # Get final mean triplet loss over the positive valid triplets
     triplet_loss = triplet_loss.sum() / (num_positive_triplets + 1e-16)

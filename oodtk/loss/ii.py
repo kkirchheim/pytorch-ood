@@ -13,25 +13,24 @@ class IILoss(nn.Module):
     """
     II Loss function from *Learning a neural network based representation for open set recognition*.
 
-    :param n_classes: number of classes
-    :param n_embedding: embedding dimensionality
 
     :see Paper: https://arxiv.org/pdf/1802.04365.pdf
     :see Implementation: https://github.com/shrtCKT/opennet
 
     .. note::
-        * We added running centers for online class center estimation
         * The device of the given embedding will be used as device for all calculations.
 
-
     .. warning::
-        * Hassen et al. report that batch-norm bounds the output in a hypercube and thus limits the spread of distances,
-          however, we could not reproduce this behavior in our experiments.
+         * We added running centers for online class center estimation. This is only an approximation and results
+           might be different if the centers are actually calculated.
 
     """
 
     def __init__(self, n_classes, n_embedding):
-
+        """
+        :param n_classes: number of classes
+        :param n_embedding: embedding dimensionality
+        """
         super(IILoss, self).__init__()
         self.n_classes = n_classes
         self.n_embedding = n_embedding
@@ -47,18 +46,21 @@ class IILoss(nn.Module):
         self.reset_running_stats()
 
     @property
-    def centers(self):
+    def centers(self) -> torch.Tensor:
         """
         :return: current class center estimates
         """
         return self.running_centers
 
-    def reset_running_stats(self):
+    def reset_running_stats(self) -> None:
+        """
+        Resets the running stats of online class center estimates.
+        """
         log.info("Reset running stats")
         init.zeros_(self.running_centers)
         init.zeros_(self.num_batches_tracked)
 
-    def calculate_centers(self, embeddings, target):
+    def _calculate_centers(self, embeddings, target) -> torch.Tensor:
         mu = torch.full(
             size=(self.n_classes, self.n_embedding),
             fill_value=float("NaN"),
@@ -70,12 +72,19 @@ class IILoss(nn.Module):
 
         return mu
 
-    def calculate_spreads(self, mu, x, y):
+    def _calculate_spreads(self, mu, x, targets) -> torch.Tensor:
+        """
+         Calculate sum of (squared) distances of all instances to the class center
+
+        :param mu:
+        :param x:
+        :param targets:
+        :return:
+        """
         spreads = torch.zeros((self.n_classes,), device=x.device)
 
-        # calculate sum of (squared) distances of all instances to the class center
-        for clazz in y.unique(sorted=False):
-            class_x = x[y == clazz]  # all instances of this class
+        for clazz in targets.unique(sorted=False):
+            class_x = x[targets == clazz]  # all instances of this class
             spreads[clazz] = torch.norm(class_x - mu[clazz], p=2).pow(2).sum()
 
         return spreads
@@ -128,7 +137,7 @@ class IILoss(nn.Module):
 
         if self.training:
             # calculate empirical centers
-            mu = self.calculate_centers(x, target)
+            mu = self._calculate_centers(x, target)
 
             # update running mean centers
             cma = (
@@ -141,7 +150,7 @@ class IILoss(nn.Module):
             mu = self.running_centers
 
         # calculate sum of class spreads and divide by the number of instances
-        intra_spread = self.calculate_spreads(mu, x, target).sum() / n_instances
+        intra_spread = self._calculate_spreads(mu, x, target).sum() / n_instances
 
         # calculate distance between all (present) class centers
         dists = self._get_center_distances(mu[batch_classes])

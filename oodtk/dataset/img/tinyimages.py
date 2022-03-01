@@ -79,9 +79,29 @@ class TinyImages(Dataset):
         return self.n_images
 
 
-class RandomImages300K(TinyImages):
+class TinyImages300k(Dataset):
     """
     A cleaned version of the TinyImages Dataset
 
     :see Page: https://github.com/hendrycks/outlier-exposure
     """
+
+    def __init__(self, datafile, transform=None):
+        self.datafile = datafile
+
+        log.info(f"Loading data from {datafile}")
+        self.data = np.load(datafile)
+        log.info(f"Shape of dataset: {self.data.shape}")
+        self.transform = transform
+
+    def __getitem__(self, index):
+        index = index % len(self)
+
+        img = self.data[index]
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img, -1
+
+    def __len__(self):
+        return self.data.shape[0]

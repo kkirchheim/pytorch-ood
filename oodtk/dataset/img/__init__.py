@@ -1,8 +1,5 @@
 """
 
- TinyImageNetCrop, TinyImageNetResize, LSUNCrop, LSUNResize
-
-
 Textures
 ----------------------
 ..  autoclass:: oodtk.dataset.img.Textures
@@ -35,7 +32,7 @@ LSUNResize
 
 300K Random Images
 ----------------------
-..  autoclass:: oodtk.dataset.img.RandomImages300K
+..  autoclass:: oodtk.dataset.img.TinyImages300k
     :members:
 
 Gaussian Noise
@@ -66,14 +63,33 @@ ImageNet-O
 
 ..  autoclass:: oodtk.dataset.img.ImageNetO
     :members:
+
+ImageNet-C
+----------------------
+
+..  autoclass:: oodtk.dataset.img.ImageNetC
+    :members:
+
+ImageNet-R
+----------------------
+
+..  autoclass:: oodtk.dataset.img.ImageNetR
+    :members:
+
+StreetHazards
+----------------------
+
+..  autoclass:: oodtk.dataset.img.StreetHazards
+    :members:
+
 """
 from .cub200 import Cub2011
-from .stanfordcars import StanfordCars
-from .tinyimagenet import TinyImagenet
-from .odin import TinyImageNetCrop, TinyImageNetResize, LSUNCrop, LSUNResize
-from .textures import Textures
-from .tinyimages import TinyImages, RandomImages300K
-from .noise import GaussianNoise, UniformNoise
+from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetP, ImageNetR
 from .mnistc import MNISTC
-from .imagenet import ImageNetA, ImageNetO
-
+from .noise import GaussianNoise, UniformNoise
+from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
+from .stanfordcars import StanfordCars
+from .streethazards import StreetHazards
+from .textures import Textures
+from .tinyimagenet import TinyImagenet
+from .tinyimages import TinyImages, TinyImages300k

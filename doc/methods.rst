@@ -27,3 +27,8 @@ Mahalanobis Distance
 -------------------------------
 
 .. automodule:: oodtk.mahalanobis
+
+Monte Carlo Dropout
+-------------------------------
+
+.. automodule:: oodtk.mcd

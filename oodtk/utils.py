@@ -1,6 +1,5 @@
 import logging
 
-import numpy as np
 import torch
 from torch import nn
 from torch.nn import init
@@ -18,10 +17,10 @@ def calc_openness(n_train, n_test, n_target):
 
     :return: Openness of the problem
 
-    :see paper: https://ieeexplore.ieee.org/abstract/document/6365193
+    :see Paper: https://ieeexplore.ieee.org/abstract/document/6365193
     """
     frac = 2 * n_train / (n_test + n_target)
-    return 1 - np.sqrt(frac)
+    return 1 - torch.sqrt(frac)
 
 
 #######################################
@@ -171,7 +170,7 @@ def pairwise_distances(x, y=None) -> torch.Tensor:
 
     dist = x_norm + y_norm - 2.0 * torch.mm(x, y_t)
 
-    return torch.clamp(dist, 0.0, np.inf)
+    return torch.clamp(dist, 0.0, torch.inf)
 
 
 class RunningCenters(nn.Module):
