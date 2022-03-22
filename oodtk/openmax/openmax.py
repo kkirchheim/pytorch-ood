@@ -4,9 +4,10 @@ except ImportError as e:
     print("You will have to install libmr manually to use OpenMax")
     raise e
 
+import logging
+
 import numpy as np
 import scipy.spatial.distance as distance
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +16,13 @@ class OpenMax(object):
     """
     Implementation of the OpenMax Layer as proposed by Bendale et. al in *Towards Open Set Deep Networks*.
 
-    Requires `libmr` to be installed, which is broken at the moment.
+    The methods determines a center :math:`\\mu_y` for each class in the logits space of a model, and then
+    creates a statistical model of the distances of correct classified inputs.
+    It uses extreme value theory to detect outliers.
+
+
+    .. warning:: This methods requires `libmr` to be installed, which is broken at the moment. You can only use it
+        by installing `cython` and `numpy`, and `libmr` manually afterwards.
 
     :param tailsize: length of the tail to fit the distribution to
     :param alpha: number of class activations to revise
@@ -149,9 +156,7 @@ class OpenMax(object):
                     # print(f"Error: class not found: {pred_class}")
                     pass
 
-            wscores = (
-                1 - ws * ranked_alpha
-            )  # wscores will be 1 except for the top predictions
+            wscores = 1 - ws * ranked_alpha  # wscores will be 1 except for the top predictions
 
             # now that we have calculated the weights, calc the revised activation vector
             revised_activation[j, 1:] = activation * wscores

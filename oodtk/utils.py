@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 
 import torch
 from torch import nn
@@ -224,10 +225,59 @@ class RunningCenters(nn.Module):
 
 
 class ToUnknown(object):
-    """"""
+    """
+    Callable that returns a negative number.
+    """
 
     def __init__(self):
         pass
 
     def __call__(self, y):
         return -1
+
+
+class TensorBuffer:
+    """
+    Used to buffer some tensors
+    """
+
+    def __init__(self, device="cpu"):
+        self._buffer = defaultdict(list)
+        self.device = device
+
+    def append(self, key, value: torch.Tensor):
+        if not isinstance(value, torch.Tensor):
+            raise ValueError(f"Can not handle value type {type(value)}")
+
+        value = value.detach().to(self.device)
+
+        self._buffer[key].append(value)
+        return self
+
+    def __contains__(self, elem):
+        return elem in self._buffer
+
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def sample(self, key) -> torch.Tensor:
+        index = torch.randint(0, len(self._buffer[key]), size=(1,))
+        return self._buffer[key][index]
+
+    def get(self, key) -> torch.Tensor:
+        if key not in self._buffer:
+            raise KeyError(key)
+
+        v = torch.cat(self._buffer[key])
+        return v
+
+    def clear(self):
+        log.debug("Clearing buffer")
+        self._buffer.clear()
+        return self
+
+    def save(self, path):
+        """Save buffer to disk"""
+        d = {k: self.get(k).cpu() for k in self._buffer.keys()}
+        torch.save(d, path)
+        return self

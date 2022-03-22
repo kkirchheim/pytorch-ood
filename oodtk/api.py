@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import torch
 
 
-class Method(torch.nn.Module, ABC):
+class Method(ABC):
     """
     Abstract Base Class for a method
     """
@@ -19,7 +19,7 @@ class Method(torch.nn.Module, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x) -> torch.Tensor:
         """
         Calculates outlier scores.
 
@@ -28,5 +28,10 @@ class Method(torch.nn.Module, ABC):
         """
         raise NotImplementedError
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.predict(x)
+    # @abstractmethod
+    # def test(self, data_loader) -> dict:
+    #     """
+    #
+    #     :return: dictionary with performance metrics
+    #     """
+    #     pass

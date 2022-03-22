@@ -5,6 +5,7 @@ import torch.nn as nn
 from torch.nn import init
 
 import oodtk.utils
+from oodtk.model.centers import RunningCenters
 
 log = logging.getLogger(__name__)
 
@@ -32,45 +33,14 @@ class IILoss(nn.Module):
         :param n_embedding: embedding dimensionality
         """
         super(IILoss, self).__init__()
-        self.n_classes = n_classes
-        self.n_embedding = n_embedding
-
-        # create buffer for centers. those buffers will be updated during training, and are fixed during evaluation
-        running_centers = torch.empty(
-            size=(self.n_classes, self.n_embedding), requires_grad=False
-        ).double()
-        num_batches_tracked = torch.empty(size=(1,), requires_grad=False).double()
-
-        self.register_buffer("running_centers", running_centers)
-        self.register_buffer("num_batches_tracked", num_batches_tracked)
-        self.reset_running_stats()
+        self.running_centers = RunningCenters(n_chasses=n_classes, n_embedding=n_embedding)
 
     @property
     def centers(self) -> torch.Tensor:
         """
         :return: current class center estimates
         """
-        return self.running_centers
-
-    def reset_running_stats(self) -> None:
-        """
-        Resets the running stats of online class center estimates.
-        """
-        log.info("Reset running stats")
-        init.zeros_(self.running_centers)
-        init.zeros_(self.num_batches_tracked)
-
-    def _calculate_centers(self, embeddings, target) -> torch.Tensor:
-        mu = torch.full(
-            size=(self.n_classes, self.n_embedding),
-            fill_value=float("NaN"),
-            device=embeddings.device,
-        )
-
-        for clazz in target.unique(sorted=False):
-            mu[clazz] = embeddings[target == clazz].mean(dim=0)  # all instances of this class
-
-        return mu
+        return self.running_centers.centers
 
     def _calculate_spreads(self, mu, x, targets) -> torch.Tensor:
         """
@@ -97,11 +67,6 @@ class IILoss(nn.Module):
         """
         dists = oodtk.utils.pairwise_distances(mu)
 
-        # n_centers = mu.shape[0]
-        # a = mu.unsqueeze(1).expand(n_centers, n_centers, mu.size(1)).double()
-        # b = mu.unsqueeze(0).expand(n_centers, n_centers, mu.size(1)).double()
-        # dists = torch.norm(a - b, p=2, dim=2).pow(2)
-
         # set diagonal elements to "high" value (this value will limit the inter seperation, so cluster
         # do not drift apart infinitely)
         dists[torch.eye(self.n_classes, dtype=torch.bool)] = 1e24
@@ -113,8 +78,7 @@ class IILoss(nn.Module):
         :param x: input points
         :return: distances to class centers
         """
-        distances = oodtk.utils.pairwise_distances(self.centers, x)
-        return distances
+        return oodtk.utils.pairwise_distances(self.centers, x)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -123,8 +87,7 @@ class IILoss(nn.Module):
         :param x: features
         :return: class membership probabilities
         """
-        distances = self.calculate_distances(x)
-        return nn.functional.softmin(distances, dim=1)
+        distances = self.calculate_distances(x).softmin(dim=1)
 
     def forward(self, x, target) -> torch.Tensor:
         """
@@ -133,24 +96,16 @@ class IILoss(nn.Module):
         :param target: label of samples
         """
         batch_classes = torch.unique(target, sorted=False)
-        n_instances = x.shape[0]
 
         if self.training:
             # calculate empirical centers
-            mu = self._calculate_centers(x, target)
-
-            # update running mean centers
-            cma = (
-                mu[batch_classes] + self.running_centers[batch_classes] * self.num_batches_tracked
-            )
-            self.running_centers[batch_classes] = cma / (self.num_batches_tracked + 1)
-            self.num_batches_tracked += 1
+            mu = self.running_centers.update(x, target)  # self._calculate_centers(x, target)
         else:
             # when testing, use the running empirical class centers
-            mu = self.running_centers
+            mu = self.running_centers.centers
 
         # calculate sum of class spreads and divide by the number of instances
-        intra_spread = self._calculate_spreads(mu, x, target).sum() / n_instances
+        intra_spread = self._calculate_spreads(mu, x, target).sum() / x.shape[0]
 
         # calculate distance between all (present) class centers
         dists = self._get_center_distances(mu[batch_classes])
