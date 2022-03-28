@@ -4,18 +4,21 @@ import sys
 import shutil
 from pathlib import Path
 
-try:
-    from ..oodtk.dataset.img.imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetP, ImageNetR
-    from ..oodtk.dataset.img.cifar import CIFAR10P, CIFAR10C, CIFAR100C
-    from ..oodtk.dataset.img.mnistc import MNISTC
-except:
-    sys.path.insert(0, os.path.join(os.getcwd(), "dataset", "img"))
-    print(os.path.join(os.getcwd(), "dataset", "img", "/"))
-    from imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetP, ImageNetR
-    from cifar import CIFAR10P, CIFAR10C, CIFAR100C
-    from mnistc import MNISTC
+myDir = os.getcwd()
+sys.path.append(myDir)
+path = Path(myDir)
+a=str(path.parent.absolute())
+sys.path.append(a)
 
-temp_root_folder = "..\temp"
+try:
+    from oodtk.dataset.img.imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetP, ImageNetR
+    from oodtk.dataset.img.cifar import CIFAR10P, CIFAR10C, CIFAR100C
+    from oodtk.dataset.img.mnistc import MNISTC
+except:
+    print("Not able to load the modules")
+
+temp_root_folder = a + "/temp"
+
 def refreshTempStorage():
     try:
         # print("Removing temorary directory\n")
