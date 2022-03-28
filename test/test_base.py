@@ -10,11 +10,12 @@ try:
     from ..oodtk.dataset.img.mnistc import MNISTC
 except:
     sys.path.insert(0, os.path.join(os.getcwd(),"..","oodtk", "dataset", "img"))
+    print(os.path.join(os.getcwd(),"..","oodtk", "dataset", "img"))
     from imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetP, ImageNetR
     from cifar import CIFAR10P, CIFAR10C, CIFAR100C
     from mnistc import MNISTC
 
-temp_root_folder = "C:\\temp\\temp"
+temp_root_folder = "..\temp"
 def refreshTempStorage():
     try:
         # print("Removing temorary directory\n")
@@ -61,14 +62,23 @@ class MyTestCase(unittest.TestCase):
         else:
             self.assertEqual(True, False)
 
-    def test_download_ImageNetR(self):
+    def test_download_ImageNetO(self):
         #Start
         refreshTempStorage
-        ImageNetR(download=True, root=temp_root_folder).base_folder
+        ImageNetO(download=True, root=temp_root_folder).base_folder
         if checkDownload:
             self.assertEqual(True, True)
         else:
             self.assertEqual(True, False)
+
+    def test_download_ImageNetR(self):
+            #Start
+            refreshTempStorage
+            ImageNetR(download=True, root=temp_root_folder).base_folder
+            if checkDownload:
+                self.assertEqual(True, True)
+            else:
+                self.assertEqual(True, False)
 
     def test_download_CIFAR10P(self):
         #Start
