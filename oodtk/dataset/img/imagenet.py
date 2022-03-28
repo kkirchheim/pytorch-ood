@@ -192,4 +192,4 @@ class ImageNetP(ImageDatasetHandler):
 
 
 
-
+ImageNetA(download=True, root="C:\\temp\\temp").base_folder

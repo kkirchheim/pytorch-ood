@@ -23,7 +23,7 @@ class MNISTC(VisionDataset):
     """
     # url = "https://zenodo.org/record/3239543/files/mnist_c.zip?download=1"
     
-    subset_list = ['all', 'leftovers']
+    subset_list = ['test', 'leftovers']
 
     base_folder_list = ["MNISTC/images/", "MNISTC_leftovers/images/"]
     url_list = [
