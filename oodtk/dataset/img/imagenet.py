@@ -188,8 +188,3 @@ class ImageNetP(ImageDatasetHandler):
 
         self.basedir = os.path.join(self.root, self.base_folder)
         self.files = os.listdir(self.basedir)
-
-
-
-
-ImageNetA(download=True, root="C:\\temp\\temp").base_folder

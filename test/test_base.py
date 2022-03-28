@@ -41,7 +41,8 @@ def checkDownload():
 
 def downloadSelector(select):
     if select==0:
-        ImageNetA(download=True, root=temp_root_folder).base_folder
+        temp = ImageNetA(download=True, root=temp_root_folder)
+        temp.base_folder
     elif select == 1:
         ImageNetO(download=True, root=temp_root_folder).base_folder
     elif select == 2:
