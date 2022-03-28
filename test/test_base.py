@@ -68,6 +68,7 @@ class MyTestCase(unittest.TestCase):
         time.sleep(3)
         p.terminate()
 
+        # Verify download 
         if checkDownload:
             self.assertEqual(True, True)
         else:
