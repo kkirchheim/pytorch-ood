@@ -17,7 +17,6 @@ class RunningCenters(nn.Module):
             size=(self.n_classes, self.n_embedding), requires_grad=False
         ).double()
         num_batches_tracked = torch.empty(size=(1,), requires_grad=False).double()
-
         self.register_buffer("running_centers", running_centers)
         self.register_buffer("num_batches_tracked", num_batches_tracked)
         self.reset_running_stats()
@@ -43,10 +42,8 @@ class RunningCenters(nn.Module):
             fill_value=float("NaN"),
             device=embeddings.device,
         )
-
         for clazz in target.unique(sorted=False):
             mu[clazz] = embeddings[target == clazz].mean(dim=0)  # all instances of this class
-
         return mu
 
     def update(self, x: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -59,15 +56,12 @@ class RunningCenters(nn.Module):
         """
         batch_classes = torch.unique(target, sorted=False)
         n_instances = x.shape[0]
-
         # calculate empirical centers
         mu = self.calculate_centers(x, target)
-
         # update running mean centers
         cma = mu[batch_classes] + self.running_centers[batch_classes] * self.num_batches_tracked
         self.running_centers[batch_classes] = cma / (self.num_batches_tracked + 1)
         self.num_batches_tracked += 1
-
         return mu
 
     def calculate_distances(self, x: torch.Tensor) -> torch.Tensor:

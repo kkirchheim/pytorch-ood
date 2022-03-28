@@ -29,7 +29,6 @@ class OutlierExposureLoss(nn.Module):
 
         :param lmbda: weighting coefficient
         """
-
         super(OutlierExposureLoss, self).__init__()
         self.lambda_ = lmbda
 
@@ -40,13 +39,10 @@ class OutlierExposureLoss(nn.Module):
         :param target: labels for predictions
         :return: tuple with cross-entropy for known samples and weighted outlier exposure loss for unknown samples.
         """
-
         loss_ce = cross_entropy(logits, target)
-
         if contains_unknown(target):
             unknown = is_unknown(target)
             loss_oe = -(logits[unknown].mean(1) - torch.logsumexp(logits[unknown], dim=1)).mean()
         else:
             loss_oe = 0
-
         return loss_ce, self.lambda_ * loss_oe

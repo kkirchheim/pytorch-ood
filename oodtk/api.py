@@ -27,11 +27,3 @@ class Method(ABC):
         :return: outlier scores for points
         """
         raise NotImplementedError
-
-    # @abstractmethod
-    # def test(self, data_loader) -> dict:
-    #     """
-    #
-    #     :return: dictionary with performance metrics
-    #     """
-    #     pass

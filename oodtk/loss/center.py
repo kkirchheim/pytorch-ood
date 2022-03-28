@@ -27,11 +27,9 @@ class CenterLoss(nn.Module):
         self.num_classes = n_classes
         self.feat_dim = n_embedding
         self.magnitude = magnitude
-
         self._centers = nn.Parameter(torch.randn(self.num_classes, self.feat_dim))
         if fixed:
             self._centers.requires_grad = False
-
         # In the published code, they initialize centers randomly.
         # This, however, is not a good idea if the loss is used without an additional inter-class-discriminability term
         self._init_centers()
@@ -46,16 +44,13 @@ class CenterLoss(nn.Module):
     def _init_centers(self):
         if self.num_classes == self.feat_dim:
             torch.nn.init.eye_(self.centers)
-
             if not self.centers.requires_grad:
                 self.centers.mul_(self.magnitude)
-
-            # Orthogonal could also be a good option. this can also be used if the embedding dimensionality is
-            # different then the number of classes
-            # torch.nn.init.orthogonal_(self.centers, gain=10)
+        # Orthogonal could also be a good option. this can also be used if the embedding dimensionality is
+        # different then the number of classes
+        # torch.nn.init.orthogonal_(self.centers, gain=10)
         else:
             torch.nn.init.normal_(self.centers)
-
             if self.magnitude != 1:
                 log.warning("Not applying magnitude parameter.")
 
@@ -73,14 +68,11 @@ class CenterLoss(nn.Module):
             .t()
         )
         distmat.addmm_(1, -2, z, self._centers.t())
-
         classes = torch.arange(self.num_classes).long().to(z.device)
         labels = labels.unsqueeze(1).expand(batch_size, self.num_classes)
         mask = labels.eq(classes.expand(batch_size, self.num_classes))
-
         dist = distmat * mask.float()
         loss = dist.clamp(min=1e-12, max=1e12).sum() / batch_size
-
         return loss
 
     def calculate_distances(self, z) -> torch.Tensor:

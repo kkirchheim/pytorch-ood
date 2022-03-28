@@ -1,8 +1,9 @@
 import logging
 import os
 from typing import Tuple
+
 import numpy as np
-from torch.utils.data import Dataset, ConcatDataset
+from torch.utils.data import ConcatDataset, Dataset
 from torchvision.datasets.utils import download_url
 
 from .stop_words import stop_words
@@ -27,13 +28,10 @@ class NewsGroup20(Dataset):
         "https://raw.githubusercontent.com/hendrycks/outlier-exposure/"
         "master/NLP_classification/20newsgroups/orig_data/20ng-test-no-short.txt"
     )
-
     test_md5 = "978c4d8fd3bde6a12a1e8312f0031815"
     train_md5 = "4444a088dda968b44f7a6dec756698b3"
-
     train_filename = "20ng-train-no-short.txt"
     test_filename = "20ng-test-no-short.txt"
-
     class_names = [
         "alt.atheism",
         "comp.graphics",
@@ -57,9 +55,7 @@ class NewsGroup20(Dataset):
         "talk.religion.misc",
     ]
 
-    def __init__(
-        self, root, transform=None, target_transform=None, train=True, download=True
-    ):
+    def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
         """
         TODO: add support for custom loader?
         """
@@ -68,22 +64,17 @@ class NewsGroup20(Dataset):
         self.transforms = transform
         self.target_transform = target_transform
         self.is_train = train
-
         self._targets = []
         self._analyzer = None
-
         if download:
             self._download()
-
         self._labels, self._data = self._load_data()
-
         # mapping class names to integers
         self.class_map = {clazz: index for index, clazz in enumerate(self.class_names)}
         for i, label in enumerate(self._labels):
             for clazz in self.class_names:
                 if label.startswith(clazz):
                     self._targets.append(self.class_map[clazz])
-
         self._targets = np.array(self._targets)
 
     def _download(self):
@@ -99,18 +90,14 @@ class NewsGroup20(Dataset):
             filename = self.test_filename
             md5 = self.test_md5
             url = self.test_url
-
         download_url(url, self.root, filename, md5)
 
     def _load_data(self) -> Tuple:
-
         if self.is_train:
             filename = self.train_filename
         else:
             filename = self.test_filename
-
         filename = os.path.join(self.root, filename)
-
         x, targets = [], []
         with open(filename, "r") as f:
             for line in f:
@@ -118,7 +105,6 @@ class NewsGroup20(Dataset):
                 text = " ".join(word for word in words[2:] if word not in stop_words)
                 x.append(text)
                 targets.append(".".join(words[0:2]))
-
         return targets, x
 
     def _check_integrity(self):
@@ -133,13 +119,10 @@ class NewsGroup20(Dataset):
     def __getitem__(self, index):
         x = self._data[index]
         y = self._targets[index]
-
         if self.target_transform:
             y = self.target_transform(y)
-
         if self.transforms:
             x = self.transforms(x)
-
         return x, y
 
     def __len__(self):

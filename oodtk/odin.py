@@ -47,7 +47,6 @@ def odin_preprocessing(
 
     """
     model.apply(zero_grad)
-
     with torch.enable_grad():
         x.requires_grad = True
         logits = model(x) / temperature
@@ -56,9 +55,7 @@ def odin_preprocessing(
         loss = criterion(logits, y)
         loss.backward()
         x_hat = torch.add(x, -eps, x.grad.sign())
-
     model.apply(zero_grad)
-
     return x_hat
 
 

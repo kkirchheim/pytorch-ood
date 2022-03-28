@@ -24,7 +24,6 @@ class BackgroundClassLoss(torch.nn.Module):
 
         :return: cross-entropy loss
         """
-
         known = is_known(targets)
         targets[known] = self.num_classes
         return F.cross_entropy(logits, targets)

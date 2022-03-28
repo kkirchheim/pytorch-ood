@@ -5,7 +5,7 @@ Datasets used for testing in  ODIN
 """
 import logging
 import os
-from typing import Optional, Callable, Any, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 from PIL import Image
 from torchvision.datasets import VisionDataset
@@ -40,14 +40,11 @@ class TinyImageNetCrop(VisionDataset):
         super(TinyImageNetCrop, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
-
         if download:
             self.download()
-
         if not self._check_integrity():
             raise RuntimeError(
-                "Dataset not found or corrupted."
-                + " You can use download=True to download it"
+                "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
         self.basedir = os.path.join(self.root, self.base_folder)
@@ -62,18 +59,14 @@ class TinyImageNetCrop(VisionDataset):
             tuple: (image, target) where target is index of the target class.
         """
         file, target = self.files[index], -1
-
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
         path = os.path.join(self.root, self.base_folder, file)
         img = Image.open(path)
-
         if self.transform is not None:
             img = self.transform(img)
-
         if self.target_transform is not None:
             target = self.target_transform(target)
-
         return img, target
 
     def __len__(self) -> int:
@@ -88,9 +81,8 @@ class TinyImageNetCrop(VisionDataset):
         if self._check_integrity():
             log.debug("Files already downloaded and verified")
             return
-        download_and_extract_archive(
-            self.url, self.root, filename=self.filename, md5=self.tgz_md5
-        )
+
+        download_and_extract_archive(self.url, self.root, filename=self.filename, md5=self.tgz_md5)
 
     def extra_repr(self) -> str:
         return "Split: {}".format("Train" if self.train is True else "Test")

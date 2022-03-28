@@ -41,11 +41,9 @@ class Mahalanobis(torch.nn.Module, Method):
         :return:
         """
         self.model.eval()
-
         # TODO: add option to buffer to GPU
         buffer = TensorBuffer()
         log.debug("Extracting features")
-
         for batch in data_loader:
             x, y = batch
             z = self.model(x)
@@ -55,14 +53,12 @@ class Mahalanobis(torch.nn.Module, Method):
 
         z = buffer.get("embedding")
         y = buffer.get("label")
-
         log.debug("Calculating mahalanobis parameters.")
         classes = y.unique()
         n_classes = classes.max()
         # TODO: move to device
         self.mu = torch.zeros(size=(n_classes,))
         self.cov = torch.zeros(size=(z.shape))
-
         for n, clazz in enumerate(classes):
             idxs = y.eq(clazz)
             assert idxs.sum() != 0

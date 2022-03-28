@@ -10,7 +10,6 @@ def cross_entropy(x, targets):
     Standard Cross-entropy, but ignores OOD inputs.
     """
     known = is_known(targets)
-
     if not known.any():
         return torch.zeros(size=(1,))
 

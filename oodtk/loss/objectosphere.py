@@ -37,7 +37,6 @@ class ObjectosphereLoss(nn.Module):
             loss_known_sqnorm = None  # TODO
         else:
             loss_known = None
-
         if contains_unknown(target):
             unknown = is_unknown(target)
             loss_unknown = torch.logsumexp(logits).mean(dim=1)
@@ -72,11 +71,9 @@ class EntropicOpenSetLoss(nn.Module):
             loss_known = F.cross_entropy(logits[known], target[known], reduction=None)
         else:
             loss_known = None
-
         if contains_unknown(target):
             unknown = is_unknown(target)
             loss_unknown = torch.logsumexp(logits).mean(dim=1)
         else:
             loss_unknown = None
-
         return torch.stack([loss_known, loss_unknown]).mean()

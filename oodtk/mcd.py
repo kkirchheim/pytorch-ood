@@ -42,14 +42,10 @@ class MCD(Method):
         """
         self.train()
         results = None
-
         with torch.no_grad():
             output = self.model(x)
-
             if results is None:
                 results = torch.zeros(size=output.shape)
-
             results += output
-
         results /= n
         self.eval()

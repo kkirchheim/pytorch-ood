@@ -1,8 +1,9 @@
 import logging
 import os
 from typing import Tuple
+
 import numpy as np
-from torch.utils.data import Dataset, ConcatDataset
+from torch.utils.data import ConcatDataset, Dataset
 from torchvision.datasets.utils import download_url
 
 from .stop_words import stop_words
@@ -18,19 +19,12 @@ class Reuters52(Dataset):
     https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/Reuters52.ipynb
     """
 
-    train_url = (
-        "https://www.cs.umb.edu/~smimarog/textmining/datasets/r52-train-stemmed.txt"
-    )
-    test_url = (
-        "https://www.cs.umb.edu/~smimarog/textmining/datasets/r52-test-stemmed.txt"
-    )
-
+    train_url = "https://www.cs.umb.edu/~smimarog/textmining/datasets/r52-train-stemmed.txt"
+    test_url = "https://www.cs.umb.edu/~smimarog/textmining/datasets/r52-test-stemmed.txt"
     test_md5 = "e29d9f65d622f926dee08a6a87b2277a"
     train_md5 = "f115a957fbbf050a81d38ca08500e5c3"
-
     train_filename = "r52-train-stemmed.txt"
     test_filename = "r52-test-stemmed.txt"
-
     class2index = {
         "acq": 0,
         "alum": 1,
@@ -86,9 +80,7 @@ class Reuters52(Dataset):
         "zinc": 51,
     }
 
-    def __init__(
-        self, root, transform=None, target_transform=None, train=True, download=True
-    ):
+    def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
         """
         TODO: add support for custom loader?
         """
@@ -97,21 +89,16 @@ class Reuters52(Dataset):
         self.transforms = transform
         self.target_transform = target_transform
         self.is_train = train
-
         self._targets = []
         self._analyzer = None
-
         if download:
             self._download()
-
         self._labels, self._data = self._load_data()
-
         # mapping class names to integers
         for i, label in enumerate(self._labels):
             for clazz, index in self.class2index.items():
                 if label.startswith(clazz):
                     self._targets.append(index)
-
         self._targets = np.array(self._targets)
 
     def _download(self):
@@ -127,18 +114,14 @@ class Reuters52(Dataset):
             filename = self.test_filename
             md5 = self.test_md5
             url = self.test_url
-
         download_url(url, self.root, filename, md5)
 
     def _load_data(self) -> Tuple:
-
         if self.is_train:
             filename = self.train_filename
         else:
             filename = self.test_filename
-
         filename = os.path.join(self.root, filename)
-
         x, targets = [], []
         with open(filename, "r") as f:
             for line in f:
@@ -146,7 +129,6 @@ class Reuters52(Dataset):
                 text = " ".join(word for word in words[2:] if word not in stop_words)
                 x.append(text)
                 targets.append(".".join(words[0:2]))
-
         return targets, x
 
     def _check_integrity(self):
@@ -161,13 +143,10 @@ class Reuters52(Dataset):
     def __getitem__(self, index):
         x = self._data[index]
         y = self._targets[index]
-
         if self.target_transform:
             y = self.target_transform(y)
-
         if self.transforms:
             x = self.transforms(x)
-
         return x, y
 
     def __len__(self):

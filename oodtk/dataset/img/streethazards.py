@@ -29,7 +29,6 @@ class StreetHazards(VisionDataset):
         "train": "https://people.eecs.berkeley.edu/~hendrycks/streethazards_train.tar",
     }
     filename = {"test": "streethazards_test.tar", "train": "streethazards_train.tar"}
-
     tgz_md5 = {"test": "8c547c1346b00c21b2483887110bfea7"}
 
     def __init__(
@@ -51,10 +50,8 @@ class StreetHazards(VisionDataset):
         super(StreetHazards, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
-
         if download:
             self.download()
-
         if not self._check_integrity():
             raise RuntimeError(
                 "Dataset not found or corrupted." + " You can use download=True to download it"
@@ -66,7 +63,6 @@ class StreetHazards(VisionDataset):
             self.files.extend(
                 [join(d, f) for f in os.listdir(join(self.basedir, d)) if not f.startswith(".")]
             )
-
         log.info(f"Found {len(self.files)} texture files.")
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
@@ -78,18 +74,14 @@ class StreetHazards(VisionDataset):
             tuple: (image, target) where target is index of the target class.
         """
         file, target = self.files[index], -1
-
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
         path = os.path.join(self.root, self.base_folder, file)
         img = Image.open(path)
-
         if self.transform is not None:
             img = self.transform(img)
-
         if self.target_transform is not None:
             target = self.target_transform(target)
-
         return img, target
 
     def __len__(self) -> int:
@@ -104,6 +96,7 @@ class StreetHazards(VisionDataset):
         if self._check_integrity():
             log.debug("Files already downloaded and verified")
             return
+
         download_and_extract_archive(self.url, self.root, filename=self.filename, md5=self.tgz_md5)
 
     def extra_repr(self) -> str:

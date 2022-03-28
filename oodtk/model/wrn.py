@@ -59,6 +59,7 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         if not self.equalInOut:
             return torch.add(self.convShortcut(x), out)
+
         else:
             return torch.add(x, out)
 
@@ -123,7 +124,6 @@ class WideResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.fc = nn.Linear(nChannels[3], num_classes)
         self.nChannels = nChannels[3]
-
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -193,7 +193,6 @@ class WideResNetPretrained(WideResNet):
         :param kwargs: arguments passed to WideResNet
         """
         super(WideResNetPretrained, self).__init__(**kwargs)
-
         url = WideResNetPretrained.urls[pretrain]
         state_dict = load_state_dict_from_url(url=url, map_location="cpu")
         self.load_state_dict(state_dict)
