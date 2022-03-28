@@ -1,8 +1,10 @@
 import unittest
 import os
 import sys
+import time
 import shutil
 from pathlib import Path
+import multiprocessing
 
 myDir = os.getcwd()
 sys.path.append(myDir)
@@ -36,12 +38,64 @@ def checkDownload():
         else:
             # print("Issue found with file :", file)
             return False
-    
+
+def downloadSelector(select):
+    if select==0:
+        ImageNetA(download=True, root=temp_root_folder).base_folder
+    elif select == 1:
+        ImageNetO(download=True, root=temp_root_folder).base_folder
+    elif select == 2:
+        ImageNetR(download=True, root=temp_root_folder).base_folder
+    elif select == 3:
+        ImageNetC(download=True, root=temp_root_folder, subset='digital').base_folder
+    elif select == 4:
+        ImageNetP(download=True, root=temp_root_folder, subset='blur').base_folder
+    elif select == 5:
+        CIFAR10P(download=True, root=temp_root_folder).base_folder
+    elif select == 6:
+        CIFAR10C(download=True, root=temp_root_folder).base_folder
+    elif select == 7:
+        CIFAR100C(download=True, root=temp_root_folder).base_folder
+    elif select == 8:
+        MNISTC(download=True, root=temp_root_folder, subset='all').base_folder
+
 class MyTestCase(unittest.TestCase):
     def test_download_ImageNetA(self):
         #Start
         refreshTempStorage()
-        ImageNetA(download=True, root=temp_root_folder).base_folder
+        p = multiprocessing.Process(target=downloadSelector, args=(0,))
+        p.start()
+        time.sleep(3)
+        p.terminate()
+
+        if checkDownload:
+            self.assertEqual(True, True)
+        else:
+            self.assertEqual(True, False)
+    
+    def test_download_ImageNetO(self):
+        #Start
+        refreshTempStorage
+        p = multiprocessing.Process(target=downloadSelector, args=(1,))
+        p.start()
+        time.sleep(3)
+        p.terminate()
+        
+        # Verify download 
+        if checkDownload:
+            self.assertEqual(True, True)
+        else:
+            self.assertEqual(True, False)
+
+    def test_download_ImageNetR(self):
+        #Start
+        refreshTempStorage
+        p = multiprocessing.Process(target=downloadSelector, args=(2,))
+        p.start()
+        time.sleep(3)
+        p.terminate()
+            
+        # Verify download 
         if checkDownload:
             self.assertEqual(True, True)
         else:
@@ -50,7 +104,12 @@ class MyTestCase(unittest.TestCase):
     def test_download_ImageNetC(self):
         #Start
         refreshTempStorage
-        ImageNetC(download=True, root=temp_root_folder).base_folder
+        p = multiprocessing.Process(target=downloadSelector, args=(3,))
+        p.start()
+        time.sleep(3)
+        p.terminate()
+        
+        # Verify download 
         if checkDownload:
             self.assertEqual(True, True)
         else:
@@ -59,34 +118,26 @@ class MyTestCase(unittest.TestCase):
     def test_download_ImageNetP(self):
         #Start
         refreshTempStorage
-        ImageNetP(download=True, root=temp_root_folder).base_folder
+        p = multiprocessing.Process(target=downloadSelector, args=(4,))
+        p.start()
+        time.sleep(3)
+        p.terminate()
+        
+        # Verify download 
         if checkDownload:
             self.assertEqual(True, True)
         else:
             self.assertEqual(True, False)
-
-    def test_download_ImageNetO(self):
-        #Start
-        refreshTempStorage
-        ImageNetO(download=True, root=temp_root_folder).base_folder
-        if checkDownload:
-            self.assertEqual(True, True)
-        else:
-            self.assertEqual(True, False)
-
-    def test_download_ImageNetR(self):
-            #Start
-            refreshTempStorage
-            ImageNetR(download=True, root=temp_root_folder).base_folder
-            if checkDownload:
-                self.assertEqual(True, True)
-            else:
-                self.assertEqual(True, False)
 
     def test_download_CIFAR10P(self):
         #Start
         refreshTempStorage
-        CIFAR10P(download=True, root=temp_root_folder).base_folder
+        p = multiprocessing.Process(target=downloadSelector, args=(5,))
+        p.start()
+        time.sleep(3)
+        p.terminate()
+            
+        # Verify download 
         if checkDownload:
             self.assertEqual(True, True)
         else:
@@ -94,8 +145,12 @@ class MyTestCase(unittest.TestCase):
 
     def test_download_CIFAR10C(self):
         #Start
-        refreshTempStorage
-        CIFAR10C(download=True, root=temp_root_folder).base_folder
+        p = multiprocessing.Process(target=downloadSelector, args=(6,))
+        p.start()
+        time.sleep(3)
+        p.terminate()
+            
+        # Verify download 
         if checkDownload:
             self.assertEqual(True, True)
         else:
@@ -103,8 +158,12 @@ class MyTestCase(unittest.TestCase):
 
     def test_download_CIFAR100C(self):
         #Start
-        refreshTempStorage
-        CIFAR100C(download=True, root=temp_root_folder).base_folder
+        p = multiprocessing.Process(target=downloadSelector, args=(7,))
+        p.start()
+        time.sleep(3)
+        p.terminate()
+            
+        # Verify download 
         if checkDownload:
             self.assertEqual(True, True)
         else:
@@ -112,8 +171,12 @@ class MyTestCase(unittest.TestCase):
 
     def test_download_MNISTC(self):
         #Start
-        refreshTempStorage
-        MNISTC(download=True, root=temp_root_folder).base_folder
+        p = multiprocessing.Process(target=downloadSelector, args=(8,))
+        p.start()
+        time.sleep(3)
+        p.terminate()
+            
+        # Verify download 
         if checkDownload:
             self.assertEqual(True, True)
         else:
