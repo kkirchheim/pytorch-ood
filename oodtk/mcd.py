@@ -1,6 +1,6 @@
 """
 
-..  autoclass:: oodtk.mcd.MCD
+..  autoclass:: oodtk.MCD
     :members:
 
 """
@@ -19,6 +19,9 @@ class MCD(Method):
     .. math:: \\hat{y} = \\frac{1}{N} \\sum_i^{N} f(x)
 
     :see Paper: http://proceedings.mlr.press/v48/gal16.pdf
+
+    .. warning:: This implementations puts the model in evaluation model. This will also affect other modules, like
+        BatchNorm.
     """
 
     def __init__(self, model: torch.nn.Module):
@@ -39,14 +42,10 @@ class MCD(Method):
         """
         self.train()
         results = None
-
         with torch.no_grad():
             output = self.model(x)
-
             if results is None:
                 results = torch.zeros(size=output.shape)
-
             results += output
-
         results /= n
         self.eval()

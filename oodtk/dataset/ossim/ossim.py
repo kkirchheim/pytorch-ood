@@ -93,45 +93,35 @@ class DynamicOSS(OpenSetSimulation):
         uuc_test=2,
         seed=None,
     ):
-
         self._dataset = dataset
         self._targets = self.get_targets(self._dataset)
         self._unique_targets = np.unique(self._targets)
-
         assert type(train_size) is float
         assert type(val_size) is float
         assert type(test_size) is float
-
         if seed is None:
             self.seed = np.random.randint(0, 1e10)
         else:
             self.seed = seed
-
         self.r_train = train_size
         self.r_val = val_size
         self.r_test = test_size
-
         self.out_train = kuc  # known unknowns
         self.out_val = uuc_val
         self.out_test = uuc_test
-
         self.indices = {
             "train": {"kkc": [], "kuc": [], "uuc": []},
             "val": {"kkc": [], "kuc": [], "uuc": []},
             "test": {"kkc": [], "kuc": [], "uuc": []},
         }
-
         self.classes = {
             "train": {"kkc": [], "kuc": [], "uuc": []},
             "val": {"kkc": [], "kuc": [], "uuc": []},
             "test": {"kkc": [], "kuc": [], "uuc": []},
         }
-
         self.class2idx = {}
-
         # sanity checks
         # assert sum([self.n_train, self.n_val, self.n_test]) == len(self._dataset)
-
         self._split(self.seed)
 
     @property
@@ -160,14 +150,11 @@ class DynamicOSS(OpenSetSimulation):
 
     def _get_subset(self, stage, in_dist, out_dist):
         indices = []
-
         if in_dist:
             indices.extend(self.indices[stage]["kkc"])
-
         if out_dist:
             indices.extend(self.indices[stage]["kuc"])
             indices.extend(self.indices[stage]["uuc"])
-
         return Subset(self._dataset, indices)
 
     def train_dataset(self, in_dist=True, out_dist=True) -> Subset:
@@ -189,7 +176,6 @@ class DynamicOSS(OpenSetSimulation):
         log.debug(
             f"Creating ossim for dataset with {len(self._dataset)} samples and {len(self.unique_targets)} classes"
         )
-
         # split classes
         perm_class = rng.permutation(self.unique_targets)
         train_out_c = perm_class[: self.out_train]
@@ -198,59 +184,46 @@ class DynamicOSS(OpenSetSimulation):
             self.out_train + self.out_val : self.out_train + self.out_val + self.out_test
         ]
         train_in_c = perm_class[self.out_train + self.out_val + self.out_test :]
-
         log.debug(f"KKC ({len(train_in_c)}): {train_in_c}")
         log.debug(f"KUC ({len(train_out_c)}): {train_out_c}")
         log.debug(f"UUC [test] ({len(test_out_c)}): {test_out_c}")
         log.debug(f"UUC [val] ({len(val_out_c)}): {val_out_c}")
-
         # get indexes of samples for each class
         for target in self.unique_targets:
             idx = np.arange(len(self._dataset))[self._targets == target]
             self.class2idx[target] = idx
             log.debug(f"{target} -> {len(idx)}")
-
         # split samples into sets
-
         # known known classes -> train, val and test
         for clazz in train_in_c:
             perm_idx = rng.permutation(self.class2idx[clazz])
             # log.debug(f"kkc {clazz} -> {perm_idx}")
-
             n_train = int(len(perm_idx) * self.r_train)
             n_val = int(len(perm_idx) * self.r_val)
-
             self.indices["train"]["kkc"].extend(perm_idx[:n_train])
             self.indices["val"]["kkc"].extend(perm_idx[n_train : n_train + n_val])
             self.indices["test"]["kkc"].extend(perm_idx[n_train + n_val :])
-
             for stage in ["train", "val", "test"]:
                 self.classes[stage]["kkc"].append(clazz)
                 self.indices[stage]["kkc"].sort()
-
         # known unknown classes  -> train, val and test
         for clazz in train_out_c:
             perm_idx = rng.permutation(self.class2idx[clazz])
             log.debug(f"kuc {clazz} -> {perm_idx}")
-
             n_train = int(len(perm_idx) * self.r_train)
             n_val = int(len(perm_idx) * self.r_val)
-
             self.indices["train"]["kuc"].extend(perm_idx[:n_train])
             self.indices["val"]["kuc"].extend(perm_idx[n_train : n_train + n_val])
             self.indices["test"]["kuc"].extend(perm_idx[n_train + n_val :])
-
             for stage in ["train", "val", "test"]:
                 self.classes[stage]["kuc"].append(clazz)
                 self.indices[stage]["kuc"].sort()
-
         # unknown unknown classes -> val and test respectively
         for clazz in val_out_c:
             idx = self.class2idx[clazz]
             self.indices["val"]["uuc"].extend(idx)
             self.indices["val"]["kuc"].sort()
             self.classes["val"]["uuc"].append(clazz)
-
         for clazz in test_out_c:
             idx = self.class2idx[clazz]
             self.indices["test"]["uuc"].extend(idx)
@@ -262,7 +235,6 @@ class DynamicOSS(OpenSetSimulation):
         """
         For some datasets, this might be an expensive operation
         """
-
         if hasattr(dataset, "targets"):
             return dataset.targets
 
@@ -285,13 +257,10 @@ class TargetMapping:
         self.train_in_classes = train_in_classes
         self.train_out_classes = train_out_classes
         self.test_out_classes = test_out_classes
-
         self._map = dict()
         self._map.update({clazz: index for index, clazz in enumerate(train_in_classes)})
-
         # mapping test_out classes to < -1000
         self._map.update({clazz: (-clazz - 1000) for index, clazz in enumerate(test_out_classes)})
-
         # mapping train_out classes to < 0
         self._map.update({clazz: (-clazz) for index, clazz in enumerate(train_out_classes)})
 

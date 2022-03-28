@@ -1,6 +1,6 @@
 """
 
-..  autoclass:: oodtk.energy.NegativeEnergy
+..  autoclass:: oodtk.NegativeEnergy
     :members:
 
 """
@@ -9,14 +9,14 @@ import torch
 from .api import Method
 
 
-class NegativeEnergy(Method):
+class NegativeEnergy(torch.nn.Module, Method):
     """
     Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.
 
     This methods calculates the negative energy for a vector of logits.
     This value can be used as outlier score.
 
-    :param t: temperature value T
+    :param t: temperature value T. Default is 1.
 
     .. math::
         E(z) = -T \\log{\\sum_i  e^{-z_i/T}}
@@ -35,10 +35,15 @@ class NegativeEnergy(Method):
         """
         pass
 
-    def __init__(self, t: int = 1):
+    def __init__(self, model, t: int = 1):
         """"""
         super(NegativeEnergy, self).__init__()
         self.t = t
+        self.model = model
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        z = self.model(x)
+        return self.t * torch.logsumexp(-z / self.t, dim=1)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -48,4 +53,4 @@ class NegativeEnergy(Method):
 
         :return: negative energy
         """
-        return -self.t * torch.logsumexp(-x / self.t, dim=1)
+        return self.forward(x)

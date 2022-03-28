@@ -28,6 +28,7 @@ before_script:
   - pip install -r requirements.txt
   - pip install cython
   - pip install libmr
+  - pip install sh torchmetrics # additional dependencies for tests
   - pip freeze # print package versions for debugging
 
 test:

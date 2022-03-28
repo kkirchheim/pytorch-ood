@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 
 import torch
 from torch import nn
@@ -26,8 +27,6 @@ def calc_openness(n_train, n_test, n_target):
 #######################################
 # Helpers for labels
 #######################################
-
-
 def is_known(labels):
     """
     :returns: True, if label >= 0
@@ -37,12 +36,8 @@ def is_known(labels):
 
 # def is_known_unknown(labels):
 #     return (labels < 0) & (labels > -1000)
-
-
 # def is_unknown_unknown(labels) -> bool:
 #     return labels <= -1000
-
-
 def is_unknown(labels) -> bool:
     """
     :returns: True, if label < 0
@@ -74,8 +69,6 @@ def contains_unknown(labels) -> bool:
 #######################################
 # Distance functions etc.
 #######################################
-
-
 def estimate_class_centers(
     embedding: torch.Tensor, target: torch.Tensor, num_centers: int = None
 ) -> torch.Tensor:
@@ -85,15 +78,11 @@ def estimate_class_centers(
     TODO: the loop can prob. be replaced
     """
     batch_classes = torch.unique(target).long().to(embedding.device)
-
     if num_centers is None:
         num_centers = torch.max(target) + 1
-
     centers = torch.zeros((num_centers, embedding.shape[1]), device=embedding.device)
-
     for clazz in batch_classes:
         centers[clazz] = embedding[target == clazz].mean(dim=0)
-
     return centers
 
 
@@ -101,14 +90,11 @@ def torch_get_distances(centers, embeddings):
     """
     TODO: this can be done way more efficiently
     """
-
     n_instances = embeddings.shape[0]
     n_centers = centers.shape[0]
     distances = torch.empty((n_instances, n_centers)).to(embeddings.device)
-
     for clazz in torch.arange(n_centers):
         distances[:, clazz] = torch.norm(embeddings - centers[clazz], dim=1, p=2)
-
     return distances
 
 
@@ -119,7 +105,6 @@ def optimize_temperature(logits: torch.Tensor, y, init=1, steps=1000, device="cp
     :see Paper: https://arxiv.org/pdf/1706.04599.pdf
     """
     log.info("Optimizing Temperature")
-
     if contains_unknown(y):
         raise ValueError("Do not optimize temperature on unknown labels")
 
@@ -129,7 +114,6 @@ def optimize_temperature(logits: torch.Tensor, y, init=1, steps=1000, device="cp
     logits = logits.clone().to(device)
     y = y.clone().to(device)
     optimizer = torch.optim.SGD([temperature], lr=0.1)
-
     with torch.enable_grad():
         for i in range(steps):
             optimizer.zero_grad()
@@ -141,7 +125,6 @@ def optimize_temperature(logits: torch.Tensor, y, init=1, steps=1000, device="cp
                 f"Step {i} Temperature {temperature.item()} NLL {loss.item()} Grad: {temperature.grad.item()}"
             )
             optimizer.step()
-
     best = temperature.detach().item()
     log.info("Finished Optimizing Temperature")
     return best
@@ -160,16 +143,14 @@ def pairwise_distances(x, y=None) -> torch.Tensor:
 
     i.e. dist[i,j] = ||x[i,:]-y[j,:]||^2
     """
-    x_norm = (x ** 2).sum(1).view(-1, 1)
+    x_norm = (x**2).sum(1).view(-1, 1)
     if y is not None:
         y_t = torch.transpose(y, 0, 1)
-        y_norm = (y ** 2).sum(1).view(1, -1)
+        y_norm = (y**2).sum(1).view(1, -1)
     else:
         y_t = torch.transpose(x, 0, 1)
         y_norm = x_norm.view(1, -1)
-
     dist = x_norm + y_norm - 2.0 * torch.mm(x, y_t)
-
     return torch.clamp(dist, 0.0, torch.inf)
 
 
@@ -184,11 +165,9 @@ class RunningCenters(nn.Module):
         """
         self.n = n_centers
         self.dim = dim
-
         # create buffer for centers. those buffers will be updated during training, and are fixed during evaluation
         centers = torch.empty(size=(self.n_classes, self.dim), requires_grad=False).double()
         counter = torch.empty(size=(1,), requires_grad=False).double()
-
         self.register_buffer("centers", centers)
         self.register_buffer("counter", counter)
         self.reset_running_stats()
@@ -206,11 +185,9 @@ class RunningCenters(nn.Module):
         :param y: targets
         :return:
         """
-
         if self.training:
             batch_classes = torch.unique(y, sorted=False)
             mu = self._calculate_centers(x, y)
-
             # update running mean centers
             cma = mu[batch_classes] + self.centers[batch_classes] * self.counter
             self.centers[batch_classes] = cma / (self.counter + 1)
@@ -224,10 +201,58 @@ class RunningCenters(nn.Module):
 
 
 class ToUnknown(object):
-    """"""
+    """
+    Callable that returns a negative number.
+    """
 
     def __init__(self):
         pass
 
     def __call__(self, y):
         return -1
+
+
+class TensorBuffer:
+    """
+    Used to buffer some tensors
+    """
+
+    def __init__(self, device="cpu"):
+        self._buffer = defaultdict(list)
+        self.device = device
+
+    def append(self, key, value: torch.Tensor):
+        if not isinstance(value, torch.Tensor):
+            raise ValueError(f"Can not handle value type {type(value)}")
+
+        value = value.detach().to(self.device)
+        self._buffer[key].append(value)
+        return self
+
+    def __contains__(self, elem):
+        return elem in self._buffer
+
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def sample(self, key) -> torch.Tensor:
+        index = torch.randint(0, len(self._buffer[key]), size=(1,))
+        return self._buffer[key][index]
+
+    def get(self, key) -> torch.Tensor:
+        if key not in self._buffer:
+            raise KeyError(key)
+
+        v = torch.cat(self._buffer[key])
+        return v
+
+    def clear(self):
+        log.debug("Clearing buffer")
+        self._buffer.clear()
+        return self
+
+    def save(self, path):
+        """Save buffer to disk"""
+        d = {k: self.get(k).cpu() for k in self._buffer.keys()}
+        torch.save(d, path)
+        return self

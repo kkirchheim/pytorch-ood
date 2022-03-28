@@ -4,6 +4,8 @@ Wide Resnet
 See https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
 
 Pretrained weights:
+
+Pretrained on downscaled imagenet:
 * https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt
 
 """
@@ -12,6 +14,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.hub import load_state_dict_from_url
 
 
 class BasicBlock(nn.Module):
@@ -56,6 +59,7 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         if not self.equalInOut:
             return torch.add(self.convShortcut(x), out)
+
         else:
             return torch.add(x, out)
 
@@ -94,7 +98,14 @@ class WideResNet(nn.Module):
     :see Implementation: https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
     """
 
-    def __init__(self, depth, num_classes, widen_factor=1, drop_rate=0.0):
+    def __init__(self, num_classes, depth=40, widen_factor=2, drop_rate=0.3):
+        """
+
+        :param depth: depth of the network
+        :param num_classes: number of classes
+        :param widen_factor: factor used for channel increase per block
+        :param drop_rate: dropout probability
+        """
         super(WideResNet, self).__init__()
         nChannels = [16, 16 * widen_factor, 32 * widen_factor, 64 * widen_factor]
         assert (depth - 4) % 6 == 0
@@ -113,7 +124,6 @@ class WideResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.fc = nn.Linear(nChannels[3], num_classes)
         self.nChannels = nChannels[3]
-
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -159,3 +169,30 @@ class WideResNet(nn.Module):
         out = F.avg_pool2d(out, 8)
         out = out.view(-1, self.nChannels)
         return self.fc(out), out_list
+
+
+class WideResNetPretrained(WideResNet):
+    """
+    WideResNet with different pre-trained weights.
+
+    - **imagenet32**: Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet dataset.
+    - **oe-cifar100-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100 dataset
+    - **oe-cifar10-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10 dataset
+    """
+
+    urls = {
+        "imagenet32": "https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt",
+        "oe-cifar100-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar100_wrn_oe_tune_epoch_9.pt",
+        "oe-cifar10-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar10_wrn_oe_tune_epoch_9.pt",
+    }
+
+    def __init__(self, pretrain, **kwargs):
+        """
+
+        :param pretrain: weights to load
+        :param kwargs: arguments passed to WideResNet
+        """
+        super(WideResNetPretrained, self).__init__(**kwargs)
+        url = WideResNetPretrained.urls[pretrain]
+        state_dict = load_state_dict_from_url(url=url, map_location="cpu")
+        self.load_state_dict(state_dict)

@@ -5,8 +5,8 @@ Cub 200 Dataset Adapter
 from https://github.com/TDeVries/cub2011_dataset/blob/master/cub2011.py
 
 """
-import os
 import logging
+import os
 
 import numpy as np
 import pandas as pd
@@ -39,21 +39,17 @@ class Cub2011(VisionDataset):
         # self.classes = None
         self._targets = None
         self.target_transform = target_transform
-
         if download:
             self._download()
-
         if not self._check_integrity():
             raise RuntimeError(
-                "Dataset not found or corrupted."
-                + " You can use download=True to download it"
+                "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
-        # if target_transform is not None:
-        #     mapped_targets = np.array([target_transform(l) for l in self._targets])
-        #     label, count = np.unique(mapped_targets[mapped_targets >= 0], return_counts=True)
-        #     print(f"{label} -> {count}")
-
+    # if target_transform is not None:
+    #     mapped_targets = np.array([target_transform(l) for l in self._targets])
+    #     label, count = np.unique(mapped_targets[mapped_targets >= 0], return_counts=True)
+    #     print(f"{label} -> {count}")
     @property
     def targets(self):
         return list(self._targets)
@@ -78,15 +74,12 @@ class Cub2011(VisionDataset):
             sep=" ",
             names=["img_id", "is_training_img"],
         )
-
         data = images.merge(image_class_labels, on="img_id")
         self.data = data.merge(train_test_split, on="img_id")
-
         if self.train:
             self.data = self.data[self.data.is_training_img == 1]
         else:
             self.data = self.data[self.data.is_training_img == 0]
-
         # classes are labeled with ascending numbers, starting with 1
         # we have to substract 1 to be in out interval [0, classes-1]
         self._targets = np.array(self.data["target"].apply(lambda x: x - 1))
@@ -103,6 +96,7 @@ class Cub2011(VisionDataset):
             if not os.path.isfile(filepath):
                 print(filepath)
                 return False
+
         return True
 
     def _download(self):
@@ -113,7 +107,6 @@ class Cub2011(VisionDataset):
             return
 
         download_url(self.url, self.root, self.filename, self.tgz_md5)
-
         with tarfile.open(os.path.join(self.root, self.filename), "r:gz") as tar:
             tar.extractall(path=self.root)
 
@@ -125,14 +118,10 @@ class Cub2011(VisionDataset):
         path = os.path.join(self.root, self.base_folder, sample.filepath)
         target = self._targets[idx]
         img = self.loader(path)
-
         if self.transforms is not None:
             img = self.transforms(img)
-
         if self.target_transform is not None:
             target = self.target_transform(target)
-
         assert img is not None
         assert target is not None
-
         return img, target

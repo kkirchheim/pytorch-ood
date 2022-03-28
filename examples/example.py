@@ -9,9 +9,10 @@ from torchvision.datasets import CIFAR10
 from oodtk import NegativeEnergy, Softmax
 from oodtk.dataset.img import Textures
 from oodtk.model import WideResNet
-from oodtk.utils import is_known
+from oodtk.utils import is_unknown
 
 torch.manual_seed(123)
+max_iterations = 1
 
 trans = tvt.Compose([tvt.Resize(32), tvt.ToTensor()])
 
@@ -24,7 +25,7 @@ train_loader = DataLoader(dataset_train, batch_size=128)
 test_loader = DataLoader(dataset_test)
 
 # setup model
-model = WideResNet(depth=40, num_classes=10, widen_factor=2, drop_rate=0.3)
+model = WideResNet(num_classes=10)
 opti = Adam(model.parameters())
 criterion = CrossEntropyLoss()
 
@@ -37,10 +38,13 @@ for n, batch in enumerate(train_loader):
     loss.backward()
     opti.step()
 
+    if n >= max_iterations:
+        break
+
 
 # create some methods
-energy = NegativeEnergy()
-softmax = Softmax()
+energy = NegativeEnergy(model)
+softmax = Softmax(model)
 
 # evaluate
 auroc_energy = AUROC(num_classes=2)
@@ -49,11 +53,11 @@ model.eval()
 
 for n, batch in enumerate(test_loader):
     x, y = batch
-    logits = model(x)
-    y_hat = logits.argmax(dim=1)
+    auroc_energy.update(energy(x), is_unknown(y))
+    auroc_softmax.update(softmax(x), is_unknown(y))
 
-    auroc_energy.update(energy(logits), is_known(y))
-    auroc_softmax.update(softmax(logits), is_known(y))
+    if n >= max_iterations:
+        break
 
 print(auroc_softmax.compute())
 print(auroc_energy.compute())

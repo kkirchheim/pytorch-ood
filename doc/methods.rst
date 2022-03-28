@@ -1,7 +1,7 @@
-Methods
+Detectors
 *************************
 
-Softmax Thresholding
+Softmax
 -------------------------------
 
 .. automodule:: oodtk.softmax
@@ -16,7 +16,6 @@ ODIN
 -------------------------------
 
 .. automodule:: oodtk.odin
-   :members: preprocessing
 
 Negative Energy
 -------------------------------

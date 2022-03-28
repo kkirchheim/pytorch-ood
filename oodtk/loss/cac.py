@@ -33,12 +33,10 @@ class CACLoss(nn.Module):
         :param magnitude: magnitude of class anchors
         :param lambda_: weight :math:`\\lambda` for loss terms
         """
-
         super(CACLoss, self).__init__()
         self.n_classes = n_classes
         self.magnitude = magnitude
         self.lambda_ = lambda_
-
         # anchor points are fixed, so they do not require gradients
         self.anchors = nn.Parameter(torch.zeros(size=(n_classes, n_classes)))
         self._init_centers()
@@ -62,20 +60,16 @@ class CACLoss(nn.Module):
         :param target: labels for samples
         """
         assert embedding.shape[1] == self.n_classes
-
         distances = self.calculate_distances(embedding)
         d_true = torch.gather(input=distances, dim=1, index=target.view(-1, 1)).view(-1)
         anchor_loss = d_true.mean()
-
         # calc distances to all non_target tensors
         tmp = [[i for i in range(self.n_classes) if target[x] != i] for x in range(len(distances))]
         non_target = torch.Tensor(tmp).long().to(embedding.device)
         d_other = torch.gather(distances, 1, non_target)
-
         # for numerical stability, we clamp the distance values
         tuplet_loss = (-d_other + d_true.unsqueeze(1)).clamp(max=50).exp()  # torch.exp()
         tuplet_loss = torch.log(1 + torch.sum(tuplet_loss, dim=1)).mean()
-
         return self.lambda_ * anchor_loss, tuplet_loss
 
     def calculate_distances(self, embeddings: torch.Tensor) -> torch.Tensor:
