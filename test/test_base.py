@@ -9,8 +9,8 @@ try:
     from ..oodtk.dataset.img.cifar import CIFAR10P, CIFAR10C, CIFAR100C
     from ..oodtk.dataset.img.mnistc import MNISTC
 except:
-    sys.path.insert(0, os.path.join(os.getcwd(),"..","oodtk", "dataset", "img"))
-    print(os.path.join(os.getcwd(),"..","oodtk", "dataset", "img"))
+    sys.path.insert(0, os.path.join(os.getcwd(), "dataset", "img"))
+    print(os.path.join(os.getcwd(), "dataset", "img"))
     from imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetP, ImageNetR
     from cifar import CIFAR10P, CIFAR10C, CIFAR100C
     from mnistc import MNISTC
