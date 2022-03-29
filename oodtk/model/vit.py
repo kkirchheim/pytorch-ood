@@ -5,11 +5,12 @@ Much of this code is taken from:
 https://github.com/asyml/vision-transformer-pytorch/blob/main/src/model.py
 """
 
+from os.path import join
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.hub import load_state_dict_from_url
-from torchvision.datasets.utils import download_file_from_google_drive
 
 
 class PositionEmbs(nn.Module):
@@ -216,29 +217,30 @@ class VisionTransformer(nn.Module):
         logits = self.classifier(feat[:, 0])
         return logits
 
-
-class VisionTransformerPretrained(VisionTransformer):
-    """
-    Vision Transformer with different pre-trained weights.
-
-    - **imagenet32**: Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet dataset.
-    - **oe-cifar100-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100 dataset
-    - **oe-cifar10-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10 dataset
-    """
-
-    urls = {
-        "imagenet32": "https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt",
-        "oe-cifar100-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar100_wrn_oe_tune_epoch_9.pt",
-        "oe-cifar10-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar10_wrn_oe_tune_epoch_9.pt",
-    }
-
-    def __init__(self, pretrain, **kwargs):
+    @staticmethod
+    def from_pretrained(name, **kwargs):
         """
+        Vision Transformer with different pre-trained weights.
 
-        :param pretrain: weights to load
-        :param kwargs: arguments passed to WideResNet
+        :param name:
+        :return:
         """
-        super(VisionTransformerPretrained, self).__init__(**kwargs)
-        url = VisionTransformerPretrained.urls[pretrain]
-        state_dict = load_state_dict_from_url(url=url, map_location="cpu")
-        self.load_state_dict(state_dict)
+        urls = {
+            "b16-cifar10-tune": "https://cse.ovgu.de/files/b16-cifar10-tune.pth",
+            "b16-cifar100-tune": "https://cse.ovgu.de/files/b16-cifar100-tune.pth",
+            # "b16-im21k": "1gEcyb4HUDzIvu7lQWTOyDC1X00YzCxFx", # "https://drive.google.com/file/d/1gEcyb4HUDzIvu7lQWTOyDC1X00YzCxFx/view?usp=sharing",
+            # "b32-im21k": "https://drive.google.com/file/d/1GingK9L_VcJynTCYMc3iMvCh4WG7ScBS/view?usp=sharing",
+            # "l16-im21k": "https://drive.google.com/file/d/1YVLunKEGApaSKXZKewZz974gHt09Uwyf/view?usp=sharing",
+            # "l32-im21k": "https://drive.google.com/file/d/1TKOa_dQaMOCL8r_rtcdB7dLGQtzBQ0ud/view?usp=sharing"
+        }
+
+        url = urls[name]
+        model = VisionTransformer(**kwargs)
+
+        state_dict = load_state_dict_from_url(url)
+
+        if "state_dict" in state_dict:
+            state_dict = state_dict["state_dict"]
+
+        model.load_state_dict(state_dict)
+        return model

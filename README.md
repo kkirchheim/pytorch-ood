@@ -33,3 +33,4 @@ You will have to install `cython` and `libmr` afterwards by manually.
 
 ## License
 The code is licensed Apache 2.0. We have taken care to make sure any third party code included or adapted has compatible (permissive) licenses such as MIT, BSD, etc.
+The legal implications of using pre-trained models in commercial services are not fully understood.

@@ -8,6 +8,12 @@ Utilities
       contains_known,
       contains_unknown,
       contains_known_and_unknown,
-      calc_openness
+      calc_openness,
+      TensorBuffer
    :undoc-members:
-   :show-inheritance:
+
+
+Transformations
+================
+
+.. automodule:: oodtk.transforms

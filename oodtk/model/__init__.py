@@ -10,7 +10,7 @@ Wide ResNet
     :members:
 
 Vision Transformer
--------------
+---------------------
 ..  autoclass:: oodtk.model.VisionTransformer
     :members:
 

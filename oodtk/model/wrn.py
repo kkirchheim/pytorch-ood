@@ -178,14 +178,22 @@ class WideResNet(nn.Module):
         """
         WideResNet with different pre-trained weights.
 
-        - **imagenet32**: Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet dataset.
-        - **oe-cifar100-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100 dataset
-        - **oe-cifar10-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10 dataset
+        - **imagenet32**: Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet.
+        - **oe-cifar100-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100
+        - **oe-cifar10-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10
+        - **er-cifar10-tune**: Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-10
+        - **er-cifar100-tune**: Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-100
+        - **cifar100-pt**: Pre-Trained model for CIFAR-100
+        - **cifar10-pt**: Pre-Trained model for CIFAR-10
         """
         urls = {
             "imagenet32": "https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt",
             "oe-cifar100-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar100_wrn_oe_tune_epoch_9.pt",
             "oe-cifar10-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar10_wrn_oe_tune_epoch_9.pt",
+            "er-cifar10-tune": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/energy_ft/cifar10_wrn_s1_energy_ft_epoch_9.pt",
+            "er-cifar100-tune": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/energy_ft/cifar100_wrn_s1_energy_ft_epoch_9.pt",
+            "cifar100-pt": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/pretrained/cifar100_wrn_pretrained_epoch_99.pt",
+            "cifar10-pt": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/pretrained/cifar10_wrn_pretrained_epoch_99.pt",
         }
 
         model = WideResNet(**kwargs)

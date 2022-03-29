@@ -1,3 +1,6 @@
+"""
+
+"""
 import logging
 from collections import defaultdict
 
@@ -27,41 +30,37 @@ def calc_openness(n_train, n_test, n_target):
 #######################################
 # Helpers for labels
 #######################################
-def is_known(labels):
+def is_known(labels) -> bool:
     """
-    :returns: True, if label >= 0
+    :returns: True, if label :math:`>= 0`
     """
     return labels >= 0
 
 
-# def is_known_unknown(labels):
-#     return (labels < 0) & (labels > -1000)
-# def is_unknown_unknown(labels) -> bool:
-#     return labels <= -1000
 def is_unknown(labels) -> bool:
     """
-    :returns: True, if label < 0
+    :returns: True, if label :math:`< 0`
     """
     return labels < 0
 
 
 def contains_known_and_unknown(labels) -> bool:
     """
-    :return: true if the labels contain known and unknown classes
+    :return: true if the labels contain *IN* and *OOD* classes
     """
     return contains_known(labels) and contains_unknown(labels)
 
 
 def contains_known(labels) -> bool:
     """
-    :return: true if the labels contains any known labels
+    :return: true if the labels contains any *IN* labels
     """
     return is_known(labels).any()
 
 
 def contains_unknown(labels) -> bool:
     """
-    :return: true if the labels contains any unknown labels
+    :return: true if the labels contains any *OOD* labels
     """
     return is_unknown(labels).any()
 
@@ -200,28 +199,27 @@ class RunningCenters(nn.Module):
         return mu
 
 
-class ToUnknown(object):
+class TensorBuffer(object):
     """
-    Callable that returns a negative number.
-    """
-
-    def __init__(self):
-        pass
-
-    def __call__(self, y):
-        return -1
-
-
-class TensorBuffer:
-    """
-    Used to buffer some tensors
+    Used to buffer tensors
     """
 
     def __init__(self, device="cpu"):
+        """
+
+        :param device: device used to store buffers. Default is *cpu*.
+        """
         self._buffer = defaultdict(list)
         self.device = device
 
     def append(self, key, value: torch.Tensor):
+        """
+        Appends a tensor to the buffer.
+
+        :param key: tensor identifier
+        :param value: tensor
+        :return: self
+        """
         if not isinstance(value, torch.Tensor):
             raise ValueError(f"Can not handle value type {type(value)}")
 
@@ -236,10 +234,22 @@ class TensorBuffer:
         return self.get(item)
 
     def sample(self, key) -> torch.Tensor:
+        """
+        Samples a random tensor from the buffer
+
+        :param key: tensor identifier
+        :return: random tensor
+        """
         index = torch.randint(0, len(self._buffer[key]), size=(1,))
         return self._buffer[key][index]
 
     def get(self, key) -> torch.Tensor:
+        """
+        Retrieves tensor from the buffer
+
+        :param key: tensor identifier
+        :return: concatenated tensor
+        """
         if key not in self._buffer:
             raise KeyError(key)
 
@@ -247,12 +257,21 @@ class TensorBuffer:
         return v
 
     def clear(self):
+        """
+        Clears the buffer
+
+        :return: self
+        """
         log.debug("Clearing buffer")
         self._buffer.clear()
         return self
 
     def save(self, path):
-        """Save buffer to disk"""
+        """
+        Save buffer to disk
+
+        :return: self
+        """
         d = {k: self.get(k).cpu() for k in self._buffer.keys()}
         torch.save(d, path)
         return self

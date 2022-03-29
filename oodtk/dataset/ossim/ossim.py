@@ -240,39 +240,3 @@ class DynamicOSS(OpenSetSimulation):
 
         # this might be slow
         return [target for _, target in dataset]
-
-
-class TargetMapping:
-    """
-    Maps known classes to index in [0,n], unknwon classes to values in [-inf, -1].
-
-    Example:
-    If we selected classes 2,3,4,9 these class values have to be remapped to 0,1,2,3 to be able to train
-    using cross entropy with 1-of-K-vectors.
-
-    These mappings have to be known at evaluation time.
-    """
-
-    def __init__(self, train_in_classes, train_out_classes, test_out_classes):
-        self.train_in_classes = train_in_classes
-        self.train_out_classes = train_out_classes
-        self.test_out_classes = test_out_classes
-        self._map = dict()
-        self._map.update({clazz: index for index, clazz in enumerate(train_in_classes)})
-        # mapping test_out classes to < -1000
-        self._map.update({clazz: (-clazz - 1000) for index, clazz in enumerate(test_out_classes)})
-        # mapping train_out classes to < 0
-        self._map.update({clazz: (-clazz) for index, clazz in enumerate(train_out_classes)})
-
-    def __call__(self, target):
-        # log.info(f"Target: {target} known: {target in self._map}")
-        return self._map.get(target, -1)
-
-    def __getitem__(self, item):
-        return self._map[item]
-
-    def items(self):
-        return self._map.items()
-
-    def __repr__(self):
-        return str(self._map)
