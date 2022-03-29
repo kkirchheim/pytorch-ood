@@ -5,10 +5,10 @@ Noise Dataset
 """
 import numpy as np
 from PIL import Image
-from torchvision.datasets import VisionDataset
+from torch.utils.data import Dataset
 
 
-class GaussianNoise(VisionDataset):
+class GaussianNoise(Dataset):
     """
     Dataset that outputs gaussian noise
     """
@@ -21,7 +21,6 @@ class GaussianNoise(VisionDataset):
         target_transform=None,
         loc=128,
         scale=128,
-        **kwargs
     ):
         self.size = size
         self.num = length
@@ -50,7 +49,7 @@ class GaussianNoise(VisionDataset):
         return img, target
 
 
-class UniformNoise(VisionDataset):
+class UniformNoise(Dataset):
     """
     Dataset that outputs uniform noise
     """

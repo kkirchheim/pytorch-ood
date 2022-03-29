@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.hub import load_state_dict_from_url
+from torchvision.datasets.utils import download_file_from_google_drive
 
 
 class PositionEmbs(nn.Module):
@@ -158,7 +159,7 @@ class VisionTransformer(nn.Module):
     Transformer-Based architectures have also been used for OOD detection, for example in
     *OODDformer: Out-Of-Distribution Detection Transformer*.
 
-    :see implementation: https://github.com/asyml/vision-transformer-pytorch/blob/main/src/model.py
+    :see Implementation: https://github.com/asyml/vision-transformer-pytorch/blob/main/src/model.py
     :see Paper: https://arxiv.org/pdf/2010.11929.pdf
     """
 
@@ -174,18 +175,6 @@ class VisionTransformer(nn.Module):
         attn_dropout_rate=0.0,
         dropout_rate=0.1,
     ):
-        """
-
-        :param image_size:
-        :param patch_size:
-        :param emb_dim:
-        :param mlp_dim:
-        :param num_heads:
-        :param num_layers:
-        :param num_classes:
-        :param attn_dropout_rate:
-        :param dropout_rate:
-        """
         super(VisionTransformer, self).__init__()
         h, w = image_size
         # embedding layer

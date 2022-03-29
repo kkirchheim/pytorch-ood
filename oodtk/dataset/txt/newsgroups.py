@@ -1,9 +1,13 @@
+"""
+Much of the code is taken from the baseline-implementation:
+https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/20%20Newsgroups.ipynb
+"""
 import logging
 import os
 from typing import Tuple
 
 import numpy as np
-from torch.utils.data import ConcatDataset, Dataset
+from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 
 from .stop_words import stop_words
@@ -14,10 +18,6 @@ log = logging.getLogger(__name__)
 class NewsGroup20(Dataset):
     """
     Stemmed etc. version of the newsgroup dataset.
-
-
-    Much of the code is taken from the baseline-implementation:
-    https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/20%20Newsgroups.ipynb
     """
 
     train_url = (
@@ -56,9 +56,6 @@ class NewsGroup20(Dataset):
     ]
 
     def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
-        """
-        TODO: add support for custom loader?
-        """
         super(Dataset, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform

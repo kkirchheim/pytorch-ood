@@ -1,3 +1,7 @@
+"""
+Much of the code is taken from the baseline-implementation:
+https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/Reuters52.ipynb
+"""
 import logging
 import os
 from typing import Tuple
@@ -14,9 +18,6 @@ log = logging.getLogger(__name__)
 class Reuters52(Dataset):
     """
     Stemmed version of the reuters 52 dataset.
-
-    Much of the code is taken from the baseline-implementation:
-    https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/Reuters52.ipynb
     """
 
     train_url = "https://www.cs.umb.edu/~smimarog/textmining/datasets/r52-train-stemmed.txt"
@@ -81,9 +82,6 @@ class Reuters52(Dataset):
     }
 
     def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
-        """
-        TODO: add support for custom loader?
-        """
         super(Dataset, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform

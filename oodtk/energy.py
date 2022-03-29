@@ -43,7 +43,7 @@ class NegativeEnergy(torch.nn.Module, Method):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         z = self.model(x)
-        return self.t * torch.logsumexp(-z / self.t, dim=1)
+        return -self.t * torch.logsumexp(-z / self.t, dim=1)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """

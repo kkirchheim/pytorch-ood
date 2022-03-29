@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Optional, Callable, Any, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 from PIL import Image
 from torchvision.datasets import VisionDataset
@@ -9,13 +9,14 @@ from torchvision.datasets.utils import check_integrity, download_and_extract_arc
 log = logging.getLogger(__name__)
 
 
-class ImageDatasetHandler(VisionDataset):
+class ImageDatasetBase(VisionDataset):
     """
     Base Class for Downlaoding ImageNet related Datasets
-    
+
     Code inspired from : https://pytorch.org/vision/0.8/_modules/torchvision/datasets/cifar.html#CIFAR10
 
     """
+
     base_folder = ""
     url = ""
     filename = ""
@@ -28,7 +29,7 @@ class ImageDatasetHandler(VisionDataset):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
-        super(ImageDatasetHandler, self).__init__(
+        super(ImageDatasetBase, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
 
@@ -37,8 +38,7 @@ class ImageDatasetHandler(VisionDataset):
 
         if not self._check_integrity():
             raise RuntimeError(
-                "Dataset not found or corrupted."
-                + " You can use download=True to download it"
+                "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
         self.basedir = os.path.join(self.root, self.base_folder)
@@ -79,6 +79,4 @@ class ImageDatasetHandler(VisionDataset):
         if self._check_integrity():
             log.debug("Files already downloaded and verified")
             return
-        download_and_extract_archive(
-            self.url, self.root, filename=self.filename, md5=self.tgz_md5
-        )
+        download_and_extract_archive(self.url, self.root, filename=self.filename, md5=self.tgz_md5)
