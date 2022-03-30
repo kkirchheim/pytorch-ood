@@ -155,12 +155,14 @@ class Encoder(nn.Module):
 
 class VisionTransformer(nn.Module):
     """
-    Vision Transformer from *AN IMAGE IS WORTH 16X16 WORDS: TRANSFORMERS FOR IMAGE RECOGNITION AT SCALE*
+    Vision Transformer from *An Image is worth 16x16 words: Transformers for Image Recognition at Scale*
 
     Transformer-Based architectures have also been used for OOD detection, for example in
     *OODDformer: Out-Of-Distribution Detection Transformer*.
 
-    :see Implementation: https://github.com/asyml/vision-transformer-pytorch/blob/main/src/model.py
+    .. warning :: PyTorch adds vision transformers in v. 0.12.
+
+    :see Implementation: https://github.com/asyml/vision-transformer-pytorch/
     :see Paper: https://arxiv.org/pdf/2010.11929.pdf
     """
 
@@ -176,6 +178,7 @@ class VisionTransformer(nn.Module):
         attn_dropout_rate=0.0,
         dropout_rate=0.1,
     ):
+        """ """
         super(VisionTransformer, self).__init__()
         h, w = image_size
         # embedding layer
@@ -222,22 +225,28 @@ class VisionTransformer(nn.Module):
         """
         Vision Transformer with different pre-trained weights.
 
-        :param name:
-        :return:
+        Weights:
+
+        * **b16-cifar10-tune**: b16 trained on ImageNet 21k and fine tuned on the CIFAR10
+        * **b16-cifar100-tune**: b16 trained on ImageNet 21k and fine tuned on the CIFAR100
+
+        .. note :: The original authors of the OODFormer did not provide weights for their final models. The
+            weights for CIFAR-10 and CIFAR-100 here are provided by us and based on the
+
         """
         urls = {
             "b16-cifar10-tune": "https://cse.ovgu.de/files/b16-cifar10-tune.pth",
             "b16-cifar100-tune": "https://cse.ovgu.de/files/b16-cifar100-tune.pth",
-            # "b16-im21k": "1gEcyb4HUDzIvu7lQWTOyDC1X00YzCxFx", # "https://drive.google.com/file/d/1gEcyb4HUDzIvu7lQWTOyDC1X00YzCxFx/view?usp=sharing",
-            # "b32-im21k": "https://drive.google.com/file/d/1GingK9L_VcJynTCYMc3iMvCh4WG7ScBS/view?usp=sharing",
-            # "l16-im21k": "https://drive.google.com/file/d/1YVLunKEGApaSKXZKewZz974gHt09Uwyf/view?usp=sharing",
-            # "l32-im21k": "https://drive.google.com/file/d/1TKOa_dQaMOCL8r_rtcdB7dLGQtzBQ0ud/view?usp=sharing"
+            "b16-im21k-224": "https://cse.ovgu.de/files/imagenet21k+imagenet2012_ViT-B_16-224.pth",
+            "b16-im21k": "https://cse.ovgu.de/files/imagenet21k+imagenet2012_ViT-B_16.pth",
+            "l16-im21k-224": "https://cse.ovgu.de/files/imagenet21k+imagenet2012_ViT-L_16-224.pth",
+            "l16-im21k": "https://cse.ovgu.de/files/imagenet21k+imagenet2012_ViT-L_16.pth",
         }
 
         url = urls[name]
         model = VisionTransformer(**kwargs)
 
-        state_dict = load_state_dict_from_url(url)
+        state_dict = load_state_dict_from_url(url, map_location="cpu")
 
         if "state_dict" in state_dict:
             state_dict = state_dict["state_dict"]

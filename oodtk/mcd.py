@@ -4,8 +4,6 @@
     :members:
 
 """
-from abc import ABC
-
 import torch.nn
 
 from .api import Method
@@ -21,7 +19,7 @@ class MCD(Method):
     :see Paper: http://proceedings.mlr.press/v48/gal16.pdf
 
     .. warning:: This implementations puts the model in evaluation model. This will also affect other modules, like
-        BatchNorm.
+        BatchNorm. This is currently a workaround.
     """
 
     def __init__(self, model: torch.nn.Module):
@@ -30,6 +28,12 @@ class MCD(Method):
         :param model: the module to use for the forward pass
         """
         self.model = model
+
+    def fit(self, data_loader):
+        """
+        Not required
+        """
+        pass
 
     def predict(self, x: torch.Tensor, n=30) -> torch.Tensor:
         """
@@ -40,12 +44,19 @@ class MCD(Method):
         :param n: number of Monte Carlo Samples
         :return: averaged output of the model
         """
-        self.train()
+        self.model.train()
+
+        # TODO: quickfix
+        dev = list(self.model.parameters())[0].device
+
         results = None
         with torch.no_grad():
-            output = self.model(x)
-            if results is None:
-                results = torch.zeros(size=output.shape)
-            results += output
+            for i in range(n):
+                output = self.model(x)
+                if results is None:
+                    results = torch.zeros(size=output.shape).to(dev)
+                results += output
         results /= n
-        self.eval()
+        self.model.eval()
+
+        return results

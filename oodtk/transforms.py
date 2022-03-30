@@ -3,7 +3,7 @@
 ..  autoclass:: oodtk.transforms.ToUnknown
     :members:
 
-..  autoclass:: oodtk.transforms.ToRBG
+..  autoclass:: oodtk.transforms.ToRGB
     :members:
 
 ..  autoclass:: oodtk.transforms.TargetMapping

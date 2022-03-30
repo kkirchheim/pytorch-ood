@@ -3,7 +3,7 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="f61e4a84-c5cc-47de-bfd4-038bb11942ee" name="grakadu">
-        <fileTransfer rootFolder="/home/ki/" accessType="SFTP" sshConfigId="a1eaf9ec-18b6-4d9f-8426-5bc6e344e70e" sshConfig="kirchheim@grakadu:22 agent">
+        <fileTransfer rootFolder="/data_slow/kirchheim/" accessType="SFTP" host="grakadu" port="22" sshConfigId="a1eaf9ec-18b6-4d9f-8426-5bc6e344e70e" sshConfig="kirchheim@grakadu:22 agent" authAgent="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>

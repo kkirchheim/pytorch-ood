@@ -47,13 +47,20 @@ class Mahalanobis(torch.nn.Module, Method):
         """
         self.model.eval()
 
+        # TODO: quickfix
+        dev = list(self.model.parameters())[0].device
+
         # TODO: add option to buffer to GPU
         buffer = TensorBuffer()
         log.debug("Extracting features")
         for batch in data_loader:
             x, y = batch
+            x = x.to(dev)
+            y = y.to(dev)
             known = is_known(y)
             z = self.model(x[known])
+            # flatten
+            x = z.view(x.shape[0], -1)
             buffer.append("embedding", z[known])
             buffer.append("label", y[known])
 
@@ -63,35 +70,34 @@ class Mahalanobis(torch.nn.Module, Method):
         classes = y.unique()
 
         # we assume here that all class 0 >= labels <= classes.max() exist
-        assert len(classes) == classes.max()
+        assert len(classes) == classes.max().item() + 1
         assert not contains_unknown(classes)
 
-        n_classes = classes.max()
-        # TODO: move to device
-        self.mu = torch.zeros(size=(n_classes,))
-        self.cov = torch.zeros(size=z.shape)
+        n_classes = len(classes)
+        self.mu = torch.zeros(size=(n_classes, z.shape[-1])).to(dev)
+        self.cov = torch.zeros(size=(z.shape[-1], z.shape[-1])).to(dev)
 
-        for clazz in range(classes):
+        for clazz in range(n_classes):
             idxs = y.eq(clazz)
             assert idxs.sum() != 0
             zs = z[idxs]
             self.mu[clazz] = zs.mean(dim=0)
-            self.cov += (zs - self.mu[clazz]).dot((zs - self.mu[clazz]).T)
+            self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
 
         self.precision = torch.linalg.inv(self.cov)
         buffer.clear()
 
     def predict(self, x) -> torch.Tensor:
         return self.forward(x)
-        pass
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """ """
-        z = self.model.intermediate_forward(x)
+        z = self.model(x)
 
-        # mean over feature maps
-        z = z.view(z.size(0), z.size(1), -1)
-        z = torch.mean(z, 2)
+        # TODO: original uses mean over feature maps
+        # here, we just flatten
+        z = self.model(x)
+        z = z.view(z.shape[0], -1)
 
         score = 0
 
@@ -102,9 +108,9 @@ class Mahalanobis(torch.nn.Module, Method):
             if clazz == 0:
                 score = term_gau.view(-1, 1)
             else:
-                score = torch.cat((score, term_gau.view(-1, 1)), 1)
+                score = torch.cat((score, term_gau.view(-1, 1)), dim=1)
 
-        return score
+        return score.max(dim=1).values
 
     @property
     def n_classes(self):

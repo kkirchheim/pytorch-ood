@@ -17,6 +17,3 @@ class TestPreTrainedModels(unittest.TestCase):
         model = VisionTransformer.from_pretrained(
             "b16-cifar10-tune", image_size=(384, 384), num_classes=10
         )
-
-    # def test_pretrained_vit(self):
-    #     model = VisionTransformer.from_pretrained("b16-im21k", image_size=(384, 384), num_classes=10)
