@@ -14,10 +14,10 @@ This library provides
 - Objective Functions
 - OOD Detection Methods
 - Datasets used in academic literature
-- Neural Network Architectures used in academic literature
+- Neural Network Architectures used in academic literature, as well as pretrained weights
 - Useful Utilities
 
-Is provided in the hope to speed up research and to facilitate reproducibility.
+It is provided with the aim to speed up research and to facilitate reproducibility.
 
 
 ## Setup
@@ -32,5 +32,5 @@ You will have to install `cython` and `libmr` afterwards by manually.
 
 
 ## License
-The code is licensed Apache 2.0. We have taken care to make sure any third party code included or adapted has compatible (permissive) licenses such as MIT, BSD, etc.
+The code is licensed under Apache 2.0. We have taken care to make sure any third party code included or adapted has compatible (permissive) licenses such as MIT, BSD, etc.
 The legal implications of using pre-trained models in commercial services are, to our knowledge, not fully understood.
