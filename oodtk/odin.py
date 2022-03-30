@@ -5,6 +5,7 @@
 
 """
 import torch
+from torch.autograd import Variable
 from torch.nn import functional as F
 
 from .api import Method
@@ -16,7 +17,13 @@ def zero_grad(x):
 
 
 def odin_preprocessing(
-    model: torch.nn.Module, x, y=None, criterion=F.nll_loss, eps=0.05, temperature=1000
+    model: torch.nn.Module,
+    x,
+    y=None,
+    criterion=F.nll_loss,
+    eps=0.05,
+    temperature=1000,
+    norm_std=None,
 ):
     """
     ODIN is a preprocessing method for inputs that aims to increase the discriminability of
@@ -34,28 +41,31 @@ def odin_preprocessing(
     :param criterion: loss function :math:`\\mathcal{L}` to use. Original Implementation used NLL
     :param eps: step size :math:`\\epsilon` of the gradient ascend step
     :param temperature: temperature :math:`T` to use for scaling
+    :param norm_std: standard deviations used during preprocessing
 
     :see Implementation: https://github.com/facebookresearch/odin/
 
-    .. warning::
-        In the original implementation, the authors normalized the gradient to the input space, i.e. mean centering and
-        scaling to unit norm.
-        This preprocessing step is differentiable and should be added to the passed model.
-
-    .. note::
-        This operation has the side effect of zeroing out gradients.
-
     """
-    model.apply(zero_grad)
     with torch.enable_grad():
-        x.requires_grad = True
+        x = Variable(x, requires_grad=True)
         logits = model(x) / temperature
         if y is None:
             y = logits.max(dim=1).indices
         loss = criterion(logits, y)
         loss.backward()
-        x_hat = torch.add(x, -eps, x.grad.sign())
-    model.apply(zero_grad)
+
+        gradient = torch.sign(x.grad.data)
+
+        if norm_std:
+            for i, std in enumerate(norm_std):
+                gradient.index_copy_(
+                    1,
+                    torch.LongTensor([i]).to(gradient.device),
+                    gradient.index_select(1, torch.LongTensor([i]).to(gradient.device)) / std,
+                )
+
+        x_hat = x - eps * gradient
+
     return x_hat
 
 
@@ -67,27 +77,19 @@ class ODIN(Method):
     The operation requires two forward and one backward pass.
 
     .. math::
-        \\hat{x} = x + \\epsilon \\nabla_x \\mathcal{L}(f(x) / T, \\hat{y})
+        \\hat{x} = x - \\epsilon \\ \\text{sign}(\\nabla_x \\mathcal{L}(f(x) / T, \\hat{y}))
 
 
     :see Implementation: https://github.com/facebookresearch/odin/
 
-    .. warning::
-        In the original implementation, the authors normalized the gradient to the input space, i.e. mean centering and
-        scaling to unit norm.
-        This preprocessing step is differentiable and should be added to the passed model.
-
-    .. note::
-        This operation has the side effect of zeroing out gradients.
-
     """
 
-    def __init__(self, model, criterion=F.nll_loss, eps=0.05, temperature=1000):
+    def __init__(self, model, criterion=F.nll_loss, eps=0.05, temperature=1000, norm_std=None):
         """
 
         :param model: module to backpropagate through
         :param criterion: loss function :math:`\\mathcal{L}` to use. Original Implementation used NLL
-        :param eps: step size :math:`\\epsilon` of the gradient ascend step
+        :param eps: step size :math:`\\epsilon` of the gradient descent step
         :param temperature: temperature :math:`T` to use for scaling
 
         """
@@ -96,6 +98,7 @@ class ODIN(Method):
         self.criterion = criterion
         self.eps = eps
         self.temperature = temperature
+        self.norm_std = norm_std
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -109,12 +112,13 @@ class ODIN(Method):
             eps=self.eps,
             criterion=self.criterion,
             temperature=self.temperature,
+            norm_std=self.norm_std,
         )
-        return self.model(x_hat).softmax(dim=1).max(dim=1).values
+        # returning negative values so higher values indicate greater outlierness
+        return -self.model(x_hat).softmax(dim=1).max(dim=1).values
 
     def fit(self):
         """
         Not required
-
         """
         pass

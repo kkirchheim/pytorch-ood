@@ -87,7 +87,7 @@ def estimate_class_centers(
 
 def torch_get_distances(centers, embeddings):
     """
-    TODO: this can be done way more efficiently
+    TODO: this can be done more efficiently
     """
     n_instances = embeddings.shape[0]
     n_centers = centers.shape[0]
@@ -95,38 +95,6 @@ def torch_get_distances(centers, embeddings):
     for clazz in torch.arange(n_centers):
         distances[:, clazz] = torch.norm(embeddings - centers[clazz], dim=1, p=2)
     return distances
-
-
-def optimize_temperature(logits: torch.Tensor, y, init=1, steps=1000, device="cpu"):
-    """
-    Optimizing temperature for temperature scaling, by minimizing NLL on the given logits
-
-    :see Paper: https://arxiv.org/pdf/1706.04599.pdf
-    """
-    log.info("Optimizing Temperature")
-    if contains_unknown(y):
-        raise ValueError("Do not optimize temperature on unknown labels")
-
-    nll = torch.nn.NLLLoss().to(device)
-    temperature = torch.nn.Parameter(torch.ones(size=(1,)), requires_grad=True).to(device)
-    torch.fill_(temperature, init)
-    logits = logits.clone().to(device)
-    y = y.clone().to(device)
-    optimizer = torch.optim.SGD([temperature], lr=0.1)
-    with torch.enable_grad():
-        for i in range(steps):
-            optimizer.zero_grad()
-            scaled_logits = logits / temperature
-            log_probs = torch.nn.functional.log_softmax(scaled_logits)
-            loss = nll(log_probs, y)
-            loss.backward()
-            log.info(
-                f"Step {i} Temperature {temperature.item()} NLL {loss.item()} Grad: {temperature.grad.item()}"
-            )
-            optimizer.step()
-    best = temperature.detach().item()
-    log.info("Finished Optimizing Temperature")
-    return best
 
 
 def pairwise_distances(x, y=None) -> torch.Tensor:
@@ -156,12 +124,13 @@ def pairwise_distances(x, y=None) -> torch.Tensor:
 class RunningCenters(nn.Module):
     """"""
 
-    def __init__(self, n_centers, dim, **kwargs):
+    def __init__(self, n_centers, dim):
         """
 
         :param n_centers: number of centers
         :param dim: number of dimensions
         """
+        super().__init__()
         self.n = n_centers
         self.dim = dim
         # create buffer for centers. those buffers will be updated during training, and are fixed during evaluation
@@ -171,12 +140,12 @@ class RunningCenters(nn.Module):
         self.register_buffer("counter", counter)
         self.reset_running_stats()
 
-    def reset(self):
-        log.info("Reset running stats")
+    def reset(self) -> None:
+        log.debug("Reset running stats")
         init.zeros_(self.running_centers)
         init.zeros_(self.num_batches_tracked)
 
-    def forward(self, x, y):
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> None:
         """
         Update centers
 
@@ -192,7 +161,7 @@ class RunningCenters(nn.Module):
             self.centers[batch_classes] = cma / (self.counter + 1)
             self.counter += 1
 
-    def _calculate_centers(self, x, y):
+    def _calculate_centers(self, x, y) -> torch.Tensor:
         mu = torch.full(size=(self.n, self.dim), fill_value=float("NaN"), device=x.device)
         for clazz in y.unique(sorted=False):
             mu[clazz] = x[y == clazz].mean(dim=0)

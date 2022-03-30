@@ -18,6 +18,9 @@ class Model(torch.nn.Module):
 class MahalanobisTest(unittest.TestCase):
     """ """
 
+    def setUp(self) -> None:
+        torch.manual_seed(123)
+
     def test_something(self):
         nn = Model()
         model = Mahalanobis(nn)
@@ -34,4 +37,5 @@ class MahalanobisTest(unittest.TestCase):
 
         scores = model(torch.ones(size=(10, 10)) * 10)
         print(scores)
-        self.assertEqual(True, True)
+
+        self.assertIsNotNone(scores)

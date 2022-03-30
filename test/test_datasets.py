@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from oodtk.dataset.img.cifar import CIFAR10C, CIFAR10P, CIFAR100C
-from oodtk.dataset.img.imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetP, ImageNetR
+from oodtk.dataset.img.imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from oodtk.dataset.img.mnistc import MNISTC
 
 
@@ -41,10 +41,10 @@ class TestDownloadDatasets(unittest.TestCase):
             self._try_download(ImageNetC, subset="blur", download=True, root=tmp_dir)
             self.assertTrue(self._check_download(tmp_dir))
 
-    def test_download_ImageNetP(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self._try_download(ImageNetP, subset="digital", download=True, root=tmp_dir)
-            self.assertTrue(self._check_download(tmp_dir))
+    # def test_download_ImageNetP(self):
+    #     with tempfile.TemporaryDirectory() as tmp_dir:
+    #         self._try_download(ImageNetP, subset="digital", download=True, root=tmp_dir)
+    #         self.assertTrue(self._check_download(tmp_dir))
 
     def test_download_CIFAR10P(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
