@@ -1,13 +1,18 @@
 import logging
 import os
+from os.path import join
 from typing import Callable, Optional
+
+from PIL import Image
+from torchvision.datasets import DatasetFolder
+from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
 
 
-class ImageNetA(ImageDatasetBase):
+class ImageNetA(DatasetFolder):
     """
     From the paper *Natural Adversarial Examples*
 
@@ -15,13 +20,49 @@ class ImageNetA(ImageDatasetBase):
     :see Paper: https://arxiv.org/abs/1907.07174
     """
 
-    base_folder = "ImageNetA/images/"
+    base_folder = "imagenet-a"
     url = "https://people.eecs.berkeley.edu/~hendrycks/imagenet-a.tar"
     filename = "imagenet-a.tar"
     tgz_md5 = "c3e55429088dc681f30d81f4726b6595"
 
+    def __init__(
+        self,
+        root: str,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        download: bool = False,
+    ):
 
-class ImageNetO(ImageDatasetBase):
+        self.root = root
+
+        if download:
+            self.download()
+
+        if not self._check_integrity():
+            raise RuntimeError(
+                "Dataset not found or corrupted." + " You can use download=True to download it"
+            )
+
+        loader = Image.open
+        super(ImageNetA, self).__init__(
+            root=join(root, self.base_folder),
+            loader=loader,
+            is_valid_file=lambda x: x.endswith(".jpg") or x.endswith(".JPEG"),
+            transform=transform,
+            target_transform=target_transform,
+        )
+
+    def _check_integrity(self) -> bool:
+        return check_integrity(join(self.root, self.filename), self.tgz_md5)
+
+    def download(self) -> None:
+        if self._check_integrity():
+            log.debug("Files already downloaded and verified")
+            return
+        download_and_extract_archive(self.url, self.root, filename=self.filename, md5=self.tgz_md5)
+
+
+class ImageNetO(ImageNetA):
     """
     From the paper *Natural Adversarial Examples*
 
@@ -29,13 +70,13 @@ class ImageNetO(ImageDatasetBase):
     :see Paper: https://arxiv.org/abs/1907.07174
     """
 
-    base_folder = "ImageNetO/images/"
+    base_folder = "imagenet-o"
     url = "https://people.eecs.berkeley.edu/~hendrycks/imagenet-o.tar"
     filename = "imagenet-o.tar"
     tgz_md5 = "86bd7a50c1c4074fb18fc5f219d6d50b"
 
 
-class ImageNetR(ImageDatasetBase):
+class ImageNetR(ImageNetA):
     """
     From the paper *The Many Faces of Robustness: A Critical Analysis of Out-of-Distribution Generalization*
 
@@ -122,61 +163,61 @@ class ImageNetC(ImageDatasetBase):
         self.files = os.listdir(self.basedir)
 
 
-class ImageNetP(ImageDatasetBase):
-    """
-    BENCHMARKING NEURAL NETWORK ROBUSTNESS TO COMMON CORRUPTIONS AND PERTURBATIONS
-    """
-
-    subset_list = ["blur", "digital", "noise", "weather"]
-
-    base_folder_list = [
-        "ImageNetP/blur/",
-        "ImageNetP/digital/",
-        "ImageNetP/noise/",
-        "ImageNetP/weather/",
-    ]
-    url_list = [
-        "https://zenodo.org/record/3565846/files/blur.tar",
-        "https://zenodo.org/record/3565846/files/digital.tar",
-        "https://zenodo.org/record/3565846/files/noise.tar",
-        "https://zenodo.org/record/3565846/files/weather.tar",
-    ]
-    filename_list = ["blur.tar", "digital.tar", "noise.tar", "weather.tar"]
-    tgz_md5_list = [
-        "869b2d2fb1604d1baa4316b5ecc9fdea ",
-        "8c1f73e4912812788e2fdb637cd55372 ",
-        "619b37b5139ce764f77ce3bed3aee837",
-        "a597ff6db8c6fb0dbcd6eb12ed620002",
-    ]
-
-    def __init__(
-        self,
-        root: str,
-        subset: str,
-        transform: Optional[Callable] = None,
-        target_transform: Optional[Callable] = None,
-        download: bool = False,
-    ) -> None:
-
-        if subset not in self.subset_list:
-            raise ValueError(f"Invalid subset: {subset}")
-
-        self.base_folder = self.base_folder_list[self.subset_list.index(subset)]
-        self.url = self.url_list[self.subset_list.index(subset)]
-        self.filename = self.filename_list[self.subset_list.index(subset)]
-        self.tgz_md5 = self.tgz_md5_list[self.subset_list.index(subset)]
-
-        super(ImageDatasetBase, self).__init__(
-            root, transform=transform, target_transform=target_transform
-        )
-
-        if download:
-            self.download()
-
-        if not self._check_integrity():
-            raise RuntimeError(
-                "Dataset not found or corrupted." + " You can use download=True to download it"
-            )
-
-        self.basedir = os.path.join(self.root, self.base_folder)
-        self.files = os.listdir(self.basedir)
+# class ImageNetP(ImageDatasetBase):
+#     """
+#     From the paper *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations*
+#     """
+#
+#     subset_list = ["blur", "digital", "noise", "weather"]
+#
+#     base_folder_list = [
+#         "ImageNetP/blur/",
+#         "ImageNetP/digital/",
+#         "ImageNetP/noise/",
+#         "ImageNetP/weather/",
+#     ]
+#     url_list = [
+#         "https://zenodo.org/record/3565846/files/blur.tar",
+#         "https://zenodo.org/record/3565846/files/digital.tar",
+#         "https://zenodo.org/record/3565846/files/noise.tar",
+#         "https://zenodo.org/record/3565846/files/weather.tar",
+#     ]
+#     filename_list = ["blur.tar", "digital.tar", "noise.tar", "weather.tar"]
+#     tgz_md5_list = [
+#         "869b2d2fb1604d1baa4316b5ecc9fdea ",
+#         "8c1f73e4912812788e2fdb637cd55372 ",
+#         "619b37b5139ce764f77ce3bed3aee837",
+#         "a597ff6db8c6fb0dbcd6eb12ed620002",
+#     ]
+#
+#     def __init__(
+#             self,
+#             root: str,
+#             subset: str,
+#             transform: Optional[Callable] = None,
+#             target_transform: Optional[Callable] = None,
+#             download: bool = False,
+#     ) -> None:
+#
+#         if subset not in self.subset_list:
+#             raise ValueError(f"Invalid subset: {subset}")
+#
+#         self.base_folder = self.base_folder_list[self.subset_list.index(subset)]
+#         self.url = self.url_list[self.subset_list.index(subset)]
+#         self.filename = self.filename_list[self.subset_list.index(subset)]
+#         self.tgz_md5 = self.tgz_md5_list[self.subset_list.index(subset)]
+#
+#         super(ImageDatasetBase, self).__init__(
+#             root, transform=transform, target_transform=target_transform
+#         )
+#
+#         if download:
+#             self.download()
+#
+#         if not self._check_integrity():
+#             raise RuntimeError(
+#                 "Dataset not found or corrupted." + " You can use download=True to download it"
+#             )
+#
+#         self.basedir = os.path.join(self.root, self.base_folder)
+#         self.files = os.listdir(self.basedir)

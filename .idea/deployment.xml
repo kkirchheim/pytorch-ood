@@ -2,12 +2,13 @@
 <project version="4">
   <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
-      <paths name="grakadu">
+      <paths name="turmfalke">
         <serverdata>
           <mappings>
-            <mapping deploy="oodtk/" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/oodtk/" local="$PROJECT_DIR$" web="/" />
           </mappings>
           <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/examples/data" />
             <excludedPath local="true" path="$PROJECT_DIR$/venv" />
           </excludedPaths>
         </serverdata>

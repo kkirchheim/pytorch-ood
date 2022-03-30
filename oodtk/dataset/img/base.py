@@ -11,16 +11,15 @@ log = logging.getLogger(__name__)
 
 class ImageDatasetBase(VisionDataset):
     """
-    Base Class for Downlaoding ImageNet related Datasets
+    Base Class for Downloading Image related Datasets
 
-    Code inspired from : https://pytorch.org/vision/0.8/_modules/torchvision/datasets/cifar.html#CIFAR10
-
+    Code inspired by : https://pytorch.org/vision/0.8/_modules/torchvision/datasets/cifar.html#CIFAR10
     """
 
-    base_folder = ""
-    url = ""
-    filename = ""
-    tgz_md5 = ""
+    base_folder = None
+    url = None
+    filename = None
+    tgz_md5 = None
 
     def __init__(
         self,

@@ -23,7 +23,7 @@ class ToUnknown(object):
         return -1
 
 
-class ToRBG(object):
+class ToRGB(object):
     """
     Convert Image to RGB, if it is not already.
     """

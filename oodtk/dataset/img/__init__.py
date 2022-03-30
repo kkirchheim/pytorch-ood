@@ -104,7 +104,7 @@ StreetHazards
 """
 from .cifar import CIFAR10C, CIFAR10P, CIFAR100C
 from .cub200 import Cub2011
-from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetP, ImageNetR
+from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from .mnistc import MNISTC
 from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
