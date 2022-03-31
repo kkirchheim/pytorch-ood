@@ -5,8 +5,7 @@ import logging
 from collections import defaultdict
 
 import torch
-from torch import nn
-from torch.nn import init
+import torchmetrics
 
 log = logging.getLogger(__name__)
 
@@ -121,53 +120,6 @@ def pairwise_distances(x, y=None) -> torch.Tensor:
     return torch.clamp(dist, 0.0, torch.inf)
 
 
-class RunningCenters(nn.Module):
-    """"""
-
-    def __init__(self, n_centers, dim):
-        """
-
-        :param n_centers: number of centers
-        :param dim: number of dimensions
-        """
-        super().__init__()
-        self.n = n_centers
-        self.dim = dim
-        # create buffer for centers. those buffers will be updated during training, and are fixed during evaluation
-        centers = torch.empty(size=(self.n_classes, self.dim), requires_grad=False).double()
-        counter = torch.empty(size=(1,), requires_grad=False).double()
-        self.register_buffer("centers", centers)
-        self.register_buffer("counter", counter)
-        self.reset_running_stats()
-
-    def reset(self) -> None:
-        log.debug("Reset running stats")
-        init.zeros_(self.running_centers)
-        init.zeros_(self.num_batches_tracked)
-
-    def forward(self, x: torch.Tensor, y: torch.Tensor) -> None:
-        """
-        Update centers
-
-        :param x: points
-        :param y: targets
-        :return:
-        """
-        if self.training:
-            batch_classes = torch.unique(y, sorted=False)
-            mu = self._calculate_centers(x, y)
-            # update running mean centers
-            cma = mu[batch_classes] + self.centers[batch_classes] * self.counter
-            self.centers[batch_classes] = cma / (self.counter + 1)
-            self.counter += 1
-
-    def _calculate_centers(self, x, y) -> torch.Tensor:
-        mu = torch.full(size=(self.n, self.dim), fill_value=float("NaN"), device=x.device)
-        for clazz in y.unique(sorted=False):
-            mu[clazz] = x[y == clazz].mean(dim=0)
-        return mu
-
-
 class TensorBuffer(object):
     """
     Used to buffer tensors
@@ -244,3 +196,94 @@ class TensorBuffer(object):
         d = {k: self.get(k).cpu() for k in self._buffer.keys()}
         torch.save(d, path)
         return self
+
+
+####################################
+# METRICS
+####################################
+
+
+def fpr_at_tpr(pred, target, k=0.95):
+    """
+
+    TODO: use bisect
+
+    :param pred:
+    :param target:
+    :param k:
+    :return:
+    """
+    fpr, tpr, thresholds = torchmetrics.functional.roc(pred, target)
+    for fp, tp, t in zip(fpr, tpr, thresholds):
+        if tp >= k:
+            return fp
+
+
+def accuracy_at_tpr(pred, target, k=0.95):
+    """
+    TODO: use bisect
+
+    :param pred:
+    :param target:
+    :param k:
+    :return:
+    """
+    fpr, tpr, thresholds = torchmetrics.functional.roc(pred, target)
+    for fp, tp, t in zip(fpr, tpr, thresholds):
+        if tp >= k:
+            break
+
+    labels = torch.where(pred >= t, 1, 0)
+    return torchmetrics.functional.accuracy(labels, target)
+
+
+class OODMetrics(torch.nn.Module):
+    """
+    Calculates various metrics used in OOD.
+
+    .. note :: This implementation is not optimized.
+    """
+
+    def __init__(self):
+        super(OODMetrics, self).__init__()
+        self.buffer = TensorBuffer()
+        self.auroc = torchmetrics.AUROC(num_classes=2)
+        self.aupr_in = torchmetrics.PrecisionRecallCurve(pos_label=1)
+        self.aupr_out = torchmetrics.PrecisionRecallCurve(pos_label=0)
+
+    def update(self, outlier_scores, y):
+        label = is_unknown(y)
+        self.auroc.update(outlier_scores, label)
+        self.aupr_in.update(outlier_scores, label)
+        self.aupr_out.update(-outlier_scores, label)
+        self.buffer.append("scores", outlier_scores)
+        self.buffer.append("labels", label)
+
+    def compute(self) -> dict:
+        auroc = self.auroc.compute()
+
+        p, r, t = self.aupr_in.compute()
+        aupr_in = torchmetrics.functional.auc(r, p, reorder=True)
+
+        p, r, t = self.aupr_out.compute()
+        aupr_out = torchmetrics.functional.auc(r, p)
+
+        label = self.buffer.get("labels")
+        s = self.buffer.get("scores")
+
+        acc = accuracy_at_tpr(s, label)
+        fpr = fpr_at_tpr(s, label)
+
+        return {
+            "AUROC": auroc.item(),
+            "AUPR-IN": aupr_in.item(),
+            "AUPR-OUT": aupr_out.item(),
+            "ACC95TPR": acc.item(),
+            "FPR95TPR": fpr.item(),
+        }
+
+    def reset(self):
+        self.auroc.reset()
+        self.aupr_in.reset()
+        self.aupr_out.reset()
+        self.buffer.clear()

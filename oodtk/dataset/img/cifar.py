@@ -53,10 +53,10 @@ class CIFAR10C(ImageDatasetBase):
     ):
         super(CIFAR10C, self).__init__(root, transform, target_transform, download)
 
+        self.subset = subset
+
         if subset not in self.subsets and subset != "all":
             raise ValueError(f"Unknown Subset: {subset}")
-
-        self.subset = subset
 
         if subset == "all":
             self.data = np.concatenate(
@@ -98,10 +98,78 @@ class CIFAR10P(ImageDatasetBase):
     :see Website: https://zenodo.org/record/2535967
     """
 
+    subsets = [
+        "brightness",
+        "gaussian_blur",
+        "gaussian_noise",
+        "gaussian_noise_2",
+        "gaussian_noise_3",
+        "motion_blur",
+        "rotate",
+        "scale",
+        "shear",
+        "shot_noise",
+        "shot_noise_2",
+        "shot_noise_3",
+        "snow",
+        "spatter",
+        "speckle_noise",
+        "speckle_noise_2",
+        "speckle_noise_3",
+        "tilt",
+        "translate",
+        "zoom_blur",
+    ]
+
     base_folder = "CIFAR-10-P/"
     url = "https://zenodo.org/record/2535967/files/CIFAR-10-P.tar"
     filename = "CIFAR-10-P.tar"
     tgz_md5 = "125d6775afc5846ea84584d7524dedff"
+
+    def __init__(
+        self,
+        root: str,
+        subset: str,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        download: bool = False,
+    ):
+        super(CIFAR10P, self).__init__(root, transform, target_transform, download)
+
+        self.subset = subset
+
+        if subset not in self.subsets and subset != "all":
+            raise ValueError(f"Unknown Subset: {subset}")
+
+        if subset == "all":
+            self.data = np.concatenate(
+                [np.load(join(root, self.base_folder, f"{s}.npy")) for s in self.subsets]
+            )
+        else:
+            self.data = np.load(join(root, self.base_folder, f"{subset}.npy"))
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: (image, target) where target is index of the target class.
+        """
+        img = self.data[index]
+        target = -1
+
+        # doing this so that it is consistent with all other datasets
+        # to return a PIL Image
+        img = Image.fromarray(img)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return img, target
 
 
 class CIFAR100C(ImageDatasetBase):

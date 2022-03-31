@@ -89,13 +89,13 @@ class CACLoss(nn.Module):
         distances = self.calculate_distances(embeddings)
         return nn.functional.softmin(distances, dim=1)
 
+    @staticmethod
+    def score(distance):
+        """
+        Rejection score used by the CAC loss
 
-def cac_rejection_score(distance):
-    """
-    Rejection score used by the CAC loss
-
-    :param distance:
-    :return:
-    """
-    scores = distance * (1 - F.softmin(distance, dim=1))
-    return scores
+        :param distance: distance of instances to class centers
+        :return:
+        """
+        scores = distance * (1 - F.softmin(distance, dim=1))
+        return scores

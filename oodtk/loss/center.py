@@ -30,8 +30,7 @@ class CenterLoss(nn.Module):
         self._centers = nn.Parameter(torch.randn(self.num_classes, self.feat_dim))
         if fixed:
             self._centers.requires_grad = False
-        # In the published code, they initialize centers randomly.
-        # This, however, is not a good idea if the loss is used without an additional inter-class-discriminability term
+
         self._init_centers()
 
     @property
@@ -42,6 +41,8 @@ class CenterLoss(nn.Module):
         return self._centers
 
     def _init_centers(self):
+        # In the published code, they initialize centers randomly.
+        # However, this might bot be optimal if the loss is used without an additional inter-class-discriminability term
         if self.num_classes == self.feat_dim:
             torch.nn.init.eye_(self.centers)
             if not self.centers.requires_grad:

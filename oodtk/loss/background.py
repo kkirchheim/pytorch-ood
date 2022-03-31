@@ -11,6 +11,8 @@ class BackgroundClassLoss(torch.nn.Module):
     """
     Plain cross-entropy, but handles remapping of the background class to positive target labels.
     When the number of classes is :math:`N`, we will remap all entries with target label :math:`<0` to :math:`N`.
+
+    The networks output layer has to include tha additional output.
     """
 
     def __init__(self, num_classes: int):

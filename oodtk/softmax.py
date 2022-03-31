@@ -5,7 +5,6 @@
 
 """
 import torch
-from torch.nn import Parameter
 
 from .api import Method
 
@@ -31,14 +30,14 @@ class Softmax(Method, torch.nn.Module):
         :param t: temperature value T. Default is 1.
         """
         super(Softmax, self).__init__()
-        self.t = Parameter(torch.Tensor([t]))
+        self.t = t
         self.model = model
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Predicts on input.
         """
-        return -self.model(x).div(self.t).softmax(dim=1).max(dim=1).values
+        return Softmax.score(self.model(x), self.t)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         return self.forward(x)
@@ -49,3 +48,7 @@ class Softmax(Method, torch.nn.Module):
 
         """
         pass
+
+    @staticmethod
+    def score(logits: torch.Tensor, t=1) -> torch.Tensor:
+        return -logits.div(t).softmax(dim=1).max(dim=1).values

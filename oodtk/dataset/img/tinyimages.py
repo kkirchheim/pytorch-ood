@@ -7,6 +7,7 @@ import logging
 from os.path import exists, join
 
 import numpy as np
+from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import (
     check_integrity,
@@ -120,6 +121,8 @@ class TinyImages300k(Dataset):
         index = index % len(self)
         img = self.data[index]
         label = -1
+
+        img = Image.fromarray(img)
 
         if self.transform is not None:
             img = self.transform(img)
