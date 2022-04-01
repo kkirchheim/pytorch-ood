@@ -14,7 +14,8 @@ log = logging.getLogger(__name__)
 
 class ImageNetA(DatasetFolder):
     """
-    From the paper *Natural Adversarial Examples*
+    From the paper *Natural Adversarial Examples*.
+    Contains images that classifiers should be able to classify
 
     :see Website: https://github.com/hendrycks/natural-adv-examples
     :see Paper: https://arxiv.org/abs/1907.07174
@@ -64,7 +65,8 @@ class ImageNetA(DatasetFolder):
 
 class ImageNetO(ImageNetA):
     """
-    From the paper *Natural Adversarial Examples*
+    From the paper *Natural Adversarial Examples*.
+    Contains anomalies of unforeseen classes
 
     :see Website: https://github.com/hendrycks/natural-adv-examples
     :see Paper: https://arxiv.org/abs/1907.07174

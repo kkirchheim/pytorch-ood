@@ -98,6 +98,7 @@ StreetHazards
 """
 from .cifar import CIFAR10C, CIFAR100C
 from .cub200 import Cub2011
+from .fooling import FoolingImages
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from .mnistc import MNISTC
 from .noise import GaussianNoise, UniformNoise
