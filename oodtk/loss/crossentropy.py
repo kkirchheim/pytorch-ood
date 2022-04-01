@@ -25,4 +25,4 @@ class CrossEntropy(nn.Module):
         super(CrossEntropy, self).__init__()
 
     def forward(self, x: torch.Tensor, targets) -> torch.Tensor:
-        cross_entropy(x, targets)
+        return cross_entropy(x, targets)

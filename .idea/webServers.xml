@@ -2,13 +2,6 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="f61e4a84-c5cc-47de-bfd4-038bb11942ee" name="grakadu">
-        <fileTransfer rootFolder="/data_slow/kirchheim/" accessType="SFTP" host="grakadu" port="22" sshConfigId="a1eaf9ec-18b6-4d9f-8426-5bc6e344e70e" sshConfig="kirchheim@grakadu:22 agent" authAgent="true">
-          <advancedOptions>
-            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
-          </advancedOptions>
-        </fileTransfer>
-      </webServer>
       <webServer id="7d0f5808-9dd2-4576-9767-1bd3f53154b2" name="turmfalke">
         <fileTransfer rootFolder="/mnt/nas/kirchhei/" accessType="SFTP" host="turmfalke" port="22" sshConfigId="27e39b14-888c-4ea6-a73b-0f11cea48998" sshConfig="kirchhei@turmfalke:22 agent" authAgent="true">
           <advancedOptions>

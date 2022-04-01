@@ -7,6 +7,7 @@
 import torch.nn
 
 from .api import Method
+from .softmax import Softmax
 
 
 class MCD(Method):
@@ -35,6 +36,32 @@ class MCD(Method):
         """
         pass
 
+    @staticmethod
+    def run(model, x, n) -> torch.Tensor:
+        """
+        Assumes that the model outputs logits
+
+        :param model: neural network
+        :param x: input
+        :param n: number of rounds
+        :return:
+        """
+        model.train()
+
+        # TODO: quickfix
+        dev = x.device  # list(model.parameters())[0].device
+
+        results = None
+        with torch.no_grad():
+            for i in range(n):
+                output = model(x).softmax(dim=1)
+                if results is None:
+                    results = torch.zeros(size=output.shape).to(dev)
+                results += output
+        results /= n
+        model.eval()
+        return results
+
     def predict(self, x: torch.Tensor, n=30) -> torch.Tensor:
         """
 
@@ -44,19 +71,4 @@ class MCD(Method):
         :param n: number of Monte Carlo Samples
         :return: averaged output of the model
         """
-        self.model.train()
-
-        # TODO: quickfix
-        dev = list(self.model.parameters())[0].device
-
-        results = None
-        with torch.no_grad():
-            for i in range(n):
-                output = self.model(x)
-                if results is None:
-                    results = torch.zeros(size=output.shape).to(dev)
-                results += output
-        results /= n
-        self.model.eval()
-
-        return results
+        return Softmax.score(MCD.run(self.model, x, n))

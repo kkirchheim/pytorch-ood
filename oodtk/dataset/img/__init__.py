@@ -82,12 +82,6 @@ CIFAR10-C
 ..  autoclass:: oodtk.dataset.img.CIFAR10C
     :members:
 
-CIFAR10-P
-----------------------
-
-..  autoclass:: oodtk.dataset.img.CIFAR10P
-    :members:
-
 CIFAR100-C
 ----------------------
 
@@ -102,7 +96,7 @@ StreetHazards
     :members:
 
 """
-from .cifar import CIFAR10C, CIFAR10P, CIFAR100C
+from .cifar import CIFAR10C, CIFAR100C
 from .cub200 import Cub2011
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from .mnistc import MNISTC
