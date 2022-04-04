@@ -23,7 +23,7 @@ class TestMCD(unittest.TestCase):
         model = Model()
         mcd = MCD(model)
 
-        x = torch.zeros(10)
+        x = torch.zeros(size=(1, 10))
         y = mcd.predict(x)
 
         self.assertIsNotNone(y)

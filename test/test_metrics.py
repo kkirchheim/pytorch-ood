@@ -1,9 +1,8 @@
 import unittest
-from os.path import dirname, join
 
 import torch
 
-from oodtk.utils import OODMetrics
+from oodtk.metrics import OODMetrics
 
 
 class TestMetrics(unittest.TestCase):
