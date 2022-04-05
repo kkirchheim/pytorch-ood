@@ -76,6 +76,19 @@ ImageNet-R
 ..  autoclass:: oodtk.dataset.img.ImageNetR
     :members:
 
+CIFAR10-C
+----------------------
+
+..  autoclass:: oodtk.dataset.img.CIFAR10C
+    :members:
+
+CIFAR100-C
+----------------------
+
+..  autoclass:: oodtk.dataset.img.CIFAR100C
+    :members:
+
+
 StreetHazards
 ----------------------
 
@@ -83,8 +96,10 @@ StreetHazards
     :members:
 
 """
+from .cifar import CIFAR10C, CIFAR100C
 from .cub200 import Cub2011
-from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetP, ImageNetR
+from .fooling import FoolingImages
+from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from .mnistc import MNISTC
 from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize

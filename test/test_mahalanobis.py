@@ -1,29 +1,41 @@
 import unittest
 
 import torch
-from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST
-from torchvision.transforms import ToTensor
+from torch.utils.data import DataLoader, TensorDataset
 
 from oodtk import Mahalanobis
-from oodtk.dataset.img import UniformNoise
 
 
 class Model(torch.nn.Module):
     def __init__(self):
         super(Model, self).__init__()
+        self.p = torch.nn.Linear(10, 3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x
+        return self.p(x)
 
 
-class MyTestCase(unittest.TestCase):
-    @unittest.skip("Not fully implemented")
+class MahalanobisTest(unittest.TestCase):
+    """ """
+
+    def setUp(self) -> None:
+        torch.manual_seed(123)
+
     def test_something(self):
         nn = Model()
         model = Mahalanobis(nn)
 
-        data = DataLoader(MNIST(root="/tmp/", download=True, transform=ToTensor()))
+        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
+        x = torch.randn(size=(20, 10))
+        dataset = TensorDataset(x, y)
+        loader = DataLoader(dataset)
 
-        model.fit(data)
-        self.assertEqual(True, True)
+        model.fit(loader)
+
+        scores = model(x)
+        print(scores)
+
+        scores = model(torch.ones(size=(10, 10)) * 10)
+        print(scores)
+
+        self.assertIsNotNone(scores)

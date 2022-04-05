@@ -39,14 +39,7 @@ class StreetHazards(VisionDataset):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
-        """
 
-        :param root:
-        :param train:
-        :param transform:
-        :param target_transform:
-        :param download:
-        """
         super(StreetHazards, self).__init__(
             root, transform=transform, target_transform=target_transform
         )

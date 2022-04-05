@@ -4,11 +4,10 @@
     :members:
 
 """
-from abc import ABC
-
 import torch.nn
 
 from .api import Method
+from .softmax import Softmax
 
 
 class MCD(Method):
@@ -21,7 +20,7 @@ class MCD(Method):
     :see Paper: http://proceedings.mlr.press/v48/gal16.pdf
 
     .. warning:: This implementations puts the model in evaluation model. This will also affect other modules, like
-        BatchNorm.
+        BatchNorm. This is currently a workaround.
     """
 
     def __init__(self, model: torch.nn.Module):
@@ -30,6 +29,38 @@ class MCD(Method):
         :param model: the module to use for the forward pass
         """
         self.model = model
+
+    def fit(self, data_loader):
+        """
+        Not required
+        """
+        pass
+
+    @staticmethod
+    def run(model, x, n) -> torch.Tensor:
+        """
+        Assumes that the model outputs logits
+
+        :param model: neural network
+        :param x: input
+        :param n: number of rounds
+        :return:
+        """
+        model.train()
+
+        # TODO: quickfix
+        dev = x.device  # list(model.parameters())[0].device
+
+        results = None
+        with torch.no_grad():
+            for i in range(n):
+                output = model(x).softmax(dim=1)
+                if results is None:
+                    results = torch.zeros(size=output.shape).to(dev)
+                results += output
+        results /= n
+        model.eval()
+        return results
 
     def predict(self, x: torch.Tensor, n=30) -> torch.Tensor:
         """
@@ -40,12 +71,4 @@ class MCD(Method):
         :param n: number of Monte Carlo Samples
         :return: averaged output of the model
         """
-        self.train()
-        results = None
-        with torch.no_grad():
-            output = self.model(x)
-            if results is None:
-                results = torch.zeros(size=output.shape)
-            results += output
-        results /= n
-        self.eval()
+        return Softmax.score(MCD.run(self.model, x, n))

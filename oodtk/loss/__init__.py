@@ -65,6 +65,7 @@ from .background import BackgroundClassLoss
 from .cac import CACLoss
 from .center import CenterLoss
 from .conf import ConfidenceLoss
+from .crossentropy import CrossEntropy
 from .energy import EnergyRegularizedLoss
 from .ii import IILoss
 from .objectosphere import ObjectosphereLoss

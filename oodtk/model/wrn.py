@@ -98,13 +98,14 @@ class WideResNet(nn.Module):
     :see Implementation: https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
     """
 
-    def __init__(self, num_classes, depth=40, widen_factor=2, drop_rate=0.3):
+    def __init__(self, num_classes, depth=40, widen_factor=2, drop_rate=0.3, in_channels=3):
         """
 
         :param depth: depth of the network
         :param num_classes: number of classes
         :param widen_factor: factor used for channel increase per block
         :param drop_rate: dropout probability
+        :param in_channels: number of input planes
         """
         super(WideResNet, self).__init__()
         nChannels = [16, 16 * widen_factor, 32 * widen_factor, 64 * widen_factor]
@@ -112,7 +113,9 @@ class WideResNet(nn.Module):
         n = (depth - 4) // 6
         block = BasicBlock
         # 1st conv before any network block
-        self.conv1 = nn.Conv2d(3, nChannels[0], kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels, nChannels[0], kernel_size=3, stride=1, padding=1, bias=False
+        )
         # 1st block
         self.block1 = NetworkBlock(n, nChannels[0], nChannels[1], block, 1, drop_rate)
         # 2nd block
@@ -170,29 +173,30 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return self.fc(out), out_list
 
-
-class WideResNetPretrained(WideResNet):
-    """
-    WideResNet with different pre-trained weights.
-
-    - **imagenet32**: Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet dataset.
-    - **oe-cifar100-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100 dataset
-    - **oe-cifar10-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10 dataset
-    """
-
-    urls = {
-        "imagenet32": "https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt",
-        "oe-cifar100-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar100_wrn_oe_tune_epoch_9.pt",
-        "oe-cifar10-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar10_wrn_oe_tune_epoch_9.pt",
-    }
-
-    def __init__(self, pretrain, **kwargs):
+    @staticmethod
+    def from_pretrained(name, **kwargs):
         """
+        WideResNet with different pre-trained weights.
 
-        :param pretrain: weights to load
-        :param kwargs: arguments passed to WideResNet
+        - **imagenet32**: Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet.
+        - **oe-cifar100-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100
+        - **oe-cifar10-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10
+        - **er-cifar10-tune**: Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-10
+        - **er-cifar100-tune**: Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-100
+        - **cifar100-pt**: Pre-Trained model for CIFAR-100
+        - **cifar10-pt**: Pre-Trained model for CIFAR-10
         """
-        super(WideResNetPretrained, self).__init__(**kwargs)
-        url = WideResNetPretrained.urls[pretrain]
-        state_dict = load_state_dict_from_url(url=url, map_location="cpu")
-        self.load_state_dict(state_dict)
+        urls = {
+            "imagenet32": "https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt",
+            "oe-cifar100-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar100_wrn_oe_tune_epoch_9.pt",
+            "oe-cifar10-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar10_wrn_oe_tune_epoch_9.pt",
+            "er-cifar10-tune": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/energy_ft/cifar10_wrn_s1_energy_ft_epoch_9.pt",
+            "er-cifar100-tune": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/energy_ft/cifar100_wrn_s1_energy_ft_epoch_9.pt",
+            "cifar100-pt": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/pretrained/cifar100_wrn_pretrained_epoch_99.pt",
+            "cifar10-pt": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/pretrained/cifar10_wrn_pretrained_epoch_99.pt",
+        }
+
+        model = WideResNet(**kwargs)
+        state_dict = load_state_dict_from_url(url=urls[name], map_location="cpu")
+        model.load_state_dict(state_dict)
+        return model

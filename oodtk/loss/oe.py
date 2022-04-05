@@ -24,7 +24,7 @@ class OutlierExposureLoss(nn.Module):
     :see Paper: https://arxiv.org/pdf/1812.04606v1.pdf
     """
 
-    def __init__(self, num_classes, lmbda=0.5):
+    def __init__(self, lmbda=0.5):
         """
 
         :param lmbda: weighting coefficient

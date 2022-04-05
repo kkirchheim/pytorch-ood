@@ -12,13 +12,9 @@ log = logging.getLogger(__name__)
 
 class Textures(VisionDataset):
     """
-    Textures dataset from *Describing Textures in the Wild*
-
-    Used in
-        - Energy-based Out-of-distribution Detection
+    Textures dataset from *Describing Textures in the Wild*, also known as DTD.
 
     :see Paper: https://arxiv.org/abs/1311.3618v2
-
     """
 
     base_folder = "dtd/images/"

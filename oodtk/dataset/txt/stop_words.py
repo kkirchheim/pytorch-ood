@@ -1,4 +1,6 @@
-# stop words taken from nltk
+"""
+List of english stop words used by nltk
+"""
 stop_words = [
     "i",
     "me",

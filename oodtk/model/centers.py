@@ -8,13 +8,73 @@ from oodtk import utils
 log = logging.getLogger(__name__)
 
 
+class ClassCenters(nn.Module):
+    """
+    Class Centers
+    """
+
+    def __init__(self, n_classes, n_features, fixed=False):
+        """
+        Centers are initialized as unit vectors, scaled by the magnitude.
+
+        :param n_classes: number of classes
+        """
+        super(ClassCenters, self).__init__()
+        # anchor points are fixed, so they do not require gradients
+        self.params = nn.Parameter(torch.zeros(size=(n_classes, n_features)))
+
+        if fixed:
+            self.params.requires_grad = False
+
+    @property
+    def num_classes(self):
+        return self.params.shape[0]
+
+    @property
+    def centers(self):
+        """
+        Class centers, a.k.a. Anchors
+        """
+        return self.params
+
+    def forward(self, embedding) -> torch.Tensor:
+        """
+        :param embedding: embeddings of samples
+        :param target: labels for samples
+        """
+        assert embedding.shape[1] == self.num_classes
+        return self._calculate_distances(embedding)
+
+    def _calculate_distances(self, embeddings: torch.Tensor) -> torch.Tensor:
+        """
+        :param embeddings: embeddings of samples
+        :returns: squared euclidean distance of embeddings to anchors
+        """
+        distances = utils.pairwise_distances(embeddings, self.params)
+        return distances
+
+    def predict(self, embeddings: torch.Tensor) -> torch.Tensor:
+        """
+        Make class membership predictions
+
+        :param embeddings: embeddings of samples
+        """
+        distances = self._calculate_distances(embeddings)
+        return nn.functional.softmin(distances, dim=1)
+
+
 class RunningCenters(nn.Module):
     """"""
 
-    def __init__(self, n_chasses, n_features):
+    def __init__(self, num_classes, n_embedding):
+        """
+
+        :param num_classes:
+        :param n_embedding:
+        """
         # create buffer for centers. those buffers will be updated during training, and are fixed during evaluation
         running_centers = torch.empty(
-            size=(self.n_classes, self.n_embedding), requires_grad=False
+            size=(self.num_classes, self.n_embedding), requires_grad=False
         ).double()
         num_batches_tracked = torch.empty(size=(1,), requires_grad=False).double()
         self.register_buffer("running_centers", running_centers)

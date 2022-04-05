@@ -5,6 +5,8 @@ Much of this code is taken from:
 https://github.com/asyml/vision-transformer-pytorch/blob/main/src/model.py
 """
 
+from os.path import join
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -153,12 +155,14 @@ class Encoder(nn.Module):
 
 class VisionTransformer(nn.Module):
     """
-    Vision Transformer from *AN IMAGE IS WORTH 16X16 WORDS: TRANSFORMERS FOR IMAGE RECOGNITION AT SCALE*
+    Vision Transformer from *An Image is worth 16x16 words: Transformers for Image Recognition at Scale*
 
     Transformer-Based architectures have also been used for OOD detection, for example in
     *OODDformer: Out-Of-Distribution Detection Transformer*.
 
-    :see implementation: https://github.com/asyml/vision-transformer-pytorch/blob/main/src/model.py
+    .. warning :: PyTorch adds vision transformers in v. 0.12.
+
+    :see Implementation: https://github.com/asyml/vision-transformer-pytorch/
     :see Paper: https://arxiv.org/pdf/2010.11929.pdf
     """
 
@@ -174,18 +178,7 @@ class VisionTransformer(nn.Module):
         attn_dropout_rate=0.0,
         dropout_rate=0.1,
     ):
-        """
-
-        :param image_size:
-        :param patch_size:
-        :param emb_dim:
-        :param mlp_dim:
-        :param num_heads:
-        :param num_layers:
-        :param num_classes:
-        :param attn_dropout_rate:
-        :param dropout_rate:
-        """
+        """ """
         super(VisionTransformer, self).__init__()
         h, w = image_size
         # embedding layer
@@ -227,29 +220,36 @@ class VisionTransformer(nn.Module):
         logits = self.classifier(feat[:, 0])
         return logits
 
-
-class VisionTransformerPretrained(VisionTransformer):
-    """
-    Vision Transformer with different pre-trained weights.
-
-    - **imagenet32**: Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet dataset.
-    - **oe-cifar100-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100 dataset
-    - **oe-cifar10-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10 dataset
-    """
-
-    urls = {
-        "imagenet32": "https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt",
-        "oe-cifar100-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar100_wrn_oe_tune_epoch_9.pt",
-        "oe-cifar10-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar10_wrn_oe_tune_epoch_9.pt",
-    }
-
-    def __init__(self, pretrain, **kwargs):
+    @staticmethod
+    def from_pretrained(name, **kwargs):
         """
+        Vision Transformer with different pre-trained weights.
 
-        :param pretrain: weights to load
-        :param kwargs: arguments passed to WideResNet
+        Weights:
+
+        * **b16-cifar10-tune**: b16 trained on ImageNet 21k and fine tuned on the CIFAR10
+        * **b16-cifar100-tune**: b16 trained on ImageNet 21k and fine tuned on the CIFAR100
+
+        .. note :: The original authors of the OODFormer did not provide weights for their final models. The
+            weights for CIFAR-10 and CIFAR-100 here are provided by us and based on the
+
         """
-        super(VisionTransformerPretrained, self).__init__(**kwargs)
-        url = VisionTransformerPretrained.urls[pretrain]
-        state_dict = load_state_dict_from_url(url=url, map_location="cpu")
-        self.load_state_dict(state_dict)
+        urls = {
+            "b16-cifar10-tune": "https://cse.ovgu.de/files/b16-cifar10-tune.pth",
+            "b16-cifar100-tune": "https://cse.ovgu.de/files/b16-cifar100-tune.pth",
+            "b16-im21k-224": "https://cse.ovgu.de/files/imagenet21k+imagenet2012_ViT-B_16-224.pth",
+            "b16-im21k": "https://cse.ovgu.de/files/imagenet21k+imagenet2012_ViT-B_16.pth",
+            "l16-im21k-224": "https://cse.ovgu.de/files/imagenet21k+imagenet2012_ViT-L_16-224.pth",
+            "l16-im21k": "https://cse.ovgu.de/files/imagenet21k+imagenet2012_ViT-L_16.pth",
+        }
+
+        url = urls[name]
+        model = VisionTransformer(**kwargs)
+
+        state_dict = load_state_dict_from_url(url, map_location="cpu")
+
+        if "state_dict" in state_dict:
+            state_dict = state_dict["state_dict"]
+
+        model.load_state_dict(state_dict)
+        return model

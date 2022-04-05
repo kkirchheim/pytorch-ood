@@ -19,7 +19,7 @@ class NegativeEnergy(torch.nn.Module, Method):
     :param t: temperature value T. Default is 1.
 
     .. math::
-        E(z) = -T \\log{\\sum_i  e^{-z_i/T}}
+        E(z) = -T \\log{\\sum_i e^{z_i/T}}
 
     :see Paper:
         https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf
@@ -43,7 +43,7 @@ class NegativeEnergy(torch.nn.Module, Method):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         z = self.model(x)
-        return self.t * torch.logsumexp(-z / self.t, dim=1)
+        return NegativeEnergy.score(z, self.t)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -51,6 +51,10 @@ class NegativeEnergy(torch.nn.Module, Method):
 
         :param x: the class logits
 
-        :return: negative energy
+        :return: energy
         """
         return self.forward(x)
+
+    @staticmethod
+    def score(logits, t=1):
+        return -t * torch.logsumexp(logits / t, dim=1)

@@ -46,10 +46,6 @@ class Cub2011(VisionDataset):
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
-    # if target_transform is not None:
-    #     mapped_targets = np.array([target_transform(l) for l in self._targets])
-    #     label, count = np.unique(mapped_targets[mapped_targets >= 0], return_counts=True)
-    #     print(f"{label} -> {count}")
     @property
     def targets(self):
         return list(self._targets)

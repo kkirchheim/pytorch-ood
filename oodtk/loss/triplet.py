@@ -1,6 +1,8 @@
 """
 Triplet loss
-Taken from
+
+https://github.com/NegatioN/OnlineMiningTripletLoss/blob/master/online_triplet_loss/losses.py
+
 """
 import torch
 from torch import nn
@@ -16,7 +18,6 @@ class TripletLoss(torch.nn.Module):
     :see Implementation: https://github.com/NegatioN/OnlineMiningTripletLoss/blob/master/online_triplet_loss/losses.py
 
     .. note::
-        * We copied this implementation and wrapped in into a Pytorch module. Credits go to **github.com/NegatioN**.
         * We added running centers for online class center estimation.
     """
 

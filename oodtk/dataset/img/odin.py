@@ -1,5 +1,5 @@
 """
-Datasets used for testing in  ODIN
+Datasets used for testing in ODIN
 
 :see  https://github.com/facebookresearch/odin
 """
