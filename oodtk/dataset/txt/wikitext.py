@@ -1,6 +1,6 @@
 """
 
-Used in outlier expoure
+Used in outlier exposure by Hendrycks et al.
 
 License: Creative Commons Attribution-ShareAlike License
 
