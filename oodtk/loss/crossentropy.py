@@ -11,7 +11,7 @@ def cross_entropy(x, targets):
     """
     known = is_known(targets)
     if not known.any():
-        return torch.zeros(size=(1,))
+        return torch.tensor(0.0, device=x.device)
 
     return F.cross_entropy(x[known], targets[known])
 

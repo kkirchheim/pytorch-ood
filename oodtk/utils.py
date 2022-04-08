@@ -4,6 +4,7 @@
 import logging
 from collections import defaultdict
 
+import numpy as np
 import torch
 import torchmetrics
 
@@ -117,7 +118,7 @@ def pairwise_distances(x, y=None) -> torch.Tensor:
         y_t = torch.transpose(x, 0, 1)
         y_norm = x_norm.view(1, -1)
     dist = x_norm + y_norm - 2.0 * torch.mm(x, y_t)
-    return torch.clamp(dist, 0.0, torch.inf)
+    return torch.clamp(dist, 0.0, np.Inf)
 
 
 class TensorBuffer(object):

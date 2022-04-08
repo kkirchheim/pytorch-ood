@@ -33,7 +33,12 @@ class TinyImages(Dataset):
     """
 
     def __init__(
-        self, datafile, cifar_index_file, transform=None, target_transform=None, exclude_cifar=True
+        self,
+        datafile,
+        cifar_index_file,
+        transform=None,
+        target_transform=None,
+        exclude_cifar=True,
     ):
         self.datafile = datafile
         self.cifar_index_file = cifar_index_file

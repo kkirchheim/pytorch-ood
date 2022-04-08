@@ -3,8 +3,8 @@ import logging
 import torch
 import torch.nn as nn
 
-import oodtk.utils
 from oodtk.model.centers import RunningCenters
+from oodtk.utils import is_known, is_unknown, pairwise_distances
 
 log = logging.getLogger(__name__)
 
@@ -32,14 +32,15 @@ class IILoss(nn.Module):
         :param n_embedding: embedding dimensionality
         """
         super(IILoss, self).__init__()
-        self.running_centers = RunningCenters(n_chasses=n_classes, n_embedding=n_embedding)
+        self.num_classes = n_classes
+        self.running_centers = RunningCenters(n_classes=n_classes, n_embedding=n_embedding)
 
     @property
-    def centers(self) -> torch.Tensor:
+    def centers(self) -> RunningCenters:
         """
         :return: current class center estimates
         """
-        return self.running_centers.centers
+        return self.running_centers
 
     def _calculate_spreads(self, mu, x, targets) -> torch.Tensor:
         """
@@ -50,7 +51,7 @@ class IILoss(nn.Module):
         :param targets:
         :return:
         """
-        spreads = torch.zeros((self.n_classes,), device=x.device)
+        spreads = torch.zeros((self.num_classes,), device=x.device)
         for clazz in targets.unique(sorted=False):
             class_x = x[targets == clazz]  # all instances of this class
             spreads[clazz] = torch.norm(class_x - mu[clazz], p=2).pow(2).sum()
@@ -62,10 +63,10 @@ class IILoss(nn.Module):
         :param mu:
         :return:
         """
-        dists = oodtk.utils.pairwise_distances(mu)
+        dists = pairwise_distances(mu)
         # set diagonal elements to "high" value (this value will limit the inter seperation, so cluster
         # do not drift apart infinitely)
-        dists[torch.eye(self.n_classes, dtype=torch.bool)] = 1e24
+        dists[torch.eye(len(mu), dtype=torch.bool)] = 1e24
         return dists
 
     def calculate_distances(self, x):
@@ -74,7 +75,7 @@ class IILoss(nn.Module):
         :param x: input points
         :return: distances to class centers
         """
-        return oodtk.utils.pairwise_distances(self.centers, x)
+        return pairwise_distances(x, self.centers.centers)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -91,20 +92,30 @@ class IILoss(nn.Module):
         :param x: embeddings of samples
         :param target: label of samples
         """
-        batch_classes = torch.unique(target, sorted=False)
-        if self.training:
-            # calculate empirical centers
-            mu = self.running_centers.update(x, target)  # self._calculate_centers(x, target)
+        known = is_known(target)
+
+        if known.any():
+            batch_classes = torch.unique(target[known], sorted=False)
+            if self.training:
+                # calculate empirical centers
+                mu = self.running_centers.update(
+                    x[known], target[known]
+                )  # self._calculate_centers(x, target)
+            else:
+                # when testing, use the running empirical class centers
+                mu = self.running_centers.centers
+
+            # calculate sum of class spreads and divide by the number of instances
+            intra_spread = (
+                self._calculate_spreads(mu, x[known], target[known]).sum() / x[known].shape[0]
+            )
+            # calculate distance between all (present) class centers
+            dists = self._get_center_distances(mu[batch_classes])
+            # the minimum distance between all class centers is the inter separation
+            inter_separation = -torch.min(dists)
+            # intra_spread should be minimized, inter_separation maximized
+            # we substract the margin from the inter seperation, so the overall loss will always be > 0.
+            # this does not influence on the results of the loss, because constant offsets have no impact on the gradient.
         else:
-            # when testing, use the running empirical class centers
-            mu = self.running_centers.centers
-        # calculate sum of class spreads and divide by the number of instances
-        intra_spread = self._calculate_spreads(mu, x, target).sum() / x.shape[0]
-        # calculate distance between all (present) class centers
-        dists = self._get_center_distances(mu[batch_classes])
-        # the minimum distance between all class centers is the inter separation
-        inter_separation = -torch.min(dists)
-        # intra_spread should be minimized, inter_separation maximized
-        # we substract the margin from the inter seperation, so the overall loss will always be > 0.
-        # this does not influence on the results of the loss, because constant offsets have no impact on the gradient.
+            intra_spread, inter_separation = 0.0, 0.0
         return intra_spread, inter_separation
