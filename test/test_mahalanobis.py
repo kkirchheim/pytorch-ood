@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from oodtk import Mahalanobis
+from pytorch_ood import Mahalanobis
 
 
 class Model(torch.nn.Module):

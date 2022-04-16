@@ -5,9 +5,9 @@ import time
 import unittest
 from pathlib import Path
 
-from oodtk.dataset.img.cifar import CIFAR10C, CIFAR100C
-from oodtk.dataset.img.imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
-from oodtk.dataset.img.mnistc import MNISTC
+from pytorch_ood.dataset.img.cifar import CIFAR10C, CIFAR100C
+from pytorch_ood.dataset.img.imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
+from pytorch_ood.dataset.img.mnistc import MNISTC
 
 
 class TestDownloadDatasets(unittest.TestCase):

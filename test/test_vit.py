@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from oodtk.model.vit import VisionTransformer
+from pytorch_ood.model.vit import VisionTransformer
 
 
 class VisionTransformerTest(unittest.TestCase):

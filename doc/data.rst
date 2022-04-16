@@ -6,7 +6,7 @@ Datasets
 Image
 ====================================================
 
-.. automodule:: oodtk.dataset.img
+.. automodule:: pytorch_ood.dataset.img
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ Image
 Text
 ======================================================
 
-.. automodule:: oodtk.dataset.txt
+.. automodule:: pytorch_ood.dataset.txt
    :members:
    :undoc-members:
    :show-inheritance:
@@ -24,6 +24,4 @@ Text
 Open Set Simulations
 =====================================================
 
-.. automodule:: oodtk.dataset.ossim
-
-
+.. automodule:: pytorch_ood.dataset.ossim

@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from oodtk import MCD
+from pytorch_ood import MCD
 
 
 class Model(torch.nn.Module):

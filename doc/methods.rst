@@ -4,30 +4,30 @@ Detectors
 Softmax
 -------------------------------
 
-.. automodule:: oodtk.softmax
+.. automodule:: pytorch_ood.softmax
 
 OpenMax
 -------------------------------
 
-.. automodule:: oodtk.openmax
+.. automodule:: pytorch_ood.openmax
 
 
 ODIN
 -------------------------------
 
-.. automodule:: oodtk.odin
+.. automodule:: pytorch_ood.odin
 
 Negative Energy
 -------------------------------
 
-.. automodule:: oodtk.energy
+.. automodule:: pytorch_ood.energy
 
 Mahalanobis Distance
 -------------------------------
 
-.. automodule:: oodtk.mahalanobis
+.. automodule:: pytorch_ood.mahalanobis
 
 Monte Carlo Dropout
 -------------------------------
 
-.. automodule:: oodtk.mcd
+.. automodule:: pytorch_ood.mcd
