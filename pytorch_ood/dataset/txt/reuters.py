@@ -17,13 +17,13 @@ log = logging.getLogger(__name__)
 
 class Reuters52(Dataset):
     """
-    Stemmed version of the reuters 52 dataset.
+    Stemmed version of the reuters 52 dataset, as used by Hendrycks et al.
     """
 
-    train_url = "https://www.cs.umb.edu/~smimarog/textmining/datasets/r52-train-stemmed.txt"
-    test_url = "https://www.cs.umb.edu/~smimarog/textmining/datasets/r52-test-stemmed.txt"
-    test_md5 = "e29d9f65d622f926dee08a6a87b2277a"
-    train_md5 = "f115a957fbbf050a81d38ca08500e5c3"
+    train_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r52-train.txt"
+    test_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r52-test.txt"
+    test_md5 = "8a82cdf79e111df1bb23a9bbc48f6d25"
+    train_md5 = "6b1d32bd95e95c1c26cd592d3bdb8c0e"
     train_filename = "r52-train-stemmed.txt"
     test_filename = "r52-test-stemmed.txt"
     class2index = {
@@ -82,6 +82,14 @@ class Reuters52(Dataset):
     }
 
     def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
+        """
+
+        :param root:
+        :param transform:
+        :param target_transform:
+        :param train:
+        :param download:
+        """
         super(Dataset, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform
