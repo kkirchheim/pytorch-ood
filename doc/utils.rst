@@ -1,7 +1,7 @@
 Utilities
 ************************************
 
-.. automodule:: oodtk.utils
+.. automodule:: pytorch_ood.utils
    :members:
       is_known,
       is_unknown,
@@ -16,4 +16,4 @@ Utilities
 Transformations
 ================
 
-.. automodule:: oodtk.transforms
+.. automodule:: pytorch_ood.transforms

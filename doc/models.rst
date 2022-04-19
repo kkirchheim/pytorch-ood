@@ -1,2 +1,2 @@
 
-.. automodule:: oodtk.model
+.. automodule:: pytorch_ood.model

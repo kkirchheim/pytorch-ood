@@ -1,70 +1,69 @@
-import multiprocessing
-import os
-import tempfile
-import time
 import unittest
-from pathlib import Path
+from urllib.request import urlopen
 
-from oodtk.dataset.img.cifar import CIFAR10C, CIFAR100C
-from oodtk.dataset.img.imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
-from oodtk.dataset.img.mnistc import MNISTC
+from pytorch_ood.dataset.img.cifar import CIFAR10C, CIFAR100C
+from pytorch_ood.dataset.img.imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
+from pytorch_ood.dataset.img.mnistc import MNISTC
+from pytorch_ood.dataset.txt import Multi30k, NewsGroup20, Reuters52, WikiText2
 
 
-class TestDownloadDatasets(unittest.TestCase):
-    """
-    Test downloading of various datasets
-    """
-
-    def _try_download(self, fun, *args, **kwargs):
-        p = multiprocessing.Process(target=fun, args=args, kwargs=kwargs)
-        p.start()
-        time.sleep(5)
-        p.terminate()
-
+class TestDatasetAvailability(unittest.TestCase):
     def test_download_ImageNetA(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self._try_download(ImageNetA, download=True, root=tmp_dir)
-            self.assertTrue(self._check_download(tmp_dir))
+        status = urlopen(ImageNetA.url).getcode()
+        self.assertEqual(status, 200)
 
     def test_download_ImageNetO(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self._try_download(ImageNetO, download=True, root=tmp_dir)
-            self.assertTrue(self._check_download(tmp_dir))
+        status = urlopen(ImageNetO.url).getcode()
+        self.assertEqual(status, 200)
 
     def test_download_ImageNetR(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self._try_download(ImageNetR, download=True, root=tmp_dir)
-            self.assertTrue(self._check_download(tmp_dir))
+        status = urlopen(ImageNetR.url).getcode()
+        self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable")
     def test_download_ImageNetC(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self._try_download(ImageNetC, subset="blur", download=True, root=tmp_dir)
-            self.assertTrue(self._check_download(tmp_dir))
+        status = urlopen(ImageNetC.url_list[0]).getcode()
+        self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable")
     def test_download_CIFAR10C(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self._try_download(CIFAR10C, subset="all", download=True, root=tmp_dir)
-            self.assertTrue(self._check_download(tmp_dir))
+        status = urlopen(CIFAR10C.url).getcode()
+        self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable")
     def test_download_CIFAR100C(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self._try_download(CIFAR100C, download=True, root=tmp_dir)
-            self.assertTrue(self._check_download(tmp_dir))
+        status = urlopen(CIFAR100C.url).getcode()
+        self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable")
     def test_download_MNISTC(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self._try_download(MNISTC, subset="all", split="train", download=True, root=tmp_dir)
-            self.assertTrue(self._check_download(tmp_dir))
+        status = urlopen(MNISTC.urls[0]).getcode()
+        self.assertEqual(status, 200)
 
-    def _check_download(self, directory):
-        files = Path(directory).glob("*")
-        for file in files:
-            print(file)
-            file_size = os.path.getsize(file)
-            print(file_size)
-            if file_size > 0:
-                return True
-            else:
-                return False
+    def test_download_Wiki2(self):
+        status = urlopen(WikiText2.url).getcode()
+        self.assertEqual(status, 200)
 
-        return False
+    def test_download_Reuters52(self):
+        status = urlopen(Reuters52.train_url).getcode()
+        self.assertEqual(status, 200)
+        status = urlopen(Reuters52.test_url).getcode()
+        self.assertEqual(status, 200)
+
+    def test_download_Multi30k(self):
+        status = urlopen(Multi30k.test_url).getcode()
+        self.assertEqual(status, 200)
+
+        status = urlopen(Multi30k.train_url).getcode()
+        self.assertEqual(status, 200)
+
+    def test_download_NewsGroup20(self):
+        status = urlopen(NewsGroup20.test_url).getcode()
+        self.assertEqual(status, 200)
+
+        status = urlopen(NewsGroup20.train_url).getcode()
+        self.assertEqual(status, 200)
+
+
+if __name__ == "__main__":
+    unittest.main()
