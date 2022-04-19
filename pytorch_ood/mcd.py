@@ -6,11 +6,11 @@
 """
 import torch.nn
 
-from .api import Method
+from .api import Detector
 from .softmax import Softmax
 
 
-class MCD(Method):
+class MCD(Detector):
     """
     From the paper *Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning*.
     Forward-propagates the input through the model several times with activated dropout and averages the results.

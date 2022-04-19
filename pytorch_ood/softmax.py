@@ -6,10 +6,10 @@
 """
 import torch
 
-from .api import Method
+from .api import Detector
 
 
-class Softmax(Method, torch.nn.Module):
+class Softmax(Detector, torch.nn.Module):
     """
     Implements the Softmax Baseline for OOD detection.
 

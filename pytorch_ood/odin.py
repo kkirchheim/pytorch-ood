@@ -8,7 +8,7 @@ import torch
 from torch.autograd import Variable
 from torch.nn import functional as F
 
-from .api import Method
+from .api import Detector
 
 
 def zero_grad(x):
@@ -69,7 +69,7 @@ def odin_preprocessing(
     return x_hat
 
 
-class ODIN(Method):
+class ODIN(Detector):
     """
     ODIN is a preprocessing method for inputs that aims to increase the discriminability of
     the softmax outputs for In- and Out-of-Distribution data.

@@ -10,12 +10,12 @@ from torch.utils.data import DataLoader
 
 from pytorch_ood.utils import TensorBuffer, contains_unknown, is_known, is_unknown
 
-from .api import Method
+from .api import Detector
 
 log = logging.getLogger(__name__)
 
 
-class Mahalanobis(torch.nn.Module, Method):
+class Mahalanobis(torch.nn.Module, Detector):
     """
     Implements the Mahalanobis Method.
 

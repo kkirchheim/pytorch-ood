@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import torch
 
 
-class Method(ABC):
+class Detector(ABC):
     """
     Abstract Base Class for a method
     """

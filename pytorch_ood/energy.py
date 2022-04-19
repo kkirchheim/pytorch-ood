@@ -6,10 +6,10 @@
 """
 import torch
 
-from .api import Method
+from .api import Detector
 
 
-class NegativeEnergy(torch.nn.Module, Method):
+class NegativeEnergy(torch.nn.Module, Detector):
     """
     Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.
 
