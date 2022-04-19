@@ -20,18 +20,22 @@ class TestDatasetAvailability(unittest.TestCase):
         status = urlopen(ImageNetR.url).getcode()
         self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable")
     def test_download_ImageNetC(self):
         status = urlopen(ImageNetC.url_list[0]).getcode()
         self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable")
     def test_download_CIFAR10C(self):
         status = urlopen(CIFAR10C.url).getcode()
         self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable")
     def test_download_CIFAR100C(self):
         status = urlopen(CIFAR100C.url).getcode()
         self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable")
     def test_download_MNISTC(self):
         status = urlopen(MNISTC.urls[0]).getcode()
         self.assertEqual(status, 200)
