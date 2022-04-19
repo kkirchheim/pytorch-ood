@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from oodtk.loss import ObjectosphereLoss
+from pytorch_ood.loss import ObjectosphereLoss
 
 
 class TestObjectosphere(unittest.TestCase):

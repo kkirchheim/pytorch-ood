@@ -1,7 +1,7 @@
 import unittest
 from test.helpers import for_examples
 
-from oodtk.model import VisionTransformer, WideResNet
+from pytorch_ood.model import VisionTransformer, WideResNet
 
 
 class TestPreTrainedModels(unittest.TestCase):
