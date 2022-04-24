@@ -24,10 +24,9 @@ before_script:
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
-  - pip install twine
-  - pip install -r requirements.txt
-  - pip install cython
-  - pip install libmr
+  - pip install twine cython
+  - pip install .
+  - pip install libmr # has to be installed after cython
   - pip install sh torchmetrics # additional dependencies for tests
   - pip freeze # print package versions for debugging
 
