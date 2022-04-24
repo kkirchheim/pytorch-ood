@@ -16,6 +16,37 @@ This library implements
 
 It is provided with the aim to speed up research and to facilitate reproducibility.
 
+## Installation
+
+```shell
+pip install pytorch-ood
+```
+
+### Optional Dependencies
+For OpenMax, you will have to install `libmr`, which is currently broken.
+You will have to install `cython` and `libmr` afterwards manually.
+
+
+## Quick Start
+Load model pre-trained with energy regularization, and predict on some dataset `data_loader` using
+Energy-based outlier scores.
+```python
+from pytorch_ood.model import WideResNet
+from pytorch_ood import NegativeEnergy
+from pytorch_ood.metrics import OODMetrics
+
+model = WideResNet.from_pretrained("er-cifar10-tune").eval().cuda()
+detector = NegativeEnergy(model)
+
+metrics = OODMetrics()
+
+for x, y in data_loader:
+    metrics.update(detector(x.cuda()), y)
+
+print(metrics.compute())
+```
+
+
 ## Implemented Methods
 
 | Method       | Reference     |
@@ -26,20 +57,9 @@ It is provided with the aim to speed up research and to facilitate reproducibili
 | Monte Carlo Dropout      |   |
 | Softmax Thresholding Baseline      |   |
 | Energy Based OOD Detection      |   |
-| Objkectosphere      |   |
+| Objectosphere      |   |
 | Outlier Exposure      |   |
-| Deeo SVDD      |   |
-
-## Installation
-
-```shell
-pip install pytorch-ood
-```
-
-### Optional Dependencies
-For OpenMax, you will have to install `libmr`, which is currently broken.
-You will have to install `cython` and `libmr` afterwards by manually.
-
+| Deep SVDD      |   |
 
 
 ## Roadmap
