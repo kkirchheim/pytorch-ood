@@ -45,7 +45,7 @@ class CACLoss(nn.Module):
     def _init_centers(self):
         """Init anchors with 1, scale by"""
         nn.init.eye_(self.centers.params)
-        self.centers.params *= self.magnitude  # scale with magnitude
+        self.centers.params.data *= self.magnitude  # scale with magnitude
 
     def forward(self, distances, target) -> torch.Tensor:
         """
