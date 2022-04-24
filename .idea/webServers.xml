@@ -9,6 +9,13 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
+      <webServer id="2f7ee581-d527-4d1a-89c8-14c4b6ed075c" name="grakadu">
+        <fileTransfer rootFolder="/data_fast/kirchheim/" accessType="SFTP" host="grakadu" port="22" sshConfigId="a1eaf9ec-18b6-4d9f-8426-5bc6e344e70e" sshConfig="kirchheim@grakadu:22 agent" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>
