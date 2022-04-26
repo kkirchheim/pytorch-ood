@@ -63,12 +63,12 @@ class CACLoss(nn.Module):
             d_true = torch.gather(input=d_known, dim=1, index=target_known.view(-1, 1)).view(-1)
             anchor_loss = d_true.mean()
 
-            # calc distances to all non_target tensors
-            tmp = [
-                [i for i in range(self.n_classes) if target_known[x] != i]
-                for x in range(len_dist_known)
-            ]
-            non_target = torch.tensor(tmp, dtype=torch.long, device=distances.device)
+            non_target = torch.arange(
+                0, self.n_classes - 1, dtype=torch.long, device=distances.device
+            ).expand(d_known.shape[0], self.n_classes - 1)
+            is_last_class = target_known == self.n_classes
+            non_target[is_last_class, target_known[is_last_class]] = self.n_classes - 1
+
             d_other = torch.gather(d_known, dim=1, index=non_target)
             # for numerical stability, we clamp the distance values
             tuplet_loss = (-d_other + d_true.unsqueeze(1)).clamp(max=50).exp()
