@@ -103,9 +103,3 @@ class StreetHazards(ImageDatasetBase):
             target = self.target_transform(target)
 
         return img, target
-
-
-obj = StreetHazards(root="C:\\Users\\budha\\Desktop\\temp",download=True, subset='test')
-for i in range(1500):
-    im1, im2 = obj.__getitem__(i)
-    print(im1.size, im2.size)
