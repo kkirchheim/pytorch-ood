@@ -4,7 +4,6 @@ from os.path import join
 from typing import Any, Callable, Optional, Tuple
 from PIL import Image
 
-
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -20,15 +19,19 @@ class StreetHazards(ImageDatasetBase):
     :see Website: https://github.com/hendrycks/anomaly-seg
     """
 
-    subset_list = ["test", "train"]
+    subset_list = ["test", "train", "validation"]
 
     base_folder_list = [
         "test/images/",
-        "train/images/",
+        "train/images/training/",
+        "train/images/validation/",
     ]
-    url_list = ["https://people.eecs.berkeley.edu/~hendrycks/streethazards_test.tar","https://people.eecs.berkeley.edu/~hendrycks/streethazards_train.tar"]
-    filename_list = ["streethazards_test.tar", "streethazards_train.tar"]
-    tgz_md5_list = ["8c547c1346b00c21b2483887110bfea7", "cd2d1a8649848afb85b5059d227d2090"]
+    url_list = ["https://people.eecs.berkeley.edu/~hendrycks/streethazards_test.tar",
+                "https://people.eecs.berkeley.edu/~hendrycks/streethazards_train.tar",
+                "https://people.eecs.berkeley.edu/~hendrycks/streethazards_train.tar",
+                ]
+    filename_list = ["streethazards_test.tar", "streethazards_train.tar","streethazards_train.tar" ]
+    tgz_md5_list = ["8c547c1346b00c21b2483887110bfea7", "cd2d1a8649848afb85b5059d227d2090", "cd2d1a8649848afb85b5059d227d2090"]
 
     def getListOfFiles(self, dirName):
         # create a list of file and sub directories 
@@ -86,12 +89,11 @@ class StreetHazards(ImageDatasetBase):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is annotation of the image.
         """
 
         file, target = self.files[index], self.files[index].replace("images", "annotations")
 
-        # doing this so that it is consistent with all other datasets
         # to return a PIL Image
         img = Image.open(file)
         target = Image.open(target)
