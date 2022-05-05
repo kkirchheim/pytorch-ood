@@ -4,6 +4,7 @@ https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/Reut
 """
 import logging
 import os
+import re
 from typing import Tuple
 
 import numpy as np
@@ -159,7 +160,48 @@ class Reuters52(Dataset):
         return len(self._data)
 
 
-if __name__ == "__main__":
-    root = os.path.expanduser(os.path.join("~", ".cache", "pytorch_ood"))
-    dataset = Reuters52(root, download=True)
-    pass
+class Reuters8(Reuters52):
+    """
+    Stemmed version of the reuters 8 dataset, as used by Hendrycks et al.
+    """
+
+    train_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r8-train.txt"
+    test_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r8-test.txt"
+    test_md5 = "7a54d01272de570d13d0c58cf8aa3c8d"
+    train_md5 = "c979a285f1c132c5be8d554b385f2c49"
+    train_filename = "r8-train-stemmed.txt"
+    test_filename = "r8-test-stemmed.txt"
+
+    def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
+        """
+
+        :param root:
+        :param transform:
+        :param target_transform:
+        :param train:
+        :param download:
+        """
+        super(Reuters52, self).__init__()
+        self.root = os.path.expanduser(root)
+        self.transforms = transform
+        self.target_transform = target_transform
+        self.is_train = train
+        self._analyzer = None
+        if download:
+            self._download()
+        self._targets, self._data = self._load_data()
+
+    def _load_data(self) -> Tuple:
+        if self.is_train:
+            filename = self.train_filename
+        else:
+            filename = self.test_filename
+        filename = os.path.join(self.root, filename)
+        x, targets = [], []
+        with open(filename, "r") as f:
+            for line in f:
+                line = re.sub(r"\W+", " ", line).strip()
+                x.append(line[1:])
+                x[-1] = " ".join(word for word in x[-1].split() if word not in stop_words)
+                targets.append(line[0])
+        return np.array(targets, dtype=int), x

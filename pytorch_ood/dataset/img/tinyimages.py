@@ -77,9 +77,8 @@ class TinyImages(Dataset):
 
                 if self.transform is not None:
                     img = self.transform(img)
-
                 if self.target_transform is not None:
-                    img = self.target_transform(label)
+                    label = self.target_transform(label)
                 return img, label
 
             except ValueError as e:

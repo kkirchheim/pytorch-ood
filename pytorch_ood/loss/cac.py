@@ -45,7 +45,7 @@ class CACLoss(nn.Module):
     def _init_centers(self):
         """Init anchors with 1, scale by"""
         nn.init.eye_(self.centers.params)
-        self.centers.params *= self.magnitude  # scale with magnitude
+        self.centers.params.data *= self.magnitude  # scale with magnitude
 
     def forward(self, distances, target) -> torch.Tensor:
         """
@@ -56,24 +56,26 @@ class CACLoss(nn.Module):
 
         known = is_known(target)
         if known.any():
-            d_true = torch.gather(
-                input=distances[known], dim=1, index=target[known].view(-1, 1)
-            ).view(-1)
+            target_known = target[known]
+            d_known = distances[known]
+            len_dist_known = len(d_known)
+
+            d_true = torch.gather(input=d_known, dim=1, index=target_known.view(-1, 1)).view(-1)
             anchor_loss = d_true.mean()
-            # calc distances to all non_target tensors
-            tmp = [
-                [i for i in range(self.n_classes) if target[known][x] != i]
-                for x in range(len(distances[known]))
-            ]
-            non_target = torch.Tensor(tmp).long().to(distances.device)
-            d_other = torch.gather(distances[known], 1, non_target)
+
+            non_target = torch.arange(
+                0, self.n_classes - 1, dtype=torch.long, device=distances.device
+            ).expand(d_known.shape[0], self.n_classes - 1)
+            is_last_class = target_known == self.n_classes
+            non_target[is_last_class, target_known[is_last_class]] = self.n_classes - 1
+
+            d_other = torch.gather(d_known, dim=1, index=non_target)
             # for numerical stability, we clamp the distance values
-            tuplet_loss = (-d_other + d_true.unsqueeze(1)).clamp(max=50).exp()  # torch.exp()
-            tuplet_loss = torch.log(1 + torch.sum(tuplet_loss, dim=1)).mean()
+            tuplet_loss = (-d_other + d_true.unsqueeze(1)).clamp(max=50).exp()
+            tuplet_loss = torch.log(1 + tuplet_loss.sum(dim=1)).mean()
         else:
-            anchor_loss, tuplet_loss = torch.tensor(0.0, device=distances.device), torch.tensor(
-                0.0, device=distances.device
-            )
+            anchor_loss = torch.tensor(0.0, device=distances.device)
+            tuplet_loss = torch.tensor(0.0, device=distances.device)
 
         return self.lambda_ * anchor_loss, tuplet_loss
 
@@ -83,7 +85,7 @@ class CACLoss(nn.Module):
         :param x: input points
         :return: distances to class centers
         """
-        return self.centers(x)
+        return self.centers(x).pow(2)
 
     @staticmethod
     def score(distance):
