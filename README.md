@@ -86,7 +86,7 @@ The legal implications of using pre-trained models in commercial services are, t
 If you use this package in your research, please consider citing it.
 To appear in
 ```text
-@article{kirchheim2022,
+@article{kirchheim2022pytorch,
 	author = {Kirchheim, Konstantin and Filax, Marco and Ortmeier, Frank},
 	journal = {CVPR Workshop for Human-centered Intelligent Services: Safety and Trustworthy},
 	number = {},

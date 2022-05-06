@@ -122,10 +122,12 @@ class OODMetrics(object):
         :param outlier_scores: outlier score
         :param y: target label
         """
-        label = is_unknown(y)
-        self.auroc.update(outlier_scores, label)
-        self.aupr_in.update(outlier_scores, label)
-        self.aupr_out.update(-outlier_scores, label)
+        label = is_unknown(y).detach().cpu().long()
+        o = outlier_scores.detach().cpu()
+
+        self.auroc.update(o, label)
+        self.aupr_in.update(o, label)
+        self.aupr_out.update(-o, label)
         self.buffer.append("scores", outlier_scores)
         self.buffer.append("labels", label)
 

@@ -4,10 +4,15 @@
     :members:
 
 """
-import torch.nn
+import logging
+
+import torch
+from torch import nn
 
 from .api import Detector
 from .softmax import Softmax
+
+log = logging.getLogger(__name__)
 
 
 class MCD(Detector):
@@ -19,11 +24,11 @@ class MCD(Detector):
 
     :see Paper: http://proceedings.mlr.press/v48/gal16.pdf
 
-    .. warning:: This implementations puts the model in evaluation model. This will also affect other modules, like
+    .. warning:: This implementations puts the model in evaluation model. This could also affect other modules, like
         BatchNorm. This is currently a workaround.
     """
 
-    def __init__(self, model: torch.nn.Module):
+    def __init__(self, model: nn.Module):
         """
 
         :param model: the module to use for the forward pass
@@ -46,7 +51,19 @@ class MCD(Detector):
         :param n: number of rounds
         :return:
         """
-        model.train()
+        mode_switch = False
+
+        if not model.training:
+            log.debug("Putting model into training mode ... ")
+            mode_switch = True
+
+            model.train()
+
+            for mod in model.modules():
+                # reset batch norm layers.
+                # TODO: are there other layers?
+                if isinstance(mod, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+                    mod.train(False)
 
         # TODO: quickfix
         dev = x.device  # list(model.parameters())[0].device
@@ -59,7 +76,11 @@ class MCD(Detector):
                     results = torch.zeros(size=output.shape).to(dev)
                 results += output
         results /= n
-        model.eval()
+
+        if mode_switch:
+            log.debug("Putting model into eval mode ... ")
+            model.eval()
+
         return results
 
     def predict(self, x: torch.Tensor, n=30) -> torch.Tensor:
