@@ -12,11 +12,12 @@ log = logging.getLogger(__name__)
 
 def calc_openness(n_train, n_test, n_target):
     """
-    In *Toward open set recognition* from Scheirer, Jain, Boult et al, the Openness was defined.
+    In *Toward open set recognition* the Openness  :math:`\\mathcal{O}`  of a problem was defined as:
 
     .. math::
         \\mathcal{O} = 1 - \\sqrt{ \\frac{2 \\times  n_{train}}{n_{test} \\times n_{target}} }
 
+    where :math:`n` is the number of classes, respectively.
 
     :return: Openness of the problem
 

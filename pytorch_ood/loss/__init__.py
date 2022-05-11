@@ -27,9 +27,16 @@ Center Loss
 .. autoclass:: pytorch_ood.loss.CenterLoss
     :members:
 
-Triplet Loss
+
+Deep SVDD
 ----------------------------------------------
-.. autoclass:: pytorch_ood.loss.TripletLoss
+.. autoclass:: pytorch_ood.loss.DeepSVDD
+    :members:
+
+
+Entropic Open-Set Loss
+----------------------------------------------
+.. autoclass:: pytorch_ood.loss.EntropicOpenSetLoss
     :members:
 
 
@@ -68,6 +75,8 @@ from .conf import ConfidenceLoss
 from .crossentropy import CrossEntropy
 from .energy import EnergyRegularizedLoss
 from .ii import IILoss
-from .objectosphere import ObjectosphereLoss
+from .objectosphere import EntropicOpenSetLoss, ObjectosphereLoss
 from .oe import OutlierExposureLoss
-from .triplet import TripletLoss
+
+# from .triplet import TripletLoss
+from .svdd import DeepSVDD

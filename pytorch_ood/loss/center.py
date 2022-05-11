@@ -17,7 +17,7 @@ class CenterLoss(nn.Module):
     Calculates
 
     .. math::
-        \\sum_{x,y} \\lbrace  d(x,\\mu_y) - r , 0 \\rbrace
+        \\mathcal{L}(x,y) = \\max \\lbrace  d(x,\\mu_y) - r , 0 \\rbrace
 
     where :math:`d` is some distance. More generally, it can be any dissimilarity function, like the squared distance,
     which is not a proper distance metric.

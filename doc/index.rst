@@ -3,11 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Out-of-Distribution ToolKit
+PyTorch Out-of-Distribution Detection
 #############################
 
-Implementation of methods and helper functions for Out-of-Distribution Detection, Open Set Recognition, Anomaly Detection,
-Novelty Detection, and and related tasks. Based on PyTorch.
+This package provides implementation of methods and helper functions for Out-of-Distribution Detection based on PyTorch.
+PyTorch-OOD aims to provide modular, well-tested, and documented implementations of OOD detection methods with a unified
+interface, as well as training and benchmark datasets, pre-trained models, and utility functions.
 
 This documentation provides a user guide with general information on the
 assumptions, nomenclature, as well as a structured API documentation to aid implementation.
@@ -22,7 +23,7 @@ assumptions, nomenclature, as well as a structured API documentation to aid impl
 
 .. toctree::
    :maxdepth: 5
-   :caption: API
+   :caption: Library
 
    losses
    methods

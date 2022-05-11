@@ -13,7 +13,7 @@
 
 class ToUnknown(object):
     """
-    Callable that returns a negative number, used in pipelines.
+    Callable that returns a negative number, used in pipelines to mark specific datasets as OOD or unknown.
     """
 
     def __init__(self):
