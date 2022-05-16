@@ -18,26 +18,26 @@ class OutlierExposureLoss(nn.Module):
 
     The loss for OOD samples is the cross-entropy between the predicted distribution and the uniform distribution.
 
-    .. math:: \\sum_{x,y \\in \\mathcal{D}^{in}} \\mathcal{L}_{NLL}(f(x),y) + \\lambda
+    .. math:: \\sum_{x,y \\in \\mathcal{D}^{in}} \\mathcal{L}_{NLL}(f(x),y) + \\alpha
         \\sum_{x \\in \\mathcal{D}^{out}} D_{KL}(f(x) \\Vert \\mathcal{U})
 
     :see Paper: https://arxiv.org/pdf/1812.04606v1.pdf
     """
 
-    def __init__(self, lmbda=0.5):
+    def __init__(self, alpha=0.5):
         """
 
-        :param lmbda: weighting coefficient
+        :param alpha: weighting coefficient
         """
         super(OutlierExposureLoss, self).__init__()
-        self.lambda_ = lmbda
+        self.alpha = alpha
 
-    def forward(self, logits, target) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, logits, target) -> torch.Tensor:
         """
 
         :param logits: class logits for predictions
         :param target: labels for predictions
-        :return: tuple with cross-entropy for known samples and weighted outlier exposure loss for unknown samples.
+        :return: loss
         """
         loss_ce = cross_entropy(logits, target)
         if contains_unknown(target):
@@ -45,4 +45,4 @@ class OutlierExposureLoss(nn.Module):
             loss_oe = -(logits[unknown].mean(1) - torch.logsumexp(logits[unknown], dim=1)).mean()
         else:
             loss_oe = 0
-        return loss_ce, self.lambda_ * loss_oe
+        return loss_ce + self.alpha * loss_oe

@@ -100,6 +100,9 @@ class ODIN(Detector):
         self.temperature = temperature
         self.norm_std = norm_std
 
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        return self.predict(x)
+
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         Calculates softmax outlier scores on ODIN pre-processed inputs.

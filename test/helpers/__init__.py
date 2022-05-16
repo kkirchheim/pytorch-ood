@@ -1,5 +1,7 @@
 import sys
 
+from .model import Model
+
 
 def for_examples(*parameters):
     def tuplify(x):

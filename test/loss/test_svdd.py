@@ -10,7 +10,7 @@ class TestDeepSVDD(unittest.TestCase):
     Test code of examples
     """
 
-    def test_example_1(self):
+    def test_forward(self):
         criterion = DeepSVDD(n_features=10)
         logits = torch.randn(size=(10, 10))
         target = torch.zeros(size=(10,)).long()
