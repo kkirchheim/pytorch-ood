@@ -34,7 +34,7 @@ This library provides
 - Neural Network Architectures used in academic literature, as well as pretrained weights
 - Useful Utilities
 
-and provided with the aim to speed up research and to facilitate reproducibility.
+and was created with the aim to speed up research and to facilitate reproducibility.
 It is designed such that it should integrate seamlessly with frameworks that enable the scaling of model training,
 like [pytorch-lightning](https://www.pytorchlightning.ai/).
 
