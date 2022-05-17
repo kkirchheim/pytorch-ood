@@ -106,6 +106,7 @@ class ODIN(Detector):
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         Calculates softmax outlier scores on ODIN pre-processed inputs.
+
         :param x:
         :return:
         """
