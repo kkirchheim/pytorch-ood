@@ -75,7 +75,13 @@ class StreetHazards(ImageDatasetBase):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
-
+        """
+        :param root: root path for dataset
+        :param subset: one of 'train', 'test', 'validation'
+        :param transform: transformations to apply to images
+        :param target_transform: transformations to apply to target
+        :param download: if dataset should be downloaded automatically
+        """
         super(StreetHazards, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
