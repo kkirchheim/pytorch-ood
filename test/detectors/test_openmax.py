@@ -4,7 +4,7 @@ from test.helpers import ClassificationModel
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.detectors.openmax import OpenMax
+from pytorch_ood.detector import OpenMax
 
 
 class TestOpenMax(unittest.TestCase):

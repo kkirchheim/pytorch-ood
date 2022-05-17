@@ -3,7 +3,7 @@ from test.helpers import ClassificationModel, SegmentationModel
 
 import torch
 
-from pytorch_ood import NegativeEnergy
+from pytorch_ood.detector import NegativeEnergy
 
 
 class TestEnergy(unittest.TestCase):

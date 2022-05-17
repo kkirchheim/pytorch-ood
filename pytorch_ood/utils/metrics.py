@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torchmetrics
 
-from pytorch_ood.utils import TensorBuffer, is_known, is_unknown
+from .utils import TensorBuffer, is_known, is_unknown
 
 
 def calibration_error(confidence, correct, p="2", beta=100):

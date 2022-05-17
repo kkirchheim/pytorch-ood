@@ -4,8 +4,8 @@ from test.helpers import ClassificationModel
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood import Mahalanobis
 from pytorch_ood.api import RequiresFitException
+from pytorch_ood.detector import Mahalanobis
 
 
 class MahalanobisTest(unittest.TestCase):

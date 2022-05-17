@@ -3,10 +3,10 @@ from test.helpers import ClassificationModel
 
 import torch
 
-from pytorch_ood import ODIN
+from pytorch_ood.detector import ODIN
 
 
-class TestExamples(unittest.TestCase):
+class TestODIN(unittest.TestCase):
     """
     Test code of examples
     """
