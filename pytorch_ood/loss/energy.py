@@ -1,9 +1,4 @@
 """
-Energy-bounded Learning
-----------------------------------------------
-
-..  automodule:: pytorch_ood.nn.loss.energy
-    :members: EnergyRegularizedLoss
 
 """
 import torch
@@ -19,8 +14,8 @@ class EnergyRegularizedLoss(nn.Module):
 
     The regularization term is defined as:
 
-    .. math:: L_{\\text{energy}} = \\mathbb{E}_{(x_{in},y) \\sim \\mathcal{D}_{in}^{train}}(max(0, E(x_{in})) - m_{in})^2 +
-        \\mathbb{E}_{x_{out} \\sim \\mathcal{D}_{out}^{train}}(max(0, m_{out} - E(x_{out}))^2
+    .. math:: L_{\\text{energy}} = \\mathbb{E}_{(x_{in},y) \\sim \\mathcal{D}_{in}^{train}}\\max(0, E(x_{in})) - m_{in})^2 +
+        \\mathbb{E}_{x_{out} \\sim \\mathcal{D}_{out}^{train}}\\max(0, m_{out} - E(x_{out}))^2
 
     where :math:`E(x)` is the energy of :math:`x`.
 

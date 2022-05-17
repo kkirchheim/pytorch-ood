@@ -1,5 +1,5 @@
 import unittest
-from test.helpers import Model
+from test.helpers import ClassificationModel
 
 import torch
 
@@ -12,7 +12,7 @@ class TestExamples(unittest.TestCase):
     """
 
     def test_odin(self):
-        model = Model()
+        model = ClassificationModel()
         odin = ODIN(model)
 
         x = torch.zeros(size=(1, 10))

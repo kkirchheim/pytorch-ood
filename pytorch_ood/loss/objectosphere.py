@@ -5,7 +5,6 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from pytorch_ood import Softmax
 from pytorch_ood.utils import contains_known, contains_unknown, is_known, is_unknown
 
 from ._utils import apply_reduction
@@ -71,7 +70,7 @@ class ObjectosphereLoss(nn.Module):
         :param logits: instance logits
         :return: outlier scores
         """
-        softmax_scores = Softmax.score(logits)
+        softmax_scores = -logits.softmax(dim=1).max(dim=1).values
         magn = torch.linalg.norm(logits, ord=2, dim=1)
         return softmax_scores * magn
 

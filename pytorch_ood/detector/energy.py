@@ -1,12 +1,12 @@
 """
 
-..  autoclass:: pytorch_ood.NegativeEnergy
+..  autoclass:: pytorch_ood.detector.NegativeEnergy
     :members:
 
 """
 import torch
 
-from .api import Detector
+from pytorch_ood.api import Detector
 
 
 class NegativeEnergy(torch.nn.Module, Detector):
@@ -42,6 +42,9 @@ class NegativeEnergy(torch.nn.Module, Detector):
         self.model = model
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Calculates neative energy
+        """
         z = self.model(x)
         return NegativeEnergy.score(z, self.t)
 
@@ -51,7 +54,7 @@ class NegativeEnergy(torch.nn.Module, Detector):
 
         :param x: the class logits
 
-        :return: energy
+        :return: Energy score
         """
         return self.forward(x)
 

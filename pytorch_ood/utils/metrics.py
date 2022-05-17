@@ -1,4 +1,6 @@
 """
+..  autoclass:: pytorch_ood.utils.OODMetrics
+    :members:
 
 """
 import numpy as np

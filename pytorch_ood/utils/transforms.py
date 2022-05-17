@@ -1,12 +1,12 @@
 """
 
-..  autoclass:: pytorch_ood.transforms.ToUnknown
+..  autoclass:: pytorch_ood.utils.ToUnknown
     :members:
 
-..  autoclass:: pytorch_ood.transforms.ToRGB
+..  autoclass:: pytorch_ood.utils.ToRGB
     :members:
 
-..  autoclass:: pytorch_ood.transforms.TargetMapping
+..  autoclass:: pytorch_ood.utils.TargetMapping
     :members:
 """
 

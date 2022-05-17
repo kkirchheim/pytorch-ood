@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from pytorch_ood.model.centers import ClassCenters
-from pytorch_ood.utils import is_known, pairwise_distances
+from pytorch_ood.utils import is_known
 
 log = logging.getLogger(__name__)
 

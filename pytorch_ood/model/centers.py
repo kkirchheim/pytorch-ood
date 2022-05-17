@@ -10,14 +10,18 @@ log = logging.getLogger(__name__)
 
 class ClassCenters(nn.Module):
     """
-    Class Centers
+    Several methods for OOD Detection propose to model a center :math:`\\mu_y` for each class.
+    These centers are either static, or learned via gradient descent.
     """
 
-    def __init__(self, n_classes, n_features, fixed=False):
+    def __init__(self, n_classes: int, n_features: int, fixed: bool = False):
         """
         Several methods use a center for each class, also known as class proxy or class prototype.
 
         :param n_classes: number of classes vectors
+        :param n_features: dimensionality of the space in which the centers live
+        :param fixed: False if the centers should be learnable parameters, True if they should be fixed at their
+            initial position
         """
         super(ClassCenters, self).__init__()
         # anchor points are fixed, so they do not require gradients
@@ -27,34 +31,36 @@ class ClassCenters(nn.Module):
             self._params.requires_grad = False
 
     @property
-    def num_classes(self):
+    def num_classes(self) -> int:
         return self.params.shape[0]
 
     @property
-    def n_features(self):
+    def n_features(self) -> int:
         return self.params.shape[1]
 
     @property
-    def params(self):
+    def params(self) -> nn.Parameter:
         """
         Class centers, a.k.a. Anchors
         """
         return self._params
 
-    def forward(self, embedding) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param embedding: embeddings of samples
+        :param x: samples
+        :returns: pairwise distance of samples to each center
         """
-        assert embedding.shape[1] == self.n_features
-        return utils.pairwise_distances(embedding, self.params)
+        assert x.shape[1] == self.n_features
+        return utils.pairwise_distances(x, self.params)
 
-    def predict(self, embeddings: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         Make class membership predictions
 
-        :param embeddings: embeddings of samples
+        :param x: embeddings of samples
+        :returns: normalized pairwise distance of samples to each center
         """
-        distances = utils.pairwise_distances(embeddings, self.params)
+        distances = utils.pairwise_distances(x, self.params)
         return nn.functional.softmin(distances, dim=1)
 
 

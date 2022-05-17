@@ -1,5 +1,5 @@
 """
-..  autoclass:: pytorch_ood.Mahalanobis
+..  autoclass:: pytorch_ood.detector.Mahalanobis
     :members:
 """
 import logging
@@ -8,9 +8,8 @@ import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
+from pytorch_ood.api import Detector, RequiresFitException
 from pytorch_ood.utils import TensorBuffer, contains_unknown, is_known, is_unknown
-
-from .api import Detector
 
 log = logging.getLogger(__name__)
 
@@ -114,6 +113,9 @@ class Mahalanobis(torch.nn.Module, Detector):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """ """
+        if self.mu is None:
+            raise RequiresFitException
+
         # TODO: quickfix
         dev = list(self.model.parameters())[0].device
 

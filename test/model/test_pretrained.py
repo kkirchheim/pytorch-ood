@@ -1,6 +1,8 @@
 import unittest
 from test.helpers import for_examples
 
+import torch
+
 from pytorch_ood.model import VisionTransformer, WideResNet
 
 
@@ -12,6 +14,9 @@ class TestPreTrainedModels(unittest.TestCase):
     @for_examples(("imagenet32", 1000), ("oe-cifar100-tune", 100), ("oe-cifar10-tune", 10))
     def test_wrn_pretrained(self, pretrain, n_classes):
         model = WideResNet.from_pretrained(pretrain, num_classes=n_classes)
+        x = torch.ones(size=(1, 3, 32, 32))
+        y = model(x)
+        self.assertEqual(y.shape, (1, n_classes))
 
     def test_pretrained_vit(self):
         model = VisionTransformer.from_pretrained(

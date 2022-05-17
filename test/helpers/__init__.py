@@ -1,6 +1,6 @@
 import sys
 
-from .model import Model
+from .model import ClassificationModel, SegmentationModel
 
 
 def for_examples(*parameters):

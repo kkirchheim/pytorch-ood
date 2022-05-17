@@ -35,11 +35,10 @@ Interface
 ===========
 
 
-
 Scope
 -----------------------------------------
 
 While Out-of-Distribution detection, Anomaly Detection, Novelty Detection, Open-Set recognition etc. differ in details,
 we believe that these tasks are related. To out knowledge, the nomenclature is not fully settled, and different
 researchers tend to use different terminologies.
-Sometimes, some of these terms are used interchangably.
+Sometimes, some of these terms are used interchangeably.

@@ -1,6 +1,6 @@
 """
 
-..  autoclass:: pytorch_ood.ODIN
+..  autoclass:: pytorch_ood.detector.ODIN
 
 
 """
@@ -8,7 +8,7 @@ import torch
 from torch.autograd import Variable
 from torch.nn import functional as F
 
-from .api import Detector
+from pytorch_ood.api import Detector
 
 
 def zero_grad(x):

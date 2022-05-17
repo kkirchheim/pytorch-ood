@@ -1,11 +1,9 @@
 import logging
-from typing import Tuple
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 
-from pytorch_ood.utils import contains_known, contains_unknown, is_known, is_unknown
+from pytorch_ood.utils import contains_unknown, is_unknown
 
 from .crossentropy import cross_entropy
 

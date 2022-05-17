@@ -1,12 +1,12 @@
 """
 
-..  autoclass:: pytorch_ood.Softmax
+..  autoclass:: pytorch_ood.detector.Softmax
     :members:
 
 """
 import torch
 
-from .api import Detector
+from pytorch_ood.api import Detector
 
 
 class Softmax(Detector, torch.nn.Module):
@@ -25,7 +25,7 @@ class Softmax(Detector, torch.nn.Module):
 
     """
 
-    def __init__(self, model, t: int = 1):
+    def __init__(self, model: torch.nn.Module, t: int = 1):
         """
         :param t: temperature value T. Default is 1.
         """
@@ -40,6 +40,7 @@ class Softmax(Detector, torch.nn.Module):
         return Softmax.score(self.model(x), self.t)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
+        """ """
         return self.forward(x)
 
     def fit(self):
@@ -52,3 +53,38 @@ class Softmax(Detector, torch.nn.Module):
     @staticmethod
     def score(logits: torch.Tensor, t=1) -> torch.Tensor:
         return -logits.div(t).softmax(dim=1).max(dim=1).values
+
+
+class MaxLogit(Detector, torch.nn.Module):
+    """
+    Implements the Max Logit Method for OOD Detection.
+
+    TODO
+    """
+
+    def __init__(self, model: torch.nn.Module):
+        """
+        :param t: temperature value T. Default is 1.
+        """
+        super(MaxLogit, self).__init__()
+        self.model = model
+
+    def forward(self, x) -> torch.Tensor:
+        return MaxLogit.score(self.model(x))
+
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
+        """ """
+        return self.forward(x)
+
+    def fit(self):
+        """
+        Not required
+        """
+        pass
+
+    @staticmethod
+    def score(logits: torch.Tensor) -> torch.Tensor:
+        """
+        :param logits: logits for samples
+        """
+        return logits.max(dim=1).values

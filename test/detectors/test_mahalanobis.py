@@ -1,28 +1,23 @@
 import unittest
+from test.helpers import ClassificationModel
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood import Mahalanobis
-
-
-class Model(torch.nn.Module):
-    def __init__(self):
-        super(Model, self).__init__()
-        self.p = torch.nn.Linear(10, 3)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.p(x)
+from pytorch_ood.api import RequiresFitException
 
 
 class MahalanobisTest(unittest.TestCase):
-    """ """
+    """
+    Test mahalanobis method
+    """
 
     def setUp(self) -> None:
         torch.manual_seed(123)
 
     def test_something(self):
-        nn = Model()
+        nn = ClassificationModel()
         model = Mahalanobis(nn)
 
         y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
@@ -39,3 +34,11 @@ class MahalanobisTest(unittest.TestCase):
         print(scores)
 
         self.assertIsNotNone(scores)
+
+    def test_nofit(self):
+        nn = ClassificationModel()
+        model = Mahalanobis(nn)
+        x = torch.randn(size=(20, 10))
+
+        with self.assertRaises(RequiresFitException):
+            model(x)

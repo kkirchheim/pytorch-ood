@@ -5,11 +5,10 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
-from pytorch_ood import NegativeEnergy, Softmax
 from pytorch_ood.dataset.img import Textures
-from pytorch_ood.metrics import OODMetrics
+from pytorch_ood.detectors import NegativeEnergy, Softmax
 from pytorch_ood.model import WideResNet
-from pytorch_ood.transforms import ToUnknown
+from pytorch_ood.utils import OODMetrics, ToUnknown
 
 torch.manual_seed(123)
 max_iterations = 1

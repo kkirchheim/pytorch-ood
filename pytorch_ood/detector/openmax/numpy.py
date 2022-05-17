@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 class OpenMax(object):
     """
-    Implementation of the OpenMax Layer as proposed by Bendale et. al in *Towards Open Set Deep Networks*.
+    Implementation of the OpenMax Layer as proposed in *Towards Open Set Deep Networks*.
 
     The methods determines a center :math:`\\mu_y` for each class in the logits space of a model, and then
     creates a statistical model of the distances of correct classified inputs.
@@ -76,7 +76,7 @@ class OpenMax(object):
             model = libmr.MR(alpha=self.alpha)
             model.fit_high(tailtofit, len(tailtofit))
             if not model.is_valid:
-                log.error(f"Fitting was invalid ({len(tailtofit)} instances)")
+                log.error(f"Fitting was invalid ({len(tailtofit)} instances for class {clazz})")
             self.distributions[clazz] = model
         self.is_fitted = True
         return self

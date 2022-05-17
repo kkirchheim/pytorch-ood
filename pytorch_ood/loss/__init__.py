@@ -1,5 +1,4 @@
 """
-
 Unsupervised
 =====================
 Unsupervised losses are only trained on in-distribution data (or similarly, only on
@@ -43,7 +42,7 @@ Entropic Open-Set Loss
 Supervised
 =====================
 Supervised Losses make use from example Out-of-Distribution samples (or samples from known unknown classes).
-Thus, these losses can handle samples with target values < 0.
+Thus, these losses can handle samples with target values :math:`< 0`.
 
 Outlier Exposure
 ----------------------------------------------

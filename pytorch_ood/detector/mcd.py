@@ -1,6 +1,6 @@
 """
 
-..  autoclass:: pytorch_ood.MCD
+..  autoclass:: pytorch_ood.detector.MCD
     :members:
 
 """
@@ -9,7 +9,8 @@ import logging
 import torch
 from torch import nn
 
-from .api import Detector
+from pytorch_ood.api import Detector
+
 from .softmax import Softmax
 
 log = logging.getLogger(__name__)
@@ -20,12 +21,14 @@ class MCD(Detector):
     From the paper *Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning*.
     Forward-propagates the input through the model several times with activated dropout and averages the results.
 
-    .. math:: \\hat{y} = \\frac{1}{N} \\sum_i^{N} f(x)
+    The outlier score is calculated as
+
+    .. math:: - \\max \\frac{1}{N} \\sum_i^{N} f(x)
 
     :see Paper: http://proceedings.mlr.press/v48/gal16.pdf
 
-    .. warning:: This implementations puts the model in evaluation model. This could also affect other modules, like
-        BatchNorm. This is currently a workaround.
+    .. warning:: This implementations puts the model in evaluation mode (except for variants of the BatchNorm Layers).
+        This could also affect other modules and is currently a workaround.
     """
 
     def __init__(self, model: nn.Module):
@@ -42,7 +45,7 @@ class MCD(Detector):
         pass
 
     @staticmethod
-    def run(model, x, n) -> torch.Tensor:
+    def run(model, x: torch.Tensor, n: int) -> torch.Tensor:
         """
         Assumes that the model outputs logits
 
@@ -85,11 +88,8 @@ class MCD(Detector):
 
     def predict(self, x: torch.Tensor, n=30) -> torch.Tensor:
         """
-
-        .. warning:: Side effect: The module will be in evaluation mode afterwards
-
         :param x: input
         :param n: number of Monte Carlo Samples
         :return: averaged output of the model
         """
-        return Softmax.score(MCD.run(self.model, x, n))
+        return -MCD.run(self.model, x, n).max(dim=1).values
