@@ -1,12 +1,26 @@
 # PyTorch Out-of-Distribution Detection
 
-<a href=""><img src="https://img.shields.io/pypi/v/pytorch-ood.svg?color=brightgreen"></a>
-<a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/-Python 3.7+-blue?logo=python&logoColor=white"></a>
-<a href="https://black.readthedocs.io/en/stable/"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-black.svg?labelColor=gray"></a>
-<a href=""><img src="https://static.pepy.tech/badge/pytorch-ood"></a>
-<a><img src="https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/pipeline.svg"></a>
-<a><img src="https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/coverage.svg"></a>
-
+<a href="https://pypi.org/project/pytorch-ood/">
+    <img src="https://img.shields.io/pypi/v/pytorch-ood.svg?color=brightgreen"/>
+</a>
+<a href="https://www.python.org/">
+    <img alt="Python" src="https://img.shields.io/badge/-Python 3.8+-blue?logo=python&logoColor=white"/>
+</a>
+<a href="https://black.readthedocs.io/en/stable/">
+    <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-black.svg?labelColor=gray"/>
+</a>
+<a href="">
+    <img src="https://static.pepy.tech/badge/pytorch-ood"/>
+</a>
+<a>
+    <img src="https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/pipeline.svg"/>
+</a>
+<a>
+    <img src="https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/coverage.svg"/>
+</a>
+<a href='https://pytorch-ood.readthedocs.io/en/latest/?badge=latest'>
+    <img src='https://readthedocs.org/projects/pytorch-ood/badge/?version=latest' alt='Documentation Status'/>
+</a>
 
 Python library to accelerate research in Out-of-Distribution Detection, as well as related
 fields such as Open-Set Recognition, Novelty Detection, Confidence Estimation and Anomaly Detection
