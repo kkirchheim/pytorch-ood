@@ -90,9 +90,6 @@ class WideResNet(nn.Module):
     """
     Resnet Architecture with large number of channels and variable depth.
 
-    Used in:
-        - Energy Based OOD
-        - Outlier Exposure
 
     :see Paper: https://arxiv.org/pdf/1605.07146v4.pdf
     :see Implementation: https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
@@ -178,13 +175,26 @@ class WideResNet(nn.Module):
         """
         WideResNet with different pre-trained weights.
 
-        - **imagenet32**: Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet.
-        - **oe-cifar100-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100
-        - **oe-cifar10-tune**: Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10
-        - **er-cifar10-tune**: Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-10
-        - **er-cifar100-tune**: Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-100
-        - **cifar100-pt**: Pre-Trained model for CIFAR-100
-        - **cifar10-pt**: Pre-Trained model for CIFAR-10
+        .. list-table:: Available models
+           :widths: 25 75
+           :header-rows: 1
+
+           * - Key
+             - Description
+           * - imagenet32
+             -  Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet.
+           * - oe-cifar100-tune
+             - Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100
+           * - oe-cifar10-tune
+             - Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10
+           * - er-cifar10-tune
+             - Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-10
+           * - er-cifar100-tune
+             - Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-100
+           * - cifar100-pt
+             - Pre-Trained model for CIFAR-100
+           * - cifar10-pt
+             - Pre-Trained model for CIFAR-10
         """
         urls = {
             "imagenet32": "https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt",

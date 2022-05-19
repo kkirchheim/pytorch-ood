@@ -72,7 +72,7 @@ deploy:
     - pip install wheel
     - python3 setup.py bdist_wheel
     - pip install twine
-    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+    - TWINE_PASSWORD=${TWINE_PASSWORD} TWINE_USERNAME=${TWINE_USER} python -m twine upload dist/*
   allow_failure: true # gitlab does not allow to deploy the same package twice
   artifacts:
     paths:

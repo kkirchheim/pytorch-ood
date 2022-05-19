@@ -43,8 +43,8 @@ class OpenSetSimulation(object):
     def train_dataset(self, in_dist=True, out_dist=False) -> Dataset:
         """
 
-        :param in_dist:
-        :param out_dist:
+        :param in_dist: include IN data
+        :param out_dist: include OOD data
         :return:
         """
         pass
@@ -52,8 +52,8 @@ class OpenSetSimulation(object):
     def val_dataset(self, in_dist=True, out_dist=True) -> Dataset:
         """
 
-        :param in_dist:
-        :param out_dist:
+        :param in_dist: include IN data
+        :param out_dist: include OOD data
         :return:
         """
         pass
@@ -61,8 +61,8 @@ class OpenSetSimulation(object):
     def test_dataset(self, in_dist=True, out_dist=True) -> Dataset:
         """
 
-        :param in_dist:
-        :param out_dist:
+        :param in_dist: include IN data
+        :param out_dist: include OOD data
         :return:
         """
         pass
@@ -75,7 +75,6 @@ class DynamicOSS(OpenSetSimulation):
     :param train_size: ratio of test samples
     :param val_size: ratio of validation samples
     :param test_size: ratio of test samples
-
     :param kuc: number of out-of-distribution classes in training set (known unknowns)
     :param uuc_val: number of out-of-distribution classes in validation set (unknown unknowns)
     :param uuc_test: number of out-of-distribution classes in test set (unknown unknowns + test)
@@ -85,12 +84,12 @@ class DynamicOSS(OpenSetSimulation):
     def __init__(
         self,
         dataset,
-        train_size=0.7,
-        val_size=0.2,
-        test_size=0.1,
-        kuc=0,
-        uuc_val=2,
-        uuc_test=2,
+        train_size: float = 0.7,
+        val_size: float = 0.2,
+        test_size: float = 0.1,
+        kuc: int = 0,
+        uuc_val: int = 2,
+        uuc_test: int = 2,
         seed=None,
     ):
         self._dataset = dataset
@@ -157,13 +156,13 @@ class DynamicOSS(OpenSetSimulation):
             indices.extend(self.indices[stage]["uuc"])
         return Subset(self._dataset, indices)
 
-    def train_dataset(self, in_dist=True, out_dist=True) -> Subset:
+    def train_dataset(self, in_dist: bool = True, out_dist: bool = True) -> Subset:
         return self._get_subset("train", in_dist, out_dist)
 
-    def val_dataset(self, in_dist=True, out_dist=True) -> Subset:
+    def val_dataset(self, in_dist: bool = True, out_dist: bool = True) -> Subset:
         return self._get_subset("val", in_dist, out_dist)
 
-    def test_dataset(self, in_dist=True, out_dist=True) -> Subset:
+    def test_dataset(self, in_dist: bool = True, out_dist: bool = True) -> Subset:
         return self._get_subset("test", in_dist, out_dist)
 
     @property

@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath(os.path.join("..")))
 
 # -- Project information -----------------------------------------------------
 
-project = "pytorch_ood"
+project = "pytorch-ood"
 copyright = "2021, K. Kirchheim"
 author = "Konstantin Kirchheim"
 

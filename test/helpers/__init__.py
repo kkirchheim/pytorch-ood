@@ -1,5 +1,7 @@
 import sys
 
+from .model import ClassificationModel, SegmentationModel
+
 
 def for_examples(*parameters):
     def tuplify(x):

@@ -200,18 +200,8 @@ class Reuters8(Reuters52):
         x, targets = [], []
         with open(filename, "r") as f:
             for line in f:
-                line = re.sub(r'\W+', ' ', line).strip()
+                line = re.sub(r"\W+", " ", line).strip()
                 x.append(line[1:])
-                x[-1] = ' '.join(word for word in x[-1].split() if word not in stop_words)
+                x[-1] = " ".join(word for word in x[-1].split() if word not in stop_words)
                 targets.append(line[0])
         return np.array(targets, dtype=int), x
-
-        
-
-
-
-if __name__ == "__main__":
-    root = os.path.expanduser(os.path.join("~", ".cache", "pytorch_ood"))
-    dataset = Reuters8(root, download=True)
-    dataset.__getitem__(0)
-    pass

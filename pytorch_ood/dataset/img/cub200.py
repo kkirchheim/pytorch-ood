@@ -9,7 +9,6 @@ import logging
 import os
 
 import numpy as np
-import pandas as pd
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.folder import default_loader
 from torchvision.datasets.utils import download_url
@@ -55,6 +54,10 @@ class Cub2011(VisionDataset):
         return np.unique(self.targets)
 
     def _load_metadata(self):
+        try:
+            import pandas as pd
+        except ImportError as e:
+            raise ImportError("You have to install pandas to use the cub200 dataset.")
         images = pd.read_csv(
             os.path.join(self.root, "CUB_200_2011", "images.txt"),
             sep=" ",

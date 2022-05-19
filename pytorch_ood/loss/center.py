@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from pytorch_ood.model.centers import ClassCenters
-from pytorch_ood.utils import is_known, pairwise_distances
+from pytorch_ood.utils import is_known
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class CenterLoss(nn.Module):
     Calculates
 
     .. math::
-        \\sum_{x,y} \\lbrace  d(x,\\mu_y) - r , 0 \\rbrace
+        \\mathcal{L}(x,y) = \\max \\lbrace  d(x,\\mu_y) - r , 0 \\rbrace
 
     where :math:`d` is some distance. More generally, it can be any dissimilarity function, like the squared distance,
     which is not a proper distance metric.

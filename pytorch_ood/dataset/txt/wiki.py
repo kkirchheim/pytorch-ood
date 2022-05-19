@@ -13,6 +13,9 @@ log = logging.getLogger(__name__)
 class WikiText2(Dataset):
     """
     WikiText2 dataset
+    Contains collection of over 100 million tokens extracted from the set of verified Good and Featured articles on Wikipedia
+
+    :see Website: https://arxiv.org/abs/1609.07843
     """
 
     url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip"
@@ -53,7 +56,7 @@ class WikiText2(Dataset):
 
         filename = os.path.join(self.root, self.base_dir, filename)
         x = []
-        with open(filename, "r") as f:
+        with open(filename, "r",encoding="utf8") as f:
             for line in f:
                 words = line.split()
                 text = " ".join(word for word in words)
@@ -82,3 +85,23 @@ class WikiText2(Dataset):
 
     def __len__(self):
         return len(self._data)
+
+
+class WikiText103(WikiText2):
+    """
+    WikiText103 dataset
+    Contains collection of over 100 million tokens extracted from the set of verified Good and Featured articles on Wikipedia
+    
+    :see Website: https://arxiv.org/abs/1609.07843
+    """
+
+    url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-103-v1.zip"
+    md5 = "9ddaacaf6af0710eda8c456decff7832"
+    base_dir = "wikitext-103"
+    filenames = {
+        "train": "wiki.train.tokens",
+        "test": "wiki.test.tokens",
+        "val": "wiki.valid.tokens",
+    }
+
+

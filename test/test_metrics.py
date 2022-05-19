@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from pytorch_ood.metrics import OODMetrics
+from pytorch_ood.utils import OODMetrics
 
 
 class TestMetrics(unittest.TestCase):

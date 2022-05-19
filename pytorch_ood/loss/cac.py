@@ -77,7 +77,7 @@ class CACLoss(nn.Module):
             anchor_loss = torch.tensor(0.0, device=distances.device)
             tuplet_loss = torch.tensor(0.0, device=distances.device)
 
-        return self.lambda_ * anchor_loss, tuplet_loss
+        return self.lambda_ * anchor_loss + tuplet_loss
 
     def calculate_distances(self, x):
         """
@@ -96,4 +96,4 @@ class CACLoss(nn.Module):
         :return:
         """
         scores = distance * (1 - F.softmin(distance, dim=1))
-        return scores
+        return scores.max(dim=1).values

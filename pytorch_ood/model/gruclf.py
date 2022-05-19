@@ -1,8 +1,8 @@
 """
 Text classifier used by Hendrycks et al.
 """
+import torch
 from torch import nn
-from torch.hub import load_state_dict_from_url
 
 
 class GRUClassifier(nn.Module):
@@ -15,8 +15,8 @@ class GRUClassifier(nn.Module):
     def __init__(self, num_classes, n_vocab, embedding_dim=50):
         """
 
-        :param num_classes:
-        :param n_vocab:
+        :param num_classes: number of classes in the dataset
+        :param n_vocab: size of the vocabulary, i.e. number of distinct tokens
         """
         super().__init__()
         self.embedding = nn.Embedding(n_vocab, embedding_dim, padding_idx=1)
@@ -30,31 +30,13 @@ class GRUClassifier(nn.Module):
         )
         self.linear = nn.Linear(128, num_classes)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        :param: lists of list of tokens
+
+        :returns: logits
+        """
         embeds = self.embedding(x)
         z = self.gru(embeds)[1][1]  # select h_n, and select the 2nd layer
         logits = self.linear(z)
         return logits
-
-    @staticmethod
-    def from_pretrained(name, **kwargs):
-        """
-
-        :param name:
-        :param kwargs:
-        :return:
-        """
-        urls = {
-            "20ng-base": "https://github.com/hendrycks/outlier-exposure/raw/master/NLP_classification/snapshots/20ng/baseline/model.dict",
-            "20ng-oe-wiki2": "https://github.com/hendrycks/outlier-exposure/raw/master/NLP_classification/snapshots/20ng/OE/wikitext2/model_finetune.dict",
-        }
-
-        url = urls[name]
-        model = GRUClassifier(**kwargs)
-        state_dict = load_state_dict_from_url(url, map_location="cpu")
-
-        if "state_dict" in state_dict:
-            state_dict = state_dict["state_dict"]
-
-        model.load_state_dict(state_dict)
-        return model

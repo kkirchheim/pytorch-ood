@@ -1,9 +1,8 @@
-
 Datasets
 *************************
 
 
-Image
+Computer Vision
 ====================================================
 
 .. automodule:: pytorch_ood.dataset.img
@@ -12,7 +11,7 @@ Image
    :show-inheritance:
 
 
-Text
+NLP
 ======================================================
 
 .. automodule:: pytorch_ood.dataset.txt

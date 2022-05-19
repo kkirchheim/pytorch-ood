@@ -16,4 +16,10 @@ Utilities
 Transformations
 ================
 
-.. automodule:: pytorch_ood.transforms
+.. automodule:: pytorch_ood.utils.transforms
+
+
+Metrics
+================
+
+.. automodule:: pytorch_ood.utils.metrics

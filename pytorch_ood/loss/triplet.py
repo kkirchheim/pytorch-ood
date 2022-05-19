@@ -62,7 +62,7 @@ class TripletLoss(torch.nn.Module):
         :return:
         """
         # FIXME: distances will be invalid if squaring is disabled (?)
-        distances = pytorch_ood.utils.torch_get_squared_distances(self.running_centers, z)
+        distances = pytorch_ood.utils.utils.torch_get_squared_distances(self.running_centers, z)
         return distances
 
     def forward(self, z, target):
