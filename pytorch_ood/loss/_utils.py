@@ -9,7 +9,7 @@ def apply_reduction(tensor: torch.Tensor, reduction: str):
         return tensor.mean()
     elif reduction == "sum":
         return tensor.sum()
-    elif reduction is None:
+    elif reduction is None or reduction == "none":
         return tensor
     else:
         raise ValueError

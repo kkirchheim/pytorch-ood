@@ -42,7 +42,7 @@ class OutlierExposureLoss(nn.Module):
         :param target: labels for predictions
         :return: loss
         """
-        loss_oe = torch.zeros(logits.shape[0], device=self.device)
+        loss_oe = torch.zeros(logits.shape[0], device=logits.device)
         loss_ce = cross_entropy(logits, target, reduction="none")
 
         if contains_unknown(target):
