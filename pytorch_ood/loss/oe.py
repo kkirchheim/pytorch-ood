@@ -1,12 +1,11 @@
 import logging
-from typing import Tuple
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 
-from pytorch_ood.utils import contains_known, contains_unknown, is_known, is_unknown
+from pytorch_ood.utils import contains_unknown, is_unknown
 
+from ._utils import apply_reduction
 from .crossentropy import cross_entropy
 
 log = logging.getLogger(__name__)
@@ -16,33 +15,42 @@ class OutlierExposureLoss(nn.Module):
     """
     From the paper *Deep Anomaly Detection With Outlier Exposure*.
 
-    The loss for OOD samples is the cross-entropy between the predicted distribution and the uniform distribution.
+    In addition to the cross-entropy for known samples, includes an :math:`\\mathcal{L}_{OE}` term
+    for OOD samples that is defined as:
 
-    .. math:: \\sum_{x,y \\in \\mathcal{D}^{in}} \\mathcal{L}_{NLL}(f(x),y) + \\lambda
-        \\sum_{x \\in \\mathcal{D}^{out}} D_{KL}(f(x) \\Vert \\mathcal{U})
+    .. math::  \\mathcal{L}_{OE}(x_{out}) =  - \\alpha (\\sum_y f(x_{out})_y - \\log(\\sum_y e^{f(x_{out})_y}))
+
+    which is the cross-entropy between the predicted distribution and the uniform distribution.
 
     :see Paper: https://arxiv.org/pdf/1812.04606v1.pdf
     """
 
-    def __init__(self, lmbda=0.5):
+    def __init__(self, alpha=0.5, reduction="mean"):
         """
 
-        :param lmbda: weighting coefficient
+        :param alpha: weighting coefficient
+        :param reduction: reduction to apply
         """
         super(OutlierExposureLoss, self).__init__()
-        self.lambda_ = lmbda
+        self.alpha = alpha
+        self.reduction = reduction
 
-    def forward(self, logits, target) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, logits, target) -> torch.Tensor:
         """
 
         :param logits: class logits for predictions
         :param target: labels for predictions
-        :return: tuple with cross-entropy for known samples and weighted outlier exposure loss for unknown samples.
+        :return: loss
         """
-        loss_ce = cross_entropy(logits, target)
+        loss_oe = torch.zeros(logits.shape[0], device=logits.device)
+        loss_ce = cross_entropy(logits, target, reduction="none")
+
         if contains_unknown(target):
             unknown = is_unknown(target)
-            loss_oe = -(logits[unknown].mean(1) - torch.logsumexp(logits[unknown], dim=1)).mean()
+            loss_oe[unknown] = -(
+                logits[unknown].mean(dim=1) - torch.logsumexp(logits[unknown], dim=1)
+            )
         else:
             loss_oe = 0
-        return loss_ce, self.lambda_ * loss_oe
+
+        return apply_reduction(loss_ce + self.alpha * loss_oe, reduction=self.reduction)

@@ -1,27 +1,31 @@
 import logging
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
 from torch import nn
 
-from pytorch_ood import Softmax
 from pytorch_ood.utils import contains_known, contains_unknown, is_known, is_unknown
+
+from ._utils import apply_reduction
 
 log = logging.getLogger(__name__)
 
 
 class ObjectosphereLoss(nn.Module):
     """
-    From *Reducing Network Agnostophobia*.
+    From the paper *Reducing Network Agnostophobia*.
 
-    Uses mean reduction.
+    .. math:: \\mathcal{L}(x,y) = \\lVert f(x) \\rVert^2
 
     :see Paper:
         https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf
 
     """
 
-    def __init__(self, lambda_=1.0, zetta=1.0):
+    def __init__(
+        self, lambda_: float = 1.0, zetta: float = 1.0, reduction: Optional[str] = "mean"
+    ):
         """
 
         :param lambda_: weight for the
@@ -30,7 +34,8 @@ class ObjectosphereLoss(nn.Module):
         super(ObjectosphereLoss, self).__init__()
         self.lambda_ = lambda_
         self.zetta = zetta
-        self.entropic = EntropicOpenSetLoss()
+        self.entropic = EntropicOpenSetLoss(reduction=None)
+        self.reduction = reduction
 
     def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
@@ -54,7 +59,8 @@ class ObjectosphereLoss(nn.Module):
             losses[unknown] = torch.linalg.norm(logits[unknown], ord=2, dim=1).pow(2)
 
         loss = entropic_loss + self.lambda_ * losses
-        return loss.mean()
+
+        return apply_reduction(loss, self.reduction)
 
     @staticmethod
     def score(logits) -> torch.Tensor:
@@ -62,9 +68,9 @@ class ObjectosphereLoss(nn.Module):
         Outlier score used by the objectosphere loss.
 
         :param logits: instance logits
-        :return: scores
+        :return: outlier scores
         """
-        softmax_scores = Softmax.score(logits)
+        softmax_scores = -logits.softmax(dim=1).max(dim=1).values
         magn = torch.linalg.norm(logits, ord=2, dim=1)
         return softmax_scores * magn
 
@@ -73,18 +79,19 @@ class EntropicOpenSetLoss(nn.Module):
     """
     From *Reducing Network Agnostophobia*.
 
-    Uses no reduction.
-
     :see Paper:
         https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf
 
     """
 
-    def __init__(self):
-        """ """
+    def __init__(self, reduction: Optional[str] = None):
+        """
+        :param reduction: reduction method.
+        """
         super(EntropicOpenSetLoss, self).__init__()
+        self.reduction = reduction
 
-    def forward(self, logits, target) -> torch.Tensor:
+    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
 
         :param logits: class logits
@@ -101,4 +108,4 @@ class EntropicOpenSetLoss(nn.Module):
             unknown = is_unknown(target)
             losses[unknown] = torch.logsumexp(logits[unknown], dim=1)
 
-        return losses
+        return apply_reduction(losses, self.reduction)

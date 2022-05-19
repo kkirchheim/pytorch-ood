@@ -225,13 +225,19 @@ class VisionTransformer(nn.Module):
         """
         Vision Transformer with different pre-trained weights.
 
-        Weights:
+         .. list-table:: Available models
+           :widths: 25 75
+           :header-rows: 1
 
-        * **b16-cifar10-tune**: b16 trained on ImageNet 21k and fine tuned on the CIFAR10
-        * **b16-cifar100-tune**: b16 trained on ImageNet 21k and fine tuned on the CIFAR100
+           * - Key
+             - Description
+           * - b16-cifar10-tune
+             - b16 trained on ImageNet 21k and fine tuned on the CIFAR10
+           * - b16-cifar100-tune
+             - b16 trained on ImageNet 21k and fine tuned on the CIFAR100
 
         .. note :: The original authors of the OODFormer did not provide weights for their final models. The
-            weights for CIFAR-10 and CIFAR-100 here are provided by us and based on the
+            weights for CIFAR-10 and CIFAR-100 here are provided by the maintainers of pytorch-ood.
 
         """
         urls = {
