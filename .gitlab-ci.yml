@@ -24,16 +24,13 @@ before_script:
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
-  - pip install twine cython
   - pip install .
-  - pip install libmr # has to be installed after cython
-  - pip install sh torchmetrics # additional dependencies for tests
+  - pip install cython libmr # has to be installed after cython
   - pip freeze # print package versions for debugging
 
 test:
   script:
-    - python -m unittest discover -s test
-    - echo "Calculating test coverage for the project."
+    - python -m unittest discover -s tests
     - pip install coverage
     - coverage run -m unittest discover
     - coverage report -m
@@ -46,9 +43,8 @@ test:
 docs:
   stage: docs
   script:
-    - echo "Building the documentation for the package."
     - pip install sphinx sphinx-rtd-theme
-    - cd doc ; make html
+    - cd docs ; make html
     - mv _build/html/ ../public/
 
   artifacts:
@@ -58,7 +54,6 @@ docs:
 build:
   stage: build
   script:
-    - echo "Building the Package"
     - pip install wheel
     - python3 setup.py bdist_wheel
   artifacts:
@@ -68,10 +63,8 @@ build:
 deploy:
   stage: deploy
   script:
-    - echo "Building the Package"
-    - pip install wheel
+    - pip install wheel twine
     - python3 setup.py bdist_wheel
-    - pip install twine
     - TWINE_PASSWORD=${TWINE_PASSWORD} TWINE_USERNAME=${TWINE_USER} python -m twine upload dist/*
   allow_failure: true # gitlab does not allow to deploy the same package twice
   artifacts:
