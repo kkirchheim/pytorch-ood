@@ -1,7 +1,7 @@
 """
 Out of Distribution Detection
 """
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 from . import api, dataset, detector, loss, model, utils
 

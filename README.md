@@ -146,13 +146,13 @@ The legal implications of using pre-trained models in commercial services are, t
 
 <a name="liang2018enhancing">[2] ODIN (2018) </a> *Enhancing the reliability of out-of-distribution image detection in neural networks*, ICLR
 
-<a name="lee2018simple">[3] Mahalanobis (2018) </a> *A simple unified framework for detecting out-of-distribution samples and adversarial attacks*, NEURIPS
+<a name="lee2018simple">[3] Mahalanobis (2018) </a> *A simple unified framework for detecting out-of-distribution samples and adversarial attacks*, NeurIPS
 
 <a name="">[4] ... </a>
 
 <a name="">[5] ... </a>
 
-<a name="liu2020energy">[6] Energy-Based OOD (2020)</a> *Energy-based Out-of-distribution Detection*, NEURIPS
+<a name="liu2020energy">[6] Energy-Based OOD (2020)</a> *Energy-based Out-of-distribution Detection*, NeurIPS
 
 <a name="">[7] ... </a>
 
