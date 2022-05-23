@@ -39,6 +39,12 @@ Entropic Open-Set Loss
     :members:
 
 
+Cross-Entropy Loss
+----------------------------------------------
+..  autoclass:: pytorch_ood.loss.CrossEntropyLoss
+    :members:
+
+
 Supervised
 =====================
 Supervised Losses make use from example Out-of-Distribution samples (or samples from known unknown classes).
@@ -71,7 +77,7 @@ from .background import BackgroundClassLoss
 from .cac import CACLoss
 from .center import CenterLoss
 from .conf import ConfidenceLoss
-from .crossentropy import CrossEntropy
+from .crossentropy import CrossEntropyLoss
 from .energy import EnergyRegularizedLoss
 from .ii import IILoss
 from .objectosphere import EntropicOpenSetLoss, ObjectosphereLoss

@@ -30,7 +30,7 @@ class ConfidenceLoss(nn.Module):
     def __init__(self, alpha: float = 1.0, eps: float = 1e-24):
         """
 
-        :param alpha: :math:`\\alpha used to balance terms
+        :param alpha: :math:`\\alpha` used to balance terms
         :param eps: Clipping value :math:`\\epsilon` used for numerical stability
         """
         super(ConfidenceLoss, self).__init__()

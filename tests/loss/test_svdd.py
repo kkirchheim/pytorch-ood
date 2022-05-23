@@ -15,7 +15,5 @@ class TestDeepSVDD(unittest.TestCase):
         logits = torch.randn(size=(10, 10))
         target = torch.zeros(size=(10,)).long()
         target[5:] = -1
-
         loss = criterion(logits, target)
-
         self.assertIsNotNone(loss)
