@@ -25,7 +25,8 @@ before_script:
   - virtualenv venv
   - source venv/bin/activate
   - pip install .
-  - pip install cython libmr # has to be installed after cython
+  - pip install cython
+  - pip install libmr # has to be installed after cython
   - pip freeze # print package versions for debugging
 
 test:
