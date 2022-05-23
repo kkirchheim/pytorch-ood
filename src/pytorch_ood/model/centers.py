@@ -145,4 +145,4 @@ class RunningCenters(nn.Module):
         :param x:
         :return: distances to all centers
         """
-        return utils.pairwise_distances(self.centers, x)
+        return utils.pairwise_distances(x, self.centers)

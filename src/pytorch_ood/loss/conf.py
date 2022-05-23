@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from ..utils import is_known
+
 
 class ConfidenceLoss(nn.Module):
     """
@@ -22,7 +24,7 @@ class ConfidenceLoss(nn.Module):
     .. note::
         * We implemented clipping for numerical stability.
         * This implementation uses mean reduction for batches.
-        * The authors additionally used ODIN
+        * The authors additionally used ODIN preprocessing
 
 
     """
@@ -45,14 +47,21 @@ class ConfidenceLoss(nn.Module):
         :param confidence: predicted confidence for samples
         :param target: labels for samples (not one-hot encoded)
         """
-        target_prob_dist = F.one_hot(target, num_classes=logits.size(1))
-        prediction = F.softmax(logits, dim=1)
-        adjusted_prediction = prediction * confidence + (1 - confidence) * target_prob_dist
-        # calculate negative log likelihood
-        adjusted_prediction = adjusted_prediction.clamp(self.eps, 1.0)
-        loss_nll = -torch.sum(torch.log(adjusted_prediction) * target_prob_dist)
-        confidence = confidence.clamp(self.eps, 1.0)
-        loss_conf = -torch.log(confidence)
-        # NOTE: we use mean as reduction for batches
-        loss_conf = loss_conf.mean()
-        return loss_nll + self.alpha * loss_conf
+        known = is_known(target)
+
+        if known.any():
+            target_prob_dist = F.one_hot(target[known], num_classes=logits.size(1))
+            prediction = F.softmax(logits[known], dim=1)
+            adjusted_prediction = (
+                prediction * confidence[known] + (1 - confidence[known]) * target_prob_dist
+            )
+            # calculate negative log likelihood
+            adjusted_prediction = adjusted_prediction.clamp(self.eps, 1.0)
+            loss_nll = -torch.sum(torch.log(adjusted_prediction) * target_prob_dist)
+            confidence = confidence.clamp(self.eps, 1.0)
+            loss_conf = -torch.log(confidence)
+            # NOTE: we use mean as reduction for batches
+            loss_conf = loss_conf.mean()
+            return loss_nll + self.alpha * loss_conf
+        else:
+            return torch.zeros(size=(1,))

@@ -2,6 +2,7 @@
 
 """
 import logging
+import math
 from collections import defaultdict
 
 import numpy as np
@@ -19,12 +20,16 @@ def calc_openness(n_train, n_test, n_target):
 
     where :math:`n` is the number of classes, respectively.
 
+    :param n_train: number of classes for training
+    :param n_test: total number of classes used during testing
+    :param n_target: number of classes for classification during testing
+
     :return: Openness of the problem
 
     :see Paper: https://ieeexplore.ieee.org/abstract/document/6365193
     """
     frac = 2 * n_train / (n_test + n_target)
-    return 1 - torch.sqrt(frac)
+    return 1 - math.sqrt(frac)
 
 
 #######################################
