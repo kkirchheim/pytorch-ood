@@ -95,19 +95,21 @@ print(metrics.compute())
 | ODIN         |   [[2]](#liang2018enhancing)   |
 | Mahalanobis      |  [[3]]()  |
 | Monte Carlo Dropout      |  [[4]]() |
-| Softmax Thresholding Baseline | [[5]]() |
-| Energy-Based OOD Detection | [[6]](#liu2020energy) |
+| Softmax Thresholding | [[5]]() |
+| Max Logit |  |
+| Energy-Based | [[6]](#liu2020energy) |
 
 ## Implemented Objective Functions
 
 | Objective Function       | Reference     |
 |--------------|---------------------------|
-| Objectosphere      | [[7]]() |
-| Outlier Exposure   | [[8]]()  |
-| Deep SVDD          | [[9]]()  |
+| Objectosphere  Loss    | [[7]]() |
+| Entropic Open-Set Loss      | [[7]]() |
+| Outlier Exposure Loss  | [[8]]()  |
+| Energy Regularization | [[6]](#liu2020energy)  |
+| Deep SVDD  Loss       | [[9]]()  |
 | II Loss           | [[10]]()  |
 | CAC Loss           | [[11]]()  |
-| Energy Regularization | [[6]](#liu2020energy)  |
 | Center Loss           | [[12]]()  |
 
 ## Cite pytorch-ood
