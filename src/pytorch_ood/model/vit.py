@@ -177,8 +177,33 @@ class VisionTransformer(nn.Module):
         num_classes=1000,
         attn_dropout_rate=0.0,
         dropout_rate=0.1,
+        pretrained=None,
     ):
-        """ """
+        """
+        :param image_size:
+        :param patch_size:
+        :param emb_dim:
+        :param mlp_dim:
+        :param num_heads:
+        :param num_layers:
+        :param num_classes:
+        :param attn_dropout_rate:
+        :param dropout_rate:
+        :param pretrained: Idenfitier for pre-trained weights to load
+
+
+        .. list-table:: Available models
+           :widths: 25 75
+           :header-rows: 1
+
+           * - Key
+             - Description
+           * - b16-cifar10-tune
+             - b16 trained on ImageNet 21k and fine tuned on the CIFAR10
+           * - b16-cifar100-tune
+             - b16 trained on ImageNet 21k and fine tuned on the CIFAR100
+
+        """
         super(VisionTransformer, self).__init__()
         h, w = image_size
         # embedding layer
@@ -220,21 +245,11 @@ class VisionTransformer(nn.Module):
         logits = self.classifier(feat[:, 0])
         return logits
 
-    @staticmethod
-    def from_pretrained(name, **kwargs):
+    def _from_pretrained(self, name, **kwargs):
         """
         Vision Transformer with different pre-trained weights.
 
-         .. list-table:: Available models
-           :widths: 25 75
-           :header-rows: 1
 
-           * - Key
-             - Description
-           * - b16-cifar10-tune
-             - b16 trained on ImageNet 21k and fine tuned on the CIFAR10
-           * - b16-cifar100-tune
-             - b16 trained on ImageNet 21k and fine tuned on the CIFAR100
 
         .. note :: The original authors of the OODFormer did not provide weights for their final models. The
             weights for CIFAR-10 and CIFAR-100 here are provided by the maintainers of pytorch-ood.
@@ -250,12 +265,10 @@ class VisionTransformer(nn.Module):
         }
 
         url = urls[name]
-        model = VisionTransformer(**kwargs)
 
         state_dict = load_state_dict_from_url(url, map_location="cpu")
 
         if "state_dict" in state_dict:
             state_dict = state_dict["state_dict"]
 
-        model.load_state_dict(state_dict)
-        return model
+        self.load_state_dict(state_dict)

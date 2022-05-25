@@ -95,7 +95,9 @@ class WideResNet(nn.Module):
     :see Implementation: https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
     """
 
-    def __init__(self, num_classes, depth=40, widen_factor=2, drop_rate=0.3, in_channels=3):
+    def __init__(
+        self, num_classes, depth=40, widen_factor=2, drop_rate=0.3, in_channels=3, pretrained=None
+    ):
         """
 
         :param depth: depth of the network
@@ -103,6 +105,28 @@ class WideResNet(nn.Module):
         :param widen_factor: factor used for channel increase per block
         :param drop_rate: dropout probability
         :param in_channels: number of input planes
+        :param pretrained: identifier of pretrained weights to load
+
+        .. list-table:: Available Pre-Trained weights
+           :widths: 25 75
+           :header-rows: 1
+
+           * - Key
+             - Description
+           * - imagenet32
+             -  Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet.
+           * - oe-cifar100-tune
+             - Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100
+           * - oe-cifar10-tune
+             - Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10
+           * - er-cifar10-tune
+             - Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-10
+           * - er-cifar100-tune
+             - Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-100
+           * - cifar100-pt
+             - Pre-Trained model for CIFAR-100
+           * - cifar10-pt
+             - Pre-Trained model for CIFAR-10
         """
         super(WideResNet, self).__init__()
         nChannels = [16, 16 * widen_factor, 32 * widen_factor, 64 * widen_factor]
@@ -133,6 +157,9 @@ class WideResNet(nn.Module):
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
+
+        if pretrained:
+            self._from_pretrained(pretrained)
 
     def forward(self, x) -> torch.Tensor:
         """
@@ -170,31 +197,9 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return self.fc(out), out_list
 
-    @staticmethod
-    def from_pretrained(name, **kwargs):
+    def _from_pretrained(self, name):
         """
-        WideResNet with different pre-trained weights.
-
-        .. list-table:: Available models
-           :widths: 25 75
-           :header-rows: 1
-
-           * - Key
-             - Description
-           * - imagenet32
-             -  Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet.
-           * - oe-cifar100-tune
-             - Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100
-           * - oe-cifar10-tune
-             - Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10
-           * - er-cifar10-tune
-             - Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-10
-           * - er-cifar100-tune
-             - Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-100
-           * - cifar100-pt
-             - Pre-Trained model for CIFAR-100
-           * - cifar10-pt
-             - Pre-Trained model for CIFAR-10
+        Load pre-trained weights
         """
         urls = {
             "imagenet32": "https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt",
@@ -206,7 +211,5 @@ class WideResNet(nn.Module):
             "cifar10-pt": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/pretrained/cifar10_wrn_pretrained_epoch_99.pt",
         }
 
-        model = WideResNet(**kwargs)
         state_dict = load_state_dict_from_url(url=urls[name], map_location="cpu")
-        model.load_state_dict(state_dict)
-        return model
+        self.load_state_dict(state_dict)

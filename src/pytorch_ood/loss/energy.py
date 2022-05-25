@@ -4,7 +4,7 @@
 import torch
 import torch.nn as nn
 
-from ..loss import CrossEntropy
+from ..loss import CrossEntropyLoss
 from ..utils import is_known, is_unknown
 
 
@@ -35,7 +35,7 @@ class EnergyRegularizedLoss(nn.Module):
         super(EnergyRegularizedLoss, self).__init__()
         self.m_in = margin_in
         self.m_out = margin_out
-        self.nll = CrossEntropy()
+        self.nll = CrossEntropyLoss()
         self.alpha = alpha
 
     def forward(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:

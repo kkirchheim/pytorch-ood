@@ -2,9 +2,9 @@ import torch
 
 
 class ClassificationModel(torch.nn.Module):
-    def __init__(self, num_classes=3):
+    def __init__(self, num_inputs=10, num_outputs=3):
         super(ClassificationModel, self).__init__()
-        self.p = torch.nn.Linear(10, num_classes)
+        self.p = torch.nn.Linear(num_inputs, num_outputs)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.p(x)

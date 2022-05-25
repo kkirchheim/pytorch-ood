@@ -13,7 +13,7 @@ class TestOpenMax(unittest.TestCase):
     """
 
     def test_something(self):
-        model = ClassificationModel(num_classes=3)
+        model = ClassificationModel(num_outputs=3)
         openmax = OpenMax(model)
 
         x = torch.randn(size=(128, 10))
