@@ -14,24 +14,32 @@ class ObjectosphereLoss(nn.Module):
     """
     From the paper *Reducing Network Agnostophobia*.
 
-    .. math:: \\mathcal{L}(x,y) = \\lVert f(x) \\rVert^2
+    .. math::
+       \\mathcal{L}(x, y) = \\mathcal{L}_E(x,y)  + \\alpha
+       \\Biggl \\lbrace
+       {
+       \\max \\lbrace 0, \\xi - \\lVert f(x) \\rVert_2^2 \\rbrace \\quad \\text{if } y \\geq 0
+        \\atop
+       \\lVert f(x) \\rVert_2^2 \\quad \\quad \\quad  \\quad \\quad \\quad  \\quad  \\text{ otherwise }
+       }
+
+    where :math:`\\mathcal{L}_E` is the Entropic Open-Set Loss
+
 
     :see Paper:
         https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf
 
     """
 
-    def __init__(
-        self, lambda_: float = 1.0, zetta: float = 1.0, reduction: Optional[str] = "mean"
-    ):
+    def __init__(self, alpha: float = 1.0, xi: float = 1.0, reduction: Optional[str] = "mean"):
         """
 
-        :param lambda_: weight for the
-        :param zetta: minimum feature magnitude
+        :param alpha: weight coefficient
+        :param xi: minimum feature magnitude :math:`\\xi`
         """
         super(ObjectosphereLoss, self).__init__()
-        self.lambda_ = lambda_
-        self.zetta = zetta
+        self.lambda_ = alpha
+        self.zetta = xi
         self.entropic = EntropicOpenSetLoss(reduction=None)
         self.reduction = reduction
 
@@ -77,6 +85,20 @@ class EntropicOpenSetLoss(nn.Module):
     """
     From *Reducing Network Agnostophobia*.
 
+
+    .. math::
+       \\mathcal{L}(x, y)
+       =
+       \\Biggl \\lbrace
+       {
+       -\\log \\sigma_y(f(x)) \\quad \\text{if } y \\geq 0
+        \\atop
+       \\frac{1}{C} \\sum_{c=1}^C \\sigma_c(f(x)) \\quad \\text{ otherwise }
+       }
+
+    where :math:`\\sigma` is the softmax function.
+
+
     :see Paper:
         https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf
 
@@ -104,6 +126,7 @@ class EntropicOpenSetLoss(nn.Module):
 
         if contains_unknown(target):
             unknown = is_unknown(target)
+            # TODO: check this, a term is missing here
             losses[unknown] = torch.logsumexp(logits[unknown], dim=1)
 
         return apply_reduction(losses, self.reduction)

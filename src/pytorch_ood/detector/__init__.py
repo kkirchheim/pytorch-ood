@@ -4,11 +4,15 @@ Detectors
 Out-of-Distribution Detectors
 
 
-
 Softmax
 -------------------------------
 
 .. automodule:: pytorch_ood.detector.softmax
+
+MaxLogit
+-------------------------------
+
+.. automodule:: pytorch_ood.detector.maxlogit
 
 OpenMax
 -------------------------------
@@ -38,6 +42,7 @@ Monte Carlo Dropout
 """
 from .energy import NegativeEnergy
 from .mahalanobis import Mahalanobis
+from .maxlogit import MaxLogit
 from .mcd import MCD
 from .odin import ODIN
 from .openmax import OpenMax
