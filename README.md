@@ -67,12 +67,12 @@ Load model pre-trained with energy regularization, and predict on some dataset `
 Energy-based outlier scores.
 
 ```python
-from src.pytorch_ood.model import WideResNet
-from src.pytorch_ood import NegativeEnergy
-from src.pytorch_ood.utils import OODMetrics
+from pytorch_ood.model import WideResNet
+from pytorch_ood import NegativeEnergy
+from pytorch_ood.utils import OODMetrics
 
 # create Neural Network
-model = WideResNet.from_pretrained("er-cifar10-tune").eval().cuda()
+model = WideResNet(pretrained="er-cifar10-tune").eval().cuda()
 
 # create detector
 detector = NegativeEnergy(model)
