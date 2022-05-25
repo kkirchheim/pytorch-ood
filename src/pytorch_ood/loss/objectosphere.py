@@ -18,7 +18,7 @@ class ObjectosphereLoss(nn.Module):
        \\mathcal{L}(x, y) = \\mathcal{L}_E(x,y)  + \\alpha
        \\Biggl \\lbrace
        {
-       \\max \\lbrace 0, \\xi - \\lVert f(x) \\rVert_2^2 \\rbrace \\quad \\text{if } y \\geq 0
+       \\max \\lbrace 0, \\xi - \\lVert f(x) \\rVert \\rbrace^2 \\quad \\text{if } y \\geq 0
         \\atop
        \\lVert f(x) \\rVert_2^2 \\quad \\quad \\quad  \\quad \\quad \\quad  \\quad  \\text{ otherwise }
        }
@@ -38,8 +38,8 @@ class ObjectosphereLoss(nn.Module):
         :param xi: minimum feature magnitude :math:`\\xi`
         """
         super(ObjectosphereLoss, self).__init__()
-        self.lambda_ = alpha
-        self.zetta = xi
+        self.alpha = alpha
+        self.xi = xi
         self.entropic = EntropicOpenSetLoss(reduction=None)
         self.reduction = reduction
 
@@ -55,8 +55,9 @@ class ObjectosphereLoss(nn.Module):
 
         if contains_known(target):
             known = is_known(target)
+            # todo: this can be optimized
             losses[known] = (
-                (torch.linalg.norm(logits[known], ord=2, dim=1) - self.zetta).relu().pow(2)
+                (self.xi - torch.linalg.norm(logits[known], ord=2, dim=1)).relu().pow(2)
             )
 
         if contains_unknown(target):
@@ -64,7 +65,7 @@ class ObjectosphereLoss(nn.Module):
             # todo: this can be optimized
             losses[unknown] = torch.linalg.norm(logits[unknown], ord=2, dim=1).pow(2)
 
-        loss = entropic_loss + self.lambda_ * losses
+        loss = entropic_loss + self.alpha * losses
 
         return apply_reduction(loss, self.reduction)
 
@@ -126,7 +127,6 @@ class EntropicOpenSetLoss(nn.Module):
 
         if contains_unknown(target):
             unknown = is_unknown(target)
-            # TODO: check this, a term is missing here
-            losses[unknown] = torch.logsumexp(logits[unknown], dim=1)
+            losses[unknown] = -logits[unknown].softmax(dim=1).log().mean(dim=1)
 
         return apply_reduction(losses, self.reduction)

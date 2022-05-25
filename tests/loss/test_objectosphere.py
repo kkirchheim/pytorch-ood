@@ -19,3 +19,4 @@ class TestObjectosphere(unittest.TestCase):
         loss = criterion(logits, target)
 
         self.assertIsNotNone(loss)
+        self.assertGreaterEqual(loss, 0)
