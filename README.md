@@ -96,18 +96,18 @@ print(metrics.compute())
 | Mahalanobis      |  [[3]]()  |
 | Monte Carlo Dropout      |  [[4]]() |
 | Softmax Thresholding | [[5]]() |
-| Max Logit |  |
 | Energy-Based | [[6]](#liu2020energy) |
+| Max Logit | [[?]]() |
 
 ## Implemented Objective Functions
 
 | Objective Function       | Reference     |
 |--------------|---------------------------|
-| Objectosphere  Loss    | [[7]]() |
-| Entropic Open-Set Loss      | [[7]]() |
+| Objectosphere  Loss    | [[7]](#dhamija2018reducing) |
+| Entropic Open-Set Loss      | [[7]](#dhamija2018reducing) |
 | Outlier Exposure Loss  | [[8]]()  |
 | Energy Regularization | [[6]](#liu2020energy)  |
-| Deep SVDD  Loss       | [[9]]()  |
+| Deep SVDD Loss       | [[9]]()  |
 | II Loss           | [[10]]()  |
 | CAC Loss           | [[11]]()  |
 | Center Loss           | [[12]]()  |
@@ -150,17 +150,17 @@ The legal implications of using pre-trained models in commercial services are, t
 
 <a name="lee2018simple">[3] Mahalanobis (2018) </a> *A simple unified framework for detecting out-of-distribution samples and adversarial attacks*, NeurIPS
 
-<a name="">[4] ... </a>
+<a name="gal2016dropout">[4] Monte Carki Dropout (2016) </a> *Dropout as a bayesian approximation: Representing model uncertainty in deep learning*, ICML
 
-<a name="">[5] ... </a>
+<a name="hendrycks2016baseline">[5] Softmax Baseline (2017) </a> *A baseline for detecting misclassified and out-of-distribution examples in neural networks*, ICLR
 
 <a name="liu2020energy">[6] Energy-Based OOD (2020)</a> *Energy-based Out-of-distribution Detection*, NeurIPS
 
-<a name="">[7] ... </a>
+<a name="dhamija2018reducing">[7] Objectosphere (2018) </a> *Reducing network agnostophobia*, NeurIPS
 
-<a name="">[8] ... </a>
+<a name="hendrycks2018deep">[8] Outlier Exposure </a>*Deep Anomaly Detection with Outlier Exposure*, ICLR
 
-<a name="">[9] ... </a>
+<a name="ruff2018deep">[9] DeepSVDD (2018) </a> *Deep one-class classification*, ICML
 
 <a name="">[10] ... </a>
 
