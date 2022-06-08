@@ -13,7 +13,7 @@ class TestBackgroundClass(unittest.TestCase):
 
     def test_example_1(self):
         criterion = BackgroundClassLoss(num_classes=3)
-        model = ClassificationModel(num_classes=4)
+        model = ClassificationModel(num_outputs=4)
         input = torch.randn(size=(10, 10))
         target = torch.arange(10) % 3
         target[5:] = -1
