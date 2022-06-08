@@ -30,8 +30,7 @@ class TestOutlierExposure(unittest.TestCase):
     def test_example_3(self):
         criterion = OutlierExposureLoss()
         logits = torch.randn(size=(10, 10))
-        target = torch.zeros(size=(10,)).long() * -1
-        target[5:] = -1
+        target = torch.ones(size=(10,)).long() * -1
         loss = criterion(logits, target)
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)

@@ -16,7 +16,10 @@ class Softmax(Detector, torch.nn.Module):
     Optionally, implements temperature scaling, which divides the logits by a constant temperature :math:`T`
     before calculating the softmax.
 
-    .. math:: \\max_y \\text{softmax}(z / T)_y
+    .. math:: - \\max_y \\sigma_y(f(x) / T)
+
+    where :math:`\\sigma` is the softmax function and :math:`\\sigma_y`  indicates the :math:`y^{th}` value of the
+    resulting probability vector.
 
     :see Paper:
         https://arxiv.org/abs/1610.02136
@@ -35,13 +38,15 @@ class Softmax(Detector, torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Predicts on input.
+        :param x: model input
         """
         return Softmax.score(self.model(x), self.t)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
-        """ """
-        return self.forward(x)
+        """
+        :param x: model input
+        """
+        return self.forward(self.model(x))
 
     def fit(self):
         """
@@ -52,39 +57,8 @@ class Softmax(Detector, torch.nn.Module):
 
     @staticmethod
     def score(logits: torch.Tensor, t=1) -> torch.Tensor:
-        return -logits.div(t).softmax(dim=1).max(dim=1).values
-
-
-class MaxLogit(Detector, torch.nn.Module):
-    """
-    Implements the Max Logit Method for OOD Detection.
-
-    TODO
-    """
-
-    def __init__(self, model: torch.nn.Module):
-        """
-        :param t: temperature value T. Default is 1.
-        """
-        super(MaxLogit, self).__init__()
-        self.model = model
-
-    def forward(self, x) -> torch.Tensor:
-        return MaxLogit.score(self.model(x))
-
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
-        """ """
-        return self.forward(x)
-
-    def fit(self):
-        """
-        Not required
-        """
-        pass
-
-    @staticmethod
-    def score(logits: torch.Tensor) -> torch.Tensor:
         """
         :param logits: logits for samples
+        :param t: temperature value
         """
-        return logits.max(dim=1).values
+        return -logits.div(t).softmax(dim=1).max(dim=1).values

@@ -11,7 +11,7 @@ class TestObjectosphere(unittest.TestCase):
     """
 
     def test_example_1(self):
-        criterion = ObjectosphereLoss(lambda_=1.0, zetta=1.0)
+        criterion = ObjectosphereLoss(alpha=1.0, xi=1.0)
         logits = torch.randn(size=(10, 10))
         target = torch.zeros(size=(10,)).long()
         target[5:] = -1
@@ -19,3 +19,4 @@ class TestObjectosphere(unittest.TestCase):
         loss = criterion(logits, target)
 
         self.assertIsNotNone(loss)
+        self.assertGreaterEqual(loss, 0)
