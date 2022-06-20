@@ -17,17 +17,17 @@ PyTorch Out-of-Distribution Detection
 
 
 .. image:: https://static.pepy.tech/badge/pytorch-ood
-   :target: 
+   :target: https://static.pepy.tech/badge/pytorch-ood
    :alt: 
 
 
 .. image:: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/pipeline.svg
-   :target: 
+   :target: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/pipeline.svg
    :alt: 
 
 
 .. image:: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/coverage.svg
-   :target: 
+   :target: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/coverage.svg
    :alt: 
 
 .. image:: https://readthedocs.org/projects/pytorch-ood/badge/?version=latest
