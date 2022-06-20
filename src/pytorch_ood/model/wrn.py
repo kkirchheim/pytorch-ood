@@ -90,7 +90,6 @@ class WideResNet(nn.Module):
     """
     Resnet Architecture with large number of channels and variable depth.
 
-
     :see Paper: https://arxiv.org/pdf/1605.07146v4.pdf
     :see Implementation: https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
     """
@@ -115,6 +114,8 @@ class WideResNet(nn.Module):
              - Description
            * - imagenet32
              -  Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet.
+           * - imagenet32-nocifar
+             - Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet, excluding cifar10 classes.
            * - oe-cifar100-tune
              - Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100
            * - oe-cifar10-tune
@@ -203,6 +204,7 @@ class WideResNet(nn.Module):
         """
         urls = {
             "imagenet32": "https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt",
+            "imagenet32-nocifar": "https://github.com/hendrycks/pre-training/raw/master/uncertainty/CIFAR/snapshots/imagenet/cifar10_excluded/imagenet_wrn_baseline_epoch_99.pt",
             "oe-cifar100-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar100_wrn_oe_tune_epoch_9.pt",
             "oe-cifar10-tune": "https://github.com/hendrycks/outlier-exposure/raw/master/CIFAR/snapshots/oe_tune/cifar10_wrn_oe_tune_epoch_9.pt",
             "er-cifar10-tune": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/energy_ft/cifar10_wrn_s1_energy_ft_epoch_9.pt",
