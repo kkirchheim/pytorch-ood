@@ -18,14 +18,18 @@ def cross_entropy(x, targets, reduction="mean"):
     return apply_reduction(loss, reduction=reduction)
 
 
-class CrossEntropy(nn.Module):
+class CrossEntropyLoss(nn.Module):
     """
     Standard Cross-entropy, but ignores OOD inputs.
     """
 
-    def __init__(self, reduction="mean"):
-        super(CrossEntropy, self).__init__()
+    def __init__(self, reduction: str = "mean"):
+        """
+        :param reduction: reduction method to apply.
+        """
+        super(CrossEntropyLoss, self).__init__()
         self.reduction = reduction
 
-    def forward(self, x: torch.Tensor, targets) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        """ """
         return cross_entropy(x, targets, reduction=self.reduction)

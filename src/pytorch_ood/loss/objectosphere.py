@@ -14,24 +14,32 @@ class ObjectosphereLoss(nn.Module):
     """
     From the paper *Reducing Network Agnostophobia*.
 
-    .. math:: \\mathcal{L}(x,y) = \\lVert f(x) \\rVert^2
+    .. math::
+       \\mathcal{L}(x, y) = \\mathcal{L}_E(x,y)  + \\alpha
+       \\Biggl \\lbrace
+       {
+       \\max \\lbrace 0, \\xi - \\lVert f(x) \\rVert \\rbrace^2 \\quad \\text{if } y \\geq 0
+        \\atop
+       \\lVert f(x) \\rVert_2^2 \\quad \\quad \\quad  \\quad \\quad \\quad  \\quad  \\text{ otherwise }
+       }
+
+    where :math:`\\mathcal{L}_E` is the Entropic Open-Set Loss
+
 
     :see Paper:
         https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf
 
     """
 
-    def __init__(
-        self, lambda_: float = 1.0, zetta: float = 1.0, reduction: Optional[str] = "mean"
-    ):
+    def __init__(self, alpha: float = 1.0, xi: float = 1.0, reduction: Optional[str] = "mean"):
         """
 
-        :param lambda_: weight for the
-        :param zetta: minimum feature magnitude
+        :param alpha: weight coefficient
+        :param xi: minimum feature magnitude :math:`\\xi`
         """
         super(ObjectosphereLoss, self).__init__()
-        self.lambda_ = lambda_
-        self.zetta = zetta
+        self.alpha = alpha
+        self.xi = xi
         self.entropic = EntropicOpenSetLoss(reduction=None)
         self.reduction = reduction
 
@@ -47,8 +55,9 @@ class ObjectosphereLoss(nn.Module):
 
         if contains_known(target):
             known = is_known(target)
+            # todo: this can be optimized
             losses[known] = (
-                (torch.linalg.norm(logits[known], ord=2, dim=1) - self.zetta).relu().pow(2)
+                (self.xi - torch.linalg.norm(logits[known], ord=2, dim=1)).relu().pow(2)
             )
 
         if contains_unknown(target):
@@ -56,7 +65,7 @@ class ObjectosphereLoss(nn.Module):
             # todo: this can be optimized
             losses[unknown] = torch.linalg.norm(logits[unknown], ord=2, dim=1).pow(2)
 
-        loss = entropic_loss + self.lambda_ * losses
+        loss = entropic_loss + self.alpha * losses
 
         return apply_reduction(loss, self.reduction)
 
@@ -76,6 +85,20 @@ class ObjectosphereLoss(nn.Module):
 class EntropicOpenSetLoss(nn.Module):
     """
     From *Reducing Network Agnostophobia*.
+
+
+    .. math::
+       \\mathcal{L}(x, y)
+       =
+       \\Biggl \\lbrace
+       {
+       -\\log \\sigma_y(f(x)) \\quad \\text{if } y \\geq 0
+        \\atop
+       \\frac{1}{C} \\sum_{c=1}^C \\sigma_c(f(x)) \\quad \\text{ otherwise }
+       }
+
+    where :math:`\\sigma` is the softmax function.
+
 
     :see Paper:
         https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf
@@ -104,6 +127,6 @@ class EntropicOpenSetLoss(nn.Module):
 
         if contains_unknown(target):
             unknown = is_unknown(target)
-            losses[unknown] = torch.logsumexp(logits[unknown], dim=1)
+            losses[unknown] = -logits[unknown].softmax(dim=1).log().mean(dim=1)
 
         return apply_reduction(losses, self.reduction)

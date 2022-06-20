@@ -17,12 +17,6 @@ log = logging.getLogger(__name__)
 class TinyImageNetCrop(VisionDataset):
     """
     Cropped version of the tiny imagenet
-
-    .. ignore::
-        base_folder
-        url
-        filename
-        tgz_md5
     """
 
     base_folder = "Imagenet/test/"
@@ -124,7 +118,7 @@ class TinyImageNetResize(TinyImageNetCrop):
 
 class LSUNCrop(TinyImageNetCrop):
     """
-    Resized version of the tiny imagenet
+    Cropped version of the LSUN
 
     """
 
@@ -154,7 +148,7 @@ class LSUNCrop(TinyImageNetCrop):
 
 class LSUNResize(TinyImageNetCrop):
     """
-    Resized version of the tiny imagenet
+    Resized version of the LSUN dataset
 
     """
 

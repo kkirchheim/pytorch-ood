@@ -12,11 +12,12 @@ class ClassCenters(nn.Module):
     """
     Several methods for OOD Detection propose to model a center :math:`\\mu_y` for each class.
     These centers are either static, or learned via gradient descent.
+
+    The centers are also known as class proxy, class prototype or class anchor.
     """
 
     def __init__(self, n_classes: int, n_features: int, fixed: bool = False):
         """
-        Several methods use a center for each class, also known as class proxy or class prototype.
 
         :param n_classes: number of classes vectors
         :param n_features: dimensionality of the space in which the centers live
@@ -41,7 +42,7 @@ class ClassCenters(nn.Module):
     @property
     def params(self) -> nn.Parameter:
         """
-        Class centers, a.k.a. Anchors
+        Class centers :math:`\\mu`
         """
         return self._params
 
@@ -55,7 +56,7 @@ class ClassCenters(nn.Module):
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Make class membership predictions
+        Make class membership predictions based on the softmin of the distances to each center.
 
         :param x: embeddings of samples
         :returns: normalized pairwise distance of samples to each center
@@ -145,4 +146,4 @@ class RunningCenters(nn.Module):
         :param x:
         :return: distances to all centers
         """
-        return utils.pairwise_distances(self.centers, x)
+        return utils.pairwise_distances(x, self.centers)

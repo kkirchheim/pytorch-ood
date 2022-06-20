@@ -26,14 +26,16 @@ class IILoss(nn.Module):
 
     """
 
-    def __init__(self, n_classes, n_embedding):
+    def __init__(self, n_classes, n_embedding, alpha=1.0):
         """
         :param n_classes: number of classes
         :param n_embedding: embedding dimensionality
+        :param alpha: weight for both loss terms
         """
         super(IILoss, self).__init__()
         self.num_classes = n_classes
         self.running_centers = RunningCenters(n_classes=n_classes, n_embedding=n_embedding)
+        self.alpha = alpha
 
     @property
     def centers(self) -> RunningCenters:
@@ -116,6 +118,6 @@ class IILoss(nn.Module):
             # intra_spread should be minimized, inter_separation maximized
             # we substract the margin from the inter seperation, so the overall loss will always be > 0.
             # this does not influence on the results of the loss, because constant offsets have no impact on the gradient.
+            return intra_spread + self.alpha * inter_separation
         else:
-            intra_spread, inter_separation = 0.0, 0.0
-        return intra_spread, inter_separation
+            return torch.zeros(size=(1,))
