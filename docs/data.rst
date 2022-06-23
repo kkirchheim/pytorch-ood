@@ -24,3 +24,10 @@ Open Set Simulations
 =====================================================
 
 .. automodule:: pytorch_ood.dataset.ossim
+
+
+Audio 
+=====================================================
+
+.. automodule:: pytorch_ood.dataset.audio
+
