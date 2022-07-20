@@ -33,8 +33,7 @@ class Chars74k(VisionDataset):
     tgz_dataset_md5 = "85d157e0c58f998e1cda8def62bcda0d"
     tgz_list_md5 = "7d7b8038b3c47bf2a1c5a80c1dd79a0d"
     
-    char_string = string.digits + string.ascii_letters
-    char_list = [char for char in char_string]
+    char_list = list(map(str, string.digits+string.ascii_uppercase+string.ascii_lowercase))
 
     def getListOfFiles(self, dirName):
         listOfFile = os.listdir(dirName)
@@ -45,7 +44,7 @@ class Chars74k(VisionDataset):
             # Create full path
             fullPath = os.path.join(dirName, entry)
             raw_label_idx = int(str(Path(fullPath).name).split("Sample")[1])-1
-            label = self.char_list[raw_label_idx]
+            label = ord(self.char_list[raw_label_idx])
             Files = os.listdir(fullPath)
             for files in Files:
                 allFiles.append(os.path.join(fullPath, files))
@@ -54,9 +53,10 @@ class Chars74k(VisionDataset):
 
     def getFiles(self, dirName):
         files_set_1, labels_set_1 = self.getListOfFiles(join(dirName, "GoodImg", "Bmp"))
-        files_set_2, labels_set_2 = self.getListOfFiles(join(dirName, "BadImag", "Bmp"))
+        # files_set_2, labels_set_2 = self.getListOfFiles(join(dirName, "BadImag", "Bmp"))
+        # all_files = files_set_1+files_set_2, all_labels = labels_set_1+labels_set_2
 
-        return files_set_1+files_set_2, labels_set_1+labels_set_2
+        return files_set_1, labels_set_1
 
     def __init__(
         self,
@@ -124,12 +124,4 @@ class Chars74k(VisionDataset):
         if self.transform is not None:
             img = self.transform(img)
 
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-
         return img, target
-
-"""obj = Chars74k(download=True, root="C:\\Users\\budha\\Desktop\\temp\\tmp")
-a, b = obj.__getitem__(0)
-print(b)
-"""
