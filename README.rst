@@ -155,6 +155,46 @@ Implemented Algorithms
 |                            | Approach for Deep Face Recognition*.                                                             |      |                   |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+-------------------+
 
+**Implemented Image Dataset Functions**:
+
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| Function              | Description                                                                                                     | Year | Ref           |
++=======================+=================================================================================================================+======+===============+
+| CIFAR10               | From the paper *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations.*                | 2019 | [#Cifar10]_   |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| CIFAR100C             | From the paper *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations.*                | 2019 | [#Cifar10]_   |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| ImageNetC             | From the paper *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations.*                | 2019 | [#Cifar10]_   |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| Cub 200               | Cub 200 Dataset Adapter                                                                                         | 2011 | [#Cub200]_    |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| FoolingImages         | From the paper *Deep neural networks are easily fooled: High confidence predictions for unrecognizable images*. | 2014 | [#FImages]_   |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| ImageNet - A, O, R    | From the paper *Natural Adversarial Examples*.                                                                  | 2019 | [#ImageNets]_ |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| MNIST-C               | MNIST-C is MNIST with corruptions for benchmarking OOD methods.                                                 | 2019 | [#MnistC]_    |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| StreetHazards         | From the paper *Scaling Out-of-Distribution Detection for Real-World Settings*                                  | 2022 | [#StreeHaz]_  |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| Textures              | Textures dataset from *Describing Textures in the Wild*, also known as DTD.                                     | 2013 | [#Textures]_  |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| TinyImages            | The TinyImages dataset is often used as auxiliary OOD training data.                                            | 2012 | [#TinyImgs]_  |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| TinyImages300k        | A cleaned version of the TinyImages Dataset with 300.000 images.                                                | 2018 | [#OE]_        |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+
+**Implemented Text Dataset Functions**:
+
++-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+| Function    | Description                                                                                                               | Year | Ref             |
++=============+===========================================================================================================================+======+=================+
+| Multi30k    | Multi-30k dataset, as used by Hendrycks et al.                                                                            | 2016 | [#Multi30k]_    |
++-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+| WikiText2   | Contains collection of over 100 million tokens extracted from the set of verified Good and Featured articles on Wikipedia | 2016 | [#WikiText2]_   |
++-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+| WikiText103 | Contains collection of over 100 million tokens extracted from the set of verified Good and Featured articles on Wikipedia | 2016 | [#WikiText103]_ |
++-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+
 
 Citing
 ^^^^^^^
@@ -186,28 +226,50 @@ The legal implications of using pre-trained models in commercial services are, t
 
 Reference
 ^^^^^^^^^
-.. [#OpenMax]  OpenMax (2016) Towards open set deep networks, CVPR
+.. [#OpenMax]  Bendale, A., & Boult, T. E. (2016). Towards open set deep networks. CVPR.
 
-.. [#ODIN] ODIN (2018)  Enhancing the reliability of out-of-distribution image detection in neural networks, ICLR
+.. [#ODIN] Liang, S., Li, Y., & Srikant, R. (2017). Enhancing the reliability of out-of-distribution image detection in neural networks. ICLR.
 
-.. [#Mahalanobis] Mahalanobis (2018)  A simple unified framework for detecting out-of-distribution samples and adversarial attacks, NeurIPS
+.. [#Mahalanobis] Lee, K., Lee, K., Lee, H., & Shin, J. (2018). A simple unified framework for detecting out-of-distribution samples and adversarial attacks. NeurIPS.
 
-.. [#MonteCarloDrop] Monte Carlo Droput
+.. [#MonteCarloDrop] Miok, K., Nguyen-Doan, D., Zaharie, D., & Robnik-Šikonja, M. (2019). Generating data using Monte Carlo dropout. ICCP.
 
-.. [#Softmax] Softmax Paper
+.. [#Softmax] Hendrycks, D., & Gimpel, K. (2016). A baseline for detecting misclassified and out-of-distribution examples in neural networks. ICLR.
 
-.. [#EnergyBasedOOD] Energy-Based OOD (2020) Energy-based Out-of-distribution Detection, NeurIPS
+.. [#EnergyBasedOOD] Liu, W., Wang, X., Owens, J., & Li, Y. (2020). Energy-based out-of-distribution detection. NeurIPS.
 
-.. [#Objectosphere] Object Sphere paper
+.. [#Objectosphere] Dhamija, A. R., Günther, M., & Boult, T. (2018). Reducing network agnostophobia. NeurIPS.
 
-.. [#OE] Outlier Exposure paper
+.. [#OE] Hendrycks, D., Mazeika, M., & Dietterich, T. (2018). Deep anomaly detection with outlier exposure. ICLR.
 
-.. [#SVDD] SVDD paper
+.. [#SVDD] Ruff, L.,  et al. (2018). Deep one-class classification. ICML.
 
-.. [#IILoss] IILoss paper
+.. [#IILoss] Hassen, M., & Chan, P. K. (2020). Learning a neural-network-based representation for open set recognition. SDM.
 
-.. [#CACLoss] CACLoss Paper
+.. [#CACLoss] Miller, D., Sunderhauf, N., Milford, M., & Dayoub, F. (2021). Class anchor clustering: A loss for distance-based open set recognition. WACV.
 
-.. [#EnergyReg] Energy Regegularization Paper
+.. [#EnergyReg] Liu, W., Wang, X., Owens, J., & Li, Y. (2020). Energy-based out-of-distribution detection. NeurIPS.
 
-.. [#CenterLoss] CenterLoss Paper
+.. [#CenterLoss] Wen, Y., Zhang, K., Li, Z., & Qiao, Y. (2016). A discriminative feature learning approach for deep face recognition. ECCV.
+
+.. [#Cifar10] Hendrycks, D., & Dietterich, T. (2019). Benchmarking neural network robustness to common corruptions and perturbations. ICLR.
+
+.. [#Cub200]  Wah, C., Branson, S., Welinder, P., Perona, P., & Belongie, S. (2011). The caltech-ucsd birds-200-2011 dataset.
+
+.. [#FImages] Nguyen, A., Yosinski, J., & Clune, J. (2015). Deep neural networks are easily fooled: High confidence predictions for unrecognizable images. CVPR.
+
+.. [#ImageNets] Hendrycks, D., Zhao, K., Basart, S., Steinhardt, J., & Song, D. (2021). Natural adversarial examples. CVPR.
+
+.. [#MnistC] Mu, N., & Gilmer, J. (2019). MNIST-C: A robustness benchmark for computer vision. ICLR Workshop.
+
+.. [#StreeHaz] Hendrycks, D., Basart, S., Mazeika, M., Mostajabi, M., Steinhardt, J., & Song, D. (2022). Scaling out-of-distribution detection for real-world settings. ICML.
+
+.. [#Textures] Cimpoi, M., Maji, S., Kokkinos, I., Mohamed, S., & Vedaldi, A. (2014). Describing textures in the wild. CVPR.
+
+.. [#TinyImgs] Torralba, A., Fergus, R., & Freeman, W. T. (2007). Tiny images.
+
+.. [#Multi30k] Elliott, D., Frank, S., Sima'an, K., & Specia, L. (2016). Multi30k: Multilingual english-german image descriptions. arXiv preprint arXiv:1605.00459.
+
+.. [#WikiText2] Merity, S., Xiong, C., Bradbury, J., & Socher, R. (2016). Pointer sentinel mixture models. ArXiv Preprint ArXiv:1609.07843.
+
+.. [#WikiText103] Merity, S., Xiong, C., Bradbury, J., & Socher, R. (2016). Pointer sentinel mixture models. ArXiv Preprint ArXiv:1609.07843.
