@@ -5,7 +5,6 @@ http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/#download
 import logging
 import os
 import numpy as np
-import string
 from pathlib import Path
 from os.path import join
 from typing import Callable, Optional

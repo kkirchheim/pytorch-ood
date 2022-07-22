@@ -108,3 +108,4 @@ from .streethazards import StreetHazards
 from .textures import Textures
 from .tinyimagenet import TinyImagenet
 from .tinyimages import TinyImages, TinyImages300k
+from .chars74k import Chars74k
