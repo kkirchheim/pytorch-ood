@@ -95,6 +95,12 @@ StreetHazards
 ..  autoclass:: pytorch_ood.dataset.img.StreetHazards
     :members:
 
+Chars74k
+----------------------
+
+..  autoclass:: pytorch_ood.dataset.img.chars74k
+    :members:
+
 """
 from .cifar import CIFAR10C, CIFAR100C
 from .cub200 import Cub2011
