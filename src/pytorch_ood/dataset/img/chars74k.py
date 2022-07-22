@@ -33,7 +33,7 @@ class Chars74k(VisionDataset):
     tgz_dataset_md5 = "85d157e0c58f998e1cda8def62bcda0d"
     tgz_list_md5 = "7d7b8038b3c47bf2a1c5a80c1dd79a0d"
     
-    char_list = list(map(str, string.digits+string.ascii_uppercase+string.ascii_lowercase))
+    # char_list = list(map(str, string.digits+string.ascii_uppercase+string.ascii_lowercase))
 
     def getListOfFiles(self, dirName):
         listOfFile = os.listdir(dirName)
@@ -43,8 +43,8 @@ class Chars74k(VisionDataset):
         for entry in listOfFile:
             # Create full path
             fullPath = os.path.join(dirName, entry)
-            raw_label_idx = int(str(Path(fullPath).name).split("Sample")[1])-1
-            label = ord(self.char_list[raw_label_idx])
+            label = int(str(Path(fullPath).name).split("Sample")[1])-1
+            # label = ord(self.char_list[label])
             Files = os.listdir(fullPath)
             for files in Files:
                 allFiles.append(os.path.join(fullPath, files))
