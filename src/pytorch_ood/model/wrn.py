@@ -95,7 +95,13 @@ class WideResNet(nn.Module):
     """
 
     def __init__(
-        self, num_classes, depth=40, widen_factor=2, drop_rate=0.3, in_channels=3, pretrained=None
+        self,
+        num_classes,
+        depth=40,
+        widen_factor=2,
+        drop_rate=0.3,
+        in_channels=3,
+        pretrained=None,
     ):
         """
 

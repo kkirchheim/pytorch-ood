@@ -95,6 +95,13 @@ StreetHazards
 ..  autoclass:: pytorch_ood.dataset.img.StreetHazards
     :members:
 
+
+MVTECH
+----------------------
+
+..  autoclass:: pytorch_ood.dataset.img.mvtech
+    :members:
+
 """
 from .cifar import CIFAR10C, CIFAR100C
 from .cub200 import Cub2011
@@ -108,3 +115,4 @@ from .streethazards import StreetHazards
 from .textures import Textures
 from .tinyimagenet import TinyImagenet
 from .tinyimages import TinyImages, TinyImages300k
+from .mvtech import MVTECH

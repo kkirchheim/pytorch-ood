@@ -1,11 +1,10 @@
+import glob
 import logging
 import os
-import glob
-from typing import Tuple
 from pathlib import Path
+from typing import Tuple
 
 from scipy.io import wavfile
-
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_and_extract_archive
 
@@ -20,28 +19,15 @@ class SpokenMNIST(Dataset):
     """
 
     metadata = {
-    'jackson': {
-        'gender': 'male',
-        'accent': 'USA/neutral',
-        'language': 'english'
-    },
-    'nicolas': {
-    	'gender': 'male',
-    	'accent': 'BE/French',
-    	'language': 'english'
-    },
-    'theo': {
-    	'gender': 'male',
-    	'accent': 'USA/neutral',
-    	'language': 'english'
-    }
+        "jackson": {"gender": "male", "accent": "USA/neutral", "language": "english"},
+        "nicolas": {"gender": "male", "accent": "BE/French", "language": "english"},
+        "theo": {"gender": "male", "accent": "USA/neutral", "language": "english"},
     }
 
     url = "https://zenodo.org/record/1342401/files/Jakobovski/free-spoken-digit-dataset-v1.0.8.zip"
     md5 = "54f48186ecb1d5ac4e971143086d529b"
     filename = "free-spoken-digit-dataset-v1.0.8.zip"
     base_folder = "Jakobovski-free-spoken-digit-dataset-e9e1155/recordings"
-
 
     def __init__(self, root, transform=None, download=True):
         super(Dataset, self).__init__()
@@ -77,14 +63,12 @@ class SpokenMNIST(Dataset):
     def __getitem__(self, index):
         file_path = self._data[index]
         rating, fileType, _ = (Path(file_path).name).split("_")
-        sample_rate, waveform = wavfile.read(file_path) 
+        sample_rate, waveform = wavfile.read(file_path)
 
         if self.transforms:
             waveform = self.target_transform(waveform)
 
-        return waveform, sample_rate, int(rating) , self.metadata[fileType]
+        return waveform, sample_rate, int(rating), self.metadata[fileType]
 
     def __len__(self):
         return len(self._data)
-
-
