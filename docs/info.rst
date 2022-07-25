@@ -31,9 +31,6 @@ We adopt the following convention: samples from in-distribution data use target 
 Samples from out-of-distribution data (known or unknown during training) will be assigned target values :math:`< 0`.
 
 
-Interface
-===========
-
 
 Scope
 -----------------------------------------
@@ -42,3 +39,4 @@ While Out-of-Distribution detection, Anomaly Detection, Novelty Detection, Open-
 we believe that these tasks are related. To out knowledge, the nomenclature is not fully settled, and different
 researchers tend to use different terminologies.
 Sometimes, some of these terms are used interchangeably.
+Therefore, while this packages aims at out-of-distribution methods, it also covers methods from closely related fields.

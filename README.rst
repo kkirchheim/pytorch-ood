@@ -70,7 +70,6 @@ The package can be installed via PyPI:
 
 
 * ``libmr``  for the OpenMax Detector [#OpenMax]_ . The library is currently broken and unlikely to be repaired. You will have to install ``cython`` and ``libmr`` afterwards manually.
-* ``pandas`` for the Cub200 Dataset [#Cub200]_
 
 
 Quick Start
@@ -111,18 +110,19 @@ Implemented
 +============================+================================================================================================+======+====================+
 | OpenMax                    | Implementation of the OpenMax Layer as proposed in the paper *Towards Open Set Deep Networks*. | 2016 | [#OpenMax]_        |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Softmax Thresholding       | Implements the Softmax Baseline for OOD and Error detection.                                   | 2017 | [#Softmax]_        |
++----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ODIN                       | ODIN is a preprocessing method for inputs that aims to increase the discriminability of        | 2018 | [#ODIN]_           |
 |                            | the softmax outputs for In- and Out-of-Distribution data.                                      |      |                    |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Mahalanobis                | Implements the Mahalanobis Method.                                                             | 2018 | [#Mahalanobis]_    |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Monte Carlo Dropout        | Implements Monte Carlo Dropout.                                                                | 2022 | [#MonteCarloDrop]_ |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Softmax Thresholding       | Implements the Softmax Baseline for OOD and Error detection.                                   | 2022 | [#Softmax]_        |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Energy-Based OOD Detection | Implements the Energy Score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-
+| Monte Carlo Dropout        | Implements Monte Carlo Dropout.                                                                | 2022 | [#MonteCarloDrop]_ |
++----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| MaxLogit                   | Implements the MaxLogit method.                                                                | 2022 | [#StreeHaz]_       |
++----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 
 **Objective Functions**:
 
@@ -131,62 +131,62 @@ Implemented
 +============================+==================================================================================================+======+====================+
 | Objectosphere              | Implementation of the paper *Reducing Network Agnostophobia*.                                    | 2016 | [#Objectosphere]_  |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| Center Loss                | Generalized version of the *Center Loss* from the Paper *A Discriminative Feature Learning       | 2016 | [#CenterLoss]_     |
+|                            | Approach for Deep Face Recognition*.                                                             |      |                    |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 | Outlier Exposure           | Implementation of the paper *Deep Anomaly Detection With Outlier Exposure*.                      | 2018 | [#OE]_             |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 | Deep SVDD                  | Implementation of the Deep Support Vector Data Description from the paper *Deep One-Class        | 2018 | [#SVDD]_           |
 |                            | Classification*.                                                                                 |      |                    |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
-| II Loss                    | Implementation of II Loss function from *Learning a neural network-based representation for      | 2022 | [#IILoss]_         |
-|                            | open set recognition*.                                                                           |      |                    |
+| Energy Regularization      | Adds a regularization term to the cross-entropy that aims to increase the energy gap between IN  | 2020 | [#EnergyBasedOOD]_ |
+|                            | and OOD samples.                                                                                 |      |                    |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 | CAC Loss                   | Class Anchor Clustering Loss from *Class Anchor Clustering: a Distance-based Loss for Training   | 2021 | [#CACLoss]_        |
 |                            | Open Set Classifiers*                                                                            |      |                    |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
-| Energy Regularization      | Adds a regularization term to the cross-entropy that aims to increase the energy gap between IN  | 2020 | [#EnergyBasedOOD]_ |
-|                            | and OOD samples.                                                                                 |      |                    |
-+----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
-| Center Loss                | Generalized version of the *Center Loss* from the Paper *A Discriminative Feature Learning       | 2016 | [#CenterLoss]_     |
-|                            | Approach for Deep Face Recognition*.                                                             |      |                    |
+| II Loss                    | Implementation of II Loss function from *Learning a neural network-based representation for      | 2022 | [#IILoss]_         |
+|                            | open set recognition*.                                                                           |      |                    |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 
 **Image Datasets**:
 
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| Function              | Description                                                                                                     | Year | Ref           |
+| Dataset               | Description                                                                                                     | Year | Ref           |
 +=======================+=================================================================================================================+======+===============+
-| CIFAR10               | From the paper *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations.*                | 2019 | [#Cifar10]_   |
+| TinyImages            | The TinyImages dataset is often used as auxiliary OOD training data. However, use is discouraged                | 2012 | [#TinyImgs]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| CIFAR100C             | From the paper *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations.*                | 2019 | [#Cifar10]_   |
+| Textures              | Textures dataset, also known as DTD, often used as OOD Examples                                                 | 2013 | [#Textures]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| ImageNetC             | From the paper *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations.*                | 2019 | [#Cifar10]_   |
+| FoolingImages         | OOD Images Generated to fool certain Deep Neural Networks                                                       | 2014 | [#FImages]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| Cub 200               | Cub 200 Dataset Adapter                                                                                         | 2011 | [#Cub200]_    |
+| TinyImages300k        | A cleaned version of the TinyImages Dataset with 300.000 images, often used as auxiliary OOD training data      | 2018 | [#OE]_        |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| FoolingImages         | From the paper *Deep neural networks are easily fooled: High confidence predictions for unrecognizable images*. | 2014 | [#FImages]_   |
+| CIFAR10-C             | Corrupted version of the CIFAR 10                                                                               | 2019 | [#Cifar10]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| ImageNet - A, O, R    | From the paper *Natural Adversarial Examples*.                                                                  | 2019 | [#ImageNets]_ |
+| CIFAR100-C            | Corrupted version of the CIFAR 100                                                                              | 2019 | [#Cifar10]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| MNIST-C               | MNIST-C is MNIST with corruptions for benchmarking OOD methods.                                                 | 2019 | [#MnistC]_    |
+| ImageNet-C            | Corrupted version of the ImageNet                                                                               | 2019 | [#Cifar10]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| StreetHazards         | From the paper *Scaling Out-of-Distribution Detection for Real-World Settings*                                  | 2022 | [#StreeHaz]_  |
+| ImageNet - A, O, R    | Different Outlier Variants for the ImageNet                                                                     | 2019 | [#ImageNets]_ |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| Textures              | Textures dataset from *Describing Textures in the Wild*, also known as DTD.                                     | 2013 | [#Textures]_  |
+| MNIST-C               | MNIST-C is MNIST with corruptions for benchmarking OOD methods                                                  | 2019 | [#MnistC]_    |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| TinyImages            | The TinyImages dataset is often used as auxiliary OOD training data.                                            | 2012 | [#TinyImgs]_  |
+| MVTech-AD             | MCTech-AD                                                                                                       | 2021 | [#MVTech]_    |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| TinyImages300k        | A cleaned version of the TinyImages Dataset with 300.000 images.                                                | 2018 | [#OE]_        |
+| StreetHazards         | Anomaly Segmentation Dataset                                                                                    | 2022 | [#StreeHaz]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 
 **Text Datasets**:
 
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
-| Function    | Description                                                                                                               | Year | Ref             |
+| Dataset     | Description                                                                                                               | Year | Ref             |
 +=============+===========================================================================================================================+======+=================+
-| Multi30k    | Multi-30k dataset, as used by Hendrycks et al.                                                                            | 2016 | [#Multi30k]_    |
+| Multi30k    | Multi-30k dataset, as used by Hendrycks et al. in the OOD baseline paper                                                  | 2016 | [#Multi30k]_    |
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
-| WikiText2   | Contains collection of over 100 million tokens extracted from the set of verified Good and Featured articles on Wikipedia | 2016 | [#WikiText2]_   |
+| WikiText2   | Texts from the wikipedia often used as auxiliary OOD training data                                                        | 2016 | [#WikiText2]_   |
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
-| WikiText103 | Contains collection of over 100 million tokens extracted from the set of verified Good and Featured articles on Wikipedia | 2016 | [#WikiText2]_   |
+| WikiText103 | Texts from the wikipedia often used as auxiliary OOD training data                                                        | 2016 | [#WikiText2]_   |
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
 
 
@@ -246,8 +246,6 @@ Reference
 
 .. [#Cifar10] Hendrycks, D., & Dietterich, T. (2019). Benchmarking neural network robustness to common corruptions and perturbations. ICLR.
 
-.. [#Cub200]  Wah, C., Branson, S., Welinder, P., Perona, P., & Belongie, S. (2011). The caltech-ucsd birds-200-2011 dataset.
-
 .. [#FImages] Nguyen, A., Yosinski, J., & Clune, J. (2015). Deep neural networks are easily fooled: High confidence predictions for unrecognizable images. CVPR.
 
 .. [#ImageNets] Hendrycks, D., Zhao, K., Basart, S., Steinhardt, J., & Song, D. (2021). Natural adversarial examples. CVPR.
@@ -263,3 +261,5 @@ Reference
 .. [#Multi30k] Elliott, D., Frank, S., Sima'an, K., & Specia, L. (2016). Multi30k: Multilingual english-german image descriptions. Proceedings of the 5th Workshop on Vision and Language.
 
 .. [#WikiText2] Merity, S., Xiong, C., Bradbury, J., & Socher, R. (2016). Pointer sentinel mixture models. `ArXiv <https://arxiv.org/abs/1609.07843>`_
+
+.. [#MVTech] P. Bergmann, K. Batzner, et al. (2021) The MVTec Anomaly Detection Dataset: A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection. IJCV.

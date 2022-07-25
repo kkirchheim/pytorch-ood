@@ -41,22 +41,6 @@ LSUNResize
 ..  autoclass:: pytorch_ood.dataset.img.TinyImages300k
     :members:
 
-Gaussian Noise
-``````````````````````````
-
-..  autoclass:: pytorch_ood.dataset.img.GaussianNoise
-    :members:
-
-Uniform Noise
-`````````````
-..  autoclass:: pytorch_ood.dataset.img.UniformNoise
-    :members:
-
-MNIST C
-`````````````
-..  autoclass:: pytorch_ood.dataset.img.MNISTC
-    :members:
-
 ImageNet-A
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.ImageNetA
@@ -67,14 +51,14 @@ ImageNet-O
 ..  autoclass:: pytorch_ood.dataset.img.ImageNetO
     :members:
 
-ImageNet-C
-`````````````
-..  autoclass:: pytorch_ood.dataset.img.ImageNetC
-    :members:
-
 ImageNet-R
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.ImageNetR
+    :members:
+
+MNIST-C
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.MNISTC
     :members:
 
 CIFAR10-C
@@ -85,6 +69,21 @@ CIFAR10-C
 CIFAR100-C
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.CIFAR100C
+    :members:
+
+ImageNet-C
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.ImageNetC
+    :members:
+
+Gaussian Noise
+``````````````````````````
+..  autoclass:: pytorch_ood.dataset.img.GaussianNoise
+    :members:
+
+Uniform Noise
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.UniformNoise
     :members:
 
 
@@ -105,14 +104,12 @@ MVTech-AD
 
 """
 from .cifar import CIFAR10C, CIFAR100C
-from .cub200 import Cub2011
 from .fooling import FoolingImages
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from .mnistc import MNISTC
 from .mvtech import MVTechAD
 from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
-from .stanfordcars import StanfordCars
 from .streethazards import StreetHazards
 from .textures import Textures
 from .tinyimagenet import TinyImagenet

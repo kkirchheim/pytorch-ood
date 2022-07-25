@@ -1,27 +1,30 @@
 import os
 
-from torch.utils.data import ConcatDataset
 from torchvision.datasets import ImageFolder, VisionDataset
 
 
 class TinyImagenet(VisionDataset):
-    """ """
+    """
+    Small Version of the ImageNet with images of size :math:`64 \times 64` from 200 classes.
 
-    def __init__(self, root, **kwargs):
+    Automatic downloading is not supported.
+    """
+
+    subsets = ["train", "val", "test"]
+
+    def __init__(self, root, subset, transform=None, target_transform=None):
         """
-
         :param root: root folder
-        :param kwargs:
         """
-        super(TinyImagenet, self).__init__(root)
-        dataset1 = ImageFolder(root=os.path.join(root, "train"))
-        dataset2 = ImageFolder(root=os.path.join(root, "val"))
-        dataset3 = ImageFolder(root=os.path.join(root, "test"))
-        self.dataset = ConcatDataset([dataset1, dataset2, dataset3])
-        self.targets = []
-        self.targets.extend(dataset1.targets)
-        self.targets.extend(dataset2.targets)
-        self.targets.extend(dataset3.targets)
+        super(TinyImagenet, self).__init__(
+            root, target_transform=target_transform, transform=transform
+        )
+
+        if subset not in self.subsets:
+            raise ValueError()
+
+        self.root = os.path.join(root, subset)
+        self.data = ImageFolder(root=root)
 
     def __getitem__(self, index: int):
         """
@@ -31,11 +34,14 @@ class TinyImagenet(VisionDataset):
         Returns:
             tuple: (image, target) where target is index of the target class.
         """
-        img, target = self.dataset[index]
+        img, target = self.data[index]
+
         if self.transform is not None:
             img = self.transform(img)
+
         if self.target_transform is not None:
             target = self.target_transform(target)
+
         return img, target
 
     def __len__(self):
