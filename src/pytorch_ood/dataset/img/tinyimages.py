@@ -28,7 +28,8 @@ class TinyImages(Dataset):
 
     ..  warning::
         The use of this dataset is discouraged by the authors.
-        See *Large image datasets: A pyrrhic win for computer vision?*
+        If you are insterested in the underlying reasonse, see *Large image datasets:
+        A pyrrhic win for computer vision?*
 
     """
 
@@ -98,7 +99,8 @@ class TinyImages(Dataset):
 
 class TinyImages300k(Dataset):
     """
-    A cleaned version of the TinyImages Dataset with 300.000 images.
+    A cleaned version of the TinyImages Dataset with 300.000 images, often used as auxiliary data
+    from training more robust models.
 
     :see Page: https://github.com/hendrycks/outlier-exposure
     """

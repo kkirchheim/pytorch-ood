@@ -1,92 +1,86 @@
-PyTorch Out-of-Distribution Detection 
+PyTorch Out-of-Distribution Detection
 =====================================
 
 .. image:: https://img.shields.io/pypi/v/pytorch-ood.svg?color=brightgreen
    :target: https://pypi.org/project/pytorch-ood/
    :alt: PyPI version
 
-
 .. image:: https://img.shields.io/badge/-Python 3.8+-blue?logo=python&logoColor=white
    :target: https://www.python.org/
    :alt: Python
-
 
 .. image:: https://img.shields.io/badge/code%20style-black-black.svg?labelColor=gray
    :target: https://black.readthedocs.io/en/stable/
    :alt: Code style: black
 
-
 .. image:: https://static.pepy.tech/badge/pytorch-ood
-   :target: https://static.pepy.tech/badge/pytorch-ood
-   :alt: 
-
+   :target: https://pepy.tech/project/pytorch-ood
+   :alt: Downloads
 
 .. image:: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/pipeline.svg
    :target: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/pipeline.svg
-   :alt: 
-
+   :alt: Pipeline
 
 .. image:: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/coverage.svg
    :target: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/coverage.svg
-   :alt: 
+   :alt: Coverage
 
 .. image:: https://readthedocs.org/projects/pytorch-ood/badge/?version=latest
-   :target: https://pytorch-ood.readthedocs.io/en/latest/?badge=latest
+   :target: https://pytorch-ood.readthedocs.io/en/latest/
    :alt: Documentation Status
 
 -----
 
-Python library to accelerate research in Out-of-Distribution Detection, as well as related
+PyTorch-based library to accelerate research in Out-of-Distribution (OOD) Detection, as well as related
 fields such as Open-Set Recognition, Novelty Detection, Confidence Estimation and Anomaly Detection
-based on Deep Neural Networks (with PyTorch).
+based on Deep Neural Networks.
 
 This library provides
 
-- Objective Functions
-- OOD Detection Methods
-- Datasets used in academic literature
-- Neural Network Architectures used in academic literature, as well as pretrained weights
+- Objective/Loss Functions
+- Out-of-Distribution Detection Methods
+- Datasets
+- Neural Network Architectures as well as pretrained weights
 - Useful Utilities
 
-and was created with the aim to speed up research and to facilitate reproducibility.
-It is designed such that it should integrate seamlessly with frameworks that enable the scaling of model training,
-like `pytorch-lightning <https://www.pytorchlightning.ai>`_.  
+and is designed such that it should integrate seamlessly with frameworks that enable the scaling of model training,
+like `pytorch-lightning <https://www.pytorchlightning.ai>`_.
 
 
 Installation
 ^^^^^^^^^^^^^^
+The package can be installed via PyPI:
 
 .. code-block:: shell
 
    pip install pytorch-ood
-   
 
 
-Required Dependencies
+
+**Dependencies**
 
 
-* torch
-* torchvision
-* scipy
-* torchmetrics
+* ``torch``
+* ``torchvision``
+* ``scipy``
+* ``torchmetrics``
 
 
-Optional Dependencies
+**Optional Dependencies**
 
 
-* libmr for the OpenMax Detector, which is currently broken. You will have to install cython and libmr afterwards manually.
-* pandas for the Cub200 Dataset
+* ``libmr``  for the OpenMax Detector [#OpenMax]_ . The library is currently broken and unlikely to be repaired. You will have to install ``cython`` and ``libmr`` afterwards manually.
 
 
 Quick Start
 ^^^^^^^^^^^
-Load model pre-trained with energy regularization, and predict on some dataset `data_loader` using
-Energy-based outlier scores.
+Load model pre-trained on CIFAR-10 with Energy Regularization [#EnergyBasedOOD]_, and predict on some dataset ``data_loader`` using
+Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the common OOD detection metrics:
 
 .. code-block:: python
 
     from pytorch_ood.model import WideResNet
-    from pytorch_ood import NegativeEnergy
+    from pytorch_ood.detector import NegativeEnergy
     from pytorch_ood.utils import OODMetrics
 
     # create Neural Network
@@ -104,75 +98,112 @@ Energy-based outlier scores.
     print(metrics.compute())
 
 
-Citing
-^^^^^^^
-
-pytorch-ood was presented on the CVPR Workshop on Human-centered Intelligent Services: Safe and Trustworthy.
-If you use pytorch-ood in a scientific publication, please consider citing us::
-
-    @article{kirchheim2022pytorch,
-      author = {Kirchheim, Konstantin and Filax, Marco and Ortmeier, Frank},
-      journal = {CVPR Workshop on Human-centered Intelligent Services: Safe and Trustworthy},
-      number = {},
-      pages = {},
-      publisher = {IEEE},
-      title = {PyTorch-OOD: A Library for Out-of-Distribution Detection based on PyTorch},
-      year = {2022}
-      }
-
-or::
-
-    Kirchheim, Konstantin and Filax, Marco and Ortmeier, Frank, 2022. PyTorch-OOD: A Library for Out-of-Distribution Detection based on PyTorch (IEEE)
 
 
-Implemented Algorithms
+Implemented
 ^^^^^^^^^^^^^^^^^^^^^^
 
-**Implemented Detectors** :
+**Detectors** :
 
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Detector                   | Description                                                                                    | Year | Ref                |
 +============================+================================================================================================+======+====================+
 | OpenMax                    | Implementation of the OpenMax Layer as proposed in the paper *Towards Open Set Deep Networks*. | 2016 | [#OpenMax]_        |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Softmax Thresholding       | Implements the Softmax Baseline for OOD and Error detection.                                   | 2017 | [#Softmax]_        |
++----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ODIN                       | ODIN is a preprocessing method for inputs that aims to increase the discriminability of        | 2018 | [#ODIN]_           |
 |                            | the softmax outputs for In- and Out-of-Distribution data.                                      |      |                    |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Mahalanobis                | This method calculates a class center :math:`\\mu_y` for each class, and a shared              | 2018 | [#Mahalanobis]_    |
-|                            | covariance matrix :math:`\\Sigma` from the data.                                               |      |                    |
+| Mahalanobis                | Implements the Mahalanobis Method.                                                             | 2018 | [#Mahalanobis]_    |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Monte Carlo Dropout        | Implements the Monte Carlo Dropout for OOD detection.                                          | 2022 | [#MonteCarloDrop]_ |
+| Energy-Based OOD Detection | Implements the Energy Score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Softmax Thresholding       | Implements the Softmax Baseline for OOD detection.                                             | 2022 | [#Softmax]_        |
+| Monte Carlo Dropout        | Implements Monte Carlo Dropout.                                                                | 2022 | [#MonteCarloDrop]_ |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Energy-Based OOD Detection | Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.                  | 2020 | [#EnergyBasedOOD]_ |
+| MaxLogit                   | Implements the MaxLogit method.                                                                | 2022 | [#StreeHaz]_       |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 
+**Objective Functions**:
 
-**Implemented Objective Functions**:
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| Objective Function         | Description                                                                                      | Year | Ref                |
++============================+==================================================================================================+======+====================+
+| Objectosphere              | Implementation of the paper *Reducing Network Agnostophobia*.                                    | 2016 | [#Objectosphere]_  |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| Center Loss                | Generalized version of the *Center Loss* from the Paper *A Discriminative Feature Learning       | 2016 | [#CenterLoss]_     |
+|                            | Approach for Deep Face Recognition*.                                                             |      |                    |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| Outlier Exposure           | Implementation of the paper *Deep Anomaly Detection With Outlier Exposure*.                      | 2018 | [#OE]_             |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| Deep SVDD                  | Implementation of the Deep Support Vector Data Description from the paper *Deep One-Class        | 2018 | [#SVDD]_           |
+|                            | Classification*.                                                                                 |      |                    |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| Energy Regularization      | Adds a regularization term to the cross-entropy that aims to increase the energy gap between IN  | 2020 | [#EnergyBasedOOD]_ |
+|                            | and OOD samples.                                                                                 |      |                    |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| CAC Loss                   | Class Anchor Clustering Loss from *Class Anchor Clustering: a Distance-based Loss for Training   | 2021 | [#CACLoss]_        |
+|                            | Open Set Classifiers*                                                                            |      |                    |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| II Loss                    | Implementation of II Loss function from *Learning a neural network-based representation for      | 2022 | [#IILoss]_         |
+|                            | open set recognition*.                                                                           |      |                    |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 
-+----------------------------+--------------------------------------------------------------------------------------------------+------+-------------------+
-| Objective Function         | Description                                                                                      | Year | Ref               |
-+============================+==================================================================================================+======+===================+
-| Objectosphere              | Implementation of the paper *Reducing Network Agnostophobia*.                                    | 2016 | [#Objectosphere]_ |
-+----------------------------+--------------------------------------------------------------------------------------------------+------+-------------------+
-| Outlier Exposure           | Implementation of the paper *Deep Anomaly Detection With Outlier Exposure*.                      | 2018 | [#OE]_            |
-+----------------------------+--------------------------------------------------------------------------------------------------+------+-------------------+
-| Deep SVDD                  | Implementation of the Deep Support Vector Data Description from the paper *Deep One-Class        | 2018 | [#SVDD]_          |
-|                            | Classification*.                                                                                 |      |                   |
-+----------------------------+--------------------------------------------------------------------------------------------------+------+-------------------+
-| II Loss                    | Implementation of II Loss function from *Learning a neural network-based representation for      | 2022 | [#IILoss]_        |
-|                            | open set recognition*.                                                                           |      |                   |
-+----------------------------+--------------------------------------------------------------------------------------------------+------+-------------------+
-| CAC Loss                   | Class Anchor Clustering Loss from *Class Anchor Clustering: a Distance-based Loss for Training   | 2022 | [#CACLoss]_       |
-|                            | Open Set Classifiers*                                                                            |      |                   |
-+----------------------------+--------------------------------------------------------------------------------------------------+------+-------------------+
-| Energy Regularization      | Adds a regularization term to the cross-entropy that aims to increase the energy gap between IN  | 2020 | [#EnergyReg]_     |
-|                            | and OOD samples.                                                                                 |      |                   |
-+----------------------------+--------------------------------------------------------------------------------------------------+------+-------------------+
-| Center Loss                | Generalized version of the *Center Loss* from the Paper *A Discriminative Feature Learning       | 2022 | [#CenterLoss]_    |
-|                            | Approach for Deep Face Recognition*.                                                             |      |                   |
-+----------------------------+--------------------------------------------------------------------------------------------------+------+-------------------+
+**Image Datasets**:
+
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| Dataset               | Description                                                                                                     | Year | Ref           |
++=======================+=================================================================================================================+======+===============+
+| TinyImages            | The TinyImages dataset is often used as auxiliary OOD training data. However, use is discouraged                | 2012 | [#TinyImgs]_  |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| Textures              | Textures dataset, also known as DTD, often used as OOD Examples                                                 | 2013 | [#Textures]_  |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| FoolingImages         | OOD Images Generated to fool certain Deep Neural Networks                                                       | 2014 | [#FImages]_   |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| TinyImages300k        | A cleaned version of the TinyImages Dataset with 300.000 images, often used as auxiliary OOD training data      | 2018 | [#OE]_        |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| CIFAR10-C             | Corrupted version of the CIFAR 10                                                                               | 2019 | [#Cifar10]_   |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| CIFAR100-C            | Corrupted version of the CIFAR 100                                                                              | 2019 | [#Cifar10]_   |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| ImageNet-C            | Corrupted version of the ImageNet                                                                               | 2019 | [#Cifar10]_   |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| ImageNet - A, O, R    | Different Outlier Variants for the ImageNet                                                                     | 2019 | [#ImageNets]_ |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| MNIST-C               | MNIST-C is MNIST with corruptions for benchmarking OOD methods                                                  | 2019 | [#MnistC]_    |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| MVTech-AD             | MCTech-AD                                                                                                       | 2021 | [#MVTech]_    |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| StreetHazards         | Anomaly Segmentation Dataset                                                                                    | 2022 | [#StreeHaz]_  |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+
+**Text Datasets**:
+
++-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+| Dataset     | Description                                                                                                               | Year | Ref             |
++=============+===========================================================================================================================+======+=================+
+| Multi30k    | Multi-30k dataset, as used by Hendrycks et al. in the OOD baseline paper                                                  | 2016 | [#Multi30k]_    |
++-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+| WikiText2   | Texts from the wikipedia often used as auxiliary OOD training data                                                        | 2016 | [#WikiText2]_   |
++-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+| WikiText103 | Texts from the wikipedia often used as auxiliary OOD training data                                                        | 2016 | [#WikiText2]_   |
++-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+
+
+Citing
+^^^^^^^
+
+``pytorch-ood`` was presented on a CVPR Workshop in 2022.
+If you use it in a scientific publication, please consider citing::
+
+    @InProceedings{kirchheim2022pytorch,
+        author    = {Kirchheim, Konstantin and Filax, Marco and Ortmeier, Frank},
+        title     = {PyTorch-OOD: A Library for Out-of-Distribution Detection Based on PyTorch},
+        booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops},
+        month     = {June},
+        year      = {2022},
+        pages     = {4351-4360}
+    }
 
 
 Contributing
@@ -189,30 +220,46 @@ The legal implications of using pre-trained models in commercial services are, t
 
 Reference
 ^^^^^^^^^
-.. [#OpenMax]  OpenMax (2016) Towards open set deep networks, CVPR
+.. [#OpenMax]  Bendale, A., & Boult, T. E. (2016). Towards open set deep networks. CVPR.
 
-.. [#ODIN] ODIN (2018)  Enhancing the reliability of out-of-distribution image detection in neural networks, ICLR
+.. [#ODIN] Liang, S., Li, Y., & Srikant, R. (2017). Enhancing the reliability of out-of-distribution image detection in neural networks. ICLR.
 
-.. [#Mahalanobis] Mahalanobis (2018)  A simple unified framework for detecting out-of-distribution samples and adversarial attacks, NeurIPS
+.. [#Mahalanobis] Lee, K., Lee, K., Lee, H., & Shin, J. (2018). A simple unified framework for detecting out-of-distribution samples and adversarial attacks. NeurIPS.
 
-.. [#MonteCarloDrop] Monte Carlo Droput 
+.. [#MonteCarloDrop] Miok, K., Nguyen-Doan, D., Zaharie, D., & Robnik-Šikonja, M. (2016). Dropout as a bayesian approximation: Representing model uncertainty in deep learning. ICML.
 
-.. [#Softmax] Softmax Paper
+.. [#Softmax] Hendrycks, D., & Gimpel, K. (2016). A baseline for detecting misclassified and out-of-distribution examples in neural networks. ICLR.
 
-.. [#EnergyBasedOOD] Energy-Based OOD (2020) Energy-based Out-of-distribution Detection, NeurIPS
+.. [#EnergyBasedOOD] Liu, W., Wang, X., Owens, J., & Li, Y. (2020). Energy-based out-of-distribution detection. NeurIPS.
 
-.. [#Objectosphere] Object Sphere paper
+.. [#Objectosphere] Dhamija, A. R., Günther, M., & Boult, T. (2018). Reducing network agnostophobia. NeurIPS.
 
-.. [#OE] Outlier Exposure paper
+.. [#OE] Hendrycks, D., Mazeika, M., & Dietterich, T. (2018). Deep anomaly detection with outlier exposure. ICLR.
 
-.. [#SVDD] SVDD paper
+.. [#SVDD] Ruff, L.,  et al. (2018). Deep one-class classification. ICML.
 
-.. [#IILoss] IILoss paper
+.. [#IILoss] Hassen, M., & Chan, P. K. (2020). Learning a neural-network-based representation for open set recognition. SDM.
 
-.. [#CACLoss] CACLoss Paper
+.. [#CACLoss] Miller, D., Sunderhauf, N., Milford, M., & Dayoub, F. (2021). Class anchor clustering: A loss for distance-based open set recognition. WACV.
 
-.. [#EnergyReg] Energy Regegularization Paper
+.. [#CenterLoss] Wen, Y., Zhang, K., Li, Z., & Qiao, Y. (2016). A discriminative feature learning approach for deep face recognition. ECCV.
 
-.. [#CenterLoss] CenterLoss Paper
+.. [#Cifar10] Hendrycks, D., & Dietterich, T. (2019). Benchmarking neural network robustness to common corruptions and perturbations. ICLR.
 
-===============================
+.. [#FImages] Nguyen, A., Yosinski, J., & Clune, J. (2015). Deep neural networks are easily fooled: High confidence predictions for unrecognizable images. CVPR.
+
+.. [#ImageNets] Hendrycks, D., Zhao, K., Basart, S., Steinhardt, J., & Song, D. (2021). Natural adversarial examples. CVPR.
+
+.. [#MnistC] Mu, N., & Gilmer, J. (2019). MNIST-C: A robustness benchmark for computer vision. ICLR Workshop.
+
+.. [#StreeHaz] Hendrycks, D., Basart, S., Mazeika, M., Mostajabi, M., Steinhardt, J., & Song, D. (2022). Scaling out-of-distribution detection for real-world settings. ICML.
+
+.. [#Textures] Cimpoi, M., Maji, S., Kokkinos, I., Mohamed, S., & Vedaldi, A. (2014). Describing textures in the wild. CVPR.
+
+.. [#TinyImgs] Torralba, A., Fergus, R., & Freeman, W. T. (2007). 80 million tiny images: a large dataset for non-parametric object and scene recognition. IEEE Transactions on Pattern Analysis and Machine Learning.
+
+.. [#Multi30k] Elliott, D., Frank, S., Sima'an, K., & Specia, L. (2016). Multi30k: Multilingual english-german image descriptions. Proceedings of the 5th Workshop on Vision and Language.
+
+.. [#WikiText2] Merity, S., Xiong, C., Bradbury, J., & Socher, R. (2016). Pointer sentinel mixture models. `ArXiv <https://arxiv.org/abs/1609.07843>`_
+
+.. [#MVTech] P. Bergmann, K. Batzner, et al. (2021) The MVTec Anomaly Detection Dataset: A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection. IJCV.

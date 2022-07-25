@@ -1,11 +1,25 @@
 import unittest
 from urllib.request import urlopen
 
-from src.pytorch_ood.dataset.img.cifar import CIFAR10C, CIFAR100C
-from src.pytorch_ood.dataset.img.imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
-from src.pytorch_ood.dataset.img.mnistc import MNISTC
-from src.pytorch_ood.dataset.img.streethazards import StreetHazards
-from src.pytorch_ood.dataset.txt import Multi30k, NewsGroup20, Reuters52, WikiText2, WikiText103, Reuters8
+from src.pytorch_ood.dataset.img import (
+    CIFAR10C,
+    CIFAR100C,
+    MNISTC,
+    ImageNetA,
+    ImageNetC,
+    ImageNetO,
+    ImageNetR,
+    MVTechAD,
+    StreetHazards,
+)
+from src.pytorch_ood.dataset.txt import (
+    Multi30k,
+    NewsGroup20,
+    Reuters8,
+    Reuters52,
+    WikiText2,
+    WikiText103,
+)
 
 
 class TestDatasetAvailability(unittest.TestCase):
@@ -40,7 +54,7 @@ class TestDatasetAvailability(unittest.TestCase):
     def test_download_MNISTC(self):
         status = urlopen(MNISTC.urls[0]).getcode()
         self.assertEqual(status, 200)
-    
+
     def test_download_StreetHazards(self):
         status = urlopen(StreetHazards.url_list[0]).getcode()
         self.assertEqual(status, 200)
@@ -62,7 +76,7 @@ class TestDatasetAvailability(unittest.TestCase):
         self.assertEqual(status, 200)
         status = urlopen(Reuters52.test_url).getcode()
         self.assertEqual(status, 200)
-    
+
     def test_download_Reuters8(self):
         status = urlopen(Reuters8.train_url).getcode()
         self.assertEqual(status, 200)
@@ -81,6 +95,13 @@ class TestDatasetAvailability(unittest.TestCase):
         self.assertEqual(status, 200)
 
         status = urlopen(NewsGroup20.train_url).getcode()
+        self.assertEqual(status, 200)
+
+    def test_download_mvtech(self):
+        status = urlopen(MVTechAD.url).getcode()
+        self.assertEqual(status, 200)
+
+        status = urlopen(MVTechAD.url).getcode()
         self.assertEqual(status, 200)
 
 
