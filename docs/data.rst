@@ -2,7 +2,7 @@ Datasets
 *************************
 
 
-Computer Vision
+Image
 ====================================================
 
 .. automodule:: pytorch_ood.dataset.img
@@ -11,7 +11,7 @@ Computer Vision
    :show-inheritance:
 
 
-NLP
+Text
 ======================================================
 
 .. automodule:: pytorch_ood.dataset.txt
@@ -20,14 +20,13 @@ NLP
    :show-inheritance:
 
 
-Open Set Simulations
-=====================================================
-
-.. automodule:: pytorch_ood.dataset.ossim
-
-
-Audio 
+Audio
 =====================================================
 
 .. automodule:: pytorch_ood.dataset.audio
 
+
+Open Set Simulations
+=====================================================
+
+.. automodule:: pytorch_ood.dataset.ossim

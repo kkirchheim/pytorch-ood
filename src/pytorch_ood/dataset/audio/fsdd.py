@@ -1,8 +1,8 @@
 import glob
 import logging
 import os
+from os.path import join
 from pathlib import Path
-from typing import Tuple
 
 from scipy.io import wavfile
 from torch.utils.data import Dataset
@@ -11,9 +11,10 @@ from torchvision.datasets.utils import download_and_extract_archive
 log = logging.getLogger(__name__)
 
 
-class SpokenMNIST(Dataset):
+class FSDD(Dataset):
     """
-    A free audio dataset of spoken digits. Think MNIST for audio.
+    Free Spoken Digit Dataset, a simple audio/speech dataset consisting of recordings of spoken
+    digits in `wav` format at 8kHz.
 
     :see Website: https://github.com/Jakobovski/free-spoken-digit-dataset
     """
@@ -29,13 +30,25 @@ class SpokenMNIST(Dataset):
     filename = "free-spoken-digit-dataset-v1.0.8.zip"
     base_folder = "Jakobovski-free-spoken-digit-dataset-e9e1155/recordings"
 
-    def __init__(self, root, transform=None, download=True):
+    def __init__(self, root, transform=None, target_transform=None, download=True):
+        """
+        :param root: root folder for the dataset
+        :param transform: transform that will be applied to the instance
+        :param target_transform: transform that will be applied to the label
+        :param download: set true if you want to download dataset automatically
+        """
         super(Dataset, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform
+        self.target_transform = target_transform
 
         if download:
             self._download()
+
+        if not self._check_integrity():
+            raise RuntimeError(
+                "Dataset not found or corrupted." + " You can use download=True to download it"
+            )
 
         self._data = self._load_data()
 
@@ -48,27 +61,34 @@ class SpokenMNIST(Dataset):
             url=self.url, download_root=self.root, extract_root=self.root, md5=self.md5
         )
 
-    def _load_data(self) -> Tuple:
-        return [f for f in glob.glob(os.path.join(self.root, self.base_folder, "*.wav"))]
+    def _load_data(self):
+        return list(glob.glob(join(self.root, self.base_folder, "*.wav")))
 
-    def _check_integrity(self):
+    def _check_integrity(self) -> bool:
         try:
-            self._load_data()
+            if len(self._load_data()) > 0:
+                return True
+            return False
         except Exception as e:
-            # log.exception(e)
             return False
 
-        return True
-
     def __getitem__(self, index):
+        """
+        Returns a tuple with the instance and the corresponding label
+        """
         file_path = self._data[index]
-        rating, fileType, _ = (Path(file_path).name).split("_")
+        label, speaker, _ = (Path(file_path).name).split("_")
         sample_rate, waveform = wavfile.read(file_path)
 
-        if self.transforms:
-            waveform = self.target_transform(waveform)
+        label = int(label)
 
-        return waveform, sample_rate, int(rating), self.metadata[fileType]
+        if self.transforms:
+            waveform = self.transforms(waveform)
+
+        if self.target_transform:
+            label = self.target_transform(label)
+
+        return waveform, int(label)
 
     def __len__(self):
         return len(self._data)

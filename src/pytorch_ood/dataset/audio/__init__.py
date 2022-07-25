@@ -1,9 +1,9 @@
 """
-Spoken MNIST
+Free Spoken Digit Dataset
 ----------------------------------------------
-.. autoclass:: pytorch_ood.dataset.audio.spokenmnist
+.. autoclass:: pytorch_ood.dataset.audio.FSDD
    :members:
 
 """
 
-from .spoken_mnist import spokenmnist
+from .fsdd import FSDD
