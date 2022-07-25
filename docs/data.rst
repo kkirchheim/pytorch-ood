@@ -1,6 +1,12 @@
 Datasets
 *************************
 
+There are many datasets used in experiments with OOD methods. Finding, downloading and writing code for reading
+these datasets can be tedious.
+
+This package provides access to some of the most used datasets in the OOD literature. Most of these
+implementations support auto-downloading.
+
 
 Image
 ====================================================
