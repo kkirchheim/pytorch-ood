@@ -83,14 +83,6 @@ class Reuters52(Dataset):
     }
 
     def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
-        """
-
-        :param root:
-        :param transform:
-        :param target_transform:
-        :param train:
-        :param download:
-        """
         super(Dataset, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform

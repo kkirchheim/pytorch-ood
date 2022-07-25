@@ -21,6 +21,11 @@ class StreetHazards(ImageDatasetBase):
 
     From the paper *Scaling Out-of-Distribution Detection for Real-World Settings*
 
+    .. image:: https://github.com/hendrycks/anomaly-seg/raw/master/streethazards.gif
+        :width: 800px
+        :alt: Street Hazards Dataset Example
+        :align: center
+
     :see Paper: https://arxiv.org/pdf/1911.11132.pdf
     :see Website: https://github.com/hendrycks/anomaly-seg
     """

@@ -14,15 +14,42 @@ from .base import ImageDatasetBase
 log = logging.getLogger(__name__)
 
 
-class MVTECH(ImageDatasetBase):
+class MVTechAD(ImageDatasetBase):
     """
     MVTec AD is a dataset for benchmarking anomaly detection methods with a focus on industrial inspection.
+    The dataset provides segmentation masks for anomalies.
+
+    .. image:: https://www.mvtec.com/fileadmin/_processed_/1/e/csm_dataset_overview_large_27c30783e5.png
+        :width: 800px
+        :alt: MVTech Anomaly Detection Dataset
+        :align: center
 
     :see Paper: https://link.springer.com/content/pdf/10.1007/s11263-020-01400-4.pdf
     :see Download: https://www.mvtec.com/company/research/datasets/mvtec-ad/
+
+
+    Subset classes can be one of  ["bottle", "cable", "capsule", "carpet", "grid", "hazelnut", "leather", "metal_nut",
+    "pill", "screw", "tile", "toothbrush", "transistor", "wood", "zipper"]
     """
 
     splits = ["train", "test"]
+    subsets = [
+        "bottle",
+        "cable",
+        "capsule",
+        "carpet",
+        "grid",
+        "hazelnut",
+        "leather",
+        "metal_nut",
+        "pill",
+        "screw",
+        "tile",
+        "toothbrush",
+        "transistor",
+        "wood",
+        "zipper",
+    ]
 
     url = "https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f282/download/420938113-1629952094/mvtec_anomaly_detection.tar.xz"
 
@@ -34,6 +61,7 @@ class MVTECH(ImageDatasetBase):
         self,
         root: str,
         split: str,
+        subset: Optional[str] = None,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         download: bool = False,
@@ -41,12 +69,15 @@ class MVTECH(ImageDatasetBase):
         """
         :param root: root directory
         :param split: split directory
+        :param subset: subset class to use
         :param transform: transformations to apply to image
         :param target_transform: transformation to apply to target masks
         :param download: set to true to automatically download the dataset
         """
         super(ImageDatasetBase, self).__init__(
-            join(root, "MVTECH-AD"), transform=transform, target_transform=target_transform
+            join(root, "mvtech-ad"),
+            transform=transform,
+            target_transform=target_transform,
         )
 
         if split not in self.splits:
@@ -62,37 +93,48 @@ class MVTECH(ImageDatasetBase):
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
+        if subset:
+            if subset in self.subsets:
+                self.subset = subset
+            else:
+                raise ValueError(f"Invalid subset: {subset}, possible values: {self.subset}")
+        else:
+            self.subset = None
+
+        self.files = None
+        self.labels = None
+
         self.load()
 
     def _get_subset_files(self, subset_dir):
+        """
+        Returns two lists with filenames to images and corresponding segmentation masks.
+        For instances without anomalies, the segmentation mask file will be None.
+        """
         ls = []
         fs = []
 
-        folders = os.listdir(join(subset_dir, self.split))
-        for folder in folders:
-            files = glb(join(subset_dir, self.split, folder, "*.png"))
-            files.sort()
+        defect_dirs = os.listdir(join(subset_dir, self.split))
+        for defect_dir in defect_dirs:
+            files = glb(join(subset_dir, self.split, defect_dir, "*.png"))
+            files.sort()  # sort, since glob does not guarantee ordering
 
-            if folder == "good":
+            if defect_dir == "good":
                 labels = [None] * len(files)
             else:
-                labels = glb(join(subset_dir, "ground_truth", folder, "*_mask.png"))
+                labels = glb(join(subset_dir, "ground_truth", defect_dir, "*_mask.png"))
                 labels.sort()
-
-            # for f, l in zip(files, labels):
-            #     print(f"{os.path.basename(f)} -> {os.path.basename(l) if l is not None else l}")
 
             ls += labels
             fs += files
 
         return fs, ls
 
-    def get_all_files(self, root):
-        subsets = os.listdir(root)
+    def _get_all_files(self, root):
         files = list()
         labels = list()
         # Iterate over all the the subsets
-        for subset in subsets:
+        for subset in self.subsets:
             # Create full path
             subset_dir = join(root, subset)
             if os.path.isdir(subset_dir):
@@ -104,7 +146,10 @@ class MVTECH(ImageDatasetBase):
         return files, labels
 
     def load(self):
-        self.files, self.labels = self.get_all_files(self.root)
+        if self.subset:
+            self.files, self.labels = self._get_subset_files(join(self.root, self.subset))
+        else:
+            self.files, self.labels = self._get_all_files(self.root)
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """

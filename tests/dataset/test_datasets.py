@@ -5,11 +5,11 @@ from src.pytorch_ood.dataset.img import (
     CIFAR10C,
     CIFAR100C,
     MNISTC,
-    MVTECH,
     ImageNetA,
     ImageNetC,
     ImageNetO,
     ImageNetR,
+    MVTechAD,
     StreetHazards,
 )
 from src.pytorch_ood.dataset.txt import (
@@ -98,10 +98,10 @@ class TestDatasetAvailability(unittest.TestCase):
         self.assertEqual(status, 200)
 
     def test_download_mvtech(self):
-        status = urlopen(MVTECH.url).getcode()
+        status = urlopen(MVTechAD.url).getcode()
         self.assertEqual(status, 200)
 
-        status = urlopen(MVTECH.url).getcode()
+        status = urlopen(MVTechAD.url).getcode()
         self.assertEqual(status, 200)
 
 
