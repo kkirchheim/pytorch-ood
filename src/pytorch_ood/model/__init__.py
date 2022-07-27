@@ -20,8 +20,8 @@ Vision Transformer
     :members:
 
 
-NLP
-===============
+Natural Language Processing
+==============================
 
 GRU Classifier
 ---------------------

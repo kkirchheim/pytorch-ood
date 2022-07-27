@@ -39,14 +39,16 @@ class Textures(VisionDataset):
         super(Textures, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
+
         if download:
             self.download()
+
         if not self._check_integrity():
             raise RuntimeError(
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
-        self.basedir = os.path.join(self.root, self.base_folder)
+        self.basedir = join(self.root, self.base_folder)
         self.files = []
         for d in os.listdir(self.basedir):
             self.files.extend(
@@ -65,12 +67,15 @@ class Textures(VisionDataset):
         file, target = self.files[index], -1
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
-        path = os.path.join(self.root, self.base_folder, file)
+        path = join(self.root, self.base_folder, file)
         img = Image.open(path)
+
         if self.transform is not None:
             img = self.transform(img)
+
         if self.target_transform is not None:
             target = self.target_transform(target)
+
         return img, target
 
     def __len__(self) -> int:
@@ -87,10 +92,3 @@ class Textures(VisionDataset):
             return
 
         download_and_extract_archive(self.url, self.root, filename=self.filename, md5=self.tgz_md5)
-
-    def extra_repr(self) -> str:
-        return "Split: {}".format("Train" if self.train is True else "Test")
-
-    @property
-    def train(self):
-        return False

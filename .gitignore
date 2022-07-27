@@ -8,6 +8,9 @@
 
 .idea/
 
+# when executing examples creates a data folder
+data/
+
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml

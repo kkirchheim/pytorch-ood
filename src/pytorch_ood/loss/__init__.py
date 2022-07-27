@@ -1,10 +1,16 @@
 """
+
+All objective functions are implemented as ``torch.nn.Modules``. Integrating custom reduction for all of them is
+work in progress.
+
+
 Unsupervised
 =====================
 Unsupervised losses are only trained on in-distribution data (or similarly, only on
 points from known known classes.)
 
 Therefore, all of these loss functions expect that the target labels are strictly :math:`\\geq 0`.
+
 
 Confidence Loss
 ----------------------------------------------
@@ -25,7 +31,6 @@ Center Loss
 ----------------------------------------------
 .. autoclass:: pytorch_ood.loss.CenterLoss
     :members:
-
 
 Deep SVDD
 ----------------------------------------------
@@ -83,4 +88,4 @@ from .objectosphere import EntropicOpenSetLoss, ObjectosphereLoss
 from .oe import OutlierExposureLoss
 
 # from .triplet import TripletLoss
-from .svdd import DeepSVDDLoss
+from .svdd import DeepSVDDLoss, SSDeepSVDDLoss

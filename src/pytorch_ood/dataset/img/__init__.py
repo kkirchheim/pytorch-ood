@@ -30,6 +30,11 @@ LSUNResize
 ..  autoclass:: pytorch_ood.dataset.img.LSUNResize
     :members:
 
+TinyImageNet
+``````````````````````````
+..  autoclass:: pytorch_ood.dataset.img.TinyImageNet
+    :members:
+
 80M TinyImages
 ``````````````````````````
 ..  autoclass:: pytorch_ood.dataset.img.TinyImages
@@ -112,5 +117,5 @@ from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
 from .streethazards import StreetHazards
 from .textures import Textures
-from .tinyimagenet import TinyImagenet
+from .tinyimagenet import TinyImageNet
 from .tinyimages import TinyImages, TinyImages300k

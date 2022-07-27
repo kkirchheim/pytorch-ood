@@ -1,15 +1,17 @@
 """
 
-..  autoclass:: pytorch_ood.detector.NegativeEnergy
+..  autoclass:: pytorch_ood.detector.EnergyBased
     :members:
 
 """
+from typing import Optional
+
 import torch
 
 from ..api import Detector
 
 
-class NegativeEnergy(torch.nn.Module, Detector):
+class EnergyBased(Detector):
     """
     Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.
 
@@ -35,29 +37,26 @@ class NegativeEnergy(torch.nn.Module, Detector):
         """
         pass
 
-    def __init__(self, model, t: int = 1):
+    def __init__(self, model: torch.nn.Module, t: Optional[float] = 1):
         """"""
-        super(NegativeEnergy, self).__init__()
+        super(EnergyBased, self).__init__()
         self.t = t
         self.model = model
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Calculates neative energy
-        """
-        z = self.model(x)
-        return NegativeEnergy.score(z, self.t)
-
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Calculate negative energy
+        Calculate negative energy for inputs
 
-        :param x: the class logits
+        :param x: input tensor, will be passed through model
 
         :return: Energy score
         """
-        return self.forward(x)
+        return self.score(self.model(x), t=self.t)
 
     @staticmethod
-    def score(logits, t=1):
+    def score(logits: torch.Tensor, t: Optional[float] = 1) -> torch.Tensor:
+        """
+        :param logits: logits of input
+        :param t: temperature value
+        """
         return -t * torch.logsumexp(logits / t, dim=1)

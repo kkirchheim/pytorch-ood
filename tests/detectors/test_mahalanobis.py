@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.api import RequiresFitException
+from src.pytorch_ood.api import RequiresFittingException
 from src.pytorch_ood.detector import Mahalanobis
 from tests.helpers import ClassificationModel
 
@@ -40,5 +40,5 @@ class MahalanobisTest(unittest.TestCase):
         model = Mahalanobis(nn)
         x = torch.randn(size=(20, 10))
 
-        with self.assertRaises(RequiresFitException):
+        with self.assertRaises(RequiresFittingException):
             model(x)

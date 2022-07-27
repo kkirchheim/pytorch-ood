@@ -1,4 +1,3 @@
-import glob
 import logging
 import os
 from glob import glob as glb
@@ -168,7 +167,7 @@ class MVTechAD(ImageDatasetBase):
         if target is None:
             target = torch.zeros(size=img.size)
         else:
-            target = torch.tensor(np.array(Image.open(target)))
+            target = -1 * torch.tensor(np.array(Image.open(target)))
 
         if self.transform is not None:
             img = self.transform(img)

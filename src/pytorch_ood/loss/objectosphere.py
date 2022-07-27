@@ -27,7 +27,7 @@ class ObjectosphereLoss(nn.Module):
 
 
     :see Paper:
-        https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf
+        `NeurIPS <https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf>`_
 
     """
 
@@ -105,7 +105,7 @@ class EntropicOpenSetLoss(nn.Module):
 
     """
 
-    def __init__(self, reduction: Optional[str] = None):
+    def __init__(self, reduction: Optional[str] = "mean"):
         """
         :param reduction: reduction method.
         """

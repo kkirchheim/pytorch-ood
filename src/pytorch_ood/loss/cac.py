@@ -21,8 +21,8 @@ class CACLoss(nn.Module):
     Class Anchor Clustering Loss from
     *Class Anchor Clustering: a Distance-based Loss for Training Open Set Classifiers*
 
-    :see Paper: https://arxiv.org/abs/2004.02434
-    :see Implementation: https://github.com/dimitymiller/cac-openset/
+    :see Paper: `WACV 2022 <https://arxiv.org/abs/2004.02434>`_
+    :see Implementation: `GitHub <https://github.com/dimitymiller/cac-openset/>`_
 
     """
 
