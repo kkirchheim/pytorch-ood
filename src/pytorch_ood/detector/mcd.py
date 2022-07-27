@@ -35,12 +35,14 @@ class MCD(Detector):
 
     """
 
-    def __init__(self, model: nn.Module):
+    def __init__(self, model: nn.Module, n=30):
         """
 
         :param model: the module to use for the forward pass
+        :param n: number of iterations
         """
         self.model = model
+        self.n = 30
 
     def fit(self, data_loader):
         """
@@ -90,10 +92,10 @@ class MCD(Detector):
 
         return results
 
-    def predict(self, x: torch.Tensor, n: int = 30) -> torch.Tensor:
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         :param x: input
         :param n: number of Monte Carlo Samples
         :return: maximum average normalized class score of the model
         """
-        return -MCD.run(self.model, x, n).max(dim=1).values
+        return -MCD.run(self.model, x, self.n).max(dim=1).values

@@ -13,7 +13,7 @@ assumptions, nomenclature, as well as a structured API documentation to aid impl
     source software, which, as we hope, will ultimately lead to bug-free implementations.
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 3
    :caption: User Guide
 
    info
@@ -21,7 +21,7 @@ assumptions, nomenclature, as well as a structured API documentation to aid impl
 
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 3
    :caption: Library
 
    detector
