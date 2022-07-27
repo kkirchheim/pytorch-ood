@@ -28,12 +28,12 @@ dataset_out_test = Textures(
 train_loader = DataLoader(dataset_train, batch_size=64, shuffle=True)
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
 
-# setup model
+# Stage 1: Create DNN
 model = WideResNet(num_classes=10)
 opti = Adam(model.parameters())
 criterion = CrossEntropyLoss()
 
-print("Training")
+
 # start training
 for n, batch in enumerate(train_loader):
     x, y = batch
@@ -47,15 +47,14 @@ for n, batch in enumerate(train_loader):
         break
 
 
-# create some methods
+# Stage 2: Create OOD detector
+# Fitting is not required in this case
 energy = EnergyBased(model)
 softmax = MaxSoftmax(model)
 
-# evaluate
+# Stage 3: Evaluate Detectors
 metrics_energy = OODMetrics()
 metrics_softmax = OODMetrics()
-
-print("Evaluating")
 model.eval()
 
 with torch.no_grad():
