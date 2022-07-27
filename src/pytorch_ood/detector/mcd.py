@@ -21,12 +21,18 @@ class MCD(Detector):
 
     The outlier score is calculated as
 
-    .. math:: - \\max \\frac{1}{N} \\sum_i^{N} f(x)
+    .. math:: - \\max_y \\frac{1}{N} \\sum_i^{N} \\sigma_y(f(x))
+
+    where :math:`\\sigma` is the softmax function.
 
     :see Paper: http://proceedings.mlr.press/v48/gal16.pdf
 
     .. warning:: This implementations puts the model in evaluation mode (except for variants of the BatchNorm Layers).
         This could also affect other modules and is currently a workaround.
+
+
+    .. note :: The device of the given input will be used for calculations.
+
     """
 
     def __init__(self, model: nn.Module):
@@ -50,7 +56,7 @@ class MCD(Detector):
         :param model: neural network
         :param x: input
         :param n: number of rounds
-        :return:
+        :return: averaged output of the model
         """
         mode_switch = False
 
@@ -84,10 +90,10 @@ class MCD(Detector):
 
         return results
 
-    def predict(self, x: torch.Tensor, n=30) -> torch.Tensor:
+    def predict(self, x: torch.Tensor, n: int = 30) -> torch.Tensor:
         """
         :param x: input
         :param n: number of Monte Carlo Samples
-        :return: averaged output of the model
+        :return: maximum average normalized class score of the model
         """
         return -MCD.run(self.model, x, n).max(dim=1).values

@@ -5,15 +5,15 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
-from src.pytorch_ood import NegativeEnergy, Softmax
-from src.pytorch_ood.dataset.img import Textures
-from src.pytorch_ood.model import WideResNet
-from src.pytorch_ood.utils import OODMetrics, ToUnknown
+from pytorch_ood.dataset.img import Textures
+from pytorch_ood.detector import EnergyBased, MaxSoftmax
+from pytorch_ood.model import WideResNet
+from pytorch_ood.utils import OODMetrics, ToUnknown
 
 torch.manual_seed(123)
 max_iterations = 1
 
-trans = tvt.Compose([tvt.Resize(32), tvt.ToTensor()])
+trans = tvt.Compose([tvt.Resize(size=(32, 32)), tvt.ToTensor()])
 
 # setup data
 dataset_train = CIFAR10(root="data", train=True, download=True, transform=trans)
@@ -24,16 +24,16 @@ dataset_out_test = Textures(
     root="data", download=True, transform=trans, target_transform=ToUnknown()
 )
 
-# concatenate datasets
-dataset_test = dataset_in_test + dataset_out_test
-train_loader = DataLoader(dataset_train, batch_size=64)
-test_loader = DataLoader(dataset_test, batch_size=64)
+# create data loaders
+train_loader = DataLoader(dataset_train, batch_size=64, shuffle=True)
+test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
 
 # setup model
 model = WideResNet(num_classes=10)
 opti = Adam(model.parameters())
 criterion = CrossEntropyLoss()
 
+print("Training")
 # start training
 for n, batch in enumerate(train_loader):
     x, y = batch
@@ -48,13 +48,14 @@ for n, batch in enumerate(train_loader):
 
 
 # create some methods
-energy = NegativeEnergy(model)
-softmax = Softmax(model)
+energy = EnergyBased(model)
+softmax = MaxSoftmax(model)
 
 # evaluate
 metrics_energy = OODMetrics()
 metrics_softmax = OODMetrics()
 
+print("Evaluating")
 model.eval()
 
 with torch.no_grad():

@@ -9,7 +9,7 @@ import torch
 from ..api import Detector
 
 
-class MaxLogit(Detector, torch.nn.Module):
+class MaxLogit(Detector):
     """
     Implements the Max Logit Method for OOD Detection as proposed in
     *Scaling Out-of-Distribution Detection for Real-World Settings*.
@@ -28,12 +28,6 @@ class MaxLogit(Detector, torch.nn.Module):
         """
         super(MaxLogit, self).__init__()
         self.model = model
-
-    def forward(self, x) -> torch.Tensor:
-        """
-        :param x: model inputs
-        """
-        return self.predict(self.model(x))
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """

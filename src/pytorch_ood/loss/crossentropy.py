@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -5,7 +7,9 @@ from torch.nn import functional as F
 from ..utils import apply_reduction, is_known
 
 
-def cross_entropy(x, targets, reduction="mean"):
+def cross_entropy(
+    x: torch.Tensor, targets: torch.Tensor, reduction: Optional[str] = "mean"
+) -> torch.Tensor:
     """
     Standard Cross-entropy, but ignores OOD inputs.
     """
@@ -23,7 +27,7 @@ class CrossEntropyLoss(nn.Module):
     Standard Cross-entropy, but ignores OOD inputs.
     """
 
-    def __init__(self, reduction: str = "mean"):
+    def __init__(self, reduction: Optional[str] = "mean"):
         """
         :param reduction: reduction method to apply.
         """

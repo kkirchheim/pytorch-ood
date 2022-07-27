@@ -3,12 +3,13 @@
     :members:
 """
 import logging
+from typing import List, Optional
 
 import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from ..api import Detector, RequiresFitException
+from ..api import Detector, RequiresFittingException
 from ..utils import TensorBuffer, contains_unknown, is_known, is_unknown
 
 log = logging.getLogger(__name__)
@@ -16,15 +17,23 @@ log = logging.getLogger(__name__)
 
 class Mahalanobis(torch.nn.Module, Detector):
     """
-    Implements the Mahalanobis Method.
+    Implements the Mahalanobis Method from the paper *A Simple Unified Framework for Detecting
+    Out-of-Distribution Samples and Adversarial Attacks*.
 
     This method calculates a class center :math:`\\mu_y` for each class,
     and a shared covariance matrix :math:`\\Sigma` from the data.
 
+    Also uses ODIN preprocessing.
+
     :see Implementation: https://github.com/pokaxpoka/deep_Mahalanobis_detector
+    :see Paper: https://arxiv.org/abs/1807.03888
+
+    .. note:: will use the device of the model parameter for calculations
     """
 
-    def __init__(self, model: torch.nn.Module, eps=0.002, norm_std=None):
+    def __init__(
+        self, model: torch.nn.Module, eps: float = 0.002, norm_std: Optional[List] = None
+    ):
         """
         :param model: the Neural Network
         :param eps: magnitude for gradient based input preprocessing
@@ -70,9 +79,9 @@ class Mahalanobis(torch.nn.Module, Detector):
         buffer.clear()
         return z, y
 
-    def fit(self, data_loader):
+    def fit(self, data_loader: DataLoader):
         """
-        Fit parameters of the multi variate gaussian
+        Fit parameters of the multi variate gaussian.
 
         :param data_loader: dataset to fit on.
         :return:
@@ -114,7 +123,7 @@ class Mahalanobis(torch.nn.Module, Detector):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """ """
         if self.mu is None:
-            raise RequiresFitException
+            raise RequiresFittingException
 
         # TODO: quickfix
         dev = list(self.model.parameters())[0].device
