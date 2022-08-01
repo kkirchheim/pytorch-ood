@@ -11,15 +11,20 @@ from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown
 
 torch.manual_seed(123)
+
+# maximum number of epochs and training iterations
+n_epochs = 1
 max_iterations = 1
 
 trans = tvt.Compose([tvt.Resize(size=(32, 32)), tvt.ToTensor()])
 
-# setup data
+# setup IN training data
 dataset_train = CIFAR10(root="data", train=True, download=True, transform=trans)
+
+# setup IN test data
 dataset_in_test = CIFAR10(root="data", train=False, transform=trans)
 
-# treat samples from this dataset as OOD
+# setup OOD test data, use ToUnknown() to mark labels as OOD
 dataset_out_test = Textures(
     root="data", download=True, transform=trans, target_transform=ToUnknown()
 )
@@ -35,20 +40,21 @@ criterion = CrossEntropyLoss()
 
 
 # start training
-for n, batch in enumerate(train_loader):
-    x, y = batch
-    logits = model(x)
-    loss = criterion(logits, y)
-    opti.zero_grad()
-    loss.backward()
-    opti.step()
+for epoch in range(n_epochs):
+    for n, batch in enumerate(train_loader):
+        x, y = batch
+        logits = model(x)
+        loss = criterion(logits, y)
+        opti.zero_grad()
+        loss.backward()
+        opti.step()
 
-    if n >= max_iterations:
-        break
+        if n >= max_iterations:
+            break
 
 
 # Stage 2: Create OOD detector
-# Fitting is not required in this case
+# Fitting the detectors is not required in this case
 energy = EnergyBased(model)
 softmax = MaxSoftmax(model)
 

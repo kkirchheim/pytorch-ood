@@ -26,7 +26,7 @@ We can use the pre-trained model from the OOD baseline paper to obtain results w
 
 .. code :: python
 
-    {'AUROC': 0.8360370993614197, 'AUPR-IN': 0.7002261281013489, 'AUPR-OUT': 0.8969095945358276, 'ACC95TPR': 0.6476342678070068, 'FPR95TPR': 0.5228999853134155}
+    {'AUROC': 0.8851455450057983, 'AUPR-IN': 0.7850116491317749, 'AUPR-OUT': 0.9299277663230896, 'ACC95TPR': 0.720716118812561, 'FPR95TPR': 0.40860000252723694}
 
 
 Pretrained Monte Carlo Dropout
@@ -43,8 +43,8 @@ We can use Monte Carlo Dropout with a pre-trained model, since the model uses dr
 
 Pretrained OpenMax
 ---------------------
-Compared to other detectors, the OpenMax has to be fitted to the training data.
-While the method was proposed before the baseline, it outperforms it by a large margin.
+Compared to other detectors, the OpenMax Layer has to be fitted to the training data.
+While the method was proposed before the baseline, it outperforms it on this OOD dataset.
 
 .. literalinclude:: ../examples/openmax.py
 
