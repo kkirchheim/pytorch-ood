@@ -35,14 +35,14 @@ class MCD(Detector):
 
     """
 
-    def __init__(self, model: nn.Module, n=30):
+    def __init__(self, model: nn.Module, samples: int = 30):
         """
 
         :param model: the module to use for the forward pass
-        :param n: number of iterations
+        :param samples: number of iterations
         """
         self.model = model
-        self.n = 30
+        self.n_samples = samples
 
     def fit(self, data_loader):
         """
@@ -51,13 +51,13 @@ class MCD(Detector):
         pass
 
     @staticmethod
-    def run(model, x: torch.Tensor, n: int) -> torch.Tensor:
+    def run(model, x: torch.Tensor, samples: int) -> torch.Tensor:
         """
         Assumes that the model outputs logits
 
         :param model: neural network
         :param x: input
-        :param n: number of rounds
+        :param samples: number of rounds
         :return: averaged output of the model
         """
         mode_switch = False
@@ -79,12 +79,12 @@ class MCD(Detector):
 
         results = None
         with torch.no_grad():
-            for i in range(n):
+            for i in range(samples):
                 output = model(x).softmax(dim=1)
                 if results is None:
                     results = torch.zeros(size=output.shape).to(dev)
                 results += output
-        results /= n
+        results /= samples
 
         if mode_switch:
             log.debug("Putting model into eval mode ... ")
@@ -95,7 +95,6 @@ class MCD(Detector):
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         :param x: input
-        :param n: number of Monte Carlo Samples
         :return: maximum average normalized class score of the model
         """
-        return -MCD.run(self.model, x, self.n).max(dim=1).values
+        return -MCD.run(self.model, x, self.n_samples).max(dim=1).values

@@ -30,7 +30,7 @@ test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=128)
 model = WideResNet(num_classes=10, pretrained="cifar10-pt").to(device)
 
 # Stage 2: Create Detector
-detector = MCD(model)
+detector = MCD(model, samples=30)
 
 # Stage 3: Evaluate Detectors
 metrics = OODMetrics()
