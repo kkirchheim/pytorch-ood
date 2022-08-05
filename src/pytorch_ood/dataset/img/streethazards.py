@@ -1,14 +1,8 @@
 import logging
 import os
-from os.path import join
+from torchvision import transforms
 from typing import Any, Callable, Optional, Tuple
-
-import numpy as np
-import scipy.io
 from PIL import Image
-from torchvision.datasets import VisionDataset
-from torchvision.datasets.folder import default_loader
-from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
 from .base import ImageDatasetBase
 
@@ -87,26 +81,20 @@ class StreetHazards(ImageDatasetBase):
         :param target_transform: transformations to apply to target
         :param download: if dataset should be downloaded automatically
         """
-        super(StreetHazards, self).__init__(
+        super(ImageDatasetBase, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
-        if download:
-            self.download()
-
-        if subset not in self.subset_list:
-            raise ValueError(f"Invalid subset: {subset}")
 
         self.base_folder = self.base_folder_list[self.subset_list.index(subset)]
         self.url = self.url_list[self.subset_list.index(subset)]
         self.filename = self.filename_list[self.subset_list.index(subset)]
         self.tgz_md5 = self.tgz_md5_list[self.subset_list.index(subset)]
-
-        super(ImageDatasetBase, self).__init__(
-            root, transform=transform, target_transform=target_transform
-        )
-
+        
         if download:
             self.download()
+
+        if subset not in self.subset_list:
+            raise ValueError(f"Invalid subset: {subset}")
 
         if not self._check_integrity():
             raise RuntimeError(
@@ -130,7 +118,7 @@ class StreetHazards(ImageDatasetBase):
 
         # to return a PIL Image
         img = Image.open(file)
-        target = Image.open(target)
+        target = transforms.ToTensor()(Image.open(target)).squeeze(0)
 
         if self.transform is not None:
             img = self.transform(img)
