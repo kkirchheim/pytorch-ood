@@ -1,26 +1,28 @@
-"""
-http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/#download
-
-"""
 import logging
 import os
-import numpy as np
+import string
 from pathlib import Path
 from os.path import join
 from typing import Callable, Optional
 
 from PIL import Image
-from torchvision.datasets import VisionDataset
+from .base import ImageDatasetBase
 from torchvision.datasets.utils import check_integrity, download_url
 
 log = logging.getLogger(__name__)
 
 
-class Chars74k(VisionDataset):
+class Chars74k(ImageDatasetBase):
     """
     Contains images of Character Recognition in Natural Images
 
+    .. image:: http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/Samples/confusing_english.png
+        :width: 800px
+        :alt: Chars47k Dataset Example
+        :align: center
+
     :see Website: http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/
+    :see Paper: http://personal.ee.surrey.ac.uk/Personal/T.Decampos/papers/decampos_etal_visapp2009.pdf
     """
 
     base_folder = "chars74k"
@@ -32,7 +34,7 @@ class Chars74k(VisionDataset):
     tgz_dataset_md5 = "85d157e0c58f998e1cda8def62bcda0d"
     tgz_list_md5 = "7d7b8038b3c47bf2a1c5a80c1dd79a0d"
     
-    # char_list = list(map(str, string.digits+string.ascii_uppercase+string.ascii_lowercase))
+    char_list = list(map(str, string.digits+string.ascii_uppercase+string.ascii_lowercase))
 
     def getListOfFiles(self, dirName):
         listOfFile = os.listdir(dirName)
@@ -43,7 +45,7 @@ class Chars74k(VisionDataset):
             # Create full path
             fullPath = os.path.join(dirName, entry)
             label = int(str(Path(fullPath).name).split("Sample")[1])-1
-            # label = ord(self.char_list[label])
+            label = ord(self.char_list[label])
             Files = os.listdir(fullPath)
             for files in Files:
                 allFiles.append(os.path.join(fullPath, files))
@@ -64,7 +66,7 @@ class Chars74k(VisionDataset):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ): 
-        super(Chars74k, self).__init__(
+        super(ImageDatasetBase, self).__init__(
                 root=root,
                 transform=transform,
                 target_transform=target_transform,
@@ -111,14 +113,15 @@ class Chars74k(VisionDataset):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is ascii value of the image class.
         """
         img_path = self.files[index]
         target = self.labels[index]
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
-        img = np.asarray(Image.open(img_path))
+        # img = np.asarray(Image.open(img_path))
+        img = Image.open(img_path)
 
         if self.transform is not None:
             img = self.transform(img)
