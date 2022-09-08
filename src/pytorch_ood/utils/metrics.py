@@ -108,7 +108,23 @@ class OODMetrics(object):
     """
     Calculates various metrics used in OOD detection experiments.
 
-    .. note :: This implementation is not optimized.
+    - AUROC
+    - AUPR IN/OUT
+    - FPR\\@95TPR
+    - ACC\\@95TPR
+
+    The interface is similar to ``torchmetrics``.
+
+    .. code :: python
+
+        metrics = OODMetrics()
+        outlier_scores = torch.Tensor([0.5, 1.0, -10])
+        labels = torch.Tensor([1,2,-1])
+        metrics.update(outlier_scores, labels)
+        metric_dict = metrics.compute()
+
+    .. warning :: This implementation is not optimized and might consume large amounts of memory.
+
     """
 
     def __init__(self, device="cpu"):
@@ -124,6 +140,7 @@ class OODMetrics(object):
 
     def update(self, outlier_scores: torch.Tensor, y: torch.Tensor) -> None:
         """
+        Add batch of results to collection.
 
         :param outlier_scores: outlier score
         :param y: target label
@@ -170,7 +187,10 @@ class OODMetrics(object):
             "FPR95TPR": fpr.item(),
         }
 
-    def reset(self):
+    def reset(self) -> None:
+        """
+        Resets collected metrics
+        """
         self.auroc.reset()
         self.aupr_in.reset()
         self.aupr_out.reset()
