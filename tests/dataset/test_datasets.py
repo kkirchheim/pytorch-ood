@@ -22,6 +22,7 @@ from src.pytorch_ood.dataset.txt import (
 )
 
 
+@unittest.skip("Currently not functional")
 class TestDatasetAvailability(unittest.TestCase):
     def test_download_ImageNetA(self):
         status = urlopen(ImageNetA.url).getcode()
