@@ -33,7 +33,7 @@ class MaxLogit(Detector):
         """
         :param x:  model inputs
         """
-        return self.forward(self.model(x))
+        return self.score(self.model(x))
 
     def fit(self):
         """
