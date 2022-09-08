@@ -13,12 +13,9 @@ def cross_entropy(
     """
     Standard Cross-entropy, but ignores OOD inputs.
     """
-    loss = torch.zeros(x.shape[0], device=x.device)
-    known = is_known(targets)
-
-    if known.any():
-        loss[known] = F.cross_entropy(x[known], targets[known], reduction="none")
-
+    # known = is_known(targets)
+    masked_targets = torch.where(targets < 0, -100, targets)
+    loss = F.cross_entropy(x, masked_targets, reduction="none", ignore_index=-100)
     return apply_reduction(loss, reduction=reduction)
 
 

@@ -49,7 +49,7 @@ class TestCrossEntropyLoss(unittest.TestCase):
         loss = criterion(logits, target)
         loss.backward()
 
-    @unittest.skip("Not implemented")
+    # @unittest.skip("Not implemented")
     def test_segmentation(self):
         model = SegmentationModel()
         criterion = CrossEntropyLoss()
@@ -58,3 +58,17 @@ class TestCrossEntropyLoss(unittest.TestCase):
         logits = model(x)
         loss = criterion(logits, target)
         loss.backward()
+
+    def test_segmentation_with_unknown(self):
+        model = SegmentationModel()
+        criterion = CrossEntropyLoss(reduction=None)
+        x = torch.randn(size=(10, 3, 32, 32))
+        target = torch.zeros(size=(10, 32, 32)).long()
+        target[0, 0, 0] = -1
+
+        logits = model(x)
+        loss = criterion(logits, target)
+
+        self.assertEqual(loss[0, 0, 0], 0)
+        self.assertNotEqual(loss[0, 0, 1], 0)
+        loss.mean().backward()
