@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torchmetrics
 
-from .utils import TensorBuffer, is_unknown
+from .utils import TensorBuffer, contains_known_and_unknown, is_unknown
 
 
 def calibration_error(confidence, correct, p="2", beta=100):
@@ -106,26 +106,47 @@ def accuracy_at_tpr(pred, target, k=0.95):
 
 class OODMetrics(object):
     """
-    Calculates various metrics used in OOD.
+    Calculates various metrics used in OOD detection experiments.
 
-    .. note :: This implementation is not optimized.
+    - AUROC
+    - AUPR IN/OUT
+    - FPR\\@95TPR
+    - ACC\\@95TPR
+
+    The interface is similar to ``torchmetrics``.
+
+    .. code :: python
+
+        metrics = OODMetrics()
+        outlier_scores = torch.Tensor([0.5, 1.0, -10])
+        labels = torch.Tensor([1,2,-1])
+        metrics.update(outlier_scores, labels)
+        metric_dict = metrics.compute()
+
+    .. warning :: This implementation is not optimized and might consume large amounts of memory.
+
     """
 
-    def __init__(self):
+    def __init__(self, device="cpu"):
+        """
+        :param device: where tensors should be stored
+        """
         super(OODMetrics, self).__init__()
-        self.buffer = TensorBuffer()
+        self.device = device
+        self.buffer = TensorBuffer(device=self.device)
         self.auroc = torchmetrics.AUROC(num_classes=2)
         self.aupr_in = torchmetrics.PrecisionRecallCurve(pos_label=1)
         self.aupr_out = torchmetrics.PrecisionRecallCurve(pos_label=0)
 
-    def update(self, outlier_scores, y) -> None:
+    def update(self, outlier_scores: torch.Tensor, y: torch.Tensor) -> None:
         """
+        Add batch of results to collection.
 
         :param outlier_scores: outlier score
         :param y: target label
         """
-        label = is_unknown(y).detach().cpu().long()
-        o = outlier_scores.detach().cpu()
+        label = is_unknown(y).detach().to(self.device).long()
+        o = outlier_scores.detach().to(self.device)
 
         self.auroc.update(o, label)
         self.aupr_in.update(o, label)
@@ -134,6 +155,19 @@ class OODMetrics(object):
         self.buffer.append("labels", label)
 
     def compute(self) -> dict:
+        """
+        Calculate metrics
+
+        :return: dictionary with different metrics
+        :raise: ValueError if data does not contain IN and OOD points
+        """
+
+        labels = self.buffer.get("labels")
+        scores = self.buffer.get("scores")
+
+        if len(torch.unique(labels)) != 2:
+            raise ValueError("Data must contain IN and OOD samples.")
+
         auroc = self.auroc.compute()
 
         p, r, t = self.aupr_in.compute()
@@ -142,11 +176,8 @@ class OODMetrics(object):
         p, r, t = self.aupr_out.compute()
         aupr_out = torchmetrics.functional.auc(r, p)
 
-        label = self.buffer.get("labels")
-        s = self.buffer.get("scores")
-
-        acc = accuracy_at_tpr(s, label)
-        fpr = fpr_at_tpr(s, label)
+        acc = accuracy_at_tpr(scores, labels)
+        fpr = fpr_at_tpr(scores, labels)
 
         return {
             "AUROC": auroc.item(),
@@ -156,7 +187,10 @@ class OODMetrics(object):
             "FPR95TPR": fpr.item(),
         }
 
-    def reset(self):
+    def reset(self) -> None:
+        """
+        Resets collected metrics
+        """
         self.auroc.reset()
         self.aupr_in.reset()
         self.aupr_out.reset()

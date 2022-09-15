@@ -2,18 +2,18 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.detector import EnergyBased
+from src.pytorch_ood.detector import MaxLogit
 from tests.helpers import ClassificationModel, SegmentationModel
 
 
-class TestEnergy(unittest.TestCase):
+class TestMaxLogit(unittest.TestCase):
     """
-    Tests for Energy based Out-of-Distribution Detection
+    Tests for MaxLogit method for OOD Detection
     """
 
     def test_classification_input(self):
         model = ClassificationModel()
-        detector = EnergyBased(model)
+        detector = MaxLogit(model)
 
         x = torch.zeros(size=(128, 10))
         y = detector(x)
@@ -25,7 +25,7 @@ class TestEnergy(unittest.TestCase):
         Tests input map for semantic segmentation
         """
         model = SegmentationModel()
-        detector = EnergyBased(model)
+        detector = MaxLogit(model)
 
         x = torch.zeros(size=(128, 3, 32, 32))
         y = detector(x)

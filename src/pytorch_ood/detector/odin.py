@@ -1,9 +1,11 @@
 """
 
 ..  autoclass:: pytorch_ood.detector.ODIN
-
+    :members:
 
 """
+from typing import Callable, List
+
 import torch
 from torch.autograd import Variable
 from torch.nn import functional as F
@@ -43,6 +45,7 @@ def odin_preprocessing(
     :param temperature: temperature :math:`T` to use for scaling
     :param norm_std: standard deviations used during preprocessing
 
+    :see Paper: https://arxiv.org/abs/1706.02690
     :see Implementation: https://github.com/facebookresearch/odin/
 
     """
@@ -79,12 +82,21 @@ class ODIN(Detector):
     .. math::
         \\hat{x} = x - \\epsilon \\ \\text{sign}(\\nabla_x \\mathcal{L}(f(x) / T, \\hat{y}))
 
+    where :math:`\\hat{y}` is the predicted class of the network.
 
+    :see Paper: https://arxiv.org/abs/1706.02690
     :see Implementation: https://github.com/facebookresearch/odin/
 
     """
 
-    def __init__(self, model, criterion=F.nll_loss, eps=0.05, temperature=1000, norm_std=None):
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        criterion: Callable = F.nll_loss,
+        eps=0.05,
+        temperature: float = 1000,
+        norm_std: List = None,
+    ):
         """
 
         :param model: module to backpropagate through
@@ -100,15 +112,12 @@ class ODIN(Detector):
         self.temperature = temperature
         self.norm_std = norm_std
 
-    def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        return self.predict(x)
-
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         Calculates softmax outlier scores on ODIN pre-processed inputs.
 
-        :param x:
-        :return:
+        :param x: input tensor
+        :return: outlier scores for each sample
         """
         x_hat = odin_preprocessing(
             model=self.model,

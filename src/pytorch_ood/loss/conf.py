@@ -18,14 +18,13 @@ class ConfidenceLoss(nn.Module):
         \\text{where} \\quad p_i' = c \\cdot p_i + (1-c) y_i
 
 
-    :see Paper: https://arxiv.org/abs/1802.04865.
+    :see Paper: `ArXiv <https://arxiv.org/abs/1802.04865>`_
 
 
     .. note::
         * We implemented clipping for numerical stability.
         * This implementation uses mean reduction for batches.
         * The authors additionally used ODIN preprocessing
-
 
     """
 

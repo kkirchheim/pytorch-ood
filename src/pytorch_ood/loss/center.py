@@ -11,8 +11,10 @@ log = logging.getLogger(__name__)
 
 class CenterLoss(nn.Module):
     """
-    Generalized version of the *Center Loss* from the Paper
+    Generalized version of the Center Loss from the Paper
     *A Discriminative Feature Learning Approach for Deep Face Recognition*.
+    For each class, this loss models a center :math:`\\mu_y` in the output space and draws representations of samples
+    to their corresponding class centers, up to a radius :math:`r`.
 
     Calculates
 
@@ -22,11 +24,11 @@ class CenterLoss(nn.Module):
     where :math:`d` is some distance. More generally, it can be any dissimilarity function, like the squared distance,
     which is not a proper distance metric.
 
-    Equipped with radius :math:`r=0` and the squared euclidean distance, this is also referred to as the
+    Equipped with radius :math:`r=0` and the squared euclidean distance as :math:`d(\\cdot,\\cdot)`, this is also referred to as the
     *soft-margin loss* in some publications.
 
-    :see Implementation: https://github.com/KaiyangZhou/pytorch-center-loss
-    :see Paper: https://ydwen.github.io/papers/WenECCV16.pdf
+    :see Implementation: `GitHub <https://github.com/KaiyangZhou/pytorch-center-loss>`_
+    :see Paper: `ECCV 2016 <https://ydwen.github.io/papers/WenECCV16.pdf>`_
     """
 
     def __init__(self, n_classes, n_dim, magnitude=1, radius=0.0, fixed=False):

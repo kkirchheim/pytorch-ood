@@ -74,22 +74,22 @@ The package can be installed via PyPI:
 
 Quick Start
 ^^^^^^^^^^^
-Load model pre-trained on CIFAR-10 with Energy Regularization [#EnergyBasedOOD]_, and predict on some dataset ``data_loader`` using
+Load model pre-trained on CIFAR-10 with the Energy-Bounded Learning Loss [#EnergyBasedOOD]_, and predict on some dataset ``data_loader`` using
 Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the common OOD detection metrics:
 
 .. code-block:: python
 
     from pytorch_ood.model import WideResNet
-    from pytorch_ood.detector import NegativeEnergy
+    from pytorch_ood.detector import EnergyBased
     from pytorch_ood.utils import OODMetrics
 
-    # create Neural Network
+    # Create Neural Network
     model = WideResNet(pretrained="er-cifar10-tune").eval().cuda()
 
-    # create detector
-    detector = NegativeEnergy(model)
+    # Create detector
+    detector = EnergyBased(model)
 
-    # evaluate
+    # Evaluate
     metrics = OODMetrics()
 
     for x, y in data_loader:
@@ -162,6 +162,8 @@ Implemented
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | TinyImages300k        | A cleaned version of the TinyImages Dataset with 300.000 images, often used as auxiliary OOD training data      | 2018 | [#OE]_        |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| MNIST-C               | Corrupted version of the MNIST                                                                                  | 2019 | [#MnistC]_    |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | CIFAR10-C             | Corrupted version of the CIFAR 10                                                                               | 2019 | [#Cifar10]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | CIFAR100-C            | Corrupted version of the CIFAR 100                                                                              | 2019 | [#Cifar10]_   |
@@ -170,9 +172,7 @@ Implemented
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | ImageNet - A, O, R    | Different Outlier Variants for the ImageNet                                                                     | 2019 | [#ImageNets]_ |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| MNIST-C               | MNIST-C is MNIST with corruptions for benchmarking OOD methods                                                  | 2019 | [#MnistC]_    |
-+-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| MVTech-AD             | MCTech-AD                                                                                                       | 2021 | [#MVTech]_    |
+| MVTech-AD             | MVTech-AD                                                                                                       | 2021 | [#MVTech]_    |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | StreetHazards         | Anomaly Segmentation Dataset                                                                                    | 2022 | [#StreeHaz]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
