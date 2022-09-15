@@ -91,6 +91,10 @@ Uniform Noise
 ..  autoclass:: pytorch_ood.dataset.img.UniformNoise
     :members:
 
+Chars74k
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.chars74k
+    :members:
 
 Segmentation
 ----------------------
@@ -100,14 +104,13 @@ StreetHazards
 ..  autoclass:: pytorch_ood.dataset.img.StreetHazards
     :members:
 
-
 MVTech-AD
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.MVTechAD
     :members:
 
-
 """
+from .chars74k import Chars74k
 from .cifar import CIFAR10C, CIFAR100C
 from .fooling import FoolingImages
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
