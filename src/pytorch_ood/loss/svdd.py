@@ -23,15 +23,26 @@ class DeepSVDDLoss(torch.nn.Module):
 
     :see Paper: `MLR <http://proceedings.mlr.press/v80/ruff18a/ruff18a.pdf>`_
 
+    :note: The center is a parameter, so this model has to be moved to the correct device
     """
 
-    def __init__(self, n_features: int, reduction: Optional[str] = "mean"):
+    def __init__(
+        self, n_dim: int, reduction: Optional[str] = "mean", center: Optional[torch.Tensor] = None
+    ):
         """
-        :param n_features: dimensionality of the output space
+        :param n_dim: dimensionality of the output space
         :param reduction: reduction method to apply
+        :param center: position of the center :math:`\\mu \\in \\mathbb{R}^n where :math:`n` is the dimensionality of
+        the output space
         """
         super(DeepSVDDLoss, self).__init__()
-        self._center = ClassCenters(1, n_features, fixed=True)
+        self._center = ClassCenters(1, n_dim, fixed=True)
+
+        # initialize center values, if given
+        if center is not None:
+            assert center.shape == (n_dim,)
+            self._center.params.data = center.reshape(1, n_dim)
+
         self.reduction = reduction
 
     @property
@@ -53,10 +64,10 @@ class DeepSVDDLoss(torch.nn.Module):
     @staticmethod
     def svdd_loss(x, y, center) -> torch.Tensor:
         """
-        Calculates the loss.
+        Calculates the loss. Treats all IN samples equally, and ignores all OOD samples.
         """
         known = is_known(y)
-        loss = torch.zeros(size=(x.shape[0],))
+        loss = torch.zeros(size=(x.shape[0],)).to(x.device)
 
         if known.any():
             loss[known] = center(x[known]).squeeze(1).pow(2)
