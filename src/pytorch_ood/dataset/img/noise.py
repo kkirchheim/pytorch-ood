@@ -81,7 +81,12 @@ class UniformNoise(NoiseDataset):
     """
 
     def __init__(
-        self, length, size=(224, 224, 3), transform=None, target_transform=None, seed=None
+        self,
+        length,
+        size=(224, 224, 3),
+        transform=None,
+        target_transform=None,
+        seed=None,
     ):
         """
         :param length: number of samples in the dataset

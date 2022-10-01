@@ -32,7 +32,10 @@ class Mahalanobis(torch.nn.Module, Detector):
     """
 
     def __init__(
-        self, model: torch.nn.Module, eps: float = 0.002, norm_std: Optional[List] = None
+        self,
+        model: torch.nn.Module,
+        eps: float = 0.002,
+        norm_std: Optional[List] = None,
     ):
         """
         :param model: the Neural Network
