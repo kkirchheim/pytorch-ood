@@ -15,7 +15,7 @@ from ..utils import TensorBuffer, contains_unknown, is_known, is_unknown
 log = logging.getLogger(__name__)
 
 
-class Mahalanobis(torch.nn.Module, Detector):
+class Mahalanobis(Detector):
     """
     Implements the Mahalanobis Method from the paper *A Simple Unified Framework for Detecting
     Out-of-Distribution Samples and Adversarial Attacks*.
@@ -120,10 +120,7 @@ class Mahalanobis(torch.nn.Module, Detector):
         self.precision = torch.linalg.inv(self.cov)
         return self
 
-    def predict(self, x) -> torch.Tensor:
-        return self.forward(x)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         """ """
         if self.mu is None:
             raise RequiresFittingException
@@ -131,6 +128,28 @@ class Mahalanobis(torch.nn.Module, Detector):
         # TODO: quickfix
         dev = list(self.model.parameters())[0].device
 
+        if self.eps > 0:
+            noise_z = self._odin_preprocess(x, dev)
+        else:
+            noise_z = self.model(x)
+
+        noise_z = noise_z.view(noise_z.size(0), noise_z.size(1), -1)
+        noise_z = torch.mean(noise_z, 2)
+        noise_gaussian_score = 0
+
+        for clazz in range(self.n_classes):
+            # batch_sample_mean = sample_mean[layer_index][i]
+            centered_z = noise_z.data - self.mu[clazz]
+            term_gau = -0.5 * torch.mm(torch.mm(centered_z, self.precision), centered_z.t()).diag()
+            if clazz == 0:
+                noise_gaussian_score = term_gau.view(-1, 1)
+            else:
+                noise_gaussian_score = torch.cat((noise_gaussian_score, term_gau.view(-1, 1)), 1)
+
+        noise_gaussian_score = torch.max(noise_gaussian_score, dim=1).values
+        return -noise_gaussian_score
+
+    def _odin_preprocess(self, x, dev):
         with torch.enable_grad():
             # TODO: original uses mean over feature maps
 
@@ -163,9 +182,7 @@ class Mahalanobis(torch.nn.Module, Detector):
             )
             loss = torch.mean(-pure_gau)
             loss.backward()
-
         gradient = torch.sign(x.grad.data)
-
         if self.norm_std:
             for i, std in enumerate(self.norm_std):
                 gradient.index_copy_(
@@ -173,27 +190,10 @@ class Mahalanobis(torch.nn.Module, Detector):
                     torch.LongTensor([i]).to(dev),
                     gradient.index_select(1, torch.LongTensor([i]).to(dev)) / std,
                 )
-
         tempInputs = x.data - self.eps * gradient
-
         with torch.no_grad():
             noise_z = self.model(tempInputs)
-
-        noise_z = noise_z.view(noise_z.size(0), noise_z.size(1), -1)
-        noise_z = torch.mean(noise_z, 2)
-        noise_gaussian_score = 0
-
-        for clazz in range(self.n_classes):
-            # batch_sample_mean = sample_mean[layer_index][i]
-            centered_z = noise_z.data - self.mu[clazz]
-            term_gau = -0.5 * torch.mm(torch.mm(centered_z, self.precision), centered_z.t()).diag()
-            if clazz == 0:
-                noise_gaussian_score = term_gau.view(-1, 1)
-            else:
-                noise_gaussian_score = torch.cat((noise_gaussian_score, term_gau.view(-1, 1)), 1)
-
-        noise_gaussian_score = torch.max(noise_gaussian_score, dim=1).values
-        return -noise_gaussian_score
+        return noise_z
 
     @property
     def n_classes(self):
