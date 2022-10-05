@@ -60,8 +60,7 @@ def test():
     model.eval()
 
     with torch.no_grad():
-        for n, batch in enumerate(test_loader):
-            x, y = batch
+        for x, y in test_loader:
             metrics_softmax.update(softmax(x.to(device)), y)
 
     print(metrics_softmax.compute())
@@ -71,8 +70,7 @@ def test():
 # start training
 for epoch in range(n_epochs):
     print(f"Epoch {epoch}")
-    for batch in train_loader:
-        x, y = batch
+    for x, y in train_loader:
         logits = model(x.to(device))
         loss = criterion(logits, y.to(device))
         opti.zero_grad()

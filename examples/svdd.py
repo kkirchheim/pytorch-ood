@@ -8,10 +8,14 @@ from torchvision.transforms import ToTensor
 from pytorch_ood.loss import DeepSVDDLoss
 from pytorch_ood.utils import OODMetrics, ToUnknown
 
+torch.manual_seed(1234)
+
+device = "cuda:0"
+
 
 class Model(nn.Module):
     """
-    We define a simple model. As described in the original paper, this model must not
+    We define a simple model. As described in the original paper of Deep SVDD, this model must not
     use biases in linear layers or convolutions, since this would lead to a trivial solution
     for the optimization problem.
     """
@@ -40,51 +44,59 @@ class Model(nn.Module):
         return x
 
 
+# setup training data
 train_dataset = MNIST(root="data", download=True, train=True, transform=ToTensor())
+train_loader = DataLoader(train_dataset, num_workers=5, batch_size=128, shuffle=True)
+
+# setup test data, mark FashionMNIST as OOD with ToUnknown()
 test_dataset_in = MNIST(root="data", download=True, train=False, transform=ToTensor())
 test_dataset_out = FashionMNIST(
     root="data", download=True, train=False, transform=ToTensor(), target_transform=ToUnknown()
 )
 
-train_loader = DataLoader(train_dataset, num_workers=5, batch_size=128)
 test_loader = DataLoader(
-    test_dataset_in + test_dataset_out, shuffle=False, num_workers=5, batch_size=256
+    test_dataset_out + test_dataset_in, shuffle=False, num_workers=5, batch_size=256
 )
 
-model = Model().cuda()
+# setup model, optimizer and training criterion
+model = Model().to(device)
 opti = Adam(model.parameters(), lr=0.001)
 
-# initialize the center with the mean over the dataset
+# initialize the center of SVDD with the mean over the dataset
 with torch.no_grad():
-    d = [model(x.cuda()) for x, y in train_loader]
+    d = [model(x.to(device)) for x, y in train_loader]
     center = torch.concat(d).mean(dim=0).cpu()
 
 print(center)
 
-criterion = DeepSVDDLoss(n_features=2, center=center).cuda()
+criterion = DeepSVDDLoss(n_dim=2, center=center).to(device)
 
 
 def test():
+    """
+    Test the model and print some metrics
+    """
     model.eval()
     metrics = OODMetrics()
 
     with torch.no_grad():
         for x, y in test_loader:
-            z = model(x.cuda())
-            # calculate distance to the center
-            distances = criterion.center(z).cpu()
+            z = model(x.to(device))
+            # calculate distance to the center, squeeze unused class-dimension (since there is only a single class)
+            distances = criterion.center(z).cpu().squeeze()
             metrics.update(distances, y)
 
     print(metrics.compute())
-
     model.train()
 
 
+# Train model and test at the end of each epoch
 for epoch in range(20):
-
-    for x, y in train_loader:
-        z = model(x.cuda())
-        loss = criterion(z, y.cuda())
+    print(f"Epoch {epoch}")
+    for x, _ in train_loader:
+        z = model(x.to(device))
+        # since this is a one-class method, we do not have to provide any class labels
+        loss = criterion(z)
         opti.zero_grad()
         loss.backward()
         opti.step()

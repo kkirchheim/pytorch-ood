@@ -52,21 +52,26 @@ class DeepSVDDLoss(torch.nn.Module):
         """
         return self._center
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, y: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         :param x: features
-        :param y: target labels (either IN or OOD)
+        :param y: target labels (either IN or OOD). If not given, will assume IN.
         :return: squared distance to center
         """
-        loss = DeepSVDDLoss.svdd_loss(x, y, self.center)
+        loss = DeepSVDDLoss.svdd_loss(x, self.center, y)
         return apply_reduction(loss, self.reduction)
 
     @staticmethod
-    def svdd_loss(x, y, center) -> torch.Tensor:
+    def svdd_loss(x: torch.Tensor, center: ClassCenters, y=None) -> torch.Tensor:
         """
         Calculates the loss. Treats all IN samples equally, and ignores all OOD samples.
+        If no labels are given, assumes all samples are IN.
         """
-        known = is_known(y)
+        if y is not None:
+            known = is_known(y)
+        else:
+            known = torch.ones(size=(x.shape[0],)).bool()
+
         loss = torch.zeros(size=(x.shape[0],)).to(x.device)
 
         if known.any():

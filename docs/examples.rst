@@ -61,8 +61,9 @@ Objective Functions
 
 Outlier Exposure
 --------------------------
-We can use a model pre-trained on the :math:`32 \times 32` resized version of the ImageNet and train it with
-:class:`Outlier Exposure <pytorch_ood.loss.OutlierExposureLoss>`.
+We train a model with  :class:`Outlier Exposure <pytorch_ood.loss.OutlierExposureLoss>` on the CIFAR10.
+
+We can use a model pre-trained on the :math:`32 \times 32` resized version of the ImageNet as a foundation.
 As outlier data, we use :class:`TinyImages300k <pytorch_ood.dataset.img.TinyImages300k>`, a cleaned version of the
 TinyImages database, which contains random images scraped from the internet.
 
@@ -87,3 +88,33 @@ TinyImages database, which contains random images scraped from the internet.
     Epoch 7
     {'AUROC': 0.9865361452102661, 'AUPR-IN': 0.9664997458457947, 'AUPR-OUT': 0.9927579760551453, 'ACC95TPR': 0.9514066576957703, 'FPR95TPR': 0.04780000075697899}
     [...]
+
+
+Deep One-Class Learning
+---------------------------
+We train a One-Class model (that is, a model that does not need class labels)
+on MNIST, using :class:`Deep SVDD <pytorch_ood.loss.DeepSVDDLoss>`.
+SVDD places a single center :math:`\mu` in the output space of a model :math:`f_{\theta}`.
+During training, the parameters  :math:`\theta` are adjusted to minimize the (squared) sum of the distances of
+representations :math:`f_{\theta}(x)` to this center.
+Thus, the model is trained to map the training samples close to the center.
+The hope is that the model learns to project **only** IN samples close to the center, and not OOD samples.
+The distance to the center can be used as outlier score.
+
+We test the model against FashionMNIST.
+
+.. literalinclude:: ../examples/svdd.py
+
+.. code :: python
+
+    tensor([-0.0232,  0.0007])
+    Epoch 0
+    {'AUROC': 0.9716497659683228, 'AUPR-IN': 0.9781308174133301, 'AUPR-OUT': 0.9612259268760681, 'ACC95TPR': 0.8962500095367432, 'FPR95TPR': 0.1574999988079071}
+    Epoch 1
+    {'AUROC': 0.9785468578338623, 'AUPR-IN': 0.983160138130188, 'AUPR-OUT': 0.9711489677429199, 'ACC95TPR': 0.9200999736785889, 'FPR95TPR': 0.10980000346899033}
+    [...]
+    {'AUROC': 0.9923456907272339, 'AUPR-IN': 0.9935303926467896, 'AUPR-OUT': 0.9906884431838989, 'ACC95TPR': 0.9639000296592712, 'FPR95TPR': 0.022199999541044235}
+    Epoch 18
+    {'AUROC': 0.9926373362541199, 'AUPR-IN': 0.9937747716903687, 'AUPR-OUT': 0.9910157322883606, 'ACC95TPR': 0.9646499752998352, 'FPR95TPR': 0.02070000022649765}
+    Epoch 19
+    {'AUROC': 0.9926471710205078, 'AUPR-IN': 0.9937890768051147, 'AUPR-OUT': 0.9909848570823669, 'ACC95TPR': 0.9646999835968018, 'FPR95TPR': 0.020600000396370888}
