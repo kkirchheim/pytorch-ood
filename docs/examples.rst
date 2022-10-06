@@ -7,7 +7,8 @@ Detectors
 Softmax vs. Energy
 ---------------------
 
-Compare the Maximum Softmax baseline method to Energy Based Out-of-Distribution Detection.
+Compare the Maximum Softmax baseline method to Energy Based Out-of-Distribution Detection with a model
+trained from scratch.
 
 .. literalinclude:: ../examples/energy_softmax.py
 
@@ -118,3 +119,32 @@ We test the model against FashionMNIST.
     {'AUROC': 0.9926373362541199, 'AUPR-IN': 0.9937747716903687, 'AUPR-OUT': 0.9910157322883606, 'ACC95TPR': 0.9646499752998352, 'FPR95TPR': 0.02070000022649765}
     Epoch 19
     {'AUROC': 0.9926471710205078, 'AUPR-IN': 0.9937890768051147, 'AUPR-OUT': 0.9909848570823669, 'ACC95TPR': 0.9646999835968018, 'FPR95TPR': 0.020600000396370888}
+
+
+Class Anchor Clustering
+--------------------------------
+:class:`Class Anchor Clustering <pytorch_ood.loss.CACLoss>` (CAC) can be seen as a multi-class generalization of Deep One-Class Learning, where there are
+several centers :math:`\{\mu_1, \mu_2, ..., \mu_y\}` in the output space of the model, one for each class.
+During training, the representations :math:`f_{\theta}(x)` from class :math:`y` is drawn
+towards the corresponding center :math:`\mu_y`.
+
+Here, we train the model for 10 epochs on the CIFAR10 dataset, using a backbone pre-trained on the
+:math:`32 \times 32` resized version of the ImageNet as a foundation.
+
+.. literalinclude:: ../examples/cac.py
+
+.. code :: python
+
+    Epoch 0
+    {'AUROC': 0.7676149606704712, 'AUPR-IN': 0.5659406185150146, 'AUPR-OUT': 0.8522064685821533, 'ACC95TPR': 0.571675181388855, 'FPR95TPR': 0.641700029373169}
+    Accuracy: 0.8070999979972839
+    Epoch 1
+    {'AUROC': 0.8150633573532104, 'AUPR-IN': 0.686570405960083, 'AUPR-OUT': 0.8723115921020508, 'ACC95TPR': 0.5786445140838623, 'FPR95TPR': 0.6308000087738037}
+    Accuracy: 0.8166000247001648
+    [...]
+    Epoch 8
+    {'AUROC': 0.8906528949737549, 'AUPR-IN': 0.8156697154045105, 'AUPR-OUT': 0.9292852282524109, 'ACC95TPR': 0.7187340259552002, 'FPR95TPR': 0.4117000102996826}
+    Accuracy: 0.8980000019073486
+    Epoch 9
+    {'AUROC': 0.8763925433158875, 'AUPR-IN': 0.7935031056404114, 'AUPR-OUT': 0.9245198965072632, 'ACC95TPR': 0.700063943862915, 'FPR95TPR': 0.4408999979496002}
+    Accuracy: 0.9020000100135803

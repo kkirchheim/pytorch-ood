@@ -64,8 +64,7 @@ metrics_softmax = OODMetrics()
 model.eval()
 
 with torch.no_grad():
-    for n, batch in enumerate(test_loader):
-        x, y = batch
+    for x, y in test_loader:
         metrics_energy.update(energy(x), y)
         metrics_softmax.update(softmax(x), y)
 

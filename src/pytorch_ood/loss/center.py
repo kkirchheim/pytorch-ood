@@ -71,7 +71,7 @@ class CenterLoss(nn.Module):
             if self.magnitude != 1:
                 log.warning("Not applying magnitude parameter.")
 
-    def calculate_distances(self, x) -> torch.Tensor:
+    def calculate_distances(self, x: torch.Tensor) -> torch.Tensor:
         """
 
         :param x: input points
@@ -79,9 +79,9 @@ class CenterLoss(nn.Module):
         """
         return self.centers(x)
 
-    def forward(self, distmat, target) -> torch.Tensor:
+    def forward(self, distmat: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
-        :param distmat: matrix of distances of samples to centers with shape (batch_size, n_centers).
+        :param distmat: matrix of distances of each point to each center with shape :math:`B \\times C`.
         :param target: ground truth labels with shape (batch_size).
         """
         batch_size = distmat.size(0)

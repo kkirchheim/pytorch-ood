@@ -35,8 +35,7 @@ detector = MCD(model, samples=30)
 # Stage 3: Evaluate Detectors
 metrics = OODMetrics()
 
-for n, batch in enumerate(test_loader):
-    x, y = batch
+for x, y in test_loader:
     metrics.update(detector(x.to(device)), y)
 
 print(metrics.compute())
