@@ -45,8 +45,8 @@ def odin_preprocessing(
     :param temperature: temperature :math:`T` to use for scaling
     :param norm_std: standard deviations used during preprocessing
 
-    :see Paper: https://arxiv.org/abs/1706.02690
-    :see Implementation: https://github.com/facebookresearch/odin/
+    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    :see Implementation: `GitHub <https://github.com/facebookresearch/odin/>`__
 
     """
     with torch.enable_grad():
@@ -84,8 +84,8 @@ class ODIN(Detector):
 
     where :math:`\\hat{y}` is the predicted class of the network.
 
-    :see Paper: https://arxiv.org/abs/1706.02690
-    :see Implementation: https://github.com/facebookresearch/odin/
+    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    :see Implementation: `GitHub <https://github.com/facebookresearch/odin/>`__
 
     """
 
@@ -130,7 +130,7 @@ class ODIN(Detector):
         # returning negative values so higher values indicate greater outlierness
         return -self.model(x_hat).softmax(dim=1).max(dim=1).values
 
-    def fit(self):
+    def fit(self, *args, **kwargs):
         """
         Not required
         """

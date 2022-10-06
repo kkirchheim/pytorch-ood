@@ -12,7 +12,7 @@ from .utils import TensorBuffer, contains_known_and_unknown, is_unknown
 
 def calibration_error(confidence, correct, p="2", beta=100):
     """
-    :see Original Implementation: https://github.com/hendrycks/natural-adv-examples/
+    :see Implementation: `GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
 
     :param confidence: predicted confidence
     :param correct: ground truth
@@ -53,7 +53,7 @@ def calibration_error(confidence, correct, p="2", beta=100):
 
 def aurra(confidence, correct):
     """
-    :see Original Implementation: https://github.com/hendrycks/natural-adv-examples/
+    :see Implementation: `GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
 
     :param confidence: predicted confidence values
     :param correct: ground truth values

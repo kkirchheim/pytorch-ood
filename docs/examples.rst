@@ -1,61 +1,35 @@
 Examples
 **************************
 
-Detectors
+Baseline Results
 ==================
-
-Softmax vs. Energy
----------------------
-
-Compare the Maximum Softmax baseline method to Energy Based Out-of-Distribution Detection with a model
-trained from scratch.
-
-.. literalinclude:: ../examples/energy_softmax.py
+The goal of this section is to describe how to quickly obtain some baseline results to compare against.
 
 
-Depending on the number of iterations, the output will be
-
-.. code :: python
-
-    {'AUROC': 0.601246178150177, 'AUPR-IN': 0.5482655763626099, 'AUPR-OUT': 0.6618213057518005, 'ACC95TPR': 0.3585677742958069, 'FPR95TPR': 0.9750000238418579}
-    {'AUROC': 0.6039068698883057, 'AUPR-IN': 0.5614069104194641, 'AUPR-OUT': 0.6644740700721741, 'ACC95TPR': 0.3593989908695221, 'FPR95TPR': 0.9736999869346619}
-
-
-
-Pretrained SoftMax
+CIFAR 10
 --------------------------
-We can use the pre-trained model from the OOD baseline paper to obtain results without having to train a model.
+The following code reproduces a common benchmark on the CIFAR10 with 6 OOD detectors.
+Each detector is tested against 5 OOD datasets. We then calculate the mean performance of each detector over all
+datasets and sort the results by their AUROC in ascending order. The table below is the output of the script.
 
-.. literalinclude:: ../examples/softmax.py
-
-.. code :: python
-
-    {'AUROC': 0.8851455450057983, 'AUPR-IN': 0.7850116491317749, 'AUPR-OUT': 0.9299277663230896, 'ACC95TPR': 0.720716118812561, 'FPR95TPR': 0.40860000252723694}
-
-
-Pretrained Monte Carlo Dropout
-------------------------------------------
-We can use Monte Carlo Dropout with a pre-trained model, since the model uses dropout in the convolutional layers.
-
-.. literalinclude:: ../examples/mcd.py
+We test :class:`MaxSoftmax <pytorch_ood.detector.MaxSoftmax>`,
+:class:`Energy-Based Out-of-Distribution Detection  <pytorch_ood.detector.EnergyBased>`,
+:class:`MaxLogit <pytorch_ood.detector.MaxLogit>`,
+:class:`ODIN <pytorch_ood.detector.ODIN>`,
+:class:`OpenMax <pytorch_ood.detector.OpenMax>` and
+:class:`Mahalanobis  <pytorch_ood.detector.Mahalanobis>`.
 
 
-.. code :: python
 
-    {'AUROC': 0.8661140203475952, 'AUPR-IN': 0.744986891746521, 'AUPR-OUT': 0.9206404089927673, 'ACC95TPR': 0.7123401761054993, 'FPR95TPR': 0.42170000076293945}
-
-
-Pretrained OpenMax
----------------------
-Compared to other detectors, the OpenMax Layer has to be fitted to the training data.
-While the method was proposed before the baseline, it outperforms it on this OOD dataset.
-
-.. literalinclude:: ../examples/openmax.py
+.. csv-table:: Results
+   :file: _static/baseline_cifar10.csv
+   :header-rows: 1
+   :class: longtable
+   :widths: 1 1 1 1 1 1
 
 
-.. code :: python
+.. literalinclude:: ../examples/cifar10_baseline.py
 
-    {'AUROC': 0.9078375101089478, 'AUPR-IN': 0.8213402628898621, 'AUPR-OUT': 0.9453056454658508, 'ACC95TPR': 0.7641304135322571, 'FPR95TPR': 0.3407000005245209}
 
 Objective Functions
 =====================
@@ -99,7 +73,7 @@ SVDD places a single center :math:`\mu` in the output space of a model :math:`f_
 During training, the parameters  :math:`\theta` are adjusted to minimize the (squared) sum of the distances of
 representations :math:`f_{\theta}(x)` to this center.
 Thus, the model is trained to map the training samples close to the center.
-The hope is that the model learns to project **only** IN samples close to the center, and not OOD samples.
+The hope is that the model learns to map **only** IN samples close to the center, and not OOD samples.
 The distance to the center can be used as outlier score.
 
 We test the model against FashionMNIST.
@@ -125,7 +99,7 @@ Class Anchor Clustering
 --------------------------------
 :class:`Class Anchor Clustering <pytorch_ood.loss.CACLoss>` (CAC) can be seen as a multi-class generalization of Deep One-Class Learning, where there are
 several centers :math:`\{\mu_1, \mu_2, ..., \mu_y\}` in the output space of the model, one for each class.
-During training, the representations :math:`f_{\theta}(x)` from class :math:`y` is drawn
+During training, the representation :math:`f_{\theta}(x)` from class :math:`y` is drawn
 towards the corresponding center :math:`\mu_y`.
 
 Here, we train the model for 10 epochs on the CIFAR10 dataset, using a backbone pre-trained on the

@@ -21,7 +21,7 @@ class DeepSVDDLoss(torch.nn.Module):
 
     .. math:: \\mathcal{L}(x) = \\max \\lbrace 0, \\lVert \\mu - f(x) \\rVert_2^2 \\rbrace
 
-    :see Paper: `MLR <http://proceedings.mlr.press/v80/ruff18a/ruff18a.pdf>`_
+    :see Paper: `Link <http://proceedings.mlr.press/v80/ruff18a/ruff18a.pdf>`__
 
     :note: The center is a parameter, so this model has to be moved to the correct device
     """
@@ -83,8 +83,8 @@ class DeepSVDDLoss(torch.nn.Module):
 class SSDeepSVDDLoss(torch.nn.Module):
     """
     Semi-Supervised generalization of Deep Support Vector Data Description.
-    It models a center :math:`\\mu` in the output space of the model and pulls IN samples towards it in order
-    to learn the common factors of intra class variance, while outliers are pushed apart from them.
+    It places a center :math:`\\mu` in the output space of the model and pulls IN samples towards this center in order
+    to learn the common factors of intra class variance.
 
     This distance of a representation this center can be used as outlier score for the corresponding input.
 

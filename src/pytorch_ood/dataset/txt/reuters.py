@@ -18,7 +18,9 @@ log = logging.getLogger(__name__)
 
 class Reuters52(Dataset):
     """
-    Stemmed version of the reuters 52 dataset, as used by Hendrycks et al.
+    Stemmed version of the Reuters 52 dataset, as used by Hendrycks et al.
+
+    Contains 52 classes.
     """
 
     train_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r52-train.txt"
@@ -154,7 +156,9 @@ class Reuters52(Dataset):
 
 class Reuters8(Reuters52):
     """
-    Stemmed version of the reuters 8 dataset, as used by Hendrycks et al.
+    Stemmed version of the Reuters 8 dataset, as used by Hendrycks et al.
+
+    Contains 8 classes.
     """
 
     train_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r8-train.txt"
@@ -165,14 +169,6 @@ class Reuters8(Reuters52):
     test_filename = "r8-test-stemmed.txt"
 
     def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
-        """
-
-        :param root:
-        :param transform:
-        :param target_transform:
-        :param train:
-        :param download:
-        """
         super(Reuters52, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform

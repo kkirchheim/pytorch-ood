@@ -25,8 +25,8 @@ class Mahalanobis(Detector):
 
     Also uses ODIN preprocessing.
 
-    :see Implementation: https://github.com/pokaxpoka/deep_Mahalanobis_detector
-    :see Paper: https://arxiv.org/abs/1807.03888
+    :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
 
     .. note:: will use the device of the model parameter for calculations
     """
@@ -82,19 +82,22 @@ class Mahalanobis(Detector):
         buffer.clear()
         return z, y
 
-    def fit(self, data_loader: DataLoader):
+    def fit(self, data_loader: DataLoader, device: str = None):
         """
         Fit parameters of the multi variate gaussian.
 
         :param data_loader: dataset to fit on.
+        :param device: device to use
         :return:
         """
         self.model.eval()
 
         if isinstance(data_loader, DataLoader):
             # TODO: quickfix
-            dev = list(self.model.parameters())[0].device
-            z, y = Mahalanobis._extract(data_loader, self.model, dev)
+            if device is None:
+                device = list(self.model.parameters())[0].device
+
+            z, y = Mahalanobis._extract(data_loader, self.model, device)
         else:
             # TODO: implement initialization with raw data
             raise ValueError()
@@ -107,13 +110,13 @@ class Mahalanobis(Detector):
         assert not contains_unknown(classes)
 
         n_classes = len(classes)
-        self.mu = torch.zeros(size=(n_classes, z.shape[-1])).to(dev)
-        self.cov = torch.zeros(size=(z.shape[-1], z.shape[-1])).to(dev)
+        self.mu = torch.zeros(size=(n_classes, z.shape[-1])).to(device)
+        self.cov = torch.zeros(size=(z.shape[-1], z.shape[-1])).to(device)
 
         for clazz in range(n_classes):
             idxs = y.eq(clazz)
             assert idxs.sum() != 0
-            zs = z[idxs].to(dev)
+            zs = z[idxs].to(device)
             self.mu[clazz] = zs.mean(dim=0)
             self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
 

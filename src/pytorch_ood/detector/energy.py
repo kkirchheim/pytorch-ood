@@ -31,7 +31,7 @@ class EnergyBased(Detector):
 
     """
 
-    def fit(self, data_loader):
+    def fit(self, *args, **kwargs):
         """
         Not required.
         """

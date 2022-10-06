@@ -1,7 +1,8 @@
 """
-    Code is adapted/inspired from : https://github.com/wkentaro/gdown
+Code is adapted from : https://github.com/wkentaro/gdown
 """
 import json
+import logging
 import os
 import os.path as osp
 import re
@@ -9,11 +10,11 @@ import shutil
 import tempfile
 import textwrap
 import time
-import logging
+import warnings
+
 import requests
 import six
 import tqdm
-import warnings
 from six.moves import urllib_parse
 
 log = logging.getLogger(__name__)
@@ -95,17 +96,16 @@ def get_url_from_gdrive_confirmation(contents):
 
 
 def download(
-        
-        url=None,
-        output=None,
-        hide_progress=False,
-        proxy=None,
-        speed=None,
-        use_cookies=True,
-        verify=True,
-        id=None,
-        fuzzy=False,
-        resume=False,
+    url=None,
+    output=None,
+    hide_progress=False,
+    proxy=None,
+    speed=None,
+    use_cookies=True,
+    verify=True,
+    id=None,
+    fuzzy=False,
+    resume=False,
 ):
     """Download file from URL.
     Parameters
@@ -185,9 +185,7 @@ def download(
         # Save cookies
         with open(cookies_file, "w") as f:
             cookies = [
-                (k, v)
-                for k, v in sess.cookies.items()
-                if not k.startswith("download_warning_")
+                (k, v) for k, v in sess.cookies.items() if not k.startswith("download_warning_")
             ]
             json.dump(cookies, f, indent=2)
 
@@ -209,9 +207,7 @@ def download(
             return
 
     if gdrive_file_id and is_gdrive_download_link:
-        content_disposition = six.moves.urllib_parse.unquote(
-            res.headers["Content-Disposition"]
-        )
+        content_disposition = six.moves.urllib_parse.unquote(res.headers["Content-Disposition"])
         m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
         filename_from_url = m.groups()[0]
     else:

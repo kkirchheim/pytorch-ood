@@ -21,8 +21,8 @@ class StreetHazards(ImageDatasetBase):
         :alt: Street Hazards Dataset Example
         :align: center
 
-    :see Paper: https://arxiv.org/pdf/1911.11132.pdf
-    :see Website: https://github.com/hendrycks/anomaly-seg
+    :see Paper: `ArXiv <https://arxiv.org/.*>`__
+    :see Website: `GitHub <https://github.com/hendrycks/anomaly-seg>`__
     """
 
     base_folder = "dtd/images/"
@@ -50,21 +50,6 @@ class StreetHazards(ImageDatasetBase):
         "cd2d1a8649848afb85b5059d227d2090",
     ]
 
-    def get_file_list(self, root) -> List[str]:
-        """
-        Recursively get all files in the root directory
-        """
-        current_files = [os.path.join(root, entry) for entry in os.listdir(root)]
-        all_files = list()
-
-        for path in current_files:
-            if os.path.isdir(path):
-                all_files += self.get_file_list(path)
-            else:
-                all_files.append(path)
-
-        return all_files
-
     def __init__(
         self,
         root: str,
@@ -74,7 +59,7 @@ class StreetHazards(ImageDatasetBase):
     ) -> None:
         """
         :param root: root path for dataset
-        :param subset: one of 'train', 'test', 'validation'
+        :param subset: one of ``train``, ``test``, ``validation``
         :param transform: transformations to apply to images and masks, will get tuple as argument
         :param download: if dataset should be downloaded automatically
         """
@@ -98,15 +83,29 @@ class StreetHazards(ImageDatasetBase):
 
         self.basedir = os.path.join(self.root, self.base_folder)
 
-        self.files = self.get_file_list(self.basedir)
+        self.files = self._get_file_list(self.basedir)
+
+    def _get_file_list(self, root) -> List[str]:
+        """
+        Recursively get all files in the root directory
+
+        :param root: root directory for the search
+        """
+        current_files = [os.path.join(root, entry) for entry in os.listdir(root)]
+        all_files = list()
+
+        for path in current_files:
+            if os.path.isdir(path):
+                all_files += self._get_file_list(path)
+            else:
+                all_files.append(path)
+
+        return all_files
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
-        Args:
-            index (int): Index
-
-        Returns:
-            tuple: (image, target) where target is annotation of the image.
+        :param index: index
+        :returns: (image, target) where target is the annotation of the image.
         """
 
         file, target = self.files[index], self.files[index].replace("images", "annotations")

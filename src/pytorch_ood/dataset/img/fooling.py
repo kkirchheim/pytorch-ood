@@ -12,8 +12,8 @@ class FoolingImages(ImageDatasetBase):
     """
     From the paper *Deep neural networks are easily fooled: High confidence predictions for unrecognizable images*.
 
-    :see Website: https://anhnguyen.me/project/fooling/
-    :see Paper: https://arxiv.org/pdf/1412.1897v1.pdf
+    :see Website: `Link <https://anhnguyen.me/project/fooling/>`__
+    :see Paper: `ArXiv <https://arxiv.org/.*>`__
     """
 
     dirs = [f"run_{i}" for i in range(10)]

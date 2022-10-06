@@ -4,6 +4,11 @@ Newsgroups
 .. autoclass:: pytorch_ood.dataset.txt.NewsGroup20
    :members:
 
+Reuters 8
+----------------------------------------------
+.. autoclass:: pytorch_ood.dataset.txt.Reuters8
+   :members:
+
 Reuters 52
 ----------------------------------------------
 .. autoclass:: pytorch_ood.dataset.txt.Reuters52
@@ -32,6 +37,6 @@ WikiText 103
 """
 from .multi30k import Multi30k
 from .newsgroups import NewsGroup20
-from .reuters import Reuters52, Reuters8
+from .reuters import Reuters8, Reuters52
 from .wiki import WikiText2, WikiText103
 from .wmt16 import WMT16Sentences

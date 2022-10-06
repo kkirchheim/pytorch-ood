@@ -30,7 +30,7 @@ class CACLoss(nn.Module):
         """
         Centers are initialized as unit vectors, scaled by the magnitude.
 
-        :param n_classes: number of classes
+        :param n_classes: number of classes :math:`C`
         :param magnitude: magnitude of class anchors
         :param alpha: :math:`\\alpha` weight for anchor term
         """

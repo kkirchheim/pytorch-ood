@@ -90,8 +90,8 @@ class WideResNet(nn.Module):
     """
     Resnet Architecture with large number of channels and variable depth.
 
-    :see Paper: https://arxiv.org/pdf/1605.07146v4.pdf
-    :see Implementation: https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
+    :see Paper: `ArXiv <https://arxiv.org/pdf/1605.07146v4.pdf>`__
+    :see Implementation: `GitHub <https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py>`__
     """
 
     def __init__(

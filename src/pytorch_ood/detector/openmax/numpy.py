@@ -28,8 +28,8 @@ class OpenMax(object):
     :param alpha: number of class activations to revise
     :param euclid_weight: weight for the euclidean distance.
 
-    :see Paper: https://arxiv.org/abs/1511.06233
-    :see Implementation: https://github.com/abhijitbendale/OSDN
+    :see Paper: `ArXiv <https://arxiv.org/abs/1511.06233>`__
+    :see Implementation: `GitHub <https://github.com/abhijitbendale/OSDN>`__
     """
 
     def __init__(self, tailsize=25, alpha=10, euclid_weight=1.0):

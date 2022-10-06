@@ -20,7 +20,7 @@ class TinyImageNet(VisionDataset):
 
     This dataset is often used for training, but not included in Torchvision.
 
-    :see Website: http://cs231n.stanford.edu/
+    :see Website: `<Stanford http://cs231n.stanford.edu/>`__
 
     """
 

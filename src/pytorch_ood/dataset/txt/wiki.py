@@ -12,10 +12,15 @@ log = logging.getLogger(__name__)
 
 class WikiText2(Dataset):
     """
-    WikiText2 dataset
-    Contains collection of over 100 million tokens extracted from the set of verified Good and Featured articles on Wikipedia
+    Contains collection of over 100 million tokens extracted from the set of verified Good and
+    Featured articles on Wikipedia.
 
-    :see Website: https://arxiv.org/abs/1609.07843
+    Usually used os OOD (training) data, for example, for
+    :class:`Outlier Exposure <pytorch_ood.loss.OutlierExposureLoss>`. Labels are -1 by default.
+
+    Split can be one of ``train``, ``test`` and ``val``.
+
+    :see Paper: `ArXiv <https://.org/abs/1609.07843>`__
     """
 
     url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip"
@@ -73,7 +78,7 @@ class WikiText2(Dataset):
 
         return True
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> Tuple:
         x = self._data[index]
         y = -1
 
@@ -89,10 +94,15 @@ class WikiText2(Dataset):
 
 class WikiText103(WikiText2):
     """
-    WikiText103 dataset
-    Contains collection of over 100 million tokens extracted from the set of verified Good and Featured articles on Wikipedia
+    Contains collection of over 100 million tokens extracted from the set of verified Good and Featured
+    articles on Wikipedia.
 
-    :see Website: https://arxiv.org/abs/1609.07843
+    Usually used os OOD (training) data, for example, for
+    :class:`Outlier Exposure <pytorch_ood.loss.OutlierExposureLoss>`. Labels are -1 by default.
+
+    Split can be one of ``train``, ``test`` and ``val``.
+
+    :see Paper: `ArXiv <https://.org/abs/1609.07843>`__
     """
 
     url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-103-v1.zip"

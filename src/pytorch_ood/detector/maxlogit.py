@@ -19,7 +19,7 @@ class MaxLogit(Detector):
     where :math:`f_y(x)` indicates the :math:`y^{th}` logits value predicted by :math:`f`.
 
     :see Paper:
-        https://arxiv.org/abs/1911.11132
+       `ArXiv <https://.org/abs/1911.11132>`__
     """
 
     def __init__(self, model: torch.nn.Module):
@@ -35,7 +35,7 @@ class MaxLogit(Detector):
         """
         return self.score(self.model(x))
 
-    def fit(self):
+    def fit(self, *args, **kwargs):
         """
         Not required
         """

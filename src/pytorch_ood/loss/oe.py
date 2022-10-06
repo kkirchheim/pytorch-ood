@@ -32,8 +32,8 @@ class OutlierExposureLoss(nn.Module):
 
     where :math:`C` is the number of classes.
 
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1812.04606v1.pdf>`_
-    :see Implementation: `GitHub <https://github.com/hendrycks/outlier-exposure>`_
+    :see Paper: `ArXiv <https://arxiv.org/pdf/1812.04606v1.pdf>`__
+    :see Implementation: `GitHub <https://github.com/hendrycks/outlier-exposure>`__
     """
 
     def __init__(self, alpha=0.5, reduction: Optional[str] = "mean"):

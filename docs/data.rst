@@ -30,6 +30,9 @@ Audio
 =====================================================
 
 .. automodule:: pytorch_ood.dataset.audio
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Open Set Simulations

@@ -6,14 +6,12 @@ from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
-from pytorch_ood.detector import MaxSoftmax
 from pytorch_ood.loss import CACLoss
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown, is_known
 
 torch.manual_seed(123)
 
-# maximum number of epochs and training iterations
 n_epochs = 10
 device = "cuda:0"
 

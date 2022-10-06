@@ -17,25 +17,36 @@ Confidence Loss
 ..  autoclass:: pytorch_ood.loss.ConfidenceLoss
     :members:
 
+
+Deep SVDD Loss
+----------------------------------------------
+.. autoclass:: pytorch_ood.loss.DeepSVDDLoss
+    :members:
+
+
+MCHAD Loss
+----------------------------------------------
+..  autoclass:: pytorch_ood.loss.MCHADLoss
+    :members:
+
+
 Class Anchor Clustering Loss
 ----------------------------------------------
 ..  autoclass:: pytorch_ood.loss.CACLoss
     :members:
+
 
 II Loss
 ----------------------------------------------
 ..  autoclass:: pytorch_ood.loss.IILoss
     :members:
 
+
 Center Loss
 ----------------------------------------------
 .. autoclass:: pytorch_ood.loss.CenterLoss
     :members:
 
-Deep SVDD
-----------------------------------------------
-.. autoclass:: pytorch_ood.loss.DeepSVDDLoss
-    :members:
 
 Cross-Entropy Loss
 ----------------------------------------------
@@ -48,6 +59,7 @@ Supervised
 Supervised Losses make use from example Out-of-Distribution samples (or samples from known unknown classes).
 Thus, these losses can handle samples with target values :math:`< 0`.
 
+
 Outlier Exposure Loss
 ----------------------------------------------
 .. autoclass:: pytorch_ood.loss.OutlierExposureLoss
@@ -58,6 +70,7 @@ Entropic Open-Set Loss
 ----------------------------------------------
 .. autoclass:: pytorch_ood.loss.EntropicOpenSetLoss
     :members:
+
 
 Objectosphere Loss
 ----------------------------------------------
@@ -84,6 +97,7 @@ from .conf import ConfidenceLoss
 from .crossentropy import CrossEntropyLoss
 from .energy import EnergyRegularizedLoss
 from .ii import IILoss
+from .mchad import MCHADLoss
 from .objectosphere import EntropicOpenSetLoss, ObjectosphereLoss
 from .oe import OutlierExposureLoss
 

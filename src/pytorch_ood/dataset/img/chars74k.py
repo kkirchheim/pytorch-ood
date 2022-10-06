@@ -22,8 +22,8 @@ class Chars74k(ImageDatasetBase):
         :alt: Chars47k Dataset Example
         :align: center
 
-    :see Website: http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/
-    :see Paper: http://personal.ee.surrey.ac.uk/Personal/T.Decampos/papers/decampos_etal_visapp2009.pdf
+    :see Website: `Link <http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/>`__
+    :see Paper: `Link <http://personal.ee.surrey.ac.uk/Personal/T.Decampos/papers/decampos_etal_visapp2009.pdf>`__
     """
 
     base_folder = "chars74k"

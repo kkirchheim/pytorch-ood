@@ -24,8 +24,8 @@ class OpenMax(Detector):
     .. warning:: This methods requires ``libmr`` to be installed, which is broken at the moment. You can only use it
        by installing ``cython`` and ``numpy``, and ``libmr`` manually afterwards.
 
-    :see Paper: https://arxiv.org/abs/1511.06233
-    :see Implementation: https://github.com/abhijitbendale/OSDN
+    :see Paper: `ArXiv <https://arxiv.org/abs/1511.06233>`__
+    :see Implementation: `GitHub <https://github.com/abhijitbendale/OSDN>`__
     """
 
     def __init__(

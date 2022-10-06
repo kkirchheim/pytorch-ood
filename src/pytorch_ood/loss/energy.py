@@ -38,13 +38,13 @@ class EnergyRegularizedLoss(nn.Module):
         self.nll = CrossEntropyLoss()
         self.alpha = alpha
 
-    def forward(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """
         :param logits: logits
-        :param y: labels
+        :param targets: labels
         """
-        regularization = self._regularization(logits, y)
-        nll = self.nll(logits, y)
+        regularization = self._regularization(logits, targets)
+        nll = self.nll(logits, targets)
         return nll + self.alpha * regularization
 
     def _regularization(self, logits, y):

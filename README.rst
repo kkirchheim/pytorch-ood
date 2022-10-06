@@ -111,6 +111,8 @@ Implemented
 +============================+================================================================================================+======+====================+
 | OpenMax                    | Implementation of the OpenMax Layer as proposed in the paper *Towards Open Set Deep Networks*. | 2016 | [#OpenMax]_        |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Monte Carlo Dropout        | Implements Monte Carlo Dropout.                                                                | 2016 | [#MonteCarloDrop]_ |
++----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Softmax Thresholding       | Implements the Softmax Baseline for OOD and Error detection.                                   | 2017 | [#Softmax]_        |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ODIN                       | ODIN is a preprocessing method for inputs that aims to increase the discriminability of        | 2018 | [#ODIN]_           |
@@ -119,8 +121,6 @@ Implemented
 | Mahalanobis                | Implements the Mahalanobis Method.                                                             | 2018 | [#Mahalanobis]_    |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Energy-Based OOD Detection | Implements the Energy Score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Monte Carlo Dropout        | Implements Monte Carlo Dropout.                                                                | 2022 | [#MonteCarloDrop]_ |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | MaxLogit                   | Implements the MaxLogit method.                                                                | 2022 | [#StreeHaz]_       |
 +----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
@@ -148,6 +148,8 @@ Implemented
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 | II Loss                    | Implementation of II Loss function from *Learning a neural network-based representation for      | 2022 | [#IILoss]_         |
 |                            | open set recognition*.                                                                           |      |                    |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| MCHAD Loss                 | Implementation of the MCHAD Loss friom the paper *Multi Class Hypersphere Anomaly Detection*.    | 2022 | [#MCHAD]_          |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 
 **Image Datasets**:
@@ -264,3 +266,5 @@ Reference
 .. [#WikiText2] Merity, S., Xiong, C., Bradbury, J., & Socher, R. (2016). Pointer sentinel mixture models. `ArXiv <https://arxiv.org/abs/1609.07843>`_
 
 .. [#MVTech] P. Bergmann, K. Batzner, et al. (2021) The MVTec Anomaly Detection Dataset: A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection. IJCV.
+
+.. [#MCHAD] K. Kirchheim, M. Filax, F. Ortmeier (2022) Multi Class Hypersphere Anomaly Detection. ICPR
