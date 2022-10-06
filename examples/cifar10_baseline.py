@@ -51,7 +51,7 @@ detectors["EnergyBased"] = EnergyBased(model)
 detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=std, eps=0.002)
 detectors["OpenMax"] = OpenMax(model)
-detectors["Mahalanobis"] = Mahalanobis(model, norm_std=std, eps=0.002)
+detectors["Mahalanobis"] = Mahalanobis(model, norm_std=std, eps=0.0)
 
 # fit detectors to training data (some require this, some do not)
 print(f"> Fitting {len(detectors)} detectors")
@@ -67,9 +67,9 @@ results = []
 with torch.no_grad():
     for detector_name, detector in detectors.items():
         print(f"> Evaluating {detector_name}")
-        metrics = OODMetrics()
         for dataset_name, loader in datasets.items():
             print(f"--> {dataset_name}")
+            metrics = OODMetrics()
             for x, y in loader:
                 metrics.update(detector(x.to(device)), y.to(device))
 
