@@ -7,7 +7,7 @@ from src.pytorch_ood.loss import DeepSVDDLoss, SSDeepSVDDLoss
 
 class TestDeepSVDD(unittest.TestCase):
     def test_forward(self):
-        criterion = DeepSVDDLoss(n_features=10, reduction=None)
+        criterion = DeepSVDDLoss(n_dim=10, reduction=None)
         logits = torch.randn(size=(10, 10))
         target = torch.zeros(size=(10,)).long()
         target[5:] = -1

@@ -18,7 +18,7 @@ class MVTechAD(ImageDatasetBase):
     MVTec AD is a dataset for benchmarking anomaly detection methods with a focus on industrial inspection.
     The dataset provides segmentation masks for anomalies.
 
-    .. image:: https://www.mvtec.com/fileadmin/_processed_/1/e/csm_dataset_overview_large_27c30783e5.png
+    .. image:: https://www.mvtec.com/fileadmin/Redaktion/mvtec.com/company/research/datasets/dataset_overview_large.png
         :width: 800px
         :alt: MVTech Anomaly Detection Dataset
         :align: center
@@ -27,8 +27,24 @@ class MVTechAD(ImageDatasetBase):
     :see Download: https://www.mvtec.com/company/research/datasets/mvtec-ad/
 
 
-    Subset classes can be one of  ["bottle", "cable", "capsule", "carpet", "grid", "hazelnut", "leather", "metal_nut",
-    "pill", "screw", "tile", "toothbrush", "transistor", "wood", "zipper"]
+    Tplit can be *train* or *test*. Subset classes can be one of
+
+    * bottle
+    * cable
+    * capsule
+    * carpet
+    * grid
+    * hazelnut
+    * leather
+    * metal_nut
+    * pill
+    * screw
+    * tile
+    * toothbrush
+    * transistor
+    * wood
+    * zipper
+
     """
 
     splits = ["train", "test"]
