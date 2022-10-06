@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 class Chars74k(ImageDatasetBase):
     """
-    Contains images of Character Recognition in Natural Images
+    Dataset from the paper *Character Recognition in Natural Images*. Can be used as example OOD data.
 
     .. image:: http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/Samples/confusing_english.png
         :width: 800px
