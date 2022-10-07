@@ -51,6 +51,10 @@ Monte Carlo Dropout
 -------------------------------
 .. automodule:: pytorch_ood.detector.mcd
 
+Virtual Logit Matching
+-------------------------------
+.. automodule:: pytorch_ood.detector.vim
+
 KL-Matching
 -------------------------------
 .. automodule:: pytorch_ood.detector.klmatching
@@ -64,3 +68,4 @@ from .mcd import MCD
 from .odin import ODIN
 from .openmax import OpenMax
 from .softmax import MaxSoftmax
+from .vim import ViM

@@ -8,7 +8,7 @@ The goal of this section is to describe how to quickly obtain some baseline resu
 
 CIFAR 10
 --------------------------
-The following code reproduces a common benchmark on the CIFAR10 with 7 OOD detectors.
+The following code reproduces a common benchmark on the CIFAR10 with 8 OOD detectors.
 Each detector is tested against 5 OOD datasets. We then calculate the mean performance of each detector over all
 datasets and sort the results by their AUROC in ascending order. The table below is the output of the script.
 
@@ -17,6 +17,7 @@ We test :class:`MaxSoftmax <pytorch_ood.detector.MaxSoftmax>`,
 :class:`MaxLogit <pytorch_ood.detector.MaxLogit>`,
 :class:`ODIN <pytorch_ood.detector.ODIN>`,
 :class:`KLMatching <pytorch_ood.detector.KLMatching>`
+:class:`ViM <pytorch_ood.detector.ViM>`,
 :class:`OpenMax <pytorch_ood.detector.OpenMax>` and
 :class:`Mahalanobis  <pytorch_ood.detector.Mahalanobis>`.
 
@@ -74,7 +75,7 @@ SVDD places a single center :math:`\mu` in the output space of a model :math:`f_
 During training, the parameters  :math:`\theta` are adjusted to minimize the (squared) sum of the distances of
 representations :math:`f_{\theta}(x)` to this center.
 Thus, the model is trained to map the training samples close to the center.
-The hope is that the model learns to map **only** IN samples close to the center, and not OOD samples.
+The idea is that the model learns to map **only** IN samples close to the center, and not OOD samples.
 The distance to the center can be used as outlier score.
 
 We test the model against FashionMNIST.

@@ -19,6 +19,7 @@ from pytorch_ood.detector import (
     MaxLogit,
     MaxSoftmax,
     OpenMax,
+    ViM,
 )
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToRGB, ToUnknown
@@ -54,13 +55,14 @@ model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
 # Stage 2: Create OOD detector
 print("STAGE 2: Creating OOD Detectors")
 detectors = {}
+detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
+detectors["Mahalanobis"] = Mahalanobis(model.features, norm_std=std, eps=0.002)
 detectors["KLMatching"] = KLMatching(model)
 detectors["MaxSoftmax"] = MaxSoftmax(model)
 detectors["EnergyBased"] = EnergyBased(model)
 detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=std, eps=0.002)
 detectors["OpenMax"] = OpenMax(model)
-detectors["Mahalanobis"] = Mahalanobis(model, norm_std=std, eps=0.0)
 
 # fit detectors to training data (some require this, some do not)
 print(f"> Fitting {len(detectors)} detectors")

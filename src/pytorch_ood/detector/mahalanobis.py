@@ -3,7 +3,7 @@
     :members:
 """
 import logging
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import torch
 from torch.autograd import Variable
@@ -27,18 +27,16 @@ class Mahalanobis(Detector):
 
     :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
     :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
-
-    .. note:: will use the device of the model parameter for calculations
     """
 
     def __init__(
         self,
-        model: torch.nn.Module,
+        model: Callable[[torch.Tensor], torch.Tensor],
         eps: float = 0.002,
         norm_std: Optional[List] = None,
     ):
         """
-        :param model: the Neural Network
+        :param model: the Neural Network, should output features
         :param eps: magnitude for gradient based input preprocessing
         :param norm_std: Standard deviations for input normalization
         """
@@ -90,7 +88,7 @@ class Mahalanobis(Detector):
         :param device: device to use
         :return:
         """
-        self.model.eval()
+        # self.model.eval()
 
         if isinstance(data_loader, DataLoader):
             # TODO: quickfix
@@ -130,8 +128,7 @@ class Mahalanobis(Detector):
         if self.mu is None:
             raise RequiresFittingException
 
-        # TODO: quickfix
-        dev = list(self.model.parameters())[0].device
+        dev = x.device
 
         if self.eps > 0:
             noise_z = self._odin_preprocess(x, dev)

@@ -7,9 +7,12 @@ class ClassificationModel(torch.nn.Module):
         self.layer1 = torch.nn.Linear(num_inputs, n_hidden)
         self.layer2 = torch.nn.Linear(n_hidden, num_outputs)
 
+    def features(self, x):
+        return self.layer1(x).tanh()
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.layer1(x).tanh()
-        return self.layer2(x).tanh()
+        x = self.features(x)
+        return self.layer2(x)
 
 
 class SegmentationModel(torch.nn.Module):
