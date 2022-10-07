@@ -11,7 +11,15 @@ from pytorch_ood.dataset.img import (
     TinyImageNetCrop,
     TinyImageNetResize,
 )
-from pytorch_ood.detector import ODIN, EnergyBased, Mahalanobis, MaxLogit, MaxSoftmax, OpenMax
+from pytorch_ood.detector import (
+    ODIN,
+    EnergyBased,
+    KLMatching,
+    Mahalanobis,
+    MaxLogit,
+    MaxSoftmax,
+    OpenMax,
+)
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToRGB, ToUnknown
 
@@ -46,6 +54,7 @@ model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
 # Stage 2: Create OOD detector
 print("STAGE 2: Creating OOD Detectors")
 detectors = {}
+detectors["KLMatching"] = KLMatching(model)
 detectors["MaxSoftmax"] = MaxSoftmax(model)
 detectors["EnergyBased"] = EnergyBased(model)
 detectors["MaxLogit"] = MaxLogit(model)

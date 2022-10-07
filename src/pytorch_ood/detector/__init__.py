@@ -48,8 +48,13 @@ Monte Carlo Dropout
 -------------------------------
 .. automodule:: pytorch_ood.detector.mcd
 
+KL-Matching
+-------------------------------
+.. automodule:: pytorch_ood.detector.klmatching
+
 """
 from .energy import EnergyBased
+from .klmatching import KLMatching
 from .mahalanobis import Mahalanobis
 from .maxlogit import MaxLogit
 from .mcd import MCD
