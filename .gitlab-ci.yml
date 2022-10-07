@@ -27,6 +27,7 @@ before_script:
   - pip install .
   - pip install cython
   - pip install libmr # has to be installed after cython
+  - pip install sklearn # for ViM
   - pip freeze # print package versions for debugging
 
 test:
