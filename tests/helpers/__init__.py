@@ -1,9 +1,14 @@
 import sys
 
+from .dataset import sample_dataset
 from .model import ClassificationModel, SegmentationModel
 
 
 def for_examples(*parameters):
+    """
+    Decorator to run tests for several examples
+    """
+
     def tuplify(x):
         if not isinstance(x, tuple):
             return (x,)

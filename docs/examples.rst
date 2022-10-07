@@ -8,7 +8,7 @@ The goal of this section is to describe how to quickly obtain some baseline resu
 
 CIFAR 10
 --------------------------
-The following code reproduces a common benchmark on the CIFAR10 with 6 OOD detectors.
+The following code reproduces a common benchmark on the CIFAR10 with 7 OOD detectors.
 Each detector is tested against 5 OOD datasets. We then calculate the mean performance of each detector over all
 datasets and sort the results by their AUROC in ascending order. The table below is the output of the script.
 
@@ -16,8 +16,9 @@ We test :class:`MaxSoftmax <pytorch_ood.detector.MaxSoftmax>`,
 :class:`Energy-Based Out-of-Distribution Detection  <pytorch_ood.detector.EnergyBased>`,
 :class:`MaxLogit <pytorch_ood.detector.MaxLogit>`,
 :class:`ODIN <pytorch_ood.detector.ODIN>`,
+:class:`KLMatching <pytorch_ood.detector.KLMatching>`
 :class:`OpenMax <pytorch_ood.detector.OpenMax>` and
-:class:`Mahalanobis  <pytorch_ood.detector.Mahalanobis>`.
+:class:`Mahalanobis  <pytorch_ood.detector.Mahalanobis>`,.
 
 
 
