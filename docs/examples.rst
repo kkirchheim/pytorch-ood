@@ -33,6 +33,20 @@ We test :class:`MaxSoftmax <pytorch_ood.detector.MaxSoftmax>`,
 .. literalinclude:: ../examples/cifar10_baseline.py
 
 
+CIFAR 100
+--------------------------
+The evaluation is the same as for CIFAR 10.
+
+.. csv-table:: Mean Performance over 5 OOD Datasets
+   :file: _static/baseline_cifar100.csv
+   :header-rows: 1
+   :class: longtable
+   :widths: 1 1 1 1 1 1
+
+
+.. literalinclude:: ../examples/cifar100_baseline.py
+
+
 Objective Functions
 =====================
 
