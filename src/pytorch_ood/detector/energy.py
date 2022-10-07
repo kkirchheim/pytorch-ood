@@ -18,16 +18,14 @@ class EnergyBased(Detector):
     This methods calculates the negative energy for a vector of logits.
     This value can be used as outlier score.
 
-    :param t: temperature value T. Default is 1.
-
     .. math::
         E(z) = -T \\log{\\sum_i e^{z_i/T}}
 
     :see Paper:
-        https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf
+        `NeurIPS <https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf>`__
 
     :see Implementation:
-        https://github.com/wetliu/energy_ood
+        `GitHub <https://github.com/wetliu/energy_ood>`__
 
     """
 
@@ -38,9 +36,11 @@ class EnergyBased(Detector):
         pass
 
     def __init__(self, model: torch.nn.Module, t: Optional[float] = 1):
-        """"""
+        """
+        :param t: Temperature value :math:`T`. Default is 1.
+        """
         super(EnergyBased, self).__init__()
-        self.t = t
+        self.t: float = t  #: Temperature
         self.model = model
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:

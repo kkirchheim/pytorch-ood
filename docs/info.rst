@@ -3,7 +3,7 @@ General Information
 
 Assumptions
 -----------------------------------------
-Whily PyTorch-OOD aims to be general, there are certain assumptions that we have to make.
+While PyTorch-OOD aims to be as general as possible, there are certain assumptions that we have to make.
 These are as follows:
 
 
@@ -12,8 +12,8 @@ OOD as Binary Classification
 PyTorch-OOD casts OOD detection as binary classification with the goal to discriminate between
 in-distribution (IN) and out-of-distribution (OOD) data. This
 detection is performed in addition to other tasks, like classification or segmentation.
-Thus, it is assumed that each **OOD detector produces outlier scores**, where high values indicate greater outlierness.
-While these are strong assumptions that some detectors, like OpenMax, might not adhere to,
+Thus, it is assumed that each **OOD detector produces outlier scores**, where high values indicate greater
+outlierness. While these are strong assumptions that some detectors, like OpenMax, might not adhere to,
 we argue that most methods can be reformulated in such a fashion.
 
 Workflow
@@ -28,9 +28,8 @@ Labeling
 ===============
 
 We adopt the following convention: samples from in-distribution data use target class labels :math:`>= 0`.
-Samples from out-of-distribution data (known or unknown during training) will be assigned target values :math:`< 0`.
-
-
+Samples from out-of-distribution data (known or unknown during training) will be
+assigned target values :math:`< 0`.
 
 Scope
 -----------------------------------------

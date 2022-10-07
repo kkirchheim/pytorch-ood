@@ -25,9 +25,9 @@ class MCD(Detector):
 
     where :math:`\\sigma` is the softmax function.
 
-    :see Paper: http://proceedings.mlr.press/v48/gal16.pdf
+    :see Paper: `Link <http://proceedings.mlr.press/v48/gal16.pdf>`__
 
-    .. warning:: This implementations puts the model in evaluation mode (except for variants of the BatchNorm Layers).
+    .. warning:: This implementations puts the model into evaluation mode (except for variants of the BatchNorm Layers).
         This could also affect other modules and is currently a workaround.
 
 

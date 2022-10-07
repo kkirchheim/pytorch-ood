@@ -3,7 +3,10 @@ Detectors
 ******************
 
 This package contains a collection of different Out-of-Distribution Detectors.
-All of them implement a common API which contains a ``predict`` and a ``fit`` method, where ``fit`` is optional.
+
+API
+------
+Each detector implements a common API which contains a ``predict`` and a ``fit`` method, where ``fit`` is optional.
 The objects ``__call__`` methods become an alias for the ``predict`` function, so you can use
 
 .. code:: python

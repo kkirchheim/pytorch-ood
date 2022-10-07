@@ -26,7 +26,7 @@ class OutlierExposureLoss(nn.Module):
        {
        -\\log \\sigma_y(f(x)) \\quad \\quad \\quad  \\quad   \\quad \\quad \\quad  \\quad  \\quad \\quad  \\text{if } y \\geq 0
         \\atop
-       \\alpha (\\sum_{c=1}^C f(x_{out})_c - \\log(\\sum_{c=1}^C  e^{f(x_{out})_c})) \\quad \\text{ otherwise }
+       \\alpha (\\sum_{c=1}^C f(x)_c - \\log(\\sum_{c=1}^C  e^{f(x)_c})) \\quad \\text{ otherwise }
        }
 
 

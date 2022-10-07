@@ -35,6 +35,13 @@ Audio
    :show-inheritance:
 
 
+Video
+=====================================================
+
+.. note :: There are, to our knowledge, no video datasets for OOD detection available.
+            If you are aware of any, please, let us know.
+
+
 Open Set Simulations
 =====================================================
 
