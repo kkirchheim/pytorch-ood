@@ -12,7 +12,7 @@ class TestBackgroundClass(unittest.TestCase):
     """
 
     def test_example_1(self):
-        criterion = BackgroundClassLoss(num_classes=3)
+        criterion = BackgroundClassLoss(n_classes=3)
         model = ClassificationModel(num_outputs=4)
         input = torch.randn(size=(10, 10))
         target = torch.arange(10) % 3
@@ -26,7 +26,7 @@ class TestBackgroundClass(unittest.TestCase):
         self.assertGreater(loss, 0)
 
     def test_class_to_high(self):
-        criterion = BackgroundClassLoss(num_classes=3)
+        criterion = BackgroundClassLoss(n_classes=3)
         logits = torch.randn(size=(10, 3))
         target = torch.arange(10) % 3
         target[5:] = 10

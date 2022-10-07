@@ -13,19 +13,18 @@ class CenterLoss(nn.Module):
     """
     Generalized version of the Center Loss from the Paper
     *A Discriminative Feature Learning Approach for Deep Face Recognition*.
-    For each class, this loss models a center :math:`\\mu_y` in the output space and draws representations of samples
+    For each class, this loss places a center :math:`\\mu_y` in the output space and draws representations of samples
     to their corresponding class centers, up to a radius :math:`r`.
 
     Calculates
 
     .. math::
-        \\mathcal{L}(x,y) = \\max \\lbrace  d(x,\\mu_y) - r , 0 \\rbrace
+        \\mathcal{L}(x,y) = \\max \\lbrace  d(f(x),\\mu_y) - r , 0 \\rbrace
 
-    where :math:`d` is some distance. More generally, it can be any dissimilarity function, like the squared distance,
-    which is not a proper distance metric.
+    where :math:`d` is some measure of dissimilarity, like the squared distance.
 
-    Equipped with radius :math:`r=0` and the squared euclidean distance as :math:`d(\\cdot,\\cdot)`, this is also
-    referred to as the *soft-margin loss* in some publications.
+    With radius :math:`r=0` and the squared euclidean distance as :math:`d(\\cdot,\\cdot)`, this is equivalent to
+    the original center loss, which is also referred to as the *soft-margin loss* in some publications.
 
     :see Implementation: `GitHub <https://github.com/KaiyangZhou/pytorch-center-loss>`__
     :see Paper: `ECCV 2016 <https://ydwen.github.io/papers/WenECCV16.pdf>`__
@@ -89,6 +88,8 @@ class CenterLoss(nn.Module):
 
     def forward(self, distmat: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
+        Calculates the loss. Ignores OOD inputs.
+
         :param distmat: matrix of distances of each point to each center with shape :math:`B \\times C`.
         :param target: ground truth labels with shape (batch_size).
         :returns: the loss values

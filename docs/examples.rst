@@ -18,11 +18,11 @@ We test :class:`MaxSoftmax <pytorch_ood.detector.MaxSoftmax>`,
 :class:`ODIN <pytorch_ood.detector.ODIN>`,
 :class:`KLMatching <pytorch_ood.detector.KLMatching>`
 :class:`OpenMax <pytorch_ood.detector.OpenMax>` and
-:class:`Mahalanobis  <pytorch_ood.detector.Mahalanobis>`,.
+:class:`Mahalanobis  <pytorch_ood.detector.Mahalanobis>`.
 
 
 
-.. csv-table:: Results
+.. csv-table:: Mean Performance over 5 OOD Datasets
    :file: _static/baseline_cifar10.csv
    :header-rows: 1
    :class: longtable

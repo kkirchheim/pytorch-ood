@@ -4,6 +4,8 @@
 import torch
 from torch import nn
 
+from pytorch_ood.model import ClassCenters
+
 from ..utils import apply_reduction, is_unknown
 from .center import CenterLoss
 from .crossentropy import CrossEntropyLoss
@@ -11,9 +13,25 @@ from .crossentropy import CrossEntropyLoss
 
 class MCHADLoss(nn.Module):
     """
-    From the Paper *Multi-Class Hypersphere Anomaly-Detection*.
+    Implements the MCHAD loss from the Paper *Multi-Class Hypersphere Anomaly-Detection*.
 
-    The loss can be used supervised as well as unsupervised.
+    The Loss places a center :math:`\\mu_y` for each class :math:`y` in the output space of the model and
+    has three components:
+
+    .. math::
+        \\mathcal{L}_{\\Lambda}(x,y) = \\max 0, \\lbrace \\Vert \\mu_y - f(x)_y \\Vert^2_2 - r^2 \\rbrace
+
+        \\mathcal{L}_{\\Delta}(x,y) = \\log(1 + \\sum_{i \\neq y} e^{\\Vert \\mu_y - f(x)_y \\Vert^2_2 -  \\Vert \\mu_y - f(x)_i \\Vert^2_2} )
+
+        \\mathcal{L}_{\\Theta}(x) = \\sum_i \\max \\lbrace 0, (r + m)^2 - \\Vert f(x) - \\mu_y \\Vert^2  \\rbrace
+
+
+    Intuitively, the first term forces the samples to cluster tightly in a sphere of radius :math:`r`
+    around the corresponding class centers.
+    The second term  ensures that the (learnable) class centers remain separable and do not collapse.
+    The third term makes sure that OOD samples have at least a distance :math:`m` to the surface of each hypersphere.
+
+    The loss can be used in a supervised, as well as in an unsupervised manner.
 
     :see Implementation: `GitLab <https://gitlab.com/kkirchheim/mchad>`__
     """
@@ -33,9 +51,9 @@ class MCHADLoss(nn.Module):
         :param n_dim: dimensionality of the output space :math:`D`
         :param radius: radius of the hyperspheres
         :param margin: margin around hyperspheres
-        :param weight_center: weight for the center loss term
-        :param weight_nll: weight for the maximum likelihood term
-        :param weight_oe: weight for the outlier exposure term
+        :param weight_center: weight :math:`\\lambda_{\\Lambda}` for the center loss term
+        :param weight_nll: weight  :math:`\\lambda_{\\Delta}` for the maximum likelihood term
+        :param weight_oe: weight  :math:`\\lambda_{\\Theta}` for the outlier exposure term
         """
         super(MCHADLoss, self).__init__()
 
@@ -49,7 +67,7 @@ class MCHADLoss(nn.Module):
         self.weight_oe = weight_oe
 
     @property
-    def centers(self):
+    def centers(self) -> ClassCenters:
         """
         Class centers :math:`\\mu_y`
         """
@@ -60,7 +78,7 @@ class MCHADLoss(nn.Module):
         Calculates the distance of each embedding to each center.
 
         :param z: embeddings of shape :math:`B \\times D`.
-        :returns: distance metrics of shape :math:`B \\times C`.
+        :returns: distance matrix of shape :math:`B \\times C`.
         """
         return self.center_loss.calculate_distances(z)
 

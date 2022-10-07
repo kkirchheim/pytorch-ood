@@ -12,21 +12,9 @@ points from known known classes.)
 Therefore, all of these loss functions expect that the target labels are strictly :math:`\\geq 0`.
 
 
-Confidence Loss
-----------------------------------------------
-..  autoclass:: pytorch_ood.loss.ConfidenceLoss
-    :members:
-
-
 Deep SVDD Loss
 ----------------------------------------------
 .. autoclass:: pytorch_ood.loss.DeepSVDDLoss
-    :members:
-
-
-MCHAD Loss
-----------------------------------------------
-..  autoclass:: pytorch_ood.loss.MCHADLoss
     :members:
 
 
@@ -54,6 +42,13 @@ Cross-Entropy Loss
     :members:
 
 
+Confidence Loss
+----------------------------------------------
+..  autoclass:: pytorch_ood.loss.ConfidenceLoss
+    :members:
+
+
+
 Supervised
 =====================
 Supervised Losses make use from example Out-of-Distribution samples (or samples from known unknown classes).
@@ -63,6 +58,12 @@ Thus, these losses can handle samples with target values :math:`< 0`.
 Outlier Exposure Loss
 ----------------------------------------------
 .. autoclass:: pytorch_ood.loss.OutlierExposureLoss
+    :members:
+
+
+MCHAD Loss
+----------------------------------------------
+..  autoclass:: pytorch_ood.loss.MCHADLoss
     :members:
 
 

@@ -44,10 +44,10 @@ class Mahalanobis(Detector):
         """
         super(Mahalanobis, self).__init__()
         self.model = model
-        self.mu = None
-        self.cov = None
-        self.precision = None
-        self.eps = eps
+        self.mu: torch.Tensor = None  #: Centers
+        self.cov: torch.Tensor = None  #: Covariance Matrix
+        self.precision: torch.Tensor = None  #: Precision Matrix
+        self.eps: float = eps  #: epsilon
         self.norm_std = norm_std
 
     @staticmethod
@@ -124,7 +124,9 @@ class Mahalanobis(Detector):
         return self
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
-        """ """
+        """
+        :param x: input tensor
+        """
         if self.mu is None:
             raise RequiresFittingException
 
