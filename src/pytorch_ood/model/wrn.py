@@ -224,5 +224,17 @@ class WideResNet(nn.Module):
             "cifar10-pt": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/pretrained/cifar10_wrn_pretrained_epoch_99.pt",
         }
 
-        state_dict = load_state_dict_from_url(url=urls[name], map_location="cpu")
+        state_dict = load_state_dict_from_url(
+            url=urls[name], map_location="cpu", file_name=f"wrn-{name}.pt"
+        )
+
+        # get last key in dict
+        key = list(state_dict.keys())[-1]
+        if key.startswith("module."):
+            new_state_dict = {}
+            for name, param in state_dict.items():
+                new_state_dict[name.replace("module.", "")] = param
+
+            state_dict = new_state_dict
+
         self.load_state_dict(state_dict)
