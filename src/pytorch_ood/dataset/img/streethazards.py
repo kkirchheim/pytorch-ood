@@ -1,14 +1,9 @@
 import logging
 import os
-from os.path import join
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
-import numpy as np
-import scipy.io
 from PIL import Image
-from torchvision.datasets import VisionDataset
-from torchvision.datasets.folder import default_loader
-from torchvision.datasets.utils import check_integrity, download_and_extract_archive
+from torchvision.transforms.functional import to_tensor
 
 from .base import ImageDatasetBase
 
@@ -26,8 +21,8 @@ class StreetHazards(ImageDatasetBase):
         :alt: Street Hazards Dataset Example
         :align: center
 
-    :see Paper: https://arxiv.org/pdf/1911.11132.pdf
-    :see Website: https://github.com/hendrycks/anomaly-seg
+    :see Paper: `ArXiv <https://arxiv.org/.*>`__
+    :see Website: `GitHub <https://github.com/hendrycks/anomaly-seg>`__
     """
 
     base_folder = "dtd/images/"
@@ -55,58 +50,31 @@ class StreetHazards(ImageDatasetBase):
         "cd2d1a8649848afb85b5059d227d2090",
     ]
 
-    def getListOfFiles(self, dirName):
-        # create a list of file and sub directories
-        # names in the given directory
-        listOfFile = os.listdir(dirName)
-        allFiles = list()
-        # Iterate over all the entries
-        for entry in listOfFile:
-            # Create full path
-            fullPath = os.path.join(dirName, entry)
-            # If entry is a directory then get the list of files in this directory
-            if os.path.isdir(fullPath):
-                allFiles = allFiles + self.getListOfFiles(fullPath)
-            else:
-                allFiles.append(fullPath)
-
-        return allFiles
-
     def __init__(
         self,
         root: str,
         subset: str,
         transform: Optional[Callable] = None,
-        target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
         """
         :param root: root path for dataset
-        :param subset: one of 'train', 'test', 'validation'
-        :param transform: transformations to apply to images
-        :param target_transform: transformations to apply to target
+        :param subset: one of ``train``, ``test``, ``validation``
+        :param transform: transformations to apply to images and masks, will get tuple as argument
         :param download: if dataset should be downloaded automatically
         """
-        super(StreetHazards, self).__init__(
-            root, transform=transform, target_transform=target_transform
-        )
-        if download:
-            self.download()
-
-        if subset not in self.subset_list:
-            raise ValueError(f"Invalid subset: {subset}")
+        super(ImageDatasetBase, self).__init__(root, transform=transform)
 
         self.base_folder = self.base_folder_list[self.subset_list.index(subset)]
         self.url = self.url_list[self.subset_list.index(subset)]
         self.filename = self.filename_list[self.subset_list.index(subset)]
         self.tgz_md5 = self.tgz_md5_list[self.subset_list.index(subset)]
 
-        super(ImageDatasetBase, self).__init__(
-            root, transform=transform, target_transform=target_transform
-        )
-
         if download:
             self.download()
+
+        if subset not in self.subset_list:
+            raise ValueError(f"Invalid subset: {subset}")
 
         if not self._check_integrity():
             raise RuntimeError(
@@ -115,27 +83,38 @@ class StreetHazards(ImageDatasetBase):
 
         self.basedir = os.path.join(self.root, self.base_folder)
 
-        self.files = self.getListOfFiles(self.basedir)
+        self.files = self._get_file_list(self.basedir)
+
+    def _get_file_list(self, root) -> List[str]:
+        """
+        Recursively get all files in the root directory
+
+        :param root: root directory for the search
+        """
+        current_files = [os.path.join(root, entry) for entry in os.listdir(root)]
+        all_files = list()
+
+        for path in current_files:
+            if os.path.isdir(path):
+                all_files += self._get_file_list(path)
+            else:
+                all_files.append(path)
+
+        return all_files
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
-        Args:
-            index (int): Index
-
-        Returns:
-            tuple: (image, target) where target is annotation of the image.
+        :param index: index
+        :returns: (image, target) where target is the annotation of the image.
         """
 
         file, target = self.files[index], self.files[index].replace("images", "annotations")
 
         # to return a PIL Image
         img = Image.open(file)
-        target = Image.open(target)
+        target = to_tensor(Image.open(target)).squeeze(0)
 
         if self.transform is not None:
-            img = self.transform(img)
-
-        if self.target_transform is not None:
-            target = self.target_transform(target)
+            img, target = self.transform(img, target)
 
         return img, target

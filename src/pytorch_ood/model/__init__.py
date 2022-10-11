@@ -20,8 +20,8 @@ Vision Transformer
     :members:
 
 
-NLP
-===============
+Natural Language Processing
+==============================
 
 GRU Classifier
 ---------------------
@@ -41,6 +41,6 @@ Class Centers
 
 """
 from .centers import ClassCenters
-from .gruclf import GRUClassifier
+from .gru import GRUClassifier
 from .vit import VisionTransformer
 from .wrn import WideResNet

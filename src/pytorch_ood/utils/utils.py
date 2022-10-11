@@ -4,6 +4,7 @@
 import logging
 import math
 from collections import defaultdict
+from typing import Union
 
 import numpy as np
 import torch
@@ -26,7 +27,7 @@ def calc_openness(n_train, n_test, n_target):
 
     :return: Openness of the problem
 
-    :see Paper: https://ieeexplore.ieee.org/abstract/document/6365193
+    :see Paper: `IEEE Explore <https://ieeexplore.ieee.org/abstract/document/6365193>`__
     """
     frac = 2 * n_train / (n_test + n_target)
     return 1 - math.sqrt(frac)
@@ -35,35 +36,35 @@ def calc_openness(n_train, n_test, n_target):
 #######################################
 # Helpers for labels
 #######################################
-def is_known(labels) -> bool:
+def is_known(labels) -> Union[bool, torch.Tensor]:
     """
     :returns: True, if label :math:`>= 0`
     """
     return labels >= 0
 
 
-def is_unknown(labels) -> bool:
+def is_unknown(labels) -> Union[bool, torch.Tensor]:
     """
     :returns: True, if label :math:`< 0`
     """
     return labels < 0
 
 
-def contains_known_and_unknown(labels) -> bool:
+def contains_known_and_unknown(labels) -> Union[bool, torch.Tensor]:
     """
     :return: true if the labels contain *IN* and *OOD* classes
     """
     return contains_known(labels) and contains_unknown(labels)
 
 
-def contains_known(labels) -> bool:
+def contains_known(labels) -> Union[bool, torch.Tensor]:
     """
     :return: true if the labels contains any *IN* labels
     """
     return is_known(labels).any()
 
 
-def contains_unknown(labels) -> bool:
+def contains_unknown(labels) -> Union[bool, torch.Tensor]:
     """
     :return: true if the labels contains any *OOD* labels
     """
@@ -204,7 +205,7 @@ class TensorBuffer(object):
         return self
 
 
-def apply_reduction(tensor: torch.Tensor, reduction: str):
+def apply_reduction(tensor: torch.Tensor, reduction: str) -> torch.Tensor:
     """
     Apply specific reduction to a tensor
     """

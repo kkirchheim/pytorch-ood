@@ -10,27 +10,33 @@ from ..utils import is_known, is_unknown
 
 class EnergyRegularizedLoss(nn.Module):
     """
-    Adds a regularization term to the cross-entropy that aims to increase the energy gap between IN and OOD samples.
+    Augments the cross-entropy by  a regularization term
+    that aims to increase the energy gap between IN and OOD samples.
+    This term is defined as
 
-    The regularization term is defined as:
+    .. math::
+       \\mathcal{L}(x, y) = \\alpha
+       \\Biggl \\lbrace
+       {
+      \\max(0, E(x)  - m_{in})^2 \\quad \\quad  \\quad  \\quad \\quad \\quad   \\text{if } y \\geq 0
+        \\atop
+       \\max(0, m_{out} - E(x))^2 \\quad \\quad \\quad  \\quad \\quad  \\text{ otherwise }
+       }
 
-    .. math:: L_{\\text{energy}} = \\mathbb{E}_{(x_{in},y) \\sim \\mathcal{D}_{in}^{train}}\\max(0, E(x_{in})) - m_{in})^2 +
-        \\mathbb{E}_{x_{out} \\sim \\mathcal{D}_{out}^{train}}\\max(0, m_{out} - E(x_{out}))^2
 
-    where :math:`E(x)` is the energy of :math:`x`.
+    where :math:`E(x) = - \\log(\\sum_y e^{f(x)_y} )` is the energy of :math:`x`.
 
     :see Paper:
-        https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf
+        `NeurIPS <https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf>`__
 
-    :see Implementation:
-        https://github.com/wetliu/energy_ood
+    :see Implementation: `GitHub <https://github.com/wetliu/energy_ood>`__
     """
 
     def __init__(self, alpha=1, margin_in=1, margin_out=1):
         """
         :param alpha: weighting parameter
-        :param margin_in:
-        :param margin_out:
+        :param margin_in:  margin energy :math:`m_{in}` for IN data
+        :param margin_out: margin energy :math:`m_{out}` for OOD data
         """
         super(EnergyRegularizedLoss, self).__init__()
         self.m_in = margin_in
@@ -38,13 +44,15 @@ class EnergyRegularizedLoss(nn.Module):
         self.nll = CrossEntropyLoss()
         self.alpha = alpha
 
-    def forward(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """
+        Calculates weighted sum of cross-entropy and the energy regularization term.
+
         :param logits: logits
-        :param y: labels
+        :param targets: labels
         """
-        regularization = self._regularization(logits, y)
-        nll = self.nll(logits, y)
+        regularization = self._regularization(logits, targets)
+        nll = self.nll(logits, targets)
         return nll + self.alpha * regularization
 
     def _regularization(self, logits, y):

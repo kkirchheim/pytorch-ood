@@ -9,7 +9,7 @@ import torch
 from ..api import Detector
 
 
-class MaxLogit(Detector, torch.nn.Module):
+class MaxLogit(Detector):
     """
     Implements the Max Logit Method for OOD Detection as proposed in
     *Scaling Out-of-Distribution Detection for Real-World Settings*.
@@ -19,7 +19,7 @@ class MaxLogit(Detector, torch.nn.Module):
     where :math:`f_y(x)` indicates the :math:`y^{th}` logits value predicted by :math:`f`.
 
     :see Paper:
-        https://arxiv.org/abs/1911.11132
+       `ArXiv <https://.org/abs/1911.11132>`__
     """
 
     def __init__(self, model: torch.nn.Module):
@@ -29,19 +29,13 @@ class MaxLogit(Detector, torch.nn.Module):
         super(MaxLogit, self).__init__()
         self.model = model
 
-    def forward(self, x) -> torch.Tensor:
-        """
-        :param x: model inputs
-        """
-        return self.predict(self.model(x))
-
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         :param x:  model inputs
         """
-        return self.forward(self.model(x))
+        return self.score(self.model(x))
 
-    def fit(self):
+    def fit(self, *args, **kwargs):
         """
         Not required
         """

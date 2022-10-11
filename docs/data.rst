@@ -30,6 +30,16 @@ Audio
 =====================================================
 
 .. automodule:: pytorch_ood.dataset.audio
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Video
+=====================================================
+
+.. note :: There are, to our knowledge, no video datasets for OOD detection available.
+            If you are aware of any, please, let us know.
 
 
 Open Set Simulations

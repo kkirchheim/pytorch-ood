@@ -162,8 +162,8 @@ class VisionTransformer(nn.Module):
 
     .. warning :: PyTorch adds vision transformers in v. 0.12.
 
-    :see Implementation: https://github.com/asyml/vision-transformer-pytorch/
-    :see Paper: https://arxiv.org/pdf/2010.11929.pdf
+    :see Implementation: `GitHub <https://github.com/asyml/vision-transformer-pytorch/>`_
+    :see Paper: `ArXiv <https://arxiv.org/pdf/2010.11929.pdf>`_
     """
 
     def __init__(
@@ -180,28 +180,28 @@ class VisionTransformer(nn.Module):
         pretrained=None,
     ):
         """
-        :param image_size:
-        :param patch_size:
-        :param emb_dim:
-        :param mlp_dim:
-        :param num_heads:
-        :param num_layers:
-        :param num_classes:
-        :param attn_dropout_rate:
-        :param dropout_rate:
-        :param pretrained: Idenfitier for pre-trained weights to load
+        :param image_size: Size of the input image
+        :param patch_size: Size of the patches to operate on
+        :param emb_dim: Embedding dimension
+        :param mlp_dim: Hidden dimension of MLPs in the MLP Block
+        :param num_heads: Number of attention heads
+        :param num_layers: Number of EncoderBlocks
+        :param num_classes: Number of output classes
+        :param attn_dropout_rate: Dropout rate in attention
+        :param dropout_rate: Dropout rate
+        :param pretrained: Pre-trained weights to load
 
 
-        .. list-table:: Available models
+        .. list-table:: Available Pre-Trained weights
            :widths: 25 75
            :header-rows: 1
 
            * - Key
              - Description
            * - b16-cifar10-tune
-             - b16 trained on ImageNet 21k and fine tuned on the CIFAR10
+             - b16 pre-trained on ImageNet 21k and fine tuned on the CIFAR10
            * - b16-cifar100-tune
-             - b16 trained on ImageNet 21k and fine tuned on the CIFAR100
+             - b16 pre-trained on ImageNet 21k and fine tuned on the CIFAR100
 
         """
         super(VisionTransformer, self).__init__()
@@ -226,11 +226,13 @@ class VisionTransformer(nn.Module):
         # classifier
         self.classifier = nn.Linear(emb_dim, num_classes)
 
+        if pretrained:
+            self._load_weights(pretrained)
+
     def forward(self, x) -> torch.Tensor:
         """
-
-        :param x: input
-        :return: output tensor
+        :param x: input tensor
+        :return: class logits :math:`B \\times C`
         """
         emb = self.embedding(x)  # (n, c, gh, gw)
         emb = emb.permute(0, 2, 3, 1)  # (n, gh, hw, c)
@@ -245,11 +247,9 @@ class VisionTransformer(nn.Module):
         logits = self.classifier(feat[:, 0])
         return logits
 
-    def _from_pretrained(self, name, **kwargs):
+    def _load_weights(self, name, **kwargs):
         """
         Vision Transformer with different pre-trained weights.
-
-
 
         .. note :: The original authors of the OODFormer did not provide weights for their final models. The
             weights for CIFAR-10 and CIFAR-100 here are provided by the maintainers of pytorch-ood.

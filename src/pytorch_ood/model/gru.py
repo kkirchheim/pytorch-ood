@@ -7,9 +7,11 @@ from torch import nn
 
 class GRUClassifier(nn.Module):
     """
-    Classifier with token embedding and multi layer gated recurrent unit (GRU) for text classification.
+    Classifier with token embedding and multi layer gated recurrent unit (GRU) for text classification,
+    as used in the OOD/Error Detection baseline paper.
 
-    :see Implementation: https://github.com/hendrycks/outlier-exposure/blob/master/NLP_classification/train.py
+    :see Implementation:
+        `GitHub <https://github.com/hendrycks/outlier-exposure/blob/master/NLP_classification/train.py>`__
     """
 
     def __init__(self, num_classes, n_vocab, embedding_dim=50):
@@ -17,6 +19,7 @@ class GRUClassifier(nn.Module):
 
         :param num_classes: number of classes in the dataset
         :param n_vocab: size of the vocabulary, i.e. number of distinct tokens
+        :param embedding_dim: embedding size
         """
         super().__init__()
         self.embedding = nn.Embedding(n_vocab, embedding_dim, padding_idx=1)
@@ -33,7 +36,6 @@ class GRUClassifier(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         :param: lists of list of tokens
-
         :returns: logits
         """
         embeds = self.embedding(x)

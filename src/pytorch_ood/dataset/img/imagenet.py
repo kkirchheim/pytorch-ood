@@ -17,8 +17,8 @@ class ImageNetA(DatasetFolder):
     From the paper *Natural Adversarial Examples*.
     Contains images that classifiers should be able to classify
 
-    :see Website: https://github.com/hendrycks/natural-adv-examples
-    :see Paper: https://arxiv.org/abs/1907.07174
+    :see Website: `GitHub <https://github.com/hendrycks/natural-adv-examples>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/1907.07174>`__
     """
 
     base_folder = "imagenet-a"
@@ -68,8 +68,8 @@ class ImageNetO(ImageNetA):
     From the paper *Natural Adversarial Examples*.
     Contains anomalies of unforeseen classes
 
-    :see Website: https://github.com/hendrycks/natural-adv-examples
-    :see Paper: https://arxiv.org/abs/1907.07174
+    :see Website: `GitHub <https://github.com/hendrycks/natural-adv-examples>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/1907.07174>`__
     """
 
     base_folder = "imagenet-o"
@@ -86,8 +86,8 @@ class ImageNetR(ImageNetA):
     plush objects, sculptures, sketches, tattoos, toys, and video game renditions of ImageNet classes.
 
 
-    :see Website: https://github.com/hendrycks/imagenet-r
-    :see Paper: https://arxiv.org/abs/2006.16241
+    :see Website: `GitHub <https://github.com/hendrycks/imagenet-r>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/2006.16241>`__
     """
 
     base_folder = "imagenet-r"
@@ -98,20 +98,18 @@ class ImageNetR(ImageNetA):
 
 class ImageNetC(ImageDatasetBase):
     """
-     Corrupted version of the ImageNet from the paper
-     *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations.*
-
-    From the paper *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations*
-
-    :see Paper: https://arxiv.org/abs/1903.12261v1
+    Corrupted version of the ImageNet from the paper *Benchmarking Neural
+    Network Robustness to Common Corruptions and Perturbations.*
 
     It contains several subsets:
 
-    - **noise** (21GB): gaussian_noise, shot_noise, and impulse_noise.
-    - **blur** (7GB): defocus_blur, glass_blur, motion_blur, and zoom_blur.
-    - **weather** (12GB):  frost, snow, fog, and brightness.
-    - **digital** (7GB): contrast, elastic_transform, pixelate, and jpeg_compression.
-    - **extra** (15GB): speckle_noise, spatter, gaussian_blur, and saturate.
+    * ``noise`` (21GB): gaussian_noise, shot_noise, and impulse_noise.
+    * ``blur`` (7GB): defocus_blur, glass_blur, motion_blur, and zoom_blur.
+    * ``weather`` (12GB):  frost, snow, fog, and brightness.
+    * ``digital`` (7GB): contrast, elastic_transform, pixelate, and jpeg_compression.
+    * ``extra`` (15GB): speckle_noise, spatter, gaussian_blur, and saturate.
+
+    :see Paper: `ArXiv <https://arxiv.org/abs/1903.12261v1>`__
     """
 
     subset_list = ["blur", "digital", "extra", "noise", "weather"]

@@ -69,27 +69,29 @@ The package can be installed via PyPI:
 **Optional Dependencies**
 
 
-* ``libmr``  for the OpenMax Detector [#OpenMax]_ . The library is currently broken and unlikely to be repaired. You will have to install ``cython`` and ``libmr`` afterwards manually.
+* ``libmr``  for the OpenMax Detector [#OpenMax]_ . The library is currently broken and unlikely to be repaired.
+  You will have to install ``cython`` and ``libmr`` afterwards manually.
+* ``scikit`` for ViM
 
 
 Quick Start
 ^^^^^^^^^^^
-Load model pre-trained on CIFAR-10 with Energy Regularization [#EnergyBasedOOD]_, and predict on some dataset ``data_loader`` using
+Load model pre-trained on CIFAR-10 with the Energy-Bounded Learning Loss [#EnergyBasedOOD]_, and predict on some dataset ``data_loader`` using
 Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the common OOD detection metrics:
 
 .. code-block:: python
 
     from pytorch_ood.model import WideResNet
-    from pytorch_ood.detector import NegativeEnergy
+    from pytorch_ood.detector import EnergyBased
     from pytorch_ood.utils import OODMetrics
 
-    # create Neural Network
+    # Create Neural Network
     model = WideResNet(pretrained="er-cifar10-tune").eval().cuda()
 
-    # create detector
-    detector = NegativeEnergy(model)
+    # Create detector
+    detector = EnergyBased(model)
 
-    # evaluate
+    # Evaluate
     metrics = OODMetrics()
 
     for x, y in data_loader:
@@ -98,6 +100,7 @@ Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the c
     print(metrics.compute())
 
 
+You can find more examples in the `documentation <https://pytorch-ood.readthedocs.io/en/latest/examples.html>`_.
 
 
 Implemented
@@ -105,24 +108,29 @@ Implemented
 
 **Detectors** :
 
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Detector                   | Description                                                                                    | Year | Ref                |
-+============================+================================================================================================+======+====================+
-| OpenMax                    | Implementation of the OpenMax Layer as proposed in the paper *Towards Open Set Deep Networks*. | 2016 | [#OpenMax]_        |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Softmax Thresholding       | Implements the Softmax Baseline for OOD and Error detection.                                   | 2017 | [#Softmax]_        |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| ODIN                       | ODIN is a preprocessing method for inputs that aims to increase the discriminability of        | 2018 | [#ODIN]_           |
-|                            | the softmax outputs for In- and Out-of-Distribution data.                                      |      |                    |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Mahalanobis                | Implements the Mahalanobis Method.                                                             | 2018 | [#Mahalanobis]_    |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Energy-Based OOD Detection | Implements the Energy Score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Monte Carlo Dropout        | Implements Monte Carlo Dropout.                                                                | 2022 | [#MonteCarloDrop]_ |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| MaxLogit                   | Implements the MaxLogit method.                                                                | 2022 | [#StreeHaz]_       |
-+----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Detector                    | Description                                                                                    | Year | Ref                |
++=============================+================================================================================================+======+====================+
+| OpenMax                     | Implementation of the OpenMax Layer as proposed in the paper *Towards Open Set Deep Networks*. | 2016 | [#OpenMax]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Monte Carlo Dropout         | Implements Monte Carlo Dropout.                                                                | 2016 | [#MonteCarloDrop]_ |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Maximum Softmax Probability | Implements the Softmax Baseline for OOD and Error detection.                                   | 2017 | [#Softmax]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| ODIN                        | ODIN is a preprocessing method for inputs that aims to increase the discriminability of        | 2018 | [#ODIN]_           |
+|                             | the softmax outputs for In- and Out-of-Distribution data.                                      |      |                    |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Mahalanobis                 | Implements the Mahalanobis Method.                                                             | 2018 | [#Mahalanobis]_    |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Energy-Based OOD Detection  | Implements the Energy Score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Maximum Logit               | Implements the MaxLogit method.                                                                | 2022 | [#StreeHaz]_       |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| KL-Matching                 | Implements the KL-Matching method for Multi-Class classification.                              | 2022 | [#StreeHaz]_       |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| ViM                         | Implements Virtual Logit Matching                               .                              | 2022 | [#ViM]_            |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+
 
 **Objective Functions**:
 
@@ -148,6 +156,8 @@ Implemented
 | II Loss                    | Implementation of II Loss function from *Learning a neural network-based representation for      | 2022 | [#IILoss]_         |
 |                            | open set recognition*.                                                                           |      |                    |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| MCHAD Loss                 | Implementation of the MCHAD Loss friom the paper *Multi Class Hypersphere Anomaly Detection*.    | 2022 | [#MCHAD]_          |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 
 **Image Datasets**:
 
@@ -162,6 +172,8 @@ Implemented
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | TinyImages300k        | A cleaned version of the TinyImages Dataset with 300.000 images, often used as auxiliary OOD training data      | 2018 | [#OE]_        |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| MNIST-C               | Corrupted version of the MNIST                                                                                  | 2019 | [#MnistC]_    |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | CIFAR10-C             | Corrupted version of the CIFAR 10                                                                               | 2019 | [#Cifar10]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | CIFAR100-C            | Corrupted version of the CIFAR 100                                                                              | 2019 | [#Cifar10]_   |
@@ -170,9 +182,7 @@ Implemented
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | ImageNet - A, O, R    | Different Outlier Variants for the ImageNet                                                                     | 2019 | [#ImageNets]_ |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| MNIST-C               | MNIST-C is MNIST with corruptions for benchmarking OOD methods                                                  | 2019 | [#MnistC]_    |
-+-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| MVTech-AD             | MCTech-AD                                                                                                       | 2021 | [#MVTech]_    |
+| MVTech-AD             | MVTech-AD                                                                                                       | 2021 | [#MVTech]_    |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | StreetHazards         | Anomaly Segmentation Dataset                                                                                    | 2022 | [#StreeHaz]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
@@ -262,4 +272,8 @@ Reference
 
 .. [#WikiText2] Merity, S., Xiong, C., Bradbury, J., & Socher, R. (2016). Pointer sentinel mixture models. `ArXiv <https://arxiv.org/abs/1609.07843>`_
 
-.. [#MVTech] P. Bergmann, K. Batzner, et al. (2021) The MVTec Anomaly Detection Dataset: A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection. IJCV.
+.. [#MVTech] Bergmann, P., Batzner, K., et al. (2021) The MVTec Anomaly Detection Dataset: A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection. IJCV.
+
+.. [#MCHAD] Kirchheim, K., Filax, M., Ortmeier, F. (2022) Multi Class Hypersphere Anomaly Detection. ICPR
+
+.. [#ViM] Wang, H., Li, Z., Feng, L., Zhang, W. (2022) ViM: Out-Of-Distribution with Virtual-logit Matching. CVPR

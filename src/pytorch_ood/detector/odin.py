@@ -1,9 +1,11 @@
 """
 
 ..  autoclass:: pytorch_ood.detector.ODIN
-
+    :members:
 
 """
+from typing import Callable, List
+
 import torch
 from torch.autograd import Variable
 from torch.nn import functional as F
@@ -43,7 +45,8 @@ def odin_preprocessing(
     :param temperature: temperature :math:`T` to use for scaling
     :param norm_std: standard deviations used during preprocessing
 
-    :see Implementation: https://github.com/facebookresearch/odin/
+    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    :see Implementation: `GitHub <https://github.com/facebookresearch/odin/>`__
 
     """
     with torch.enable_grad():
@@ -79,12 +82,21 @@ class ODIN(Detector):
     .. math::
         \\hat{x} = x - \\epsilon \\ \\text{sign}(\\nabla_x \\mathcal{L}(f(x) / T, \\hat{y}))
 
+    where :math:`\\hat{y}` is the predicted class of the network.
 
-    :see Implementation: https://github.com/facebookresearch/odin/
+    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    :see Implementation: `GitHub <https://github.com/facebookresearch/odin/>`__
 
     """
 
-    def __init__(self, model, criterion=F.nll_loss, eps=0.05, temperature=1000, norm_std=None):
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        criterion: Callable = F.nll_loss,
+        eps=0.05,
+        temperature: float = 1000,
+        norm_std: List = None,
+    ):
         """
 
         :param model: module to backpropagate through
@@ -100,15 +112,12 @@ class ODIN(Detector):
         self.temperature = temperature
         self.norm_std = norm_std
 
-    def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        return self.predict(x)
-
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         Calculates softmax outlier scores on ODIN pre-processed inputs.
 
-        :param x:
-        :return:
+        :param x: input tensor
+        :return: outlier scores for each sample
         """
         x_hat = odin_preprocessing(
             model=self.model,
@@ -121,7 +130,7 @@ class ODIN(Detector):
         # returning negative values so higher values indicate greater outlierness
         return -self.model(x_hat).softmax(dim=1).max(dim=1).values
 
-    def fit(self):
+    def fit(self, *args, **kwargs):
         """
         Not required
         """

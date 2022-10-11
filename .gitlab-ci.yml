@@ -27,6 +27,7 @@ before_script:
   - pip install .
   - pip install cython
   - pip install libmr # has to be installed after cython
+  - pip install sklearn # for ViM
   - pip freeze # print package versions for debugging
 
 test:
@@ -61,12 +62,29 @@ build:
     paths:
       - dist/*.whl
 
-deploy:
+deploy-master:
   stage: deploy
   script:
     - pip install wheel twine
     - python3 setup.py bdist_wheel
     - TWINE_PASSWORD=${TWINE_PASSWORD} TWINE_USERNAME=${TWINE_USER} python -m twine upload dist/*
+  allow_failure: true # gitlab does not allow to deploy the same package twice
+  artifacts:
+    paths:
+      - dist/*.whl
+  when: manual
+  only:
+    - master
+
+deploy-inter:
+  stage: deploy
+  script:
+    - pip install wheel twine
+    # modify-version
+    - sed -i "s/__version__ .*/__version__ = \"${CI_JOB_ID}\"/" src/pytorch_ood/__init__.py
+    - rm -r dist/*
+    - python3 setup.py bdist_wheel
+    - TWINE_PASSWORD=${TWINE_PASSWORD_TEST} TWINE_USERNAME=${TWINE_USER} python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
   allow_failure: true # gitlab does not allow to deploy the same package twice
   artifacts:
     paths:

@@ -30,6 +30,11 @@ LSUNResize
 ..  autoclass:: pytorch_ood.dataset.img.LSUNResize
     :members:
 
+TinyImageNet
+``````````````````````````
+..  autoclass:: pytorch_ood.dataset.img.TinyImageNet
+    :members:
+
 80M TinyImages
 ``````````````````````````
 ..  autoclass:: pytorch_ood.dataset.img.TinyImages
@@ -76,6 +81,12 @@ ImageNet-C
 ..  autoclass:: pytorch_ood.dataset.img.ImageNetC
     :members:
 
+Chars74k
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.Chars74k
+    :members:
+
+
 Gaussian Noise
 ``````````````````````````
 ..  autoclass:: pytorch_ood.dataset.img.GaussianNoise
@@ -86,7 +97,6 @@ Uniform Noise
 ..  autoclass:: pytorch_ood.dataset.img.UniformNoise
     :members:
 
-
 Segmentation
 ----------------------
 
@@ -95,14 +105,13 @@ StreetHazards
 ..  autoclass:: pytorch_ood.dataset.img.StreetHazards
     :members:
 
-
 MVTech-AD
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.MVTechAD
     :members:
 
-
 """
+from .chars74k import Chars74k
 from .cifar import CIFAR10C, CIFAR100C
 from .fooling import FoolingImages
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
@@ -112,5 +121,5 @@ from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
 from .streethazards import StreetHazards
 from .textures import Textures
-from .tinyimagenet import TinyImagenet
+from .tinyimagenet import TinyImageNet
 from .tinyimages import TinyImages, TinyImages300k

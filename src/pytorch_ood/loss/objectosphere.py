@@ -27,7 +27,7 @@ class ObjectosphereLoss(nn.Module):
 
 
     :see Paper:
-        https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf
+        `NeurIPS <https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf>`__
 
     """
 
@@ -48,7 +48,7 @@ class ObjectosphereLoss(nn.Module):
 
         :param logits: class logits
         :param target: target labels
-        :return:
+        :return: the loss
         """
         entropic_loss = self.entropic(logits, target)
         losses = torch.zeros(size=(logits.shape[0],)).to(logits.device)
@@ -84,8 +84,7 @@ class ObjectosphereLoss(nn.Module):
 
 class EntropicOpenSetLoss(nn.Module):
     """
-    From *Reducing Network Agnostophobia*.
-
+    From the paper *Reducing Network Agnostophobia*.
 
     .. math::
        \\mathcal{L}(x, y)
@@ -101,13 +100,13 @@ class EntropicOpenSetLoss(nn.Module):
 
 
     :see Paper:
-        https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf
+        `NeurIPS <https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf>`__
 
     """
 
-    def __init__(self, reduction: Optional[str] = None):
+    def __init__(self, reduction: Optional[str] = "mean"):
         """
-        :param reduction: reduction method.
+        :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
         """
         super(EntropicOpenSetLoss, self).__init__()
         self.reduction = reduction
@@ -117,7 +116,7 @@ class EntropicOpenSetLoss(nn.Module):
 
         :param logits: class logits
         :param target: target labels
-        :return:
+        :return: the loss
         """
         losses = torch.zeros(size=(logits.shape[0],)).to(logits.device)
 

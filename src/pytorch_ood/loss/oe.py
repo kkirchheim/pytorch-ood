@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import torch
 from torch import nn
@@ -11,19 +12,31 @@ log = logging.getLogger(__name__)
 
 class OutlierExposureLoss(nn.Module):
     """
-    From the paper *Deep Anomaly Detection With Outlier Exposure*.
+    Loss from the paper *Deep Anomaly Detection With Outlier Exposure*.
+    While the formulation in the original paper is very general, this module implements the exact loss that
+    was used in the corresponding experiments.
 
-    In addition to the cross-entropy for known samples, includes an :math:`\\mathcal{L}_{OE}` term
+    In addition to the cross-entropy for known samples, outlier exposure includes a term
     for OOD samples that is defined as:
 
-    .. math::  \\mathcal{L}_{OE}(x_{out}) =  - \\alpha (\\sum_y f(x_{out})_y - \\log(\\sum_y e^{f(x_{out})_y}))
+    .. math::
+        \\mathcal{L}(x, y)
+       =
+       \\Biggl \\lbrace
+       {
+       -\\log \\sigma_y(f(x)) \\quad \\quad \\quad  \\quad   \\quad \\quad \\quad  \\quad  \\quad \\quad  \\text{if } y \\geq 0
+        \\atop
+       \\alpha (\\sum_{c=1}^C f(x)_c - \\log(\\sum_{c=1}^C  e^{f(x)_c})) \\quad \\text{ otherwise }
+       }
 
-    which is the cross-entropy between the predicted distribution and the uniform distribution.
 
-    :see Paper: https://arxiv.org/pdf/1812.04606v1.pdf
+    where :math:`C` is the number of classes.
+
+    :see Paper: `ArXiv <https://arxiv.org/pdf/1812.04606v1.pdf>`__
+    :see Implementation: `GitHub <https://github.com/hendrycks/outlier-exposure>`__
     """
 
-    def __init__(self, alpha=0.5, reduction="mean"):
+    def __init__(self, alpha=0.5, reduction: Optional[str] = "mean"):
         """
 
         :param alpha: weighting coefficient
@@ -41,14 +54,12 @@ class OutlierExposureLoss(nn.Module):
         :return: loss
         """
         loss_oe = torch.zeros(logits.shape[0], device=logits.device)
-        loss_ce = cross_entropy(logits, target, reduction="none")
+        loss_ce = cross_entropy(logits, target, reduction=None)
 
         if contains_unknown(target):
             unknown = is_unknown(target)
             loss_oe[unknown] = -(
                 logits[unknown].mean(dim=1) - torch.logsumexp(logits[unknown], dim=1)
             )
-        else:
-            loss_oe = 0
 
         return apply_reduction(loss_ce + self.alpha * loss_oe, reduction=self.reduction)

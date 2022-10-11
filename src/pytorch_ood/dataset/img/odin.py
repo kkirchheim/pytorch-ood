@@ -1,7 +1,7 @@
 """
 Datasets used for testing in ODIN
 
-First used in: https://github.com/facebookresearch/odin
+First used in:the `ODIN paper<https://github.com/facebookresearch/odin>`__.
 """
 import logging
 import os
@@ -18,7 +18,7 @@ class TinyImageNetCrop(VisionDataset):
     """
     Cropped version of the TinyImageNet, often used as OOD data.
 
-    :see Paper: https://arxiv.org/abs/1706.02690
+    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
     """
 
     base_folder = "Imagenet/test/"
@@ -80,15 +80,12 @@ class TinyImageNetCrop(VisionDataset):
 
         download_and_extract_archive(self.url, self.root, filename=self.filename, md5=self.tgz_md5)
 
-    def extra_repr(self) -> str:
-        return "Split: {}".format("Train" if self.train is True else "Test")
-
 
 class TinyImageNetResize(TinyImageNetCrop):
     """
     Resized version of the TinyImageNet, often used as OOD data.
 
-    :see Paper: https://arxiv.org/abs/1706.02690
+    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
     """
 
     base_folder = "Imagenet_resize/Imagenet_resize/"
@@ -115,7 +112,7 @@ class LSUNCrop(TinyImageNetCrop):
     """
     Cropped version of the LSUN, often used as OOD data.
 
-    :see Paper: https://arxiv.org/abs/1706.02690
+    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
     """
 
     base_folder = "LSUN/test/"
@@ -142,7 +139,7 @@ class LSUNResize(TinyImageNetCrop):
     """
     Resized version of the LSUN dataset, often used as OOD data.
 
-    :see Paper: https://arxiv.org/abs/1706.02690
+    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
     """
 
     base_folder = "LSUN_resize/LSUN_resize"

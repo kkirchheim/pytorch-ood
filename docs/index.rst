@@ -9,11 +9,11 @@ This documentation provides a user guide with general information on the
 assumptions, nomenclature, as well as a structured API documentation to aid implementation.
 
 .. warning:: The library is still work in progress. We do not claim that the provided implementations do not
-    contain bugs. In fact, they probably do. However, we count on the self correcting nature of open
+    contain bugs. However, we count on the self correcting nature of open
     source software, which, as we hope, will ultimately lead to bug-free implementations.
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 3
    :caption: User Guide
 
    info
@@ -21,7 +21,7 @@ assumptions, nomenclature, as well as a structured API documentation to aid impl
 
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 3
    :caption: Library
 
    detector

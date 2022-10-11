@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.detector import NegativeEnergy
+from src.pytorch_ood.detector import EnergyBased
 from tests.helpers import ClassificationModel, SegmentationModel
 
 
@@ -13,10 +13,10 @@ class TestEnergy(unittest.TestCase):
 
     def test_classification_input(self):
         model = ClassificationModel()
-        energy = NegativeEnergy(model)
+        detector = EnergyBased(model)
 
         x = torch.zeros(size=(128, 10))
-        y = energy.predict(x)
+        y = detector(x)
         self.assertIsNotNone(y)
         self.assertEqual(y.shape, (128,))
 
@@ -25,9 +25,9 @@ class TestEnergy(unittest.TestCase):
         Tests input map for semantic segmentation
         """
         model = SegmentationModel()
-        energy = NegativeEnergy(model)
+        detector = EnergyBased(model)
 
         x = torch.zeros(size=(128, 3, 32, 32))
-        y = energy.predict(x)
+        y = detector(x)
         self.assertIsNotNone(y)
         self.assertEqual(y.shape, (128, 32, 32))

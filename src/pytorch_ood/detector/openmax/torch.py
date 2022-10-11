@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import torch
 from torch.utils.data import DataLoader
@@ -20,11 +21,11 @@ class OpenMax(Detector):
 
     We use the activation of the *unknown* class as outlier score.
 
-    .. warning:: This methods requires `libmr` to be installed, which is broken at the moment. You can only use it
-       by installing `cython` and `numpy`, and `libmr` manually afterwards.
+    .. warning:: This methods requires ``libmr`` to be installed, which is broken at the moment. You can only use it
+       by installing ``cython`` and ``numpy``, and ``libmr`` manually afterwards.
 
-    :see Paper: https://arxiv.org/abs/1511.06233
-    :see Implementation: https://github.com/abhijitbendale/OSDN
+    :see Paper: `ArXiv <https://arxiv.org/abs/1511.06233>`__
+    :see Implementation: `GitHub <https://github.com/abhijitbendale/OSDN>`__
     """
 
     def __init__(
@@ -46,29 +47,27 @@ class OpenMax(Detector):
 
         self.openmax = NPOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
 
-    def fit(self, data_loader: DataLoader):
+    def fit(self, data_loader: DataLoader, device: Optional[str] = "cpu"):
         """
         Determines parameters of the weibull functions for each class.
 
         :param data_loader: Data to use for fitting
+        :param device: Device used for calculations
         """
-        z, y = OpenMax._extract(data_loader, self.model, device="cpu")
+        z, y = OpenMax._extract(data_loader, self.model, device=device)
         self.openmax.fit(z.numpy(), y.numpy())
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         :param x: class logits
         """
-        if len(x.shape) != 2:
-            raise ValueError()
-
         with torch.no_grad():
-            z = self.model(x).numpy()
+            z = self.model(x).cpu().numpy()
 
         return torch.tensor(self.openmax.predict(z)[:, 0])
 
     @staticmethod
-    def _extract(data_loader, model: torch.nn.Module, device: str):
+    def _extract(data_loader, model: torch.nn.Module, device):
         """
         Extract embeddings from model
 
@@ -76,16 +75,13 @@ class OpenMax(Detector):
 
         :param data_loader:
         :param model:
-        :param device:
         :return:
         """
-        # TODO: add option to buffer to GPU
         buffer = TensorBuffer()
         log.debug("Extracting features")
         for batch in data_loader:
             x, y = batch
             x = x.to(device)
-            y = y.to(device)
             known = is_known(y)
             z = model(x[known])
             # flatten

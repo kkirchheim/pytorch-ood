@@ -15,8 +15,20 @@ class MNISTC(ImageDatasetBase):
     """
     MNIST-C is MNIST with corruptions for benchmarking OOD methods.
 
-    :see Paper: https://arxiv.org/pdf/1906.02337.pdf
-    :see Download: https://zenodo.org/record/3239543
+    Split can be one of ``train``, ``test`` and ``leftovers``.
+
+    Subsets can be one of ``all``, ``brightness``, ``canny_edges``, ``dotted_line``, ``fog``, ``glass_blur``, ``identity``, ``impulse_noise``,
+    ``motion_blur``, ``rotate``, ``scale``, ``shear``, ``shot_noise``,
+    ``spatter``, ``stripe``, ``translate`` and ``zigzag``.
+
+    :see Paper: `ArXiv <https://arxiv.org/pdf/1906.02337.pdf>`__
+    :see Download: `Zenodo <https://zenodo.org/record/3239543>`__
+
+    .. image:: https://media.arxiv-vanity.com/render-output/4755208/corruption_examples.png
+        :width: 800px
+        :alt: MNIST-C Dataset examples
+        :align: center
+
     """
 
     splits = ["train", "test", "leftovers"]

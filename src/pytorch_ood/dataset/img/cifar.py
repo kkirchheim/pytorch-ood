@@ -12,11 +12,11 @@ log = logging.getLogger(__name__)
 
 class CIFAR10C(ImageDatasetBase):
     """
-    Corrupted version of the CIFAR10 from the paper
-     *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations.*
+    Corrupted version of the CIFAR10 from the paper *Benchmarking Neural
+    Network Robustness to Common Corruptions and Perturbations.*
 
-    :see Website: https://zenodo.org/record/2535967
-    :see Paper: https://arxiv.org/abs/1903.12261
+    :see Website: `Zenodo <https://zenodo.org/record/2535967>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/1903.12261>`__
     """
 
     subsets = [
@@ -95,11 +95,11 @@ class CIFAR10C(ImageDatasetBase):
 
 class CIFAR100C(ImageDatasetBase):
     """
-    Corrupted version of the CIFAR100 from the paper
-     *Benchmarking Neural Network Robustness to Common Corruptions and Perturbations.*
+    Corrupted version of the CIFAR100 from the paper *Benchmarking Neural Network
+    Robustness to Common Corruptions and Perturbations.*
 
-    :see Website: https://zenodo.org/record/3555552
-    :see Paper: https://arxiv.org/abs/1903.12261
+    :see Website: `Zenodo <https://zenodo.org/record/3555552>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/1903.12261>`__
     """
 
     base_folder = "CIFAR-100-C/"

@@ -21,20 +21,28 @@ class MCD(Detector):
 
     The outlier score is calculated as
 
-    .. math:: - \\max \\frac{1}{N} \\sum_i^{N} f(x)
+    .. math:: - \\max_y \\frac{1}{N} \\sum_i^{N} \\sigma_y(f(x))
 
-    :see Paper: http://proceedings.mlr.press/v48/gal16.pdf
+    where :math:`\\sigma` is the softmax function.
 
-    .. warning:: This implementations puts the model in evaluation mode (except for variants of the BatchNorm Layers).
+    :see Paper: `Link <http://proceedings.mlr.press/v48/gal16.pdf>`__
+
+    .. warning:: This implementations puts the model into evaluation mode (except for variants of the BatchNorm Layers).
         This could also affect other modules and is currently a workaround.
+
+
+    .. note :: The device of the given input will be used for calculations.
+
     """
 
-    def __init__(self, model: nn.Module):
+    def __init__(self, model: nn.Module, samples: int = 30):
         """
 
         :param model: the module to use for the forward pass
+        :param samples: number of iterations
         """
         self.model = model
+        self.n_samples = samples
 
     def fit(self, data_loader):
         """
@@ -43,14 +51,14 @@ class MCD(Detector):
         pass
 
     @staticmethod
-    def run(model, x: torch.Tensor, n: int) -> torch.Tensor:
+    def run(model, x: torch.Tensor, samples: int) -> torch.Tensor:
         """
         Assumes that the model outputs logits
 
         :param model: neural network
         :param x: input
-        :param n: number of rounds
-        :return:
+        :param samples: number of rounds
+        :return: averaged output of the model
         """
         mode_switch = False
 
@@ -71,12 +79,12 @@ class MCD(Detector):
 
         results = None
         with torch.no_grad():
-            for i in range(n):
+            for i in range(samples):
                 output = model(x).softmax(dim=1)
                 if results is None:
                     results = torch.zeros(size=output.shape).to(dev)
                 results += output
-        results /= n
+        results /= samples
 
         if mode_switch:
             log.debug("Putting model into eval mode ... ")
@@ -84,10 +92,9 @@ class MCD(Detector):
 
         return results
 
-    def predict(self, x: torch.Tensor, n=30) -> torch.Tensor:
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         :param x: input
-        :param n: number of Monte Carlo Samples
-        :return: averaged output of the model
+        :return: maximum average normalized class score of the model
         """
-        return -MCD.run(self.model, x, n).max(dim=1).values
+        return -MCD.run(self.model, x, self.n_samples).max(dim=1).values
