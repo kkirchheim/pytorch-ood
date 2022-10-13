@@ -14,8 +14,8 @@ class IILoss(nn.Module):
     II Loss function from *Learning a neural network based representation for open set recognition*.
 
 
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1802.04365.pdf>`_
-    :see Implementation: `GitHub <https://github.com/shrtCKT/opennet>`_
+    :see Paper: `ArXiv <https://arxiv.org/pdf/1802.04365.pdf>`__
+    :see Implementation: `GitHub <https://github.com/shrtCKT/opennet>`__
 
     .. note::
         * The device of the given embedding will be used as device for all calculations.

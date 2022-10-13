@@ -18,7 +18,7 @@ class MVTechAD(ImageDatasetBase):
     MVTec AD is a dataset for benchmarking anomaly detection methods with a focus on industrial inspection.
     The dataset provides segmentation masks for anomalies.
 
-    .. image:: https://www.mvtec.com/fileadmin/_processed_/1/e/csm_dataset_overview_large_27c30783e5.png
+    .. image:: https://www.mvtec.com/fileadmin/Redaktion/mvtec.com/company/research/datasets/dataset_overview_large.png
         :width: 800px
         :alt: MVTech Anomaly Detection Dataset
         :align: center
@@ -26,9 +26,11 @@ class MVTechAD(ImageDatasetBase):
     :see Paper: https://link.springer.com/content/pdf/10.1007/s11263-020-01400-4.pdf
     :see Download: https://www.mvtec.com/company/research/datasets/mvtec-ad/
 
+    Split must be one of ``train`` or ``test``.
 
-    Subset classes can be one of  ["bottle", "cable", "capsule", "carpet", "grid", "hazelnut", "leather", "metal_nut",
-    "pill", "screw", "tile", "toothbrush", "transistor", "wood", "zipper"]
+    Subset classes can be one of ``bottle``, ``cable``, ``capsule``, ``carpet``,
+    ``grid``, ``hazelnut``, ``leather``, ``metal_nut``, ``pill``, ``screw``, ``tile``,
+    ``toothbrush``, ``transistor``, ``wood`` and ``zipper``.
     """
 
     splits = ["train", "test"]
@@ -152,16 +154,12 @@ class MVTechAD(ImageDatasetBase):
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
-        Args:
-            index (int): Index
-
-        Returns:
-            tuple: (image, target) where target is index of the target class.
+        :param index: index
+        :returns: (image, target) where target is the segmentation mask
         """
         img_path = self.files[index]
         target = self.labels[index]
 
-        # doing this so that it is consistent with all other datasets to return a PIL Image
         img = Image.open(img_path)
 
         if target is None:

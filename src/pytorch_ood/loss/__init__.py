@@ -12,30 +12,29 @@ points from known known classes.)
 Therefore, all of these loss functions expect that the target labels are strictly :math:`\\geq 0`.
 
 
-Confidence Loss
+Deep SVDD Loss
 ----------------------------------------------
-..  autoclass:: pytorch_ood.loss.ConfidenceLoss
+.. autoclass:: pytorch_ood.loss.DeepSVDDLoss
     :members:
+
 
 Class Anchor Clustering Loss
 ----------------------------------------------
 ..  autoclass:: pytorch_ood.loss.CACLoss
     :members:
 
+
 II Loss
 ----------------------------------------------
 ..  autoclass:: pytorch_ood.loss.IILoss
     :members:
+
 
 Center Loss
 ----------------------------------------------
 .. autoclass:: pytorch_ood.loss.CenterLoss
     :members:
 
-Deep SVDD
-----------------------------------------------
-.. autoclass:: pytorch_ood.loss.DeepSVDDLoss
-    :members:
 
 Cross-Entropy Loss
 ----------------------------------------------
@@ -43,10 +42,18 @@ Cross-Entropy Loss
     :members:
 
 
+Confidence Loss
+----------------------------------------------
+..  autoclass:: pytorch_ood.loss.ConfidenceLoss
+    :members:
+
+
+
 Supervised
 =====================
 Supervised Losses make use from example Out-of-Distribution samples (or samples from known unknown classes).
 Thus, these losses can handle samples with target values :math:`< 0`.
+
 
 Outlier Exposure Loss
 ----------------------------------------------
@@ -54,10 +61,17 @@ Outlier Exposure Loss
     :members:
 
 
+MCHAD Loss
+----------------------------------------------
+..  autoclass:: pytorch_ood.loss.MCHADLoss
+    :members:
+
+
 Entropic Open-Set Loss
 ----------------------------------------------
 .. autoclass:: pytorch_ood.loss.EntropicOpenSetLoss
     :members:
+
 
 Objectosphere Loss
 ----------------------------------------------
@@ -84,6 +98,7 @@ from .conf import ConfidenceLoss
 from .crossentropy import CrossEntropyLoss
 from .energy import EnergyRegularizedLoss
 from .ii import IILoss
+from .mchad import MCHADLoss
 from .objectosphere import EntropicOpenSetLoss, ObjectosphereLoss
 from .oe import OutlierExposureLoss
 

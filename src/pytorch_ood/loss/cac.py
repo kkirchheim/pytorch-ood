@@ -18,7 +18,7 @@ from ..utils import is_known
 
 class CACLoss(nn.Module):
     """
-    Class Anchor Clustering Loss from
+    Class Anchor Clustering Loss from the paper
     *Class Anchor Clustering: a Distance-based Loss for Training Open Set Classifiers*
 
     :see Paper: `WACV 2022 <https://arxiv.org/abs/2004.02434>`_
@@ -26,30 +26,40 @@ class CACLoss(nn.Module):
 
     """
 
-    def __init__(self, n_classes, magnitude=1, alpha=1):
+    def __init__(self, n_classes: int, magnitude: float = 1.0, alpha: float = 1.0):
         """
         Centers are initialized as unit vectors, scaled by the magnitude.
 
-        :param n_classes: number of classes
+        :param n_classes: number of classes :math:`C`
         :param magnitude: magnitude of class anchors
-        :param alpha: weight for anchor term
+        :param alpha: :math:`\\alpha` weight for anchor term
         """
         super(CACLoss, self).__init__()
         self.n_classes = n_classes
         self.magnitude = magnitude
         self.alpha = alpha
         # anchor points are fixed, so they do not require gradients
-        self.centers = ClassCenters(n_classes, n_classes, fixed=True)
+        self._centers = ClassCenters(n_classes, n_classes, fixed=True)
         self._init_centers()
 
-    def _init_centers(self):
-        """Init anchors with 1, scale by"""
-        nn.init.eye_(self.centers.params)
-        self.centers.params.data *= self.magnitude  # scale with magnitude
-
-    def forward(self, distances, target) -> torch.Tensor:
+    @property
+    def centers(self) -> ClassCenters:
         """
-        :param distances: distance matrix
+        The class centers :math:`\\mu_y`.
+        """
+        return self._centers
+
+    def _init_centers(self) -> None:
+        """Init anchors with 1, scale by magnitude"""
+        nn.init.eye_(self.centers.params)
+        self.centers.params.data *= self.magnitude
+
+    def forward(self, distances: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """
+        Calculates the CAC loss, based on the given distanc matrix and target labels.
+        OOD inputs will be ignored.
+
+        :param distances:  matrix of distances of each point to each center with shape :math:`B \\times C`.
         :param target: labels for samples
         """
         assert distances.shape[1] == self.n_classes
@@ -58,7 +68,6 @@ class CACLoss(nn.Module):
         if known.any():
             target_known = target[known]
             d_known = distances[known]
-            len_dist_known = len(d_known)
 
             d_true = torch.gather(input=d_known, dim=1, index=target_known.view(-1, 1)).view(-1)
             anchor_loss = d_true.mean()
@@ -79,21 +88,21 @@ class CACLoss(nn.Module):
 
         return self.alpha * anchor_loss + tuplet_loss
 
-    def calculate_distances(self, x):
+    def calculate_distances(self, x: torch.Tensor) -> torch.Tensor:
         """
 
         :param x: input points
-        :return: distances to class centers
+        :return: matrix with squared distances from each point to each center with shape :math:`B \\times C`.
         """
         return self.centers(x).pow(2)
 
     @staticmethod
-    def score(distance):
+    def score(distance: torch.Tensor) -> torch.Tensor:
         """
-        Rejection score used by the CAC loss
+        Rejection score proposed in the paper.
 
         :param distance: distance of instances to class centers
-        :return:
+        :return: outlier scores
         """
         scores = distance * (1 - F.softmin(distance, dim=1))
-        return scores.max(dim=1).values
+        return -scores.max(dim=1).values

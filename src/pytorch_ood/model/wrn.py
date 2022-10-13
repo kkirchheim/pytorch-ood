@@ -90,8 +90,8 @@ class WideResNet(nn.Module):
     """
     Resnet Architecture with large number of channels and variable depth.
 
-    :see Paper: https://arxiv.org/pdf/1605.07146v4.pdf
-    :see Implementation: https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py
+    :see Paper: `ArXiv <https://arxiv.org/pdf/1605.07146v4.pdf>`__
+    :see Implementation: `GitHub <https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py>`__
     """
 
     def __init__(
@@ -184,12 +184,17 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return self.fc(out)
 
-    def intermediate_forward(self, x):
+    def features(self, x):
+        """
+        Extracts features before the last fully connected layer.
+        """
         out = self.conv1(x)
         out = self.block1(out)
         out = self.block2(out)
         out = self.block3(out)
         out = self.relu(self.bn1(out))
+        out = F.avg_pool2d(out, 8)
+        out = out.view(-1, self.nChannels)
         return out
 
     def feature_list(self, x):
@@ -219,5 +224,17 @@ class WideResNet(nn.Module):
             "cifar10-pt": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/pretrained/cifar10_wrn_pretrained_epoch_99.pt",
         }
 
-        state_dict = load_state_dict_from_url(url=urls[name], map_location="cpu")
+        state_dict = load_state_dict_from_url(
+            url=urls[name], map_location="cpu", file_name=f"wrn-{name}.pt"
+        )
+
+        # get last key in dict
+        key = list(state_dict.keys())[-1]
+        if key.startswith("module."):
+            new_state_dict = {}
+            for name, param in state_dict.items():
+                new_state_dict[name.replace("module.", "")] = param
+
+            state_dict = new_state_dict
+
         self.load_state_dict(state_dict)

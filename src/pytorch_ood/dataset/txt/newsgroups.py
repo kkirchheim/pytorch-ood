@@ -17,7 +17,9 @@ log = logging.getLogger(__name__)
 
 class NewsGroup20(Dataset):
     """
-    Stemmed etc. version of the newsgroup dataset, as used by Hendrycks et al.
+    Stemmed etc. version of the 20 NewsGroups dataset, as used by Hendrycks et al.
+
+    Contains 20 classes.
     """
 
     train_url = (

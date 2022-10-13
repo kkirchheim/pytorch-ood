@@ -13,28 +13,34 @@ class CenterLoss(nn.Module):
     """
     Generalized version of the Center Loss from the Paper
     *A Discriminative Feature Learning Approach for Deep Face Recognition*.
-    For each class, this loss models a center :math:`\\mu_y` in the output space and draws representations of samples
+    For each class, this loss places a center :math:`\\mu_y` in the output space and draws representations of samples
     to their corresponding class centers, up to a radius :math:`r`.
 
     Calculates
 
     .. math::
-        \\mathcal{L}(x,y) = \\max \\lbrace  d(x,\\mu_y) - r , 0 \\rbrace
+        \\mathcal{L}(x,y) = \\max \\lbrace  d(f(x),\\mu_y) - r , 0 \\rbrace
 
-    where :math:`d` is some distance. More generally, it can be any dissimilarity function, like the squared distance,
-    which is not a proper distance metric.
+    where :math:`d` is some measure of dissimilarity, like the squared distance.
 
-    Equipped with radius :math:`r=0` and the squared euclidean distance as :math:`d(\\cdot,\\cdot)`, this is also referred to as the
-    *soft-margin loss* in some publications.
+    With radius :math:`r=0` and the squared euclidean distance as :math:`d(\\cdot,\\cdot)`, this is equivalent to
+    the original center loss, which is also referred to as the *soft-margin loss* in some publications.
 
-    :see Implementation: `GitHub <https://github.com/KaiyangZhou/pytorch-center-loss>`_
-    :see Paper: `ECCV 2016 <https://ydwen.github.io/papers/WenECCV16.pdf>`_
+    :see Implementation: `GitHub <https://github.com/KaiyangZhou/pytorch-center-loss>`__
+    :see Paper: `ECCV 2016 <https://ydwen.github.io/papers/WenECCV16.pdf>`__
     """
 
-    def __init__(self, n_classes, n_dim, magnitude=1, radius=0.0, fixed=False):
+    def __init__(
+        self,
+        n_classes: int,
+        n_dim: int,
+        magnitude: float = 1.0,
+        radius: float = 0.0,
+        fixed: bool = False,
+    ):
         """
-        :param n_classes: number of classes.
-        :param n_dim: dimensionality of center space
+        :param n_classes: number of classes :math:`C`
+        :param n_dim: dimensionality of center space :math:`D`
         :param magnitude:  scale :math:`\\lambda` used for center initialization
         :param radius: radius :math:`r` of spheres, lower bound for distance from center that is penalized
         :param fixed: false if centers should be learnable
@@ -71,18 +77,22 @@ class CenterLoss(nn.Module):
             if self.magnitude != 1:
                 log.warning("Not applying magnitude parameter.")
 
-    def calculate_distances(self, x) -> torch.Tensor:
+    def calculate_distances(self, z: torch.Tensor) -> torch.Tensor:
         """
+        Calculates the distance :math:`d` of each embedding to each center.
 
-        :param x: input points
-        :return: distances to all class centers
+        :param z: embeddings of shape :math:`B \\times D`.
+        :returns: distance metrics of shape :math:`B \\times C`.
         """
-        return self.centers(x)
+        return self.soft_margin_loss.calculate_distances(z)
 
-    def forward(self, distmat, target) -> torch.Tensor:
+    def forward(self, distmat: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
-        :param distmat: matrix of distances of samples to centers with shape (batch_size, n_centers).
+        Calculates the loss. Ignores OOD inputs.
+
+        :param distmat: matrix of distances of each point to each center with shape :math:`B \\times C`.
         :param target: ground truth labels with shape (batch_size).
+        :returns: the loss values
         """
         batch_size = distmat.size(0)
         known = is_known(target)

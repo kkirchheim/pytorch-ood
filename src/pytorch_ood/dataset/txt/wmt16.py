@@ -15,6 +15,8 @@ log = logging.getLogger(__name__)
 class WMT16Sentences(Dataset):
     """
     WMT16 sentences, as used by Hendrycks et al.
+
+    Usually used os OOD data, labels are -1 by default.
     """
 
     url = "https://raw.githubusercontent.com/hendrycks/outlier-exposure/master/NLP_classification/wmt16/wmt16_sentences"

@@ -26,14 +26,14 @@ class OutlierExposureLoss(nn.Module):
        {
        -\\log \\sigma_y(f(x)) \\quad \\quad \\quad  \\quad   \\quad \\quad \\quad  \\quad  \\quad \\quad  \\text{if } y \\geq 0
         \\atop
-       \\alpha (\\sum_{c=1}^C f(x_{out})_c - \\log(\\sum_{c=1}^C  e^{f(x_{out})_c})) \\quad \\text{ otherwise }
+       \\alpha (\\sum_{c=1}^C f(x)_c - \\log(\\sum_{c=1}^C  e^{f(x)_c})) \\quad \\text{ otherwise }
        }
 
 
     where :math:`C` is the number of classes.
 
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1812.04606v1.pdf>`_
-    :see Implementation: `GitHub <https://github.com/hendrycks/outlier-exposure>`_
+    :see Paper: `ArXiv <https://arxiv.org/pdf/1812.04606v1.pdf>`__
+    :see Implementation: `GitHub <https://github.com/hendrycks/outlier-exposure>`__
     """
 
     def __init__(self, alpha=0.5, reduction: Optional[str] = "mean"):

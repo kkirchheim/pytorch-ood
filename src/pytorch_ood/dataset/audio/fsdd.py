@@ -16,7 +16,7 @@ class FSDD(Dataset):
     Free Spoken Digit Dataset, a simple audio/speech dataset consisting of recordings of spoken
     digits in `wav` format at 8kHz.
 
-    :see Website: https://github.com/Jakobovski/free-spoken-digit-dataset
+    :see Website: `GitHub <https://github.com/Jakobovski/free-spoken-digit-dataset>`__
     """
 
     metadata = {

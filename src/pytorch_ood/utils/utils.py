@@ -27,7 +27,7 @@ def calc_openness(n_train, n_test, n_target):
 
     :return: Openness of the problem
 
-    :see Paper: https://ieeexplore.ieee.org/abstract/document/6365193
+    :see Paper: `IEEE Explore <https://ieeexplore.ieee.org/abstract/document/6365193>`__
     """
     frac = 2 * n_train / (n_test + n_target)
     return 1 - math.sqrt(frac)

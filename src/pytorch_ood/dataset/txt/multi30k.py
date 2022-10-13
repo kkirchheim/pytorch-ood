@@ -16,6 +16,8 @@ log = logging.getLogger(__name__)
 class Multi30k(Dataset):
     """
     Multi-30k dataset, as used by Hendrycks et al.
+
+    Usually used as OOD data, labels are -1 by default.
     """
 
     train_url = "https://github.com/hendrycks/outlier-exposure/raw/master/NLP_classification/multi30k/train.txt"

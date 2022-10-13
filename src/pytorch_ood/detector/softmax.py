@@ -45,7 +45,7 @@ class MaxSoftmax(Detector):
         """
         return self.score(self.model(x), t=1)
 
-    def fit(self):
+    def fit(self, *args, **kwargs):
         """
         Not required
 

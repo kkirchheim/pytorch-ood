@@ -3,7 +3,10 @@ Detectors
 ******************
 
 This package contains a collection of different Out-of-Distribution Detectors.
-All of them implement a common API which contains a ``predict`` and a ``fit`` method, where ``fit`` is optional.
+
+API
+------
+Each detector implements a common API which contains a ``predict`` and a ``fit`` method, where ``fit`` is optional.
 The objects ``__call__`` methods become an alias for the ``predict`` function, so you can use
 
 .. code:: python
@@ -48,11 +51,21 @@ Monte Carlo Dropout
 -------------------------------
 .. automodule:: pytorch_ood.detector.mcd
 
+Virtual Logit Matching
+-------------------------------
+.. automodule:: pytorch_ood.detector.vim
+
+KL-Matching
+-------------------------------
+.. automodule:: pytorch_ood.detector.klmatching
+
 """
 from .energy import EnergyBased
+from .klmatching import KLMatching
 from .mahalanobis import Mahalanobis
 from .maxlogit import MaxLogit
 from .mcd import MCD
 from .odin import ODIN
 from .openmax import OpenMax
 from .softmax import MaxSoftmax
+from .vim import ViM

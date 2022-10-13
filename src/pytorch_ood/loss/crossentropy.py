@@ -26,7 +26,7 @@ class CrossEntropyLoss(nn.Module):
 
     def __init__(self, reduction: Optional[str] = "mean"):
         """
-        :param reduction: reduction method to apply.
+        :param reduction: reduction method to apply. Can be one of ``mean``, ``sum`` or ``none``
         """
         super(CrossEntropyLoss, self).__init__()
         self.reduction = reduction

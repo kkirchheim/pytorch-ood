@@ -20,8 +20,8 @@ class Textures(VisionDataset):
         :alt: Textured Dataset
         :align: center
 
-    :see Paper: https://arxiv.org/abs/1311.3618v2
-    :see Website: https://www.robots.ox.ac.uk/~vgg/data/dtd/
+    :see Paper: `ArXiv <https://arxiv.org/abs/1311.3618v2>`__
+    :see Website: `Link <https://www.robots.ox.ac.uk/~vgg/data/dtd/>`__
     """
 
     base_folder = "dtd/images/"

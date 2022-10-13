@@ -81,6 +81,12 @@ ImageNet-C
 ..  autoclass:: pytorch_ood.dataset.img.ImageNetC
     :members:
 
+Chars74k
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.Chars74k
+    :members:
+
+
 Gaussian Noise
 ``````````````````````````
 ..  autoclass:: pytorch_ood.dataset.img.GaussianNoise
@@ -89,11 +95,6 @@ Gaussian Noise
 Uniform Noise
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.UniformNoise
-    :members:
-
-Chars74k
-`````````````
-..  autoclass:: pytorch_ood.dataset.img.chars74k
     :members:
 
 Segmentation

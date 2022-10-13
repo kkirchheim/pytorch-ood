@@ -26,7 +26,7 @@ class ClassCenters(nn.Module):
         """
         super(ClassCenters, self).__init__()
         # anchor points are fixed, so they do not require gradients
-        self._params = nn.Parameter(torch.zeros(size=(n_classes, n_features)))
+        self._params = nn.Parameter(torch.randn(size=(n_classes, n_features)))
 
         if fixed:
             self._params.requires_grad = False
