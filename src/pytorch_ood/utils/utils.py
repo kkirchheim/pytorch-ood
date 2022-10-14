@@ -140,6 +140,10 @@ class TensorBuffer(object):
         self._buffer = defaultdict(list)
         self.device = device
 
+    def empty(self) -> bool:
+        """ """
+        return len(self._buffer) == 0
+
     def append(self, key, value: torch.Tensor):
         """
         Appends a tensor to the buffer.

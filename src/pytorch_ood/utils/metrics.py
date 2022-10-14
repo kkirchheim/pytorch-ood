@@ -159,8 +159,10 @@ class OODMetrics(object):
         Calculate metrics
 
         :return: dictionary with different metrics
-        :raise: ValueError if data does not contain IN and OOD points
+        :raise: ValueError if data does not contain IN and OOD points or buffer is empty
         """
+        if self.buffer.empty():
+            raise ValueError("Must be given data to calculate metrics.")
 
         labels = self.buffer.get("labels")
         scores = self.buffer.get("scores")

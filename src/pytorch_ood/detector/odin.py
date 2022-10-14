@@ -4,6 +4,8 @@
     :members:
 
 """
+import logging
+import warnings
 from typing import Callable, List
 
 import torch
@@ -11,6 +13,8 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 
 from ..api import Detector
+
+log = logging.getLogger(__name__)
 
 
 def zero_grad(x):
@@ -49,25 +53,33 @@ def odin_preprocessing(
     :see Implementation: `GitHub <https://github.com/facebookresearch/odin/>`__
 
     """
-    with torch.enable_grad():
-        x = Variable(x, requires_grad=True)
-        logits = model(x) / temperature
-        if y is None:
-            y = logits.max(dim=1).indices
-        loss = criterion(logits, y)
-        loss.backward()
+    # does not work in inference mode, this sometimes collides with pytorch-lightning
+    if torch.is_inference_mode_enabled():
+        warnings.warn("ODIN not compatible with inference mode. Will be deactivated.")
 
-        gradient = torch.sign(x.grad.data)
+    with torch.inference_mode(False):
+        if torch.is_inference(x):
+            x = x.clone()
 
-        if norm_std:
-            for i, std in enumerate(norm_std):
-                gradient.index_copy_(
-                    1,
-                    torch.LongTensor([i]).to(gradient.device),
-                    gradient.index_select(1, torch.LongTensor([i]).to(gradient.device)) / std,
-                )
+        with torch.enable_grad():
+            x = Variable(x, requires_grad=True)
+            logits = model(x) / temperature
+            if y is None:
+                y = logits.max(dim=1).indices
+            loss = criterion(logits, y)
+            loss.backward()
 
-        x_hat = x - eps * gradient
+            gradient = torch.sign(x.grad.data)
+
+            if norm_std:
+                for i, std in enumerate(norm_std):
+                    gradient.index_copy_(
+                        1,
+                        torch.LongTensor([i]).to(gradient.device),
+                        gradient.index_select(1, torch.LongTensor([i]).to(gradient.device)) / std,
+                    )
+
+            x_hat = x - eps * gradient
 
     return x_hat
 
