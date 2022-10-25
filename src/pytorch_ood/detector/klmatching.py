@@ -55,8 +55,8 @@ class KLMatching(Detector):
                 known = is_known(y)
                 logits = self.model(x[known])
                 y_hat = logits.argmax(dim=1)
-                buffer.append("logits", logits[known])
-                buffer.append("label", y_hat[known])
+                buffer.append("logits", logits)
+                buffer.append("label", y_hat)
 
         probabilities = buffer.get("logits").softmax(dim=1)
         labels = buffer.get("label")
