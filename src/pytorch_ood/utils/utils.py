@@ -8,8 +8,50 @@ from typing import Union
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 log = logging.getLogger(__name__)
+
+
+def temperature_calibration(
+    logits: torch.Tensor,
+    labels: torch.Tensor,
+    lower: float = 0.2,
+    upper: float = 5.0,
+    eps: float = 0.0001,
+) -> float:
+    """
+    Implements confidence calibration from the paper
+    *On Calibration of Modern Neural Networks*.
+
+    Implementation uses binary search to find the optimal temperature value.
+
+    :see Paper: `PLMR <http://proceedings.mlr.press/v70/guo17a.html>`__
+    :see Implementation: `Here <https://github.com/andyzoujm/pixmix/blob/main/calibration_tools.py>`__
+
+    :param logits: the logits predicted by the model
+    :param labels: ground truth labels
+    :param lower: lower bound for the search
+    :param upper: upper bound for the search
+    :param eps: minimum change necessary to continue optimization
+    """
+    logits = torch.FloatTensor(logits)
+    labels = torch.LongTensor(labels)
+    t_guess = torch.FloatTensor([0.5 * (lower + upper)]).requires_grad_()
+
+    while upper - lower > eps:
+        if torch.autograd.grad(F.cross_entropy(logits / t_guess, labels), t_guess)[0] > 0:
+            upper = 0.5 * (lower + upper)
+        else:
+            lower = 0.5 * (lower + upper)
+        t_guess = t_guess * 0 + 0.5 * (lower + upper)
+
+    t = min(
+        [lower, 0.5 * (lower + upper), upper],
+        key=lambda x: float(F.cross_entropy(logits / x, labels)),
+    )
+
+    return t
 
 
 def calc_openness(n_train, n_test, n_target):

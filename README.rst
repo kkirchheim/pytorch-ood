@@ -1,6 +1,10 @@
 PyTorch Out-of-Distribution Detection
 =====================================
 
+.. image:: https://img.shields.io/badge/docs-online-blue
+   :target: https://pytorch-ood.readthedocs.io/en/latest/
+   :alt: Documentation
+
 .. image:: https://img.shields.io/pypi/v/pytorch-ood.svg?color=brightgreen
    :target: https://pypi.org/project/pytorch-ood/
    :alt: PyPI version
@@ -24,10 +28,6 @@ PyTorch Out-of-Distribution Detection
 .. image:: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/coverage.svg
    :target: https://gitlab.com/kkirchheim/pytorch-ood/badges/dev/coverage.svg
    :alt: Coverage
-
-.. image:: https://readthedocs.org/projects/pytorch-ood/badge/?version=latest
-   :target: https://pytorch-ood.readthedocs.io/en/latest/
-   :alt: Documentation Status
 
 -----
 
@@ -186,6 +186,9 @@ Implemented
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | StreetHazards         | Anomaly Segmentation Dataset                                                                                    | 2022 | [#StreeHaz]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| PixMix                | PixMix image augmentation method.                                                                               | 2022 | [#PixMix]_    |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+
 
 **Text Datasets**:
 
@@ -277,3 +280,5 @@ Reference
 .. [#MCHAD] Kirchheim, K., Filax, M., Ortmeier, F. (2022) Multi Class Hypersphere Anomaly Detection. ICPR
 
 .. [#ViM] Wang, H., Li, Z., Feng, L., Zhang, W. (2022) ViM: Out-Of-Distribution with Virtual-logit Matching. CVPR
+
+.. [#PixMix] Hendrycks, D, Zou, A,  et al. (2022) PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures. CVPR
