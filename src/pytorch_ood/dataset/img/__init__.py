@@ -87,6 +87,24 @@ Chars74k
     :members:
 
 
+PixMix
+``````````````````````````
+..  autoclass:: pytorch_ood.dataset.img.PixMixDataset
+    :members:
+
+
+Fractals
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.FractalDataset
+    :members:
+
+
+Layer Visualizations
+``````````````````````````
+..  autoclass:: pytorch_ood.dataset.img.LayerVisDataset
+    :members:
+
+
 Gaussian Noise
 ``````````````````````````
 ..  autoclass:: pytorch_ood.dataset.img.GaussianNoise
@@ -119,6 +137,7 @@ from .mnistc import MNISTC
 from .mvtech import MVTechAD
 from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
+from .pixmix import FractalDataset, LayerVisDataset, PixMixDataset
 from .streethazards import StreetHazards
 from .textures import Textures
 from .tinyimagenet import TinyImageNet

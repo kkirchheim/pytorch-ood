@@ -10,16 +10,22 @@ import torchmetrics
 from .utils import TensorBuffer, contains_known_and_unknown, is_unknown
 
 
-def calibration_error(confidence, correct, p="2", beta=100):
+def calibration_error(
+    confidence: torch.Tensor, correct: torch.Tensor, p: str = "2", beta: int = 100
+) -> float:
     """
     :see Implementation: `GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
 
     :param confidence: predicted confidence
     :param correct: ground truth
-    :param p: p for norm
+    :param p: p for norm. Can be one of ``1``, ``2``, or ``infty``
     :param beta: target bin size
-    :return:
+    :return: calculated calibration error
     """
+
+    confidence = confidence.numpy()
+    correct = correct.numpy()
+
     idxs = np.argsort(confidence)
     confidence = confidence[idxs]
     correct = correct[idxs]
@@ -48,21 +54,22 @@ def calibration_error(confidence, correct, p="2", beta=100):
     if p == "2":
         cerr = np.sqrt(cerr)
 
-    return cerr
+    return float(cerr)
 
 
-def aurra(confidence, correct):
+def aurra(confidence: torch.Tensor, correct: torch.Tensor) -> float:
     """
     :see Implementation: `GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
 
     :param confidence: predicted confidence values
-    :param correct: ground truth values
-    :return:
+    :param correct: ground truth
+
+    :return: score
     """
-    conf_ranks = np.argsort(confidence)[::-1]  # indices from greatest to least confidence
-    rra_curve = np.cumsum(np.asarray(correct)[conf_ranks])
+    conf_ranks = np.argsort(confidence.numpy())[::-1]  # indices from greatest to least confidence
+    rra_curve = np.cumsum(np.asarray(correct.numpy())[conf_ranks])
     rra_curve = rra_curve / np.arange(1, len(rra_curve) + 1)  # accuracy at each response rate
-    return np.mean(rra_curve)
+    return float(np.mean(rra_curve))
 
 
 def fpr_at_tpr(pred, target, k=0.95):

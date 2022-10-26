@@ -11,11 +11,12 @@ import tempfile
 import textwrap
 import time
 import warnings
+from os.path import join
+from urllib import parse as urllib_parse
 
 import requests
-import six
-import tqdm
-from six.moves import urllib_parse
+import torch
+from torch.hub import get_dir
 
 log = logging.getLogger(__name__)
 
@@ -207,7 +208,7 @@ def download(
             return
 
     if gdrive_file_id and is_gdrive_download_link:
-        content_disposition = six.moves.urllib_parse.unquote(res.headers["Content-Disposition"])
+        content_disposition = urllib_parse.unquote(res.headers["Content-Disposition"])
         m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
         filename_from_url = m.groups()[0]
     else:
@@ -216,7 +217,7 @@ def download(
     if output is None:
         output = filename_from_url
 
-    output_is_path = isinstance(output, six.string_types)
+    output_is_path = isinstance(output, str)
     if output_is_path and output.endswith(osp.sep):
         if not osp.exists(output):
             os.makedirs(output)
@@ -265,6 +266,8 @@ def download(
         if total is not None:
             total = int(total)
         if not hide_progress:
+            import tqdm
+
             pbar = tqdm.tqdm(total=total, unit="B", unit_scale=True)
         t_start = time.time()
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
@@ -287,3 +290,34 @@ def download(
     finally:
         sess.close()
     return output
+
+
+def load_state_dict_from_drive(id, file_name, model_dir=None, map_location=None, progress=True):
+    """Loads the Torch serialized object from the google drive.
+
+    Args:
+        id (string): google drive id of the object to download
+        file_name (string): name for the downloaded file. Filename from ``url`` will be used if not set.
+        model_dir (string, optional): directory in which to save the object
+        map_location (optional): a function or a dict specifying how to remap storage locations (see torch.load)
+        progress (bool, optional): whether or not to display a progress bar to stderr.
+            Default: True
+        check_hash(bool, optional): If True, the filename part of the URL should follow the naming convention
+            ``filename-<sha256>.ext`` where ``<sha256>`` is the first eight or more
+            digits of the SHA256 hash of the contents of the file. The hash is used to
+            ensure unique names and to verify the contents of the file.
+            Default: False
+
+     This function is adapted from the pytorch function with the same name.
+    """
+
+    if model_dir is None:
+        hub_dir = get_dir()
+        model_dir = os.path.join(hub_dir, "checkpoints")
+
+    os.makedirs(model_dir, exist_ok=True)
+
+    cache_file = join(model_dir, file_name)
+    download(id=id, output=cache_file, hide_progress=not progress, use_cookies=True)
+
+    return torch.load(cache_file, map_location=map_location)
