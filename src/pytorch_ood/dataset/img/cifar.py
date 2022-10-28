@@ -64,19 +64,17 @@ class CIFAR10C(ImageDatasetBase):
             self.data = np.concatenate(
                 [np.load(join(root, self.base_folder, f"{s}.npy")) for s in self.subsets]
             )
+            self.targets = np.concatenate(
+                [np.load(join(root, self.base_folder, "labels.npy")) for s in self.subsets]
+            )
         else:
             self.data = np.load(join(root, self.base_folder, f"{subset}.npy"))
+            self.targets = np.load(join(root, self.base_folder, "labels.npy"))
 
-        self.targets = np.load(join(root, self.base_folder, "labels.npy"))
+    def __len__(self):
+        return len(self.data)
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        """
-        Args:
-            index (int): Index
-
-        Returns:
-            tuple: (image, target) where target is index of the target class.
-        """
         img = self.data[index]
         target = self.targets[index]
 
@@ -93,7 +91,7 @@ class CIFAR10C(ImageDatasetBase):
         return img, target
 
 
-class CIFAR100C(ImageDatasetBase):
+class CIFAR100C(CIFAR10C):
     """
     Corrupted version of the CIFAR100 from the paper *Benchmarking Neural Network
     Robustness to Common Corruptions and Perturbations.*
