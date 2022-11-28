@@ -70,11 +70,10 @@ class RunningCenters(nn.Module):
     Estimates class centers from batches of data using a running mean estimator.
     """
 
-    def __init__(self, n_classes, n_embedding):
+    def __init__(self, n_classes: int, n_embedding: int):
         """
-
-        :param n_classes:
-        :param n_embedding:
+        :param n_classes: number of centers
+        :param n_embedding: dimensionality of embedding space
         """
         super(RunningCenters, self).__init__()
         self.num_classes = n_classes
@@ -86,7 +85,7 @@ class RunningCenters(nn.Module):
         num_batches_tracked = torch.empty(size=(1,), requires_grad=False).float()
         self.register_buffer("running_centers", running_centers)
         self.register_buffer("num_batches_tracked", num_batches_tracked)
-        self.reset_running_stats()
+        self.reset()
 
     @property
     def centers(self) -> torch.Tensor:
@@ -95,7 +94,7 @@ class RunningCenters(nn.Module):
         """
         return self.running_centers
 
-    def reset_running_stats(self) -> None:
+    def reset(self) -> None:
         """
         Resets the running stats of online class center estimates.
         """
@@ -131,19 +130,11 @@ class RunningCenters(nn.Module):
         self.num_batches_tracked += 1
         return mu
 
-    def calculate_distances(self, x: torch.Tensor) -> torch.Tensor:
-        """
-
-        :param x: input points
-        :return: distances to class centers
-        """
-        distances = utils.pairwise_distances(self.centers, x)
-        return distances
-
     def forward(self, x: torch.Tensor):
         """
         Calculates distances to centers
+
         :param x:
-        :return: distances to all centers
+        :return:  distance matrix
         """
-        return utils.pairwise_distances(x, self.centers)
+        return utils.pairwise_distances(self.centers, x)

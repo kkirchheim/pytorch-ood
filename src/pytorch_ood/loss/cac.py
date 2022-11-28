@@ -88,7 +88,7 @@ class CACLoss(nn.Module):
 
         return self.alpha * anchor_loss + tuplet_loss
 
-    def calculate_distances(self, x: torch.Tensor) -> torch.Tensor:
+    def distance(self, x: torch.Tensor) -> torch.Tensor:
         """
 
         :param x: input points

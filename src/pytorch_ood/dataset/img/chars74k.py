@@ -1,16 +1,32 @@
 import logging
 import os
-import string
+import tarfile
 from os.path import join
 from pathlib import Path
 from typing import Callable, Optional
 
+import numpy as np
 from PIL import Image
 from torchvision.datasets.utils import check_integrity, download_url
 
-from .base import ImageDatasetBase
+from pytorch_ood.dataset.img.base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
+
+
+def _get_file_list(dir_name):
+    file_list = os.listdir(dir_name)
+    all_files = list()
+    all_labels = list()
+
+    for entry in file_list:
+        full_path = os.path.join(dir_name, entry)
+        label = int(str(Path(full_path).name).split("Sample")[1]) - 1
+        dir_files = os.listdir(full_path)
+        for files in dir_files:
+            all_files.append(os.path.join(full_path, files))
+            all_labels.append(label)
+    return all_files, all_labels
 
 
 class Chars74k(ImageDatasetBase):
@@ -34,28 +50,6 @@ class Chars74k(ImageDatasetBase):
 
     tgz_dataset_md5 = "85d157e0c58f998e1cda8def62bcda0d"
     tgz_list_md5 = "7d7b8038b3c47bf2a1c5a80c1dd79a0d"
-
-    char_list = list(map(str, string.digits + string.ascii_uppercase + string.ascii_lowercase))
-
-    def _get_file_list(self, dirName):
-        listOfFile = os.listdir(dirName)
-        allFiles = list()
-        allLabels = list()
-
-        for entry in listOfFile:
-            fullPath = os.path.join(dirName, entry)
-            label = int(str(Path(fullPath).name).split("Sample")[1]) - 1
-            label = ord(self.char_list[label])
-            Files = os.listdir(fullPath)
-            for files in Files:
-                allFiles.append(os.path.join(fullPath, files))
-                allLabels.append(label)
-        return allFiles, allLabels
-
-    def _get_all_files(self, dirName):
-        files_set_1, labels_set_1 = self._get_file_list(join(dirName, "GoodImg", "Bmp"))
-
-        return files_set_1, labels_set_1
 
     def __init__(
         self,
@@ -86,13 +80,14 @@ class Chars74k(ImageDatasetBase):
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
+        self.class_mapping = {}
         self._load()
+        self._create_class_remapping()
 
     def _check_integrity(self) -> bool:
         return check_integrity(join(self.root, self.filename_dataset), self.tgz_dataset_md5)
 
     def _download(self):
-        import tarfile
 
         if self._check_integrity():
             return
@@ -105,21 +100,25 @@ class Chars74k(ImageDatasetBase):
             tar.extractall(path=self.root)
 
     def _load(self):
-        self.files, self.labels = self._get_all_files(join(self.root, "English", "Img"))
+        self.files, self.labels = _get_file_list(
+            join(self.root, "English", "Img", "GoodImg", "Bmp")
+        )
+
+    def _create_class_remapping(self):
+        """
+        For remapping labels into range 0, ..., n_classes - 1
+        """
+        labels = np.unique(np.array(self.labels))
+        self.class_mapping = {k: v for k, v in zip(labels, range(len(labels)))}
 
     def __len__(self):
         return len(self.files)
 
     def __getitem__(self, index):
-        """
-        Args:
-            index (int): Index
-
-        Returns:
-            tuple: (image, target) where target is ascii value of the image class.
-        """
         img_path = self.files[index]
         target = self.labels[index]
+
+        target = self.class_mapping[target]
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image

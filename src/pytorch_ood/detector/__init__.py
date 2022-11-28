@@ -65,7 +65,7 @@ from .klmatching import KLMatching
 from .mahalanobis import Mahalanobis
 from .maxlogit import MaxLogit
 from .mcd import MCD
-from .odin import ODIN
+from .odin import ODIN, odin_preprocessing
 from .openmax import OpenMax
 from .softmax import MaxSoftmax
 from .vim import ViM

@@ -19,7 +19,7 @@ class MCHADLoss(nn.Module):
     has three components:
 
     .. math::
-        \\mathcal{L}_{\\Lambda}(x,y) = \\max 0, \\lbrace \\Vert \\mu_y - f(x)_y \\Vert^2_2 - r^2 \\rbrace
+        \\mathcal{L}_{\\Lambda}(x,y) = \\max  \\lbrace 0, \\Vert \\mu_y - f(x)_y \\Vert^2_2 - r^2 \\rbrace
 
         \\mathcal{L}_{\\Delta}(x,y) = \\log(1 + \\sum_{i \\neq y} e^{\\Vert \\mu_y - f(x)_y \\Vert^2_2 -  \\Vert \\mu_y - f(x)_i \\Vert^2_2} )
 
@@ -58,9 +58,11 @@ class MCHADLoss(nn.Module):
         super(MCHADLoss, self).__init__()
 
         # loss function components: center loss, cross-entropy and regularization
-        self.center_loss = CenterLoss(n_classes=n_classes, n_dim=n_dim, radius=radius)
-        self.nll_loss = CrossEntropyLoss(reduction="mean")
-        self.regu_loss = CenterRegularizationLoss(margin=margin, reduction="sum")
+        self.center_loss: CenterLoss = CenterLoss(n_classes=n_classes, n_dim=n_dim, radius=radius)
+        self.nll_loss: CrossEntropyLoss = CrossEntropyLoss(reduction="mean")
+        self.regu_loss: CenterRegularizationLoss = CenterRegularizationLoss(
+            margin=margin, reduction="sum"
+        )
 
         self.weight_center = weight_center
         self.weight_nll = weight_nll
@@ -73,14 +75,14 @@ class MCHADLoss(nn.Module):
         """
         return self.center_loss.centers
 
-    def calculate_distances(self, z: torch.Tensor) -> torch.Tensor:
+    def distance(self, z: torch.Tensor) -> torch.Tensor:
         """
         Calculates the distance of each embedding to each center.
 
         :param z: embeddings of shape :math:`B \\times D`.
         :returns: distance matrix of shape :math:`B \\times C`.
         """
-        return self.center_loss.calculate_distances(z)
+        return self.centers(z)
 
     def forward(self, distmat: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
@@ -95,7 +97,7 @@ class MCHADLoss(nn.Module):
 
         loss = (
             self.weight_center * loss_center
-            + self.weight_ce * loss_nll
+            + self.weight_nll * loss_nll
             + self.weight_oe * loss_out
         )
 

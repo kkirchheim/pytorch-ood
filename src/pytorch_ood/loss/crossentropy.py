@@ -8,14 +8,13 @@ from ..utils import apply_reduction, is_known
 
 
 def cross_entropy(
-    x: torch.Tensor, targets: torch.Tensor, reduction: Optional[str] = "mean"
+    logits: torch.Tensor, targets: torch.Tensor, reduction: Optional[str] = "mean"
 ) -> torch.Tensor:
     """
-    Standard Cross-entropy, but ignores OOD inputs.
+    Standard cross-entropy, but ignores OOD inputs.
     """
-    # known = is_known(targets)
     masked_targets = torch.where(targets < 0, -100, targets)
-    loss = F.cross_entropy(x, masked_targets, reduction="none", ignore_index=-100)
+    loss = F.cross_entropy(logits, masked_targets, reduction="none", ignore_index=-100)
     return apply_reduction(loss, reduction=reduction)
 
 
@@ -31,6 +30,11 @@ class CrossEntropyLoss(nn.Module):
         super(CrossEntropyLoss, self).__init__()
         self.reduction = reduction
 
-    def forward(self, x: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        """ """
-        return cross_entropy(x, targets, reduction=self.reduction)
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        """
+        Calculates cross-entropy.
+
+        :param logits: logits
+        :param targets: labels
+        """
+        return cross_entropy(logits, targets, reduction=self.reduction)

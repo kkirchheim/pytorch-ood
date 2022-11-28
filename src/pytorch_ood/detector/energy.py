@@ -4,11 +4,13 @@
     :members:
 
 """
-from typing import Optional
+from typing import Optional, TypeVar
 
 import torch
 
 from ..api import Detector
+
+Self = TypeVar("Self")
 
 
 class EnergyBased(Detector):
@@ -19,7 +21,9 @@ class EnergyBased(Detector):
     This value can be used as outlier score.
 
     .. math::
-        E(z) = -T \\log{\\sum_i e^{z_i/T}}
+        E(x) = -T \\log{\\sum_i e^{f_i(x)/T}}
+
+    where :math:`f_i(x)` indicates the :math:`i^{th}` logit value predicted by :math:`f`.
 
     :see Paper:
         `NeurIPS <https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf>`__
@@ -29,11 +33,11 @@ class EnergyBased(Detector):
 
     """
 
-    def fit(self, *args, **kwargs):
+    def fit(self: Self, *args, **kwargs) -> Self:
         """
         Not required.
         """
-        pass
+        return self
 
     def __init__(self, model: torch.nn.Module, t: Optional[float] = 1):
         """

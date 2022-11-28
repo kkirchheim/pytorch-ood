@@ -235,7 +235,7 @@ class LayerVisDataset(PixMixExampleDatasets):
     ) -> None:
         super(LayerVisDataset, self).__init__(
             root,
-            subset="layer",
+            subset="layers",
             transform=transform,
             target_transform=target_transform,
             download=download,

@@ -3,7 +3,6 @@ import unittest
 import torch
 
 from src.pytorch_ood.loss import IILoss
-from tests.helpers import ClassificationModel
 
 
 class TestIILoss(unittest.TestCase):
@@ -21,3 +20,9 @@ class TestIILoss(unittest.TestCase):
 
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)
+
+        dists = criterion.distance(z)
+        probs = criterion.predict(z)
+
+        self.assertEqual(dists.shape, (128, 10))
+        self.assertEqual(probs.shape, (128, 10))
