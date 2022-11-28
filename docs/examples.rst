@@ -16,7 +16,7 @@ We test :class:`MaxSoftmax <pytorch_ood.detector.MaxSoftmax>`,
 :class:`Energy-Based Out-of-Distribution Detection  <pytorch_ood.detector.EnergyBased>`,
 :class:`MaxLogit <pytorch_ood.detector.MaxLogit>`,
 :class:`ODIN <pytorch_ood.detector.ODIN>`,
-:class:`KLMatching <pytorch_ood.detector.KLMatching>`
+:class:`KLMatching <pytorch_ood.detector.KLMatching>`,
 :class:`ViM <pytorch_ood.detector.ViM>`,
 :class:`OpenMax <pytorch_ood.detector.OpenMax>` and
 :class:`Mahalanobis  <pytorch_ood.detector.Mahalanobis>`.

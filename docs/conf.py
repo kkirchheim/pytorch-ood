@@ -69,3 +69,5 @@ html_static_path = ["_static"]
 
 # include init arguments
 autoclass_content = "both"
+# add_module_names = False
+autodoc_typehints_format = "short"

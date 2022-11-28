@@ -23,3 +23,4 @@ Metrics
 ================
 
 .. automodule:: pytorch_ood.utils.metrics
+    :members: calibration_error, aurra

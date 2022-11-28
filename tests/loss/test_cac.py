@@ -21,6 +21,9 @@ class TestCAC(unittest.TestCase):
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)
 
+        dists = criterion.distance(z)
+        self.assertEqual(dists.shape, (128, 10))
+
     def test_distance_calc(self):
         criterion = CACLoss(n_classes=10)
         z = torch.randn(size=(128, 10))

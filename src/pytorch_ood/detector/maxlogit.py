@@ -4,9 +4,13 @@
     :members:
 
 """
+from typing import TypeVar
+
 import torch
 
 from ..api import Detector
+
+Self = TypeVar("Self")
 
 
 class MaxLogit(Detector):
@@ -35,11 +39,11 @@ class MaxLogit(Detector):
         """
         return self.score(self.model(x))
 
-    def fit(self, *args, **kwargs):
+    def fit(self: Self, *args, **kwargs) -> Self:
         """
         Not required
         """
-        pass
+        return self
 
     @staticmethod
     def score(logits: torch.Tensor) -> torch.Tensor:

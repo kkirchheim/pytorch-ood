@@ -4,12 +4,57 @@
 import logging
 import math
 from collections import defaultdict
-from typing import Union
+from typing import TypeVar, Union
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 log = logging.getLogger(__name__)
+
+
+Self = TypeVar("Self")
+
+
+def temperature_calibration(
+    logits: torch.Tensor,
+    labels: torch.Tensor,
+    lower: float = 0.2,
+    upper: float = 5.0,
+    eps: float = 0.0001,
+) -> float:
+    """
+    Implements confidence calibration from the paper
+    *On Calibration of Modern Neural Networks*.
+
+    Implementation uses binary search to find the optimal temperature value.
+
+    :see Paper: `PLMR <http://proceedings.mlr.press/v70/guo17a.html>`__
+    :see Implementation: `Here <https://github.com/andyzoujm/pixmix/blob/main/calibration_tools.py>`__
+
+    :param logits: the logits predicted by the model
+    :param labels: ground truth labels
+    :param lower: lower bound for the search
+    :param upper: upper bound for the search
+    :param eps: minimum change necessary to continue optimization
+    """
+    logits = torch.FloatTensor(logits)
+    labels = torch.LongTensor(labels)
+    t_guess = torch.FloatTensor([0.5 * (lower + upper)]).requires_grad_()
+
+    while upper - lower > eps:
+        if torch.autograd.grad(F.cross_entropy(logits / t_guess, labels), t_guess)[0] > 0:
+            upper = 0.5 * (lower + upper)
+        else:
+            lower = 0.5 * (lower + upper)
+        t_guess = t_guess * 0 + 0.5 * (lower + upper)
+
+    t = min(
+        [lower, 0.5 * (lower + upper), upper],
+        key=lambda x: float(F.cross_entropy(logits / x, labels)),
+    )
+
+    return t
 
 
 def calc_openness(n_train, n_test, n_target):
@@ -140,13 +185,18 @@ class TensorBuffer(object):
         self._buffer = defaultdict(list)
         self.device = device
 
-    def append(self, key, value: torch.Tensor):
+    def is_empty(self) -> bool:
+        """
+        Returns true if this buffer does not hold any tensors.
+        """
+        return len(self._buffer) == 0
+
+    def append(self: Self, key, value: torch.Tensor) -> Self:
         """
         Appends a tensor to the buffer.
 
         :param key: tensor identifier
         :param value: tensor
-        :return: self
         """
         if not isinstance(value, torch.Tensor):
             raise ValueError(f"Can not handle value type {type(value)}")
@@ -155,10 +205,10 @@ class TensorBuffer(object):
         self._buffer[key].append(value)
         return self
 
-    def __contains__(self, elem):
+    def __contains__(self, elem) -> bool:
         return elem in self._buffer
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> torch.Tensor:
         return self.get(item)
 
     def sample(self, key) -> torch.Tensor:
@@ -184,17 +234,15 @@ class TensorBuffer(object):
         v = torch.cat(self._buffer[key])
         return v
 
-    def clear(self):
+    def clear(self: Self) -> Self:
         """
         Clears the buffer
-
-        :return: self
         """
         log.debug("Clearing buffer")
         self._buffer.clear()
         return self
 
-    def save(self, path):
+    def save(self: Self, path) -> Self:
         """
         Save buffer to disk
 

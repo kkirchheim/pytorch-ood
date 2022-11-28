@@ -5,6 +5,7 @@ from src.pytorch_ood.dataset.img import (
     CIFAR10C,
     CIFAR100C,
     MNISTC,
+    FractalDataset,
     ImageNetA,
     ImageNetC,
     ImageNetO,
@@ -22,7 +23,6 @@ from src.pytorch_ood.dataset.txt import (
 )
 
 
-@unittest.skip("Currently not functional")
 class TestDatasetAvailability(unittest.TestCase):
     def test_download_ImageNetA(self):
         status = urlopen(ImageNetA.url).getcode()
@@ -104,6 +104,11 @@ class TestDatasetAvailability(unittest.TestCase):
 
         status = urlopen(MVTechAD.url).getcode()
         self.assertEqual(status, 200)
+
+    @unittest.skip("Too large")
+    def test_google_drive(self):
+        data = FractalDataset(root=".", download=True)
+        self.assertIsNotNone(data)
 
 
 if __name__ == "__main__":

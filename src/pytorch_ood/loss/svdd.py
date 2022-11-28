@@ -11,17 +11,17 @@ from ..utils import apply_reduction, is_known
 
 class DeepSVDDLoss(torch.nn.Module):
     """
-    Deep Support Vector Data Description from the paper *Deep One-Class Classification*.
-    It models a center :math:`\\mu` in the output space of the model and pulls IN samples towards it in order
+    Deep Support Vector Data Description  (SVDD) from the paper *Deep One-Class Classification*.
+    It places a center :math:`\\mu` in the output space of the model and pulls IN samples towards it in order
     to learn the common factors of intra class variance.
 
-    This distance to this center can be used as outlier score.
+    This distance of a point to this center can be used as outlier score.
 
     In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before training.
 
     .. math:: \\mathcal{L}(x) = \\max \\lbrace 0, \\lVert \\mu - f(x) \\rVert_2^2 \\rbrace
 
-    :see Paper: `Link <http://proceedings.mlr.press/v80/ruff18a/ruff18a.pdf>`__
+    :see Paper: `ICML <http://proceedings.mlr.press/v80/ruff18a/ruff18a.pdf>`__
 
     :note: The center is a parameter, so this model has to be moved to the correct device
     """
@@ -31,9 +31,9 @@ class DeepSVDDLoss(torch.nn.Module):
     ):
         """
         :param n_dim: dimensionality of the output space
-        :param reduction: reduction method to apply
-        :param center: position of the center :math:`\\mu \\in \\mathbb{R}^n where :math:`n` is the dimensionality of
-        the output space
+        :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
+        :param center: position of the center :math:`\\mu \\in \\mathbb{R}^n` where :math:`n` is the dimensionality of
+            the output space
         """
         super(DeepSVDDLoss, self).__init__()
         self._center = ClassCenters(1, n_dim, fixed=True)
@@ -52,6 +52,13 @@ class DeepSVDDLoss(torch.nn.Module):
         """
         return self._center
 
+    def distance(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        returns the vector of distances.
+        """
+        # squeeze class dimension
+        return self._center(x).squeeze(1)
+
     def forward(self, x: torch.Tensor, y: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         :param x: features
@@ -62,7 +69,9 @@ class DeepSVDDLoss(torch.nn.Module):
         return apply_reduction(loss, self.reduction)
 
     @staticmethod
-    def svdd_loss(x: torch.Tensor, center: ClassCenters, y=None) -> torch.Tensor:
+    def svdd_loss(
+        x: torch.Tensor, center: ClassCenters, y: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """
         Calculates the loss. Treats all IN samples equally, and ignores all OOD samples.
         If no labels are given, assumes all samples are IN.

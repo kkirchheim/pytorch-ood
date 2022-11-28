@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, TypeVar
 
 import torch
 from torch.utils.data import DataLoader
@@ -8,6 +8,7 @@ from ...api import Detector
 from ...utils import TensorBuffer, is_known
 
 log = logging.getLogger(__name__)
+Self = TypeVar("Self")
 
 
 class OpenMax(Detector):
@@ -36,6 +37,7 @@ class OpenMax(Detector):
         euclid_weight: float = 1.0,
     ):
         """
+        :param model: neural network, assumed to output logits
         :param tailsize: length of the tail to fit the distribution to
         :param alpha: number of class activations to revise
         :param euclid_weight: weight for the euclidean distance.
@@ -47,7 +49,7 @@ class OpenMax(Detector):
 
         self.openmax = NPOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
 
-    def fit(self, data_loader: DataLoader, device: Optional[str] = "cpu"):
+    def fit(self: Self, data_loader: DataLoader, device: Optional[str] = "cpu") -> Self:
         """
         Determines parameters of the weibull functions for each class.
 
@@ -56,10 +58,11 @@ class OpenMax(Detector):
         """
         z, y = OpenMax._extract(data_loader, self.model, device=device)
         self.openmax.fit(z.numpy(), y.numpy())
+        return self
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param x: class logits
+        :param x: input, will be passed through the model to obtain logits
         """
         with torch.no_grad():
             z = self.model(x).cpu().numpy()
@@ -69,13 +72,7 @@ class OpenMax(Detector):
     @staticmethod
     def _extract(data_loader, model: torch.nn.Module, device):
         """
-        Extract embeddings from model
-
-        .. note :: this should be moved into a dedicated function
-
-        :param data_loader:
-        :param model:
-        :return:
+        Extract embeddings from model. Ignores OOD data.
         """
         buffer = TensorBuffer()
         log.debug("Extracting features")
@@ -86,7 +83,7 @@ class OpenMax(Detector):
             z = model(x[known])
             # flatten
             x = z.view(x.shape[0], -1)
-            buffer.append("embedding", z[known])
+            buffer.append("embedding", z)
             buffer.append("label", y[known])
 
         z = buffer.get("embedding")

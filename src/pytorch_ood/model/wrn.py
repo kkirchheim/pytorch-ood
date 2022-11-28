@@ -9,6 +9,7 @@ Pretrained on downscaled imagenet:
 * https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt
 
 """
+import copy
 import math
 
 import torch
@@ -88,9 +89,16 @@ class NetworkBlock(nn.Module):
 
 class WideResNet(nn.Module):
     """
-    Resnet Architecture with large number of channels and variable depth.
+    Resnet Architecture with large number of channels and variable depth, which has been used in a number of
+    publications.
 
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1605.07146v4.pdf>`__
+    Provides a number of pre-trained weights for models trained with
+    :class:`OutlierExposureLoss <pytorch_ood.loss.OutlierExposureLoss>`,
+    :class:`Energy Regularization <pytorch_ood.loss.EnergyRegularizedLoss>` or
+    :class:`PixMix <pytorch_ood.dataset.img.PixMixDataset>`.
+    Also includes models pre-trained on the variants on the ImageNet, which is known to increase the robustness.
+
+    :see Paper: `BMVC <https://arxiv.org/pdf/1605.07146v4.pdf>`__
     :see Implementation: `GitHub <https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py>`__
     """
 
@@ -134,6 +142,10 @@ class WideResNet(nn.Module):
              - Pre-Trained model for CIFAR-100
            * - cifar10-pt
              - Pre-Trained model for CIFAR-10
+           * - cifar10-pixmix
+             - Model trained with PixMix on CIFAR-10. ``widen_factor=4``
+           * - cifar100-pixmix
+             - Model trained with PixMix on CIFAR-100. ``widen_factor=4``
         """
         super(WideResNet, self).__init__()
         nChannels = [16, 16 * widen_factor, 32 * widen_factor, 64 * widen_factor]
@@ -184,9 +196,9 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return self.fc(out)
 
-    def features(self, x):
+    def features(self, x) -> torch.Tensor:
         """
-        Extracts features before the last fully connected layer.
+        Extracts (flattened) features before the last fully connected layer.
         """
         out = self.conv1(x)
         out = self.block1(out)
@@ -198,6 +210,9 @@ class WideResNet(nn.Module):
         return out
 
     def feature_list(self, x):
+        """
+        Extracts features from several layers
+        """
         out_list = []
         out = self.conv1(x)
         out = self.block1(out)
@@ -206,6 +221,7 @@ class WideResNet(nn.Module):
         out = self.relu(self.bn1(out))
         out_list.append(out)
         out = F.avg_pool2d(out, 8)
+        out_list.append(out)
         out = out.view(-1, self.nChannels)
         return self.fc(out), out_list
 
@@ -222,11 +238,30 @@ class WideResNet(nn.Module):
             "er-cifar100-tune": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/energy_ft/cifar100_wrn_s1_energy_ft_epoch_9.pt",
             "cifar100-pt": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/pretrained/cifar100_wrn_pretrained_epoch_99.pt",
             "cifar10-pt": "https://github.com/wetliu/energy_ood/raw/master/CIFAR/snapshots/pretrained/cifar10_wrn_pretrained_epoch_99.pt",
+            "cifar10-pixmix": "https://cse.ovgu.de/files/cifar10-pixmix.pt",
+            "cifar100-pixmix": "https://cse.ovgu.de/files/cifar100-pixmix.pt",
         }
 
-        state_dict = load_state_dict_from_url(
-            url=urls[name], map_location="cpu", file_name=f"wrn-{name}.pt"
-        )
+        file_name = f"wrn-{name}.pt"
+
+        if name in urls.keys():
+            state_dict = load_state_dict_from_url(
+                url=urls[name], map_location="cpu", file_name=file_name
+            )
+
+        else:
+            raise ValueError(f"Unknown model identifier. Possible values are {list(urls)}")
+
+        if "pixmix" in name:
+            state_dict = state_dict["state_dict"]
+            new_state_dict = copy.copy(state_dict)
+
+            for key in state_dict.keys():
+                if "conv_shortcut" in key:
+                    new_state_dict[key.replace("conv_shortcut", "convShortcut")] = state_dict[key]
+                    del new_state_dict[key]
+
+            state_dict = new_state_dict
 
         # get last key in dict
         key = list(state_dict.keys())[-1]
