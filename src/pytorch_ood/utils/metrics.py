@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torchmetrics
 
-from .utils import TensorBuffer, contains_known_and_unknown, is_unknown
+from .utils import TensorBuffer, is_unknown
 
 
 def calibration_error(
@@ -168,7 +168,7 @@ class OODMetrics(object):
         :return: dictionary with different metrics
         :raise: ValueError if data does not contain IN and OOD points or buffer is empty
         """
-        if self.buffer.empty():
+        if self.buffer.is_empty():
             raise ValueError("Must be given data to calculate metrics.")
 
         labels = self.buffer.get("labels")

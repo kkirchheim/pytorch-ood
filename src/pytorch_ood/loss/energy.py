@@ -8,6 +8,10 @@ from ..loss import CrossEntropyLoss
 from ..utils import is_known, is_unknown
 
 
+def _energy(logits: torch.Tensor) -> torch.Tensor:
+    return torch.logsumexp(logits, dim=1)
+
+
 class EnergyRegularizedLoss(nn.Module):
     """
     Augments the cross-entropy by  a regularization term
@@ -32,7 +36,7 @@ class EnergyRegularizedLoss(nn.Module):
     :see Implementation: `GitHub <https://github.com/wetliu/energy_ood>`__
     """
 
-    def __init__(self, alpha=1, margin_in=1, margin_out=1):
+    def __init__(self, alpha: float = 1, margin_in: float = 1, margin_out: float = 1):
         """
         :param alpha: weighting parameter
         :param margin_in:  margin energy :math:`m_{in}` for IN data
@@ -55,18 +59,15 @@ class EnergyRegularizedLoss(nn.Module):
         nll = self.nll(logits, targets)
         return nll + self.alpha * regularization
 
-    def _regularization(self, logits, y):
+    def _regularization(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         if is_known(y).any():
-            energy_in = (self._energy(logits[is_known(y)]) - self.m_in).relu().pow(2).mean()
+            energy_in = (_energy(logits[is_known(y)]) - self.m_in).relu().pow(2).mean()
         else:
             energy_in = 0
 
         if is_unknown(y).any():
-            energy_out = (self._energy(self.m_out - logits[is_unknown(y)])).relu().pow(2).mean()
+            energy_out = (_energy(self.m_out - logits[is_unknown(y)])).relu().pow(2).mean()
         else:
             energy_out = 0
 
         return energy_in + energy_out
-
-    def _energy(self, logits):
-        return torch.logsumexp(logits, dim=1)

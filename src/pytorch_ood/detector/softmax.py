@@ -4,11 +4,13 @@
     :members:
 
 """
-from typing import Optional
+from typing import Optional, TypeVar
 
 import torch
 
 from ..api import Detector
+
+Self = TypeVar("Self")
 
 
 class MaxSoftmax(Detector):
@@ -45,12 +47,11 @@ class MaxSoftmax(Detector):
         """
         return self.score(self.model(x), t=1)
 
-    def fit(self, *args, **kwargs):
+    def fit(self: Self, *args, **kwargs) -> Self:
         """
         Not required
-
         """
-        pass
+        return self
 
     @staticmethod
     def score(logits: torch.Tensor, t: Optional[float] = 1) -> torch.Tensor:

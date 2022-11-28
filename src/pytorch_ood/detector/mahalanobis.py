@@ -4,7 +4,7 @@
 """
 import logging
 import warnings
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, TypeVar
 
 import torch
 from torch.autograd import Variable
@@ -14,6 +14,8 @@ from ..api import Detector, RequiresFittingException
 from ..utils import TensorBuffer, contains_unknown, is_known, is_unknown
 
 log = logging.getLogger(__name__)
+
+Self = TypeVar("Self")
 
 
 class Mahalanobis(Detector):
@@ -63,17 +65,21 @@ class Mahalanobis(Detector):
         """
         # TODO: add option to buffer to GPU
         buffer = TensorBuffer()
-        log.debug("Extracting features")
+
         for batch in data_loader:
             x, y = batch
             x = x.to(device)
             y = y.to(device)
             known = is_known(y)
-            z = model(x[known])
-            # flatten
-            x = z.view(x.shape[0], -1)
-            buffer.append("embedding", z[known])
-            buffer.append("label", y[known])
+            if known.any():
+                z = model(x[known])
+                # flatten
+                z = z.view(known.sum(), -1)
+                buffer.append("embedding", z)
+                buffer.append("label", y[known])
+
+        if buffer.is_empty():
+            raise ValueError("No IN instances in loader")
 
         z = buffer.get("embedding")
         y = buffer.get("label")
@@ -81,7 +87,7 @@ class Mahalanobis(Detector):
         buffer.clear()
         return z, y
 
-    def fit(self, data_loader: DataLoader, device: str = None):
+    def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
         """
         Fit parameters of the multi variate gaussian.
 
