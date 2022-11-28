@@ -46,7 +46,7 @@ class OutlierExposureLoss(nn.Module):
         self.alpha = alpha
         self.reduction = reduction
 
-    def forward(self, logits, target) -> torch.Tensor:
+    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
 
         :param logits: class logits for predictions

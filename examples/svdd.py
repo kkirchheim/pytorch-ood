@@ -82,8 +82,8 @@ def test():
     with torch.no_grad():
         for x, y in test_loader:
             z = model(x.to(device))
-            # calculate distance to the center, squeeze unused class-dimension (since there is only a single class)
-            distances = criterion.center(z).cpu().squeeze()
+            # calculate (squared) distance of points to the center in output space
+            distances = criterion.distance(z)
             metrics.update(distances, y)
 
     print(metrics.compute())

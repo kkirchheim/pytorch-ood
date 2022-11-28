@@ -4,6 +4,7 @@
 
 """
 import logging
+from typing import TypeVar
 
 import torch
 from torch.nn import Parameter, ParameterDict
@@ -14,6 +15,8 @@ from pytorch_ood.utils import TensorBuffer, is_known
 from ..api import Detector, RequiresFittingException
 
 log = logging.getLogger()
+
+Self = TypeVar("Self")
 
 
 class KLMatching(Detector):
@@ -40,7 +43,7 @@ class KLMatching(Detector):
         self.model = model
         self.dists: ParameterDict = ParameterDict()  #: Typical posteriors per class
 
-    def fit(self, data_loader: DataLoader, device="cpu"):
+    def fit(self: Self, data_loader: DataLoader, device="cpu") -> Self:
         """
         Estimates typical distributions for each class.
         Ignores OOD samples.
@@ -65,6 +68,8 @@ class KLMatching(Detector):
             log.debug(f"Fitting class {label}")
             d_k = probabilities[labels == label].mean(dim=0)
             self.dists[str(label.item())] = Parameter(d_k)
+
+        return self
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """

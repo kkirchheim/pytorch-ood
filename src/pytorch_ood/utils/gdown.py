@@ -1,5 +1,6 @@
 """
 Code is adapted from : https://github.com/wkentaro/gdown
+Original License is MIT
 """
 import json
 import logging

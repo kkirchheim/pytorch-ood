@@ -4,13 +4,16 @@
 import logging
 import math
 from collections import defaultdict
-from typing import Union
+from typing import TypeVar, Union
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
 log = logging.getLogger(__name__)
+
+
+Self = TypeVar("Self")
 
 
 def temperature_calibration(
@@ -182,17 +185,18 @@ class TensorBuffer(object):
         self._buffer = defaultdict(list)
         self.device = device
 
-    def empty(self) -> bool:
-        """ """
+    def is_empty(self) -> bool:
+        """
+        Returns true if this buffer does not hold any tensors.
+        """
         return len(self._buffer) == 0
 
-    def append(self, key, value: torch.Tensor):
+    def append(self: Self, key, value: torch.Tensor) -> Self:
         """
         Appends a tensor to the buffer.
 
         :param key: tensor identifier
         :param value: tensor
-        :return: self
         """
         if not isinstance(value, torch.Tensor):
             raise ValueError(f"Can not handle value type {type(value)}")
@@ -201,10 +205,10 @@ class TensorBuffer(object):
         self._buffer[key].append(value)
         return self
 
-    def __contains__(self, elem):
+    def __contains__(self, elem) -> bool:
         return elem in self._buffer
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> torch.Tensor:
         return self.get(item)
 
     def sample(self, key) -> torch.Tensor:
@@ -230,17 +234,15 @@ class TensorBuffer(object):
         v = torch.cat(self._buffer[key])
         return v
 
-    def clear(self):
+    def clear(self: Self) -> Self:
         """
         Clears the buffer
-
-        :return: self
         """
         log.debug("Clearing buffer")
         self._buffer.clear()
         return self
 
-    def save(self, path):
+    def save(self: Self, path) -> Self:
         """
         Save buffer to disk
 

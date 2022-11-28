@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
+from typing import TypeVar
 
 import torch
 from torch.utils.data import DataLoader
+
+Self = TypeVar("Self")
 
 
 class RequiresFittingException(Exception):
@@ -24,7 +27,7 @@ class Detector(ABC):
         return self.predict(*args, **kwargs)
 
     @abstractmethod
-    def fit(self, data_loader: DataLoader):
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Fit the model to a dataset. Some methods require this.
 
@@ -40,6 +43,6 @@ class Detector(ABC):
         :param x: batch of data
         :return: outlier scores for points
 
-        :raise RequiresFitException: if Detectos has to be fitted to some data
+        :raise RequiresFitException: if detector has to be fitted to some data
         """
         raise NotImplementedError

@@ -210,6 +210,9 @@ class WideResNet(nn.Module):
         return out
 
     def feature_list(self, x):
+        """
+        Extracts features from several layers
+        """
         out_list = []
         out = self.conv1(x)
         out = self.block1(out)
@@ -218,6 +221,7 @@ class WideResNet(nn.Module):
         out = self.relu(self.bn1(out))
         out_list.append(out)
         out = F.avg_pool2d(out, 8)
+        out_list.append(out)
         out = out.view(-1, self.nChannels)
         return self.fc(out), out_list
 

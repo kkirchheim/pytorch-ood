@@ -77,15 +77,6 @@ class CenterLoss(nn.Module):
             if self.magnitude != 1:
                 log.warning("Not applying magnitude parameter.")
 
-    def calculate_distances(self, z: torch.Tensor) -> torch.Tensor:
-        """
-        Calculates the distance :math:`d` of each embedding to each center.
-
-        :param z: embeddings of shape :math:`B \\times D`.
-        :returns: distance metrics of shape :math:`B \\times C`.
-        """
-        return self.soft_margin_loss.calculate_distances(z)
-
     def forward(self, distmat: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
         Calculates the loss. Ignores OOD inputs.
@@ -94,10 +85,13 @@ class CenterLoss(nn.Module):
         :param target: ground truth labels with shape (batch_size).
         :returns: the loss values
         """
-        batch_size = distmat.size(0)
         known = is_known(target)
 
         if known.any():
+            distmat = distmat[known]
+            target = target[known]
+            batch_size = distmat.size(0)
+
             classes = torch.arange(self.num_classes).long().to(distmat.device)
             target = target.unsqueeze(1).expand(batch_size, self.num_classes)
             mask = target.eq(classes.expand(batch_size, self.num_classes))

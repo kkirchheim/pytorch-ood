@@ -39,8 +39,13 @@ Class Centers
 ..  autoclass:: pytorch_ood.model.ClassCenters
     :members:
 
+
+..  autoclass:: pytorch_ood.model.RunningCenters
+    :members:
+
+
 """
-from .centers import ClassCenters
+from .centers import ClassCenters, RunningCenters
 from .gru import GRUClassifier
 from .vit import VisionTransformer
 from .wrn import WideResNet

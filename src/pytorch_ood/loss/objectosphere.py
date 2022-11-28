@@ -70,7 +70,7 @@ class ObjectosphereLoss(nn.Module):
         return apply_reduction(loss, self.reduction)
 
     @staticmethod
-    def score(logits) -> torch.Tensor:
+    def score(logits: torch.Tensor) -> torch.Tensor:
         """
         Outlier score used by the objectosphere loss.
 

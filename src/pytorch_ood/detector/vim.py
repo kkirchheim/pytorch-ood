@@ -5,16 +5,19 @@
 
 """
 import logging
-from typing import Callable
+from typing import Callable, TypeVar
 
 import numpy as np
 import torch
 from numpy.linalg import norm, pinv
 from scipy.special import logsumexp
 
+from pytorch_ood.utils import is_known
+
 from ..api import Detector, RequiresFittingException
 
 log = logging.getLogger(__name__)
+Self = TypeVar("Self")
 
 
 class ViM(Detector):
@@ -77,19 +80,21 @@ class ViM(Detector):
         # TODO: negative?
         return -torch.Tensor(score)
 
-    def fit(self, data_loader, device="cpu"):
+    def fit(self: Self, data_loader, device="cpu") -> Self:
         """
-        Extracts features and logits, computes principle subspace and alpha
+        Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
         """
         # extract features
         with torch.no_grad():
             features_l = []
 
             for x, y in data_loader:
-                features = self.model(x.to(device)).cpu()
+                known = is_known(y)
+                features = self.model(x[known].to(device)).cpu()
+                features = features.view(known.sum(), -1)  # flatten
                 features_l.append(features)
 
-        features = torch.concat(features_l).numpy()
+        features = torch.cat(features_l).numpy()
         logits = self._get_logits(features)
 
         try:
@@ -113,3 +118,4 @@ class ViM(Detector):
         vlogits = norm(x_p_t, axis=-1)
         self.alpha = logits.max(axis=-1).mean() / vlogits.mean()
         log.info(f"{self.alpha=:.4f}")
+        return self

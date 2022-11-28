@@ -57,7 +57,7 @@ def test():
             # calculate embeddings
             z = model(x.to(device))
             # calculate the distance of each embedding to each center
-            distances = criterion.calculate_distances(z).cpu()
+            distances = criterion.distance(z).cpu()
             # the CAC Loss proposes its own method for score calculation.
             # We could, however, also use the minimum distance.
             metrics.update(CACLoss.score(distances), y)
@@ -77,7 +77,7 @@ for epoch in range(n_epochs):
         # calculate embeddings
         z = model(x.to(device))
         # calculate the distance of each embedding to each center
-        distances = criterion.calculate_distances(z)
+        distances = criterion.distance(z)
         # calculate CAC loss, based on distances to centers
         loss = criterion(distances, y.cuda())
         opti.zero_grad()
