@@ -13,7 +13,7 @@ class ConfidenceLoss(nn.Module):
     The loss minimized the Negative Log Likelihood for class membership prediction.
 
     .. math::
-        \\mathcal{L}_{NLL} + \\alpha \\mathcal{L}_c = - \\sum_{i=1}^{M} log(p'_{i}) y_i - \\alpha log(c)
+        \\mathcal{L}_{NLL} + \\alpha \\mathcal{L}_c = - \\sum_{i=1}^{M} \\log(p'_{i}) y_i - \\alpha \\log(c)
 
         \\text{where} \\quad p_i' = c \\cdot p_i + (1-c) y_i
 
