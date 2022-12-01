@@ -1,8 +1,36 @@
+"""
+
+
+CIFAR 100
+==============================
+The evaluation is the same as for CIFAR 10.
+
++-------------+--------+----------+-----------+-----------+-----------+
+| Detector    | AUROC  | AUPR-IN  | AUPR-OUT  | ACC95TPR  | FPR95TPR  |
++=============+========+==========+===========+===========+===========+
+| MaxSoftmax  | 79.10  | 73.75    | 82.92     | 66.57     | 58.16     |
++-------------+--------+----------+-----------+-----------+-----------+
+| KLMatching  | 80.14  | 75.28    | 82.49     | 65.06     | 60.73     |
++-------------+--------+----------+-----------+-----------+-----------+
+| ODIN        | 81.46  | 76.65    | 84.88     | 67.73     | 55.57     |
++-------------+--------+----------+-----------+-----------+-----------+
+| Mahalanobis | 83.91  | 79.86    | 86.08     | 72.90     | 46.99     |
++-------------+--------+----------+-----------+-----------+-----------+
+| MaxLogit    | 84.64  | 79.95    | 87.25     | 71.41     | 48.51     |
++-------------+--------+----------+-----------+-----------+-----------+
+| EnergyBased | 84.90  | 80.27    | 87.46     | 71.74     | 47.85     |
++-------------+--------+----------+-----------+-----------+-----------+
+| ViM         | 85.87  | 81.18    | 88.81     | 75.54     | 41.83     |
++-------------+--------+----------+-----------+-----------+-----------+
+
+
+
+"""
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 import torchvision.transforms as tvt
 from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import CIFAR100
 
 from pytorch_ood.dataset.img import (
     LSUNCrop,
@@ -18,7 +46,6 @@ from pytorch_ood.detector import (
     Mahalanobis,
     MaxLogit,
     MaxSoftmax,
-    OpenMax,
     ViM,
 )
 from pytorch_ood.model import WideResNet
@@ -35,8 +62,9 @@ trans = tvt.Compose(
     [tvt.Resize(size=(32, 32)), ToRGB(), tvt.ToTensor(), tvt.Normalize(std=std, mean=mean)]
 )
 
-# setup datasets
-dataset_in_test = CIFAR10(root="data", train=False, transform=trans)
+# %%
+# Setup datasets
+dataset_in_test = CIFAR100(root="data", train=False, transform=trans, download=True)
 
 # create all OOD datasets
 ood_datasets = [Textures, TinyImageNetCrop, TinyImageNetResize, LSUNCrop, LSUNResize]
@@ -48,9 +76,10 @@ for ood_dataset in ood_datasets:
     test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=256)
     datasets[ood_dataset.__name__] = test_loader
 
-# Stage 1: Create DNN with pre-trained weights from the Hendrycks baseline paper
+# %%
+# **Stage 1**: Create DNN with pre-trained weights from the Hendrycks baseline paper
 print("STAGE 1: Creating a Model")
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
+model = WideResNet(num_classes=100, pretrained="cifar100-pt").eval().to(device)
 
 # Stage 2: Create OOD detector
 print("STAGE 2: Creating OOD Detectors")
@@ -62,16 +91,17 @@ detectors["MaxSoftmax"] = MaxSoftmax(model)
 detectors["EnergyBased"] = EnergyBased(model)
 detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=std, eps=0.002)
-detectors["OpenMax"] = OpenMax(model)
 
-# fit detectors to training data (some require this, some do not)
+# %%
+# **Stage 2**: fit detectors to training data (some require this, some do not)
 print(f"> Fitting {len(detectors)} detectors")
-loader_in_train = DataLoader(CIFAR10(root="data", train=True, transform=trans), batch_size=256)
+loader_in_train = DataLoader(CIFAR100(root="data", train=True, transform=trans), batch_size=256)
 for name, detector in detectors.items():
     print(f"--> Fitting {name}")
     detector.fit(loader_in_train, device=device)
 
-# Stage 3: Evaluate Detectors
+# %%
+# **Stage 3**: Evaluate Detectors
 print(f"STAGE 3: Evaluating {len(detectors)} detectors on {len(datasets)} datasets.")
 results = []
 

@@ -1,3 +1,16 @@
+"""
+
+Outlier Exposure
+-------------------------
+
+We train a model with  :class:`Outlier Exposure <pytorch_ood.loss.OutlierExposureLoss>` on the CIFAR10.
+
+We can use a model pre-trained on the :math:`32 \\times 32` resized version of the ImageNet as a foundation.
+As outlier data, we use :class:`TinyImages300k <pytorch_ood.dataset.img.TinyImages300k>`, a cleaned version of the
+TinyImages database, which contains random images scraped from the internet.
+
+
+"""
 import torch
 import torchvision.transforms as tvt
 from torch.optim import Adam
@@ -16,6 +29,8 @@ torch.manual_seed(123)
 n_epochs = 10
 device = "cuda:0"
 
+# %%
+# Setup preprocessing and data
 trans = tvt.Compose([tvt.Resize(size=(32, 32)), tvt.ToTensor()])
 
 # setup IN training data
@@ -26,7 +41,6 @@ dataset_in_train = CIFAR10(root="data", train=True, download=True, transform=tra
 dataset_out_train = TinyImages300k(
     root="data", download=True, transform=trans, target_transform=ToUnknown()
 )
-
 
 # setup IN test data
 dataset_in_test = CIFAR10(root="data", train=False, transform=trans)
@@ -40,6 +54,7 @@ dataset_out_test = Textures(
 train_loader = DataLoader(dataset_in_train + dataset_out_train, batch_size=64, shuffle=True)
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
 
+# %%
 # Create DNN, pretrained on the imagenet excluding cifar10 classes
 model = WideResNet(num_classes=1000, pretrained="imagenet32-nocifar")
 # we have to replace the final layer to account for the lower number of
@@ -52,8 +67,9 @@ opti = Adam(model.parameters())
 criterion = OutlierExposureLoss(alpha=0.5)
 
 
+# %%
+# Define a function to test the model
 def test():
-    # Evaluate model with MaxSoftmax
     softmax = MaxSoftmax(model)
 
     metrics_softmax = OODMetrics()
@@ -67,7 +83,8 @@ def test():
     model.train()
 
 
-# start training
+# %%
+# Start training
 for epoch in range(n_epochs):
     print(f"Epoch {epoch}")
     for x, y in train_loader:

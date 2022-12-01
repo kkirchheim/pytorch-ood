@@ -141,9 +141,9 @@ class OODMetrics(object):
         super(OODMetrics, self).__init__()
         self.device = device
         self.buffer = TensorBuffer(device=self.device)
-        self.auroc = torchmetrics.AUROC(num_classes=2)
-        self.aupr_in = torchmetrics.PrecisionRecallCurve(pos_label=1)
-        self.aupr_out = torchmetrics.PrecisionRecallCurve(pos_label=0)
+        self.auroc = torchmetrics.classification.BinaryAUROC(num_classes=2)
+        self.aupr_in = torchmetrics.classification.BinaryPrecisionRecallCurve(pos_label=1)
+        self.aupr_out = torchmetrics.classification.BinaryPrecisionRecallCurve(pos_label=0)
 
     def update(self, outlier_scores: torch.Tensor, y: torch.Tensor) -> None:
         """
@@ -157,7 +157,7 @@ class OODMetrics(object):
 
         self.auroc.update(o, label)
         self.aupr_in.update(o, label)
-        self.aupr_out.update(-o, label)
+        self.aupr_out.update(-o, 1 - label)
         self.buffer.append("scores", outlier_scores)
         self.buffer.append("labels", label)
 

@@ -1,2 +1,6 @@
-# readthedocs currently fails with torch 1.13.0
+sphinx
+sphinx-rtd-theme
+sphinx-gallery
+
+# readthedocs build currently fails with torch 1.13.0
 torch==1.11.0
