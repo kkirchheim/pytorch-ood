@@ -1,18 +1,24 @@
+"""
+Monte Carlo Dropout
+==============================
+
+"""
+
 import torch
 import torchvision.transforms as tvt
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
-from pytorch_ood.detector import MaxSoftmax
+from pytorch_ood.detector import MCD, MaxSoftmax
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown
 
 torch.manual_seed(123)
 device = "cuda:0"
 
-mean = [0.5, 0.5, 0.5]
-std = [0.5, 0.5, 0.5]
+mean = [x / 255 for x in [125.3, 123.0, 113.9]]
+std = [x / 255 for x in [63.0, 62.1, 66.7]]
 
 trans = tvt.Compose([tvt.Resize(size=(32, 32)), tvt.ToTensor(), tvt.Normalize(std=std, mean=mean)])
 
@@ -27,10 +33,10 @@ dataset_out_test = Textures(
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=128)
 
 # Stage 1: Create DNN
-model = WideResNet(num_classes=10, pretrained="cifar10-pixmix", widen_factor=4).to(device).eval()
+model = WideResNet(num_classes=10, pretrained="cifar10-pt").to(device)
 
 # Stage 2: Create Detector
-detector = MaxSoftmax(model)
+detector = MCD(model, samples=30)
 
 # Stage 3: Evaluate Detectors
 metrics = OODMetrics()
