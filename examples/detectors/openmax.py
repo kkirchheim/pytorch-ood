@@ -1,3 +1,15 @@
+"""
+OpenMax
+==============================
+
+:class:`OpenMax <pytorch_ood.detector.OpenMax>` was originally proposed
+for Open Set Recognition but can be adapted for Out-of-Distribution tasks.
+
+.. warning:: OpenMax requires ``libmr`` to be installed, which is broken at the moment. You can only use it
+   by installing ``cython`` and ``numpy``, and ``libmr`` manually afterwards.
+
+
+"""
 import torch
 import torchvision.transforms as tvt
 from torch.utils.data import DataLoader
@@ -11,12 +23,13 @@ from pytorch_ood.utils import OODMetrics, ToUnknown
 torch.manual_seed(123)
 device = "cuda:0"
 
+# %%
+# Setup preprocessing and data
 mean = [x / 255 for x in [125.3, 123.0, 113.9]]
 std = [x / 255 for x in [63.0, 62.1, 66.7]]
 
 trans = tvt.Compose([tvt.Resize(size=(32, 32)), tvt.ToTensor(), tvt.Normalize(std=std, mean=mean)])
 
-# setup data
 dataset_train = CIFAR10(root="data", train=True, download=True, transform=trans)
 dataset_in_test = CIFAR10(root="data", train=False, download=True, transform=trans)
 dataset_out_test = Textures(
@@ -28,14 +41,17 @@ train_loader = DataLoader(dataset_train, batch_size=128, shuffle=True)
 # create data loaders
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=128)
 
-# Stage 1: Create DNN
+# %%
+# **Stage 1**: Create DNN pre-trained on CIFAR 10
 model = WideResNet(num_classes=10, pretrained="cifar10-pt").to(device).eval()
 
-# Stage 2: Create and Fit OpenMax
+# %%
+# **Stage 2**: Create and Fit OpenMax
 detector = OpenMax(model, tailsize=25, alpha=5, euclid_weight=0.5)
 detector.fit(train_loader, device=device)
 
-# Stage 3: Evaluate Detectors
+# %%
+# **Stage 3**: Evaluate Detectors
 metrics = OODMetrics()
 
 for x, y in test_loader:

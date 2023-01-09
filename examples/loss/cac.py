@@ -1,3 +1,16 @@
+"""
+Class Anchor Clustering
+-------------------------
+
+:class:`Class Anchor Clustering <pytorch_ood.loss.CACLoss>` (CAC) can be seen as a multi-class generalization of Deep
+One-Class Learning, where there are
+several centers :math:`\\{\\mu_1, \\mu_2, ..., \\mu_y\\}` in the output space of the model, one for each class.
+During training, the representation :math:`f_{\\theta}(x)` from class :math:`y` is drawn
+towards the corresponding center :math:`\\mu_y`.
+
+Here, we train the model for 10 epochs on the CIFAR10 dataset, using a backbone pre-trained on the
+:math:`32 \\times 32` resized version of the ImageNet as a foundation.
+"""
 import torch
 import torchvision.transforms as tvt
 from torch.optim import Adam
@@ -32,21 +45,21 @@ dataset_out_test = Textures(
 train_loader = DataLoader(dataset_in_train, batch_size=64, shuffle=True)
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
 
-# Create DNN, pretrained on the imagenet excluding cifar10 classes
+# %%
+# Create DNN, pretrained on the imagenet excluding cifar10 classes.
+# We have to replace the final layer to match the number of classes.
 model = WideResNet(num_classes=1000, pretrained="imagenet32-nocifar")
-# we have to replace the final layer to match the number of classes
 model.fc = torch.nn.Linear(model.fc.in_features, 10)
-
 model.to(device)
 
 opti = Adam(model.parameters())
 criterion = CACLoss(n_classes=10, magnitude=5, alpha=2).to(device)
 
+# %%
+# Define a function that evaluates the model
+
 
 def test():
-    """
-    Evaluate model
-    """
     metrics = OODMetrics()
     acc = Accuracy(num_classes=10)
 
@@ -70,7 +83,9 @@ def test():
     model.train()
 
 
-# start training
+# %%
+# Start training
+
 for epoch in range(n_epochs):
     print(f"Epoch {epoch}")
     for x, y in train_loader:

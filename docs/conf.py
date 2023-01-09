@@ -35,7 +35,7 @@ on_rtd = os.environ.get("READTHEDOCS", None) == "True"
 # -- Project information -----------------------------------------------------
 
 project = "pytorch-ood"
-copyright = "2021, K. Kirchheim"
+copyright = "2022, K. Kirchheim"
 author = "Konstantin Kirchheim"
 
 
@@ -44,7 +44,16 @@ author = "Konstantin Kirchheim"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinx_gallery.gen_gallery"]
+
+sphinx_gallery_conf = {
+    "examples_dirs": "../examples",  # path to your example scripts
+    "gallery_dirs": "auto_examples",  # path to where to save gallery generated output,
+    "nested_sections": False,
+    "line_numbers": True,
+    "min_reported_time": 20,
+}
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -69,5 +78,4 @@ html_static_path = ["_static"]
 
 # include init arguments
 autoclass_content = "both"
-# add_module_names = False
 autodoc_typehints_format = "short"

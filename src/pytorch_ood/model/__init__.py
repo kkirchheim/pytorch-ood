@@ -29,9 +29,9 @@ GRU Classifier
     :members:
 
 
-Components
+Modules
 =================
-Components frequently used in OOD Detection.
+Neural Network modules frequently used in OOD Detection.
 
 
 Class Centers

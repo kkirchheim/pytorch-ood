@@ -72,6 +72,7 @@ The package can be installed via PyPI:
 * ``libmr``  for the OpenMax Detector [#OpenMax]_ . The library is currently broken and unlikely to be repaired.
   You will have to install ``cython`` and ``libmr`` afterwards manually.
 * ``scikit`` for ViM
+* ``pandas`` for the `examples <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/index.html>`_.
 
 
 Quick Start
@@ -100,7 +101,7 @@ Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the c
     print(metrics.compute())
 
 
-You can find more examples in the `documentation <https://pytorch-ood.readthedocs.io/en/latest/examples.html>`_.
+You can find more examples in the `documentation <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/index.html>`_.
 
 
 Implemented

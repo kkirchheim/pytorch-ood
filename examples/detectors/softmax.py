@@ -1,3 +1,10 @@
+"""
+
+MaxSoftmax
+==============================
+
+
+"""
 import torch
 import torchvision.transforms as tvt
 from torch.utils.data import DataLoader

@@ -85,6 +85,7 @@ class ObjectosphereLoss(nn.Module):
 class EntropicOpenSetLoss(nn.Module):
     """
     From the paper *Reducing Network Agnostophobia*.
+    Aims to maximizes the entropy for OOD data.
 
     .. math::
        \\mathcal{L}(x, y)
@@ -93,7 +94,7 @@ class EntropicOpenSetLoss(nn.Module):
        {
        -\\log \\sigma_y(f(x)) \\quad \\text{if } y \\geq 0
         \\atop
-       \\frac{1}{C} \\sum_{c=1}^C \\sigma_c(f(x)) \\quad \\text{ otherwise }
+       \\frac{1}{C} \\sum_{c=1}^C \\log \\sigma_c(f(x)) \\quad \\text{ otherwise }
        }
 
     where :math:`\\sigma` is the softmax function.

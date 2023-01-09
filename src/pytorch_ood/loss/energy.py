@@ -4,8 +4,8 @@
 import torch
 import torch.nn as nn
 
-from ..loss import CrossEntropyLoss
-from ..utils import is_known, is_unknown
+from ..loss.crossentropy import cross_entropy
+from ..utils import apply_reduction, is_known, is_unknown
 
 
 def _energy(logits: torch.Tensor) -> torch.Tensor:
@@ -28,7 +28,7 @@ class EnergyRegularizedLoss(nn.Module):
        }
 
 
-    where :math:`E(x) = - \\log(\\sum_y e^{f(x)_y} )` is the energy of :math:`x`.
+    where :math:`E(x) = - \\log(\\sum_i e^{f_i(x)} )` is the energy of :math:`x`.
 
     :see Paper:
         `NeurIPS <https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf>`__
@@ -36,17 +36,24 @@ class EnergyRegularizedLoss(nn.Module):
     :see Implementation: `GitHub <https://github.com/wetliu/energy_ood>`__
     """
 
-    def __init__(self, alpha: float = 1, margin_in: float = 1, margin_out: float = 1):
+    def __init__(
+        self,
+        alpha: float = 1.0,
+        margin_in: float = 1.0,
+        margin_out: float = 1.0,
+        reduction: str = "mean",
+    ):
         """
         :param alpha: weighting parameter
         :param margin_in:  margin energy :math:`m_{in}` for IN data
         :param margin_out: margin energy :math:`m_{out}` for OOD data
+        :param reduction: can be one of ``none``, ``mean``, ``sum``
         """
         super(EnergyRegularizedLoss, self).__init__()
         self.m_in = margin_in
         self.m_out = margin_out
-        self.nll = CrossEntropyLoss()
         self.alpha = alpha
+        self.reduction = reduction
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """
@@ -56,18 +63,17 @@ class EnergyRegularizedLoss(nn.Module):
         :param targets: labels
         """
         regularization = self._regularization(logits, targets)
-        nll = self.nll(logits, targets)
-        return nll + self.alpha * regularization
+        nll = cross_entropy(logits, targets, reduction="none")
+        return apply_reduction(nll + self.alpha * regularization, reduction=self.reduction)
 
     def _regularization(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        if is_known(y).any():
-            energy_in = (_energy(logits[is_known(y)]) - self.m_in).relu().pow(2).mean()
-        else:
-            energy_in = 0
+        energy = torch.zeros(logits.shape[0])
 
-        if is_unknown(y).any():
-            energy_out = (_energy(self.m_out - logits[is_unknown(y)])).relu().pow(2).mean()
-        else:
-            energy_out = 0
+        known = is_known(y)
+        if known.any():
+            energy[known] = (_energy(logits[is_known(y)]) - self.m_in).relu().pow(2)
 
-        return energy_in + energy_out
+        if (~known).any():
+            energy[~known] = (_energy(self.m_out - logits[is_unknown(y)])).relu().pow(2)
+
+        return energy

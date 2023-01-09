@@ -1,3 +1,20 @@
+"""
+Deep One-Class Learning
+-------------------------
+
+We train a One-Class model (that is, a model that does not need class labels)
+on MNIST, using :class:`Deep SVDD <pytorch_ood.loss.DeepSVDDLoss>`.
+SVDD places a single center :math:`\\mu` in the output space of a model :math:`f_{\\theta}`.
+During training, the parameters  :math:`\\theta` are adjusted to minimize the (squared) sum of the distances of
+representations :math:`f_{\\theta}(x)` to this center.
+Thus, the model is trained to map the training samples close to the center.
+The idea is that the model learns to map **only** IN samples close to the center, and not OOD samples.
+The distance to the center can be used as outlier score.
+
+We test the model against FashionMNIST.
+
+First, some imports etc.
+"""
 import torch
 from torch import nn
 from torch.optim import Adam
@@ -12,13 +29,14 @@ torch.manual_seed(1234)
 
 device = "cuda:0"
 
+# %%
+# Next, we define a simple model. As described in the original paper of Deep SVDD, this
+# model must not use biases in linear layers or convolutions,
+# since this would lead to a trivial solution for the optimization problem.
+
 
 class Model(nn.Module):
-    """
-    We define a simple model. As described in the original paper of Deep SVDD, this model must not
-    use biases in linear layers or convolutions, since this would lead to a trivial solution
-    for the optimization problem.
-    """
+    """ """
 
     def __init__(self):
         super().__init__()
@@ -44,11 +62,12 @@ class Model(nn.Module):
         return x
 
 
-# setup training data
+# %%
+# Setup training and test data. Mark FashionMNIST as OOD with ``ToUnknown()``
+
 train_dataset = MNIST(root="data", download=True, train=True, transform=ToTensor())
 train_loader = DataLoader(train_dataset, num_workers=5, batch_size=128, shuffle=True)
 
-# setup test data, mark FashionMNIST as OOD with ToUnknown()
 test_dataset_in = MNIST(root="data", download=True, train=False, transform=ToTensor())
 test_dataset_out = FashionMNIST(
     root="data", download=True, train=False, transform=ToTensor(), target_transform=ToUnknown()
@@ -58,11 +77,12 @@ test_loader = DataLoader(
     test_dataset_out + test_dataset_in, shuffle=False, num_workers=5, batch_size=256
 )
 
-# setup model, optimizer and training criterion
+# %%
+# Setup model, optimizer and training criterion (SVDD).
+# Initialize the center of SVDD with the mean over the dataset
 model = Model().to(device)
 opti = Adam(model.parameters(), lr=0.001)
 
-# initialize the center of SVDD with the mean over the dataset
 with torch.no_grad():
     d = [model(x.to(device)) for x, y in train_loader]
     center = torch.concat(d).mean(dim=0).cpu()
@@ -72,10 +92,10 @@ print(center)
 criterion = DeepSVDDLoss(n_dim=2, center=center).to(device)
 
 
+# %%
+# Define a function to the model and print some metrics
 def test():
-    """
-    Test the model and print some metrics
-    """
+    """ """
     model.eval()
     metrics = OODMetrics()
 
@@ -90,6 +110,7 @@ def test():
     model.train()
 
 
+# %%
 # Train model and test at the end of each epoch
 for epoch in range(20):
     print(f"Epoch {epoch}")

@@ -1,8 +1,36 @@
+"""
+
+CIFAR 10
+==============================
+
+Benchmark code for CIFAR10
+
++-------------+--------+----------+-----------+-----------+-----------+
+| Detector    | AUROC  | AUPR-IN  | AUPR-OUT  | ACC95TPR  | FPR95TPR  |
++=============+========+==========+===========+===========+===========+
+| KLMatching  | 88.75  | 86.95    | 85.17     | 66.12     | 58.57     |
++-------------+--------+----------+-----------+-----------+-----------+
+| MaxSoftmax  | 91.85  | 88.55    | 93.57     | 82.29     | 28.43     |
++-------------+--------+----------+-----------+-----------+-----------+
+| MaxLogit    | 93.06  | 91.44    | 93.74     | 80.21     | 31.18     |
++-------------+--------+----------+-----------+-----------+-----------+
+| EnergyBased | 93.10  | 91.51    | 93.78     | 80.28     | 31.05     |
++-------------+--------+----------+-----------+-----------+-----------+
+| ODIN        | 93.20  | 92.12    | 93.94     | 79.88     | 31.65     |
++-------------+--------+----------+-----------+-----------+-----------+
+| ViM         | 94.49  | 93.42    | 95.34     | 85.02     | 23.48     |
++-------------+--------+----------+-----------+-----------+-----------+
+| Mahalanobis | 94.87  | 93.69    | 95.79     | 86.60     | 21.00     |
++-------------+--------+----------+-----------+-----------+-----------+
+
+
+
+"""
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 import torchvision.transforms as tvt
 from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR100
+from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import (
     LSUNCrop,
@@ -18,7 +46,6 @@ from pytorch_ood.detector import (
     Mahalanobis,
     MaxLogit,
     MaxSoftmax,
-    OpenMax,
     ViM,
 )
 from pytorch_ood.model import WideResNet
@@ -28,15 +55,18 @@ device = "cuda:0"
 
 torch.manual_seed(123)
 
-# setup preprocessing
+# %%
+# Setup preprocessing
 mean = [x / 255 for x in [125.3, 123.0, 113.9]]
 std = [x / 255 for x in [63.0, 62.1, 66.7]]
 trans = tvt.Compose(
     [tvt.Resize(size=(32, 32)), ToRGB(), tvt.ToTensor(), tvt.Normalize(std=std, mean=mean)]
 )
 
-# setup datasets
-dataset_in_test = CIFAR100(root="data", train=False, transform=trans)
+# %%
+# Setup datasets
+
+dataset_in_test = CIFAR10(root="data", train=False, transform=trans, download=True)
 
 # create all OOD datasets
 ood_datasets = [Textures, TinyImageNetCrop, TinyImageNetResize, LSUNCrop, LSUNResize]
@@ -48,11 +78,13 @@ for ood_dataset in ood_datasets:
     test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=256)
     datasets[ood_dataset.__name__] = test_loader
 
-# Stage 1: Create DNN with pre-trained weights from the Hendrycks baseline paper
+# %%
+# **Stage 1**: Create DNN with pre-trained weights from the Hendrycks baseline paper
 print("STAGE 1: Creating a Model")
-model = WideResNet(num_classes=100, pretrained="cifar100-pt").eval().to(device)
+model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
 
-# Stage 2: Create OOD detector
+# %%
+# **Stage 2**: Create OOD detector
 print("STAGE 2: Creating OOD Detectors")
 detectors = {}
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
@@ -62,16 +94,16 @@ detectors["MaxSoftmax"] = MaxSoftmax(model)
 detectors["EnergyBased"] = EnergyBased(model)
 detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=std, eps=0.002)
-detectors["OpenMax"] = OpenMax(model)
 
 # fit detectors to training data (some require this, some do not)
 print(f"> Fitting {len(detectors)} detectors")
-loader_in_train = DataLoader(CIFAR100(root="data", train=True, transform=trans), batch_size=256)
+loader_in_train = DataLoader(CIFAR10(root="data", train=True, transform=trans), batch_size=256)
 for name, detector in detectors.items():
     print(f"--> Fitting {name}")
     detector.fit(loader_in_train, device=device)
 
-# Stage 3: Evaluate Detectors
+# %%
+# **Stage 3**: Evaluate Detectors
 print(f"STAGE 3: Evaluating {len(detectors)} detectors on {len(datasets)} datasets.")
 results = []
 
