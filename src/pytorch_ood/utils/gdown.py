@@ -108,7 +108,7 @@ def download(
     id=None,
     fuzzy=False,
     resume=False,
-):
+) -> str:
     """Download file from URL.
     Parameters
     ----------
@@ -138,7 +138,7 @@ def download(
     Returns
     -------
     output: str
-        Output filename.
+        Output filename or None if download failed
     """
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
@@ -287,7 +287,7 @@ def download(
             shutil.move(tmp_file, output)
     except IOError as e:
         log.error(e)
-        return
+        return None
     finally:
         sess.close()
     return output
