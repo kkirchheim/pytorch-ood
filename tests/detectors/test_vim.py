@@ -18,8 +18,8 @@ class TestViM(unittest.TestCase):
     def test_classification_input(self):
 
         model = ClassificationModel(n_hidden=10)
-        w = model.layer2.weight.data
-        b = model.layer2.bias.data
+        w = model.classifier.weight.data
+        b = model.classifier.bias.data
         detector = ViM(model.features, 2, w=w, b=b)
 
         y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
@@ -59,7 +59,9 @@ class TestViM(unittest.TestCase):
 
         x = torch.randn(size=(128, n_dim)) + torch.Tensor(n_dim * [0])
 
-        detector = ViM(model.features, d=5, w=model.layer2.weight.data, b=model.layer2.bias.data)
+        detector = ViM(
+            model.features, d=5, w=model.classifier.weight.data, b=model.classifier.bias.data
+        )
 
         with torch.no_grad():
             logits1 = model(x)
@@ -97,7 +99,9 @@ class TestViM(unittest.TestCase):
         x = torch.randn(size=(128, n_dim)) + torch.Tensor(n_dim * [0])
         y = torch.ones(size=(128,)) * -1
 
-        detector = ViM(model.features, d=5, w=model.layer2.weight.data, b=model.layer2.bias.data)
+        detector = ViM(
+            model.features, d=5, w=model.classifier.weight.data, b=model.classifier.bias.data
+        )
         detector.fit(train_loader)
 
         metrics = OODMetrics()
