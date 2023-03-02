@@ -21,7 +21,7 @@ class FoolingImages(ImageDatasetBase):
     base_folder = "10-runs-x-1000-cppns"
     url = "https://s.anhnguyen.me/10_runs_x_1000_cppns.tar.gz"
     filename = "10_runs_x_1000_cppns.tar.gz"
-    tgz_md5 = "0910d63973b1512770f37bebdbb53e37"
+    md5hash = "0910d63973b1512770f37bebdbb53e37"
 
     def __init__(
         self,

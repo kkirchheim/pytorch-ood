@@ -1,5 +1,6 @@
 import logging
 import os
+from os.path import join
 from typing import Any, Callable, List, Optional, Tuple
 
 from PIL import Image
@@ -25,36 +26,33 @@ class StreetHazards(ImageDatasetBase):
     :see Website: `GitHub <https://github.com/hendrycks/anomaly-seg>`__
     """
 
-    base_folder = "dtd/images/"
-
     subset_list = ["test", "train", "validation"]
 
-    base_folder_list = [
-        "test/images/",
-        "train/images/training/",
-        "train/images/validation/",
-    ]
-    url_list = [
-        "https://people.eecs.berkeley.edu/~hendrycks/streethazards_test.tar",
-        "https://people.eecs.berkeley.edu/~hendrycks/streethazards_train.tar",
-        "https://people.eecs.berkeley.edu/~hendrycks/streethazards_train.tar",
-    ]
-    filename_list = [
-        "streethazards_test.tar",
-        "streethazards_train.tar",
-        "streethazards_train.tar",
-    ]
-    tgz_md5_list = [
-        "8c547c1346b00c21b2483887110bfea7",
-        "cd2d1a8649848afb85b5059d227d2090",
-        "cd2d1a8649848afb85b5059d227d2090",
-    ]
+    root_dir_name = "streethazards"
+
+    base_folders = {
+        "test": "test/images/",
+        "train": "train/images/training/",
+        "validation": "validation",
+    }
+
+    url_list = {
+        "test": "https://people.eecs.berkeley.edu/~hendrycks/streethazards_test.tar",
+        "train": "https://people.eecs.berkeley.edu/~hendrycks/streethazards_train.tar",
+        "validation": "https://people.eecs.berkeley.edu/~hendrycks/streethazards_train.tar",
+    }
+
+    filename_list = {
+        "test": ("streethazards_test.tar", "8c547c1346b00c21b2483887110bfea7"),
+        "train": ("streethazards_train.tar", "cd2d1a8649848afb85b5059d227d2090"),
+        "validation": ("streethazards_train.tar", "cd2d1a8649848afb85b5059d227d2090"),
+    }
 
     def __init__(
         self,
         root: str,
         subset: str,
-        transform: Optional[Callable] = None,
+        transform: Optional[Callable[[Tuple], Tuple]] = None,
         download: bool = False,
     ) -> None:
         """
@@ -63,12 +61,12 @@ class StreetHazards(ImageDatasetBase):
         :param transform: transformations to apply to images and masks, will get tuple as argument
         :param download: if dataset should be downloaded automatically
         """
+        root = join(root, self.root_dir_name)
         super(ImageDatasetBase, self).__init__(root, transform=transform)
 
-        self.base_folder = self.base_folder_list[self.subset_list.index(subset)]
-        self.url = self.url_list[self.subset_list.index(subset)]
-        self.filename = self.filename_list[self.subset_list.index(subset)]
-        self.tgz_md5 = self.tgz_md5_list[self.subset_list.index(subset)]
+        self.base_folder = self.base_folders[subset]
+        self.url = self.url_list[subset]
+        self.filename, self.tgz_md5 = self.filename_list[subset]
 
         if download:
             self.download()
@@ -92,7 +90,7 @@ class StreetHazards(ImageDatasetBase):
         :param root: root directory for the search
         """
         current_files = [os.path.join(root, entry) for entry in os.listdir(root)]
-        all_files = list()
+        all_files = []
 
         for path in current_files:
             if os.path.isdir(path):
@@ -107,12 +105,13 @@ class StreetHazards(ImageDatasetBase):
         :param index: index
         :returns: (image, target) where target is the annotation of the image.
         """
-
         file, target = self.files[index], self.files[index].replace("images", "annotations")
 
         # to return a PIL Image
         img = Image.open(file)
         target = to_tensor(Image.open(target)).squeeze(0)
+        target = (target * 255).long()  # labels to integer
+        target[target >= 14] = -1  # negative labels for outliers
 
         if self.transform is not None:
             img, target = self.transform(img, target)

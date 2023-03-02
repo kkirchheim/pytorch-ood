@@ -3,11 +3,22 @@
     :members:
 
 """
+from typing import Dict, TypeVar
+
 import numpy as np
 import torch
 import torchmetrics
+from torch import Tensor
+from torchmetrics.functional.classification import (
+    binary_accuracy,
+    binary_auroc,
+    binary_roc,
+    precision_recall_curve,
+)
 
 from .utils import TensorBuffer, is_unknown
+
+Self = TypeVar("Self")
 
 
 def calibration_error(
@@ -76,39 +87,15 @@ def fpr_at_tpr(pred, target, k=0.95):
     """
     Calculate the False Positive Rate at a certain True Positive Rate
 
-    TODO: use bisect
-
     :param pred: outlier scores
     :param target: target label
     :param k: cutoff value
     :return:
     """
-    fpr, tpr, thresholds = torchmetrics.functional.roc(pred, target)
-    for fp, tp, t in zip(fpr, tpr, thresholds):
-        if tp >= k:
-            return fp
-
-    return torch.tensor(1.0)
-
-
-def accuracy_at_tpr(pred, target, k=0.95):
-    """
-    Calculate the accurcy at a certain True Positive Rate
-
-    TODO: use bisect
-
-    :param pred: outlier scores
-    :param target: target label
-    :param k: cutoff value
-    :return:
-    """
-    fpr, tpr, thresholds = torchmetrics.functional.roc(pred, target)
-    for fp, tp, t in zip(fpr, tpr, thresholds):
-        if tp >= k:
-            labels = torch.where(pred >= t, 1, 0)
-            return torchmetrics.functional.accuracy(labels, target)
-
-    return torch.tensor(0.0)
+    # results will be sorted in reverse order
+    fpr, tpr, _ = binary_roc(pred, target)
+    idx = torch.searchsorted(tpr, k)
+    return fpr[idx]
 
 
 class OODMetrics(object):
@@ -116,9 +103,9 @@ class OODMetrics(object):
     Calculates various metrics used in OOD detection experiments.
 
     - AUROC
-    - AUPR IN/OUT
+    - AUPR IN
+    - AUPR OUT
     - FPR\\@95TPR
-    - ACC\\@95TPR
 
     The interface is similar to ``torchmetrics``.
 
@@ -129,9 +116,6 @@ class OODMetrics(object):
         labels = torch.Tensor([1,2,-1])
         metrics.update(outlier_scores, labels)
         metric_dict = metrics.compute()
-
-    .. warning :: This implementation is not optimized and might consume large amounts of memory.
-
     """
 
     def __init__(self, device="cpu"):
@@ -141,11 +125,8 @@ class OODMetrics(object):
         super(OODMetrics, self).__init__()
         self.device = device
         self.buffer = TensorBuffer(device=self.device)
-        self.auroc = torchmetrics.classification.BinaryAUROC(num_classes=2)
-        self.aupr_in = torchmetrics.classification.BinaryPrecisionRecallCurve(pos_label=1)
-        self.aupr_out = torchmetrics.classification.BinaryPrecisionRecallCurve(pos_label=0)
 
-    def update(self, outlier_scores: torch.Tensor, y: torch.Tensor) -> None:
+    def update(self: Self, outlier_scores: Tensor, y: Tensor) -> Self:
         """
         Add batch of results to collection.
 
@@ -153,15 +134,11 @@ class OODMetrics(object):
         :param y: target label
         """
         label = is_unknown(y).detach().to(self.device).long()
-        o = outlier_scores.detach().to(self.device)
-
-        self.auroc.update(o, label)
-        self.aupr_in.update(o, label)
-        self.aupr_out.update(-o, 1 - label)
         self.buffer.append("scores", outlier_scores)
         self.buffer.append("labels", label)
+        return self
 
-    def compute(self) -> dict:
+    def compute(self) -> Dict[str, float]:
         """
         Calculate metrics
 
@@ -171,59 +148,36 @@ class OODMetrics(object):
         if self.buffer.is_empty():
             raise ValueError("Must be given data to calculate metrics.")
 
-        labels = self.buffer.get("labels")
-        scores = self.buffer.get("scores")
+        labels = self.buffer.get("labels").view(-1)
+        scores = self.buffer.get("scores").view(-1)
 
         if len(torch.unique(labels)) != 2:
             raise ValueError("Data must contain IN and OOD samples.")
 
-        auroc = self.auroc.compute()
+        scores, scores_idx = torch.sort(scores, stable=True)
+        labels = labels[scores_idx]
 
-        p, r, t = self.aupr_in.compute()
-        aupr_in = torchmetrics.functional.auc(r, p, reorder=True)
+        auroc = binary_auroc(scores, labels)
 
-        p, r, t = self.aupr_out.compute()
+        # num_classes=None for binary
+        p, r, t = precision_recall_curve(scores, labels, pos_label=1, num_classes=None)
+        aupr_in = torchmetrics.functional.auc(r, p)
+
+        p, r, t = precision_recall_curve(-scores, labels, pos_label=0, num_classes=None)
         aupr_out = torchmetrics.functional.auc(r, p)
 
-        acc = accuracy_at_tpr(scores, labels)
         fpr = fpr_at_tpr(scores, labels)
 
         return {
             "AUROC": auroc.item(),
             "AUPR-IN": aupr_in.item(),
             "AUPR-OUT": aupr_out.item(),
-            "ACC95TPR": acc.item(),
             "FPR95TPR": fpr.item(),
         }
 
-    def reset(self) -> None:
+    def reset(self: Self) -> Self:
         """
         Resets collected metrics
         """
-        self.auroc.reset()
-        self.aupr_in.reset()
-        self.aupr_out.reset()
         self.buffer.clear()
-
-
-class ErrorDetectionMetrics(object):
-    def __init__(self):
-        self.buffer = TensorBuffer()
-
-    def update(self, outlier_scores, y, y_hat) -> None:
-        """
-
-        :param outlier_scores: outlier score
-        :param y: true label
-        :param y_hat: predicted label
-        """
-        self.buffer.append("scores", outlier_scores)
-        self.buffer.append("y", y)
-        self.buffer.append("y_hat", y_hat)
-
-    def compute(self) -> dict:
-        y = self.buffer.get("y")
-        s = self.buffer.get("scores")
-        y_hat = self.buffer.get("y_hat")
-
-        correct = y_hat.eq(y)
+        return self

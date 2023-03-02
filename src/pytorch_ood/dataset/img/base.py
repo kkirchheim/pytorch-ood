@@ -19,7 +19,7 @@ class ImageDatasetBase(VisionDataset):
     base_folder = None
     url = None
     filename = None
-    tgz_md5 = None
+    md5hash = None
 
     def __init__(
         self,
@@ -70,12 +70,11 @@ class ImageDatasetBase(VisionDataset):
         return len(self.files)
 
     def _check_integrity(self) -> bool:
-        root = self.root
-        fpath = os.path.join(root, self.filename)
-        return check_integrity(fpath, self.tgz_md5)
+        fpath = os.path.join(self.root, self.filename)
+        return check_integrity(fpath, self.md5hash)
 
     def download(self) -> None:
         if self._check_integrity():
             log.debug("Files already downloaded and verified")
             return
-        download_and_extract_archive(self.url, self.root, filename=self.filename, md5=self.tgz_md5)
+        download_and_extract_archive(self.url, self.root, filename=self.filename, md5=self.md5hash)

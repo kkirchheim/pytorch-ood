@@ -22,7 +22,6 @@ class TestMetrics(unittest.TestCase):
         self.assertEqual(r["AUROC"], 1.0)
         self.assertEqual(r["AUPR-IN"], 1.0)
         self.assertEqual(r["AUPR-OUT"], 1.0)
-        self.assertEqual(r["ACC95TPR"], 1.0)
         self.assertEqual(r["FPR95TPR"], 0.0)
 
     def test_error_on_only_IN_data(self):
@@ -43,3 +42,7 @@ class TestMetrics(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             r = metrics.compute()
+
+    def test_reset_1(self):
+        metrics = OODMetrics()
+        metrics.reset()

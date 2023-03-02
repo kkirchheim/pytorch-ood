@@ -57,11 +57,11 @@ class TestDatasetAvailability(unittest.TestCase):
         self.assertEqual(status, 200)
 
     def test_download_StreetHazards(self):
-        status = urlopen(StreetHazards.url_list[0]).getcode()
+        status = urlopen(StreetHazards.url_list["train"]).getcode()
         self.assertEqual(status, 200)
-        status = urlopen(StreetHazards.url_list[1]).getcode()
+        status = urlopen(StreetHazards.url_list["test"]).getcode()
         self.assertEqual(status, 200)
-        status = urlopen(StreetHazards.url_list[2]).getcode()
+        status = urlopen(StreetHazards.url_list["validation"]).getcode()
         self.assertEqual(status, 200)
 
     def test_download_Wiki2(self):
