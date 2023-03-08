@@ -5,14 +5,14 @@ class ClassificationModel(torch.nn.Module):
     def __init__(self, num_inputs=10, n_hidden=10, num_outputs=3):
         super(ClassificationModel, self).__init__()
         self.layer1 = torch.nn.Linear(num_inputs, n_hidden)
-        self.layer2 = torch.nn.Linear(n_hidden, num_outputs)
+        self.classifier = torch.nn.Linear(n_hidden, num_outputs)
 
     def features(self, x):
         return self.layer1(x).tanh()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.features(x)
-        return self.layer2(x)
+        return self.classifier(x)
 
 
 class SegmentationModel(torch.nn.Module):

@@ -1,13 +1,13 @@
 PyTorch Out-of-Distribution Detection
-=====================================
+****************************************
 
 .. image:: https://img.shields.io/badge/docs-online-blue
    :target: https://pytorch-ood.readthedocs.io/en/latest/
    :alt: Documentation
 
-.. image:: https://img.shields.io/pypi/v/pytorch-ood.svg?color=brightgreen
-   :target: https://pypi.org/project/pytorch-ood/
-   :alt: PyPI version
+.. image:: https://img.shields.io/pypi/l/pytorch-ood
+   :target: https://gitlab.com/kkirchheim/pytorch-ood/-/blob/master/LICENSE
+   :alt: License
 
 .. image:: https://img.shields.io/badge/-Python 3.8+-blue?logo=python&logoColor=white
    :target: https://www.python.org/
@@ -31,52 +31,35 @@ PyTorch Out-of-Distribution Detection
 
 -----
 
-PyTorch-based library to accelerate research in Out-of-Distribution (OOD) Detection, as well as related
-fields such as Open-Set Recognition, Novelty Detection, Confidence Estimation and Anomaly Detection
-based on Deep Neural Networks.
+Out-of-Distribution (OOD) Detection with Deep Neural Networks based on PyTorch.
 
-This library provides
+The library provides:
 
-- Objective/Loss Functions
 - Out-of-Distribution Detection Methods
+- Loss Functions
 - Datasets
 - Neural Network Architectures as well as pretrained weights
 - Useful Utilities
 
-and is designed such that it should integrate seamlessly with frameworks that enable the scaling of model training,
-like `pytorch-lightning <https://www.pytorchlightning.ai>`_.
-
-
-Installation
-^^^^^^^^^^^^^^
-The package can be installed via PyPI:
-
-.. code-block:: shell
-
-   pip install pytorch-ood
+and is designed such that it should be compatible with frameworks like,
+like `pytorch-lightning <https://www.pytorchlightning.ai>`_ and
+`pytorch-segmentation-models <https://github.com/qubvel/segmentation_models.pytorch>`_.
+The library also covers some methods from closely related fields such as Open-Set Recognition, Novelty Detection,
+Confidence Estimation and Anomaly Detection.
 
 
 
-**Dependencies**
+📚  Documentation
+^^^^^^^^^^^^^^^^^^^
+The documentation is available `here <https://pytorch-ood.readthedocs.io/en/latest/>`_.
 
+**NOTE**: An important convention adopted in ``pytorch-ood`` is that **OOD detectors predict outlier scores**
+that should be larger for outliers than for inliers.
+If you notice that the scores predicted by a detector do not match the formulas in the corresponding publication,
+it may be possible that we multiplied the scores with negative one to comply with this convention.
 
-* ``torch``
-* ``torchvision``
-* ``scipy``
-* ``torchmetrics``
-
-
-**Optional Dependencies**
-
-
-* ``libmr``  for the OpenMax Detector [#OpenMax]_ . The library is currently broken and unlikely to be repaired.
-  You will have to install ``cython`` and ``libmr`` afterwards manually.
-* ``scikit`` for ViM
-* ``pandas`` for the `examples <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/index.html>`_.
-
-
-Quick Start
-^^^^^^^^^^^
+⏳ Quick Start
+^^^^^^^^^^^^^^^^^
 Load model pre-trained on CIFAR-10 with the Energy-Bounded Learning Loss [#EnergyBasedOOD]_, and predict on some dataset ``data_loader`` using
 Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the common OOD detection metrics:
 
@@ -103,11 +86,39 @@ Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the c
 
 You can find more examples in the `documentation <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/index.html>`_.
 
+🛠 ️️Installation
+^^^^^^^^^^^^^^^^^
+The package can be installed via PyPI:
 
-Implemented
-^^^^^^^^^^^^^^^^^^^^^^
+.. code-block:: shell
 
-**Detectors** :
+   pip install pytorch-ood
+
+
+
+**Dependencies**
+
+
+* ``torch``
+* ``torchvision``
+* ``scipy``
+* ``torchmetrics``
+
+
+**Optional Dependencies**
+
+
+* ``libmr``  for the OpenMax Detector [#OpenMax]_ . The library is currently broken and unlikely to be repaired.
+  You will have to install ``cython`` and ``libmr`` afterwards manually.
+* ``scikit`` for ViM
+* ``pandas`` for the `examples <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/index.html>`_.
+* ``segmentation-models-pytorch`` to run the examples for anomaly segmentation
+
+
+📦 Implemented
+^^^^^^^^^^^^^^^
+
+**Detectors**:
 
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Detector                    | Description                                                                                    | Year | Ref                |
@@ -129,9 +140,8 @@ Implemented
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | KL-Matching                 | Implements the KL-Matching method for Multi-Class classification.                              | 2022 | [#StreeHaz]_       |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| ViM                         | Implements Virtual Logit Matching                               .                              | 2022 | [#ViM]_            |
+| ViM                         | Implements Virtual Logit Matching.                                                             | 2022 | [#ViM]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-
 
 **Objective Functions**:
 
@@ -165,29 +175,29 @@ Implemented
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | Dataset               | Description                                                                                                     | Year | Ref           |
 +=======================+=================================================================================================================+======+===============+
-| TinyImages            | The TinyImages dataset is often used as auxiliary OOD training data. However, use is discouraged                | 2012 | [#TinyImgs]_  |
+| TinyImages            | The TinyImages dataset is often used as auxiliary OOD training data. However, use is discouraged.               | 2012 | [#TinyImgs]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| Textures              | Textures dataset, also known as DTD, often used as OOD Examples                                                 | 2013 | [#Textures]_  |
+| Textures              | Textures dataset, also known as DTD, often used as OOD Examples.                                                | 2013 | [#Textures]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| FoolingImages         | OOD Images Generated to fool certain Deep Neural Networks                                                       | 2014 | [#FImages]_   |
+| FoolingImages         | OOD Images Generated to fool certain Deep Neural Networks.                                                      | 2014 | [#FImages]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| TinyImages300k        | A cleaned version of the TinyImages Dataset with 300.000 images, often used as auxiliary OOD training data      | 2018 | [#OE]_        |
+| TinyImages300k        | A cleaned version of the TinyImages Dataset with 300.000 images, often used as auxiliary OOD training data.     | 2018 | [#OE]_        |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| MNIST-C               | Corrupted version of the MNIST                                                                                  | 2019 | [#MnistC]_    |
+| MNIST-C               | Corrupted version of the MNIST.                                                                                 | 2019 | [#MnistC]_    |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| CIFAR10-C             | Corrupted version of the CIFAR 10                                                                               | 2019 | [#Cifar10]_   |
+| CIFAR10-C             | Corrupted version of the CIFAR 10.                                                                              | 2019 | [#Cifar10]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| CIFAR100-C            | Corrupted version of the CIFAR 100                                                                              | 2019 | [#Cifar10]_   |
+| CIFAR100-C            | Corrupted version of the CIFAR 100.                                                                             | 2019 | [#Cifar10]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| ImageNet-C            | Corrupted version of the ImageNet                                                                               | 2019 | [#Cifar10]_   |
+| ImageNet-C            | Corrupted version of the ImageNet.                                                                              | 2019 | [#Cifar10]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| ImageNet - A, O, R    | Different Outlier Variants for the ImageNet                                                                     | 2019 | [#ImageNets]_ |
+| ImageNet - A, O, R    | Different Outlier Variants for the ImageNet.                                                                    | 2019 | [#ImageNets]_ |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| MVTech-AD             | MVTech-AD                                                                                                       | 2021 | [#MVTech]_    |
+| MVTech-AD             | MVTech Anomaly Segmentation Dataset                                                                             | 2021 | [#MVTech]_    |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | StreetHazards         | Anomaly Segmentation Dataset                                                                                    | 2022 | [#StreeHaz]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| PixMix                | PixMix image augmentation method.                                                                               | 2022 | [#PixMix]_    |
+| PixMix                | PixMix image augmentation method                                                                                | 2022 | [#PixMix]_    |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 
 
@@ -196,16 +206,23 @@ Implemented
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
 | Dataset     | Description                                                                                                               | Year | Ref             |
 +=============+===========================================================================================================================+======+=================+
-| Multi30k    | Multi-30k dataset, as used by Hendrycks et al. in the OOD baseline paper                                                  | 2016 | [#Multi30k]_    |
+| Multi30k    | Multi-30k dataset, as used by Hendrycks et al. in the OOD baseline paper.                                                 | 2016 | [#Multi30k]_    |
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
-| WikiText2   | Texts from the wikipedia often used as auxiliary OOD training data                                                        | 2016 | [#WikiText2]_   |
+| WikiText2   | Texts from the wikipedia often used as auxiliary OOD training data.                                                       | 2016 | [#WikiText2]_   |
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
-| WikiText103 | Texts from the wikipedia often used as auxiliary OOD training data                                                        | 2016 | [#WikiText2]_   |
+| WikiText103 | Texts from the wikipedia often used as auxiliary OOD training data.                                                       | 2016 | [#WikiText2]_   |
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
 
 
-Citing
-^^^^^^^
+
+🤝  Contributing
+^^^^^^^^^^^^^^^^^
+We encourage everyone to contribute to this project by adding implementations of OOD Detection methods, datasets etc,
+or check the existing implementations for bugs.
+
+
+📝 Citing
+^^^^^^^^^^
 
 ``pytorch-ood`` was presented on a CVPR Workshop in 2022.
 If you use it in a scientific publication, please consider citing::
@@ -219,20 +236,14 @@ If you use it in a scientific publication, please consider citing::
         pages     = {4351-4360}
     }
 
-
-Contributing
-^^^^^^^^^^^^
-We encourage everyone to contribute to this project by adding implementations of OOD Detection methods, datasets etc,
-or check the existing implementations for bugs.
-
-License
+🛡️ ️License
 ^^^^^^^
 The code is licensed under Apache 2.0. We have taken care to make sure any third party code included or adapted has compatible (permissive) licenses such as MIT, BSD, etc.
 The legal implications of using pre-trained models in commercial services are, to our knowledge, not fully understood.
 
 ----
 
-Reference
+🔗 References
 ^^^^^^^^^
 .. [#OpenMax]  Bendale, A., & Boult, T. E. (2016). Towards open set deep networks. CVPR.
 

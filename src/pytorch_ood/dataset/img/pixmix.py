@@ -150,7 +150,10 @@ class PixMixDataset(torch.utils.data.Dataset):
 class PixMixExampleDatasets(VisionDataset):
     google_drive_id = "1qC2gIUx9ARU7zhgI4IwGD3YcFhm8J4cA"
     filename = "fractals_and_fvis.tar"
-    subdirs = {"fractals": "fractals/images/", "layers": "first_layers_resized256_onevis/images/"}
+    subdirs = {
+        "fractals": "fractals/images/",
+        "features": "first_layers_resized256_onevis/images/",
+    }
     base_folder = "fractals_and_fvis"
     md5sum = "3619fb7e2c76130749d97913fdd3ab27"
 
@@ -202,8 +205,7 @@ class PixMixExampleDatasets(VisionDataset):
         return len(self.files)
 
     def _check_integrity(self) -> bool:
-        root = self.root
-        fpath = os.path.join(root, self.filename)
+        fpath = os.path.join(self.root, self.filename)
         return check_integrity(fpath, self.md5sum)
 
     def download(self) -> None:
@@ -212,16 +214,19 @@ class PixMixExampleDatasets(VisionDataset):
             return
 
         archive = os.path.join(self.root, self.filename)
-        gdown.download(id=self.google_drive_id, output=archive)
+        if not gdown.download(id=self.google_drive_id, output=archive):
+            raise Exception("File must be downloaded manually")
 
         log.info("Extracting {archive} to {self.root}")
         extract_archive(archive, self.root, remove_finished=False)
 
 
-class LayerVisDataset(PixMixExampleDatasets):
+class FeatureVisDataset(PixMixExampleDatasets):
     """
-    Dataset with Layer visualizations, as used in
+    Dataset with Feature visualizations, as used in
     *PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures*.
+
+    .. note:: Dataset has to be downloaded manually.
 
     :see Paper: `ArXiv <https://arxiv.org/abs/2112.05135>`__
     """
@@ -231,14 +236,12 @@ class LayerVisDataset(PixMixExampleDatasets):
         root: str,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-        download: bool = False,
     ) -> None:
-        super(LayerVisDataset, self).__init__(
+        super(FeatureVisDataset, self).__init__(
             root,
-            subset="layers",
+            subset="features",
             transform=transform,
             target_transform=target_transform,
-            download=download,
         )
 
 
@@ -247,6 +250,8 @@ class FractalDataset(PixMixExampleDatasets):
     Dataset with Fractals, as used in
     *PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures*.
 
+    .. note:: Dataset has to be downloaded manually.
+
     :see Paper: `ArXiv <https://arxiv.org/abs/2112.05135>`__
     """
 
@@ -255,12 +260,10 @@ class FractalDataset(PixMixExampleDatasets):
         root: str,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-        download: bool = False,
     ) -> None:
         super(FractalDataset, self).__init__(
             root,
             subset="fractals",
             transform=transform,
             target_transform=target_transform,
-            download=download,
         )

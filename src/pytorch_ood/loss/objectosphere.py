@@ -3,7 +3,7 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
-from torch import nn
+from torch import Tensor, nn
 
 from ..utils import apply_reduction, contains_known, contains_unknown, is_known, is_unknown
 
@@ -18,12 +18,13 @@ class ObjectosphereLoss(nn.Module):
        \\mathcal{L}(x, y) = \\mathcal{L}_E(x,y)  + \\alpha
        \\Biggl \\lbrace
        {
-       \\max \\lbrace 0, \\xi - \\lVert f(x) \\rVert \\rbrace^2 \\quad \\text{if } y \\geq 0
+       \\max \\lbrace 0, \\xi - \\lVert F(x) \\rVert \\rbrace^2 \\quad \\text{if } y \\geq 0
         \\atop
-       \\lVert f(x) \\rVert_2^2 \\quad \\quad \\quad  \\quad \\quad \\quad  \\quad  \\text{ otherwise }
+       \\lVert F(x) \\rVert_2^2 \\hspace{3.7cm}  \\text{ otherwise }
        }
 
-    where :math:`\\mathcal{L}_E` is the Entropic Open-Set Loss
+    where :math:`F(x)` are deep features in some layer of the model, and
+    :math:`\\mathcal{L}_E` is the Entropic Open-Set Loss.
 
 
     :see Paper:
@@ -43,11 +44,12 @@ class ObjectosphereLoss(nn.Module):
         self.entropic = EntropicOpenSetLoss(reduction=None)
         self.reduction = reduction
 
-    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    def forward(self, logits: Tensor, features: Tensor, target: Tensor) -> Tensor:
         """
 
-        :param logits: class logits
-        :param target: target labels
+        :param logits: class logits :math:`f(x)`
+        :param features: deep features :math:`F(x)`
+        :param target: target labels :math:`y`
         :return: the loss
         """
         entropic_loss = self.entropic(logits, target)
@@ -57,20 +59,20 @@ class ObjectosphereLoss(nn.Module):
             known = is_known(target)
             # todo: this can be optimized
             losses[known] = (
-                (self.xi - torch.linalg.norm(logits[known], ord=2, dim=1)).relu().pow(2)
+                (self.xi - torch.linalg.norm(features[known], ord=2, dim=1)).relu().pow(2)
             )
 
         if contains_unknown(target):
             unknown = is_unknown(target)
             # todo: this can be optimized
-            losses[unknown] = torch.linalg.norm(logits[unknown], ord=2, dim=1).pow(2)
+            losses[unknown] = torch.linalg.norm(features[unknown], ord=2, dim=1).pow(2)
 
         loss = entropic_loss + self.alpha * losses
 
         return apply_reduction(loss, self.reduction)
 
     @staticmethod
-    def score(logits: torch.Tensor) -> torch.Tensor:
+    def score(logits: Tensor) -> Tensor:
         """
         Outlier score used by the objectosphere loss.
 
@@ -112,7 +114,7 @@ class EntropicOpenSetLoss(nn.Module):
         super(EntropicOpenSetLoss, self).__init__()
         self.reduction = reduction
 
-    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    def forward(self, logits: Tensor, target: Tensor) -> Tensor:
         """
 
         :param logits: class logits

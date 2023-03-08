@@ -99,9 +99,9 @@ Fractals
     :members:
 
 
-Layer Visualizations
+Feature Visualizations
 ``````````````````````````
-..  autoclass:: pytorch_ood.dataset.img.LayerVisDataset
+..  autoclass:: pytorch_ood.dataset.img.FeatureVisDataset
     :members:
 
 
@@ -137,7 +137,7 @@ from .mnistc import MNISTC
 from .mvtech import MVTechAD
 from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
-from .pixmix import FractalDataset, LayerVisDataset, PixMixDataset
+from .pixmix import FeatureVisDataset, FractalDataset, PixMixDataset
 from .streethazards import StreetHazards
 from .textures import Textures
 from .tinyimagenet import TinyImageNet

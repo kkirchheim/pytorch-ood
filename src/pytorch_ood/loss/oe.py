@@ -16,8 +16,7 @@ class OutlierExposureLoss(nn.Module):
     While the formulation in the original paper is very general, this module implements the exact loss that
     was used in the corresponding experiments.
 
-    In addition to the cross-entropy for known samples, outlier exposure includes a term
-    for OOD samples that is defined as:
+    The loss is defined as
 
     .. math::
         \\mathcal{L}(x, y)
@@ -30,17 +29,18 @@ class OutlierExposureLoss(nn.Module):
        }
 
 
-    where :math:`C` is the number of classes.
+    where :math:`C` is the number of classes, :math:`\\alpha` is a hyper parameter, and :math:`\\sigma_y`
+    denotes the :math:`y^{th}` softmax output.
 
     :see Paper: `ArXiv <https://arxiv.org/pdf/1812.04606v1.pdf>`__
     :see Implementation: `GitHub <https://github.com/hendrycks/outlier-exposure>`__
     """
 
-    def __init__(self, alpha=0.5, reduction: Optional[str] = "mean"):
+    def __init__(self, alpha: float = 0.5, reduction: Optional[str] = "mean"):
         """
 
-        :param alpha: weighting coefficient
-        :param reduction: reduction to apply
+        :param alpha: weighting coefficient :math:`\\alpha`
+        :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
         """
         super(OutlierExposureLoss, self).__init__()
         self.alpha = alpha

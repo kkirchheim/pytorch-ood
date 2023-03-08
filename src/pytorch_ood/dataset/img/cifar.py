@@ -43,7 +43,7 @@ class CIFAR10C(ImageDatasetBase):
     base_folder = "CIFAR-10-C"
     url = "https://zenodo.org/record/2535967/files/CIFAR-10-C.tar"
     filename = "CIFAR-10-C.tar"
-    tgz_md5 = "56bf5dcef84df0e2308c6dcbcbbd8499"
+    md5hash = "56bf5dcef84df0e2308c6dcbcbbd8499"
 
     def __init__(
         self,
@@ -103,4 +103,4 @@ class CIFAR100C(CIFAR10C):
     base_folder = "CIFAR-100-C/"
     url = "https://zenodo.org/record/3555552/files/CIFAR-100-C.tar"
     filename = "CIFAR-100-C.tar"
-    tgz_md5 = "11f0ed0f1191edbf9fa23466ae6021d3 "
+    md5hash = "11f0ed0f1191edbf9fa23466ae6021d3 "

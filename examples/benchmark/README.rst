@@ -15,4 +15,9 @@ We test :class:`MaxSoftmax <pytorch_ood.detector.MaxSoftmax>`,
 :class:`ViM <pytorch_ood.detector.ViM>` and
 :class:`Mahalanobis  <pytorch_ood.detector.Mahalanobis>`.
 
-To run these examples, you have to install ``pandas`` as well as ``scikit-learn`` as additional dependencies.
+To run these examples, you have to install ``pandas`` as well as ``scikit-learn``
+as additional dependencies:
+
+.. code-block:: shell
+
+    pip install pandas scikit-learn
