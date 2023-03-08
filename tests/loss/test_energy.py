@@ -4,6 +4,8 @@ import torch
 
 from src.pytorch_ood.loss import EnergyRegularizedLoss
 
+torch.manual_seed(123)
+
 
 class TestEnergyRegularization(unittest.TestCase):
     """
@@ -30,7 +32,7 @@ class TestEnergyRegularization(unittest.TestCase):
         self.assertGreater(loss, 0)
 
     def test_forward_only_negative(self):
-        criterion = EnergyRegularizedLoss()
+        criterion = EnergyRegularizedLoss(margin_out=1.0)
         logits = torch.randn(size=(128, 10))
         target = torch.ones(size=(128,)).long() * -1
         loss = criterion(logits, target)

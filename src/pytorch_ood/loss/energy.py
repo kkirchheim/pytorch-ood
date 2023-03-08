@@ -9,7 +9,7 @@ from ..utils import apply_reduction, is_known, is_unknown
 
 
 def _energy(logits: torch.Tensor) -> torch.Tensor:
-    return torch.logsumexp(logits, dim=1)
+    return -torch.logsumexp(logits, dim=1)
 
 
 class EnergyRegularizedLoss(nn.Module):
@@ -74,6 +74,6 @@ class EnergyRegularizedLoss(nn.Module):
             energy[known] = (_energy(logits[is_known(y)]) - self.m_in).relu().pow(2)
 
         if (~known).any():
-            energy[~known] = (_energy(self.m_out - logits[is_unknown(y)])).relu().pow(2)
+            energy[~known] = (self.m_out - _energy(logits[is_unknown(y)])).relu().pow(2)
 
         return energy
