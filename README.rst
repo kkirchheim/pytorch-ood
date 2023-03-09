@@ -237,14 +237,16 @@ If you use it in a scientific publication, please consider citing::
     }
 
 🛡️ ️License
-^^^^^^^
+^^^^^^^^^^^
+
 The code is licensed under Apache 2.0. We have taken care to make sure any third party code included or adapted has compatible (permissive) licenses such as MIT, BSD, etc.
 The legal implications of using pre-trained models in commercial services are, to our knowledge, not fully understood.
 
 ----
 
 🔗 References
-^^^^^^^^^
+^^^^^^^^^^^^^^
+
 .. [#OpenMax]  Bendale, A., & Boult, T. E. (2016). Towards open set deep networks. CVPR.
 
 .. [#ODIN] Liang, S., Li, Y., & Srikant, R. (2017). Enhancing the reliability of out-of-distribution image detection in neural networks. ICLR.
