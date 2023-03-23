@@ -12,6 +12,10 @@ We then use the :class:`Entropy<pytorch_ood.detector.Entropy>` OOD detector.
 This setup is merely made to demonstrate how to train a supervised anomaly segmentation model with
 this loss function.
 
+.. warning :: We train on the test set, as it contains examples of anomalies.
+    The results will not be meaningful.
+
+
 .. note :: Training with a batch-size of 4 requires slightly more than 12 GB of GPU memory.
     However, the models tend to also converge to reasonable performance with a smaller batch-size.
 

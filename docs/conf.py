@@ -35,7 +35,7 @@ on_rtd = os.environ.get("READTHEDOCS", None) == "True"
 # -- Project information -----------------------------------------------------
 
 project = "pytorch-ood"
-copyright = "2022, K. Kirchheim"
+copyright = "2023, K. Kirchheim"
 author = "Konstantin Kirchheim"
 
 
