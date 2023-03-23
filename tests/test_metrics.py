@@ -46,3 +46,26 @@ class TestMetrics(unittest.TestCase):
     def test_reset_1(self):
         metrics = OODMetrics()
         metrics.reset()
+
+    def test_segmentation1(self):
+        metrics = OODMetrics(mode="segmentation")
+        x = torch.zeros(size=(2, 32, 32))
+        y = torch.zeros(size=(2, 32, 32))
+        y[:, 1, :] = -1
+
+        metrics.update(x, y)
+        metrics.compute()
+
+    def test_segmentation2(self):
+        metrics = OODMetrics(mode="segmentation")
+        x = torch.zeros(size=(2, 32, 32))
+        y = torch.zeros(size=(2, 32, 32))
+        y[:, 1, :] = -1
+        x[:, 1, :] = 1
+
+        metrics.update(x, y)
+        r = metrics.compute()
+        self.assertEqual(r["AUROC"], 1.0)
+        self.assertEqual(r["AUPR-IN"], 1.0)
+        self.assertEqual(r["AUPR-OUT"], 1.0)
+        self.assertEqual(r["FPR95TPR"], 0.0)

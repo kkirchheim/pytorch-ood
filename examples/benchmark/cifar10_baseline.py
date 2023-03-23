@@ -8,18 +8,23 @@ Benchmark code for CIFAR10
 +-------------+-------+---------+----------+----------+
 | Detector    | AUROC | AUPR-IN | AUPR-OUT | FPR95TPR |
 +=============+=======+=========+==========+==========+
-| KLMatching  | 88.76 | 86.95   | 85.17    | 58.55    |
+| KLMatching  | 88.73 | 86.95   | 85.10    | 58.74    |
 +-------------+-------+---------+----------+----------+
-| MaxSoftmax  | 91.85 | 88.55   | 93.57    | 28.42    |
+| MaxSoftmax  | 91.85 | 88.55   | 93.57    | 28.43    |
 +-------------+-------+---------+----------+----------+
-| MaxLogit    | 93.06 | 91.44   | 93.73    | 31.16    |
+| Entropy     | 92.48 | 90.16   | 93.87    | 28.29    |
 +-------------+-------+---------+----------+----------+
-| EnergyBased | 93.11 | 91.51   | 93.76    | 31.02    |
+| MaxLogit    | 93.06 | 91.44   | 93.74    | 31.18    |
 +-------------+-------+---------+----------+----------+
-| ODIN        | 93.20 | 92.12   | 93.94    | 31.64    |
+| EnergyBased | 93.10 | 91.51   | 93.78    | 31.05    |
 +-------------+-------+---------+----------+----------+
-| ViM         | 94.49 | 93.43   | 95.33    | 23.49    |
+| ODIN        | 93.20 | 92.12   | 93.94    | 31.65    |
 +-------------+-------+---------+----------+----------+
+| ViM         | 94.49 | 93.42   | 95.34    | 23.48    |
++-------------+-------+---------+----------+----------+
+| Mahalanobis | 94.87 | 93.69   | 95.79    | 21.00    |
++-------------+-------+---------+----------+----------+
+
 
 """
 import pandas as pd  # additional dependency, used here for convenience
@@ -38,6 +43,7 @@ from pytorch_ood.dataset.img import (
 from pytorch_ood.detector import (
     ODIN,
     EnergyBased,
+    Entropy,
     KLMatching,
     Mahalanobis,
     MaxLogit,
@@ -83,6 +89,7 @@ model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
 # **Stage 2**: Create OOD detector
 print("STAGE 2: Creating OOD Detectors")
 detectors = {}
+detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
 detectors["Mahalanobis"] = Mahalanobis(model.features, norm_std=std, eps=0.002)
 detectors["KLMatching"] = KLMatching(model)

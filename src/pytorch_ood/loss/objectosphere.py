@@ -2,10 +2,10 @@ import logging
 from typing import Optional
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor, nn
 
 from ..utils import apply_reduction, contains_known, contains_unknown, is_known, is_unknown
+from . import EntropicOpenSetLoss
 
 log = logging.getLogger(__name__)
 
@@ -82,53 +82,3 @@ class ObjectosphereLoss(nn.Module):
         softmax_scores = -logits.softmax(dim=1).max(dim=1).values
         magn = torch.linalg.norm(logits, ord=2, dim=1)
         return softmax_scores * magn
-
-
-class EntropicOpenSetLoss(nn.Module):
-    """
-    From the paper *Reducing Network Agnostophobia*.
-    Aims to maximizes the entropy for OOD data.
-
-    .. math::
-       \\mathcal{L}(x, y)
-       =
-       \\Biggl \\lbrace
-       {
-       -\\log \\sigma_y(f(x)) \\quad \\text{if } y \\geq 0
-        \\atop
-       \\frac{1}{C} \\sum_{c=1}^C \\log \\sigma_c(f(x)) \\quad \\text{ otherwise }
-       }
-
-    where :math:`\\sigma` is the softmax function.
-
-
-    :see Paper:
-        `NeurIPS <https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf>`__
-
-    """
-
-    def __init__(self, reduction: Optional[str] = "mean"):
-        """
-        :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
-        """
-        super(EntropicOpenSetLoss, self).__init__()
-        self.reduction = reduction
-
-    def forward(self, logits: Tensor, target: Tensor) -> Tensor:
-        """
-
-        :param logits: class logits
-        :param target: target labels
-        :return: the loss
-        """
-        losses = torch.zeros(size=(logits.shape[0],)).to(logits.device)
-
-        if contains_known(target):
-            known = is_known(target)
-            losses[known] = F.cross_entropy(logits[known], target[known], reduction="none")
-
-        if contains_unknown(target):
-            unknown = is_unknown(target)
-            losses[unknown] = -logits[unknown].softmax(dim=1).log().mean(dim=1)
-
-        return apply_reduction(losses, self.reduction)

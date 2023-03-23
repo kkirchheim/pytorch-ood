@@ -59,8 +59,14 @@ KL-Matching
 -------------------------------
 .. automodule:: pytorch_ood.detector.klmatching
 
+Entropy
+-------------------------------
+.. automodule:: pytorch_ood.detector.entropy
+
+
 """
 from .energy import EnergyBased
+from .entropy import Entropy
 from .klmatching import KLMatching
 from .mahalanobis import Mahalanobis
 from .maxlogit import MaxLogit

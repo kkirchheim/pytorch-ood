@@ -1,22 +1,16 @@
 """
-StreetHazards
--------------------------
+StreetHazards with Entropic Loss
+-------------------------------------
 
 We train a Feature Pyramid Segmentation model
 with a ResNet-50 backbone pre-trained on the ImageNet
-on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>`.
+on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` **test set**.
 We then use the :class:`EnergyBased<pytorch_ood.detector.EnergyBased>` OOD detector.
+
+This setup is merely made for demonstration purposes.
 
 .. note :: Training with a batch-size of 4 requires slightly more than 12 GB of GPU memory.
     However, the models tend to also converge to reasonable performance with a smaller batch-size.
-
-.. warning :: The results produced by this script vary. It is impossible to ensure the
-    reproducibility of the exact numerical values at the moment, because the model includes operations for
-    which no deterministic implementation exists at the time of writing.
-
-.. note :: The license of the model originally used for the street hazards dataset
-    is not compatible with ``pytorch-ood``. This prevents us from re-using the implementation
-    from the original repository.
 
 """
 import segmentation_models_pytorch as smp
@@ -27,7 +21,8 @@ from torch.utils.data import DataLoader
 from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import StreetHazards
-from pytorch_ood.detector import EnergyBased
+from pytorch_ood.detector import Entropy, MaxSoftmax
+from pytorch_ood.loss import EntropicOpenSetLoss
 from pytorch_ood.utils import OODMetrics, fix_random_seed
 
 device = "cuda:0"
@@ -57,8 +52,8 @@ def my_transform(img, target):
 
 
 # %%
-# Setup datasets
-dataset = StreetHazards(root="data", subset="train", transform=my_transform, download=True)
+# Setup datasets, train on ood images for demonstration purposes.
+dataset = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
 dataset_test = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
 
 
@@ -73,7 +68,8 @@ model = smp.FPN(
 
 # %%
 # Train model for some epochs
-criterion = smp.losses.DiceLoss(mode="multiclass")
+
+criterion = EntropicOpenSetLoss()
 optimizer = torch.optim.Adam(params=model.parameters(), lr=0.0001)
 loader = DataLoader(
     dataset,
@@ -119,7 +115,7 @@ for epoch in range(num_epochs):
 print("Evaluating")
 model.eval()
 loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
-detector = EnergyBased(model)
+detector = Entropy(model)
 metrics = OODMetrics(mode="segmentation")
 
 with torch.no_grad():

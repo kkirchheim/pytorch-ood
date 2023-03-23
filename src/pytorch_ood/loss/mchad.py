@@ -34,6 +34,7 @@ class MCHADLoss(nn.Module):
     The loss can be used in a supervised, as well as in an unsupervised manner.
 
     :see Implementation: `GitLab <https://gitlab.com/kkirchheim/mchad>`__
+    :see Paper: `ICPR <https://ieeexplore.ieee.org/document/9956337>`__
     """
 
     def __init__(
