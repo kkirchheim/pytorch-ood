@@ -5,9 +5,9 @@ StreetHazards with Entropic Loss
 We train a Feature Pyramid Segmentation model
 with a ResNet-50 backbone pre-trained on the ImageNet
 on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` **test set** using
-the supervised :class:`EnergyBased< pytorch_ood.loss.EntropicOpenSetLoss>`.
+the supervised :class:`EntropicOpenSetLoss<pytorch_ood.loss.EntropicOpenSetLoss>`.
 
-We then use the :class:`EnergyBased<pytorch_ood.detector.Entropy>` OOD detector.
+We then use the :class:`Entropy<pytorch_ood.detector.Entropy>` OOD detector.
 
 This setup is merely made to demonstrate how to train a supervised anomaly segmentation model with
 this loss function.
