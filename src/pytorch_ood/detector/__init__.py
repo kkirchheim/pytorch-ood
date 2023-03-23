@@ -39,7 +39,7 @@ ODIN Preprocessing
 -------------------------------
 .. automodule:: pytorch_ood.detector.odin
 
-Energy Based OOD
+Energy Based
 -------------------------------
 .. automodule:: pytorch_ood.detector.energy
 

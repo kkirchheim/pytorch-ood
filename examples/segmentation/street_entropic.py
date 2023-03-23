@@ -4,10 +4,13 @@ StreetHazards with Entropic Loss
 
 We train a Feature Pyramid Segmentation model
 with a ResNet-50 backbone pre-trained on the ImageNet
-on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` **test set**.
-We then use the :class:`EnergyBased<pytorch_ood.detector.EnergyBased>` OOD detector.
+on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` **test set** using
+the supervised :class:`EnergyBased< pytorch_ood.loss.EntropicOpenSetLoss>`.
 
-This setup is merely made for demonstration purposes.
+We then use the :class:`EnergyBased<pytorch_ood.detector.Entropy>` OOD detector.
+
+This setup is merely made to demonstrate how to train a supervised anomaly segmentation model with
+this loss function.
 
 .. note :: Training with a batch-size of 4 requires slightly more than 12 GB of GPU memory.
     However, the models tend to also converge to reasonable performance with a smaller batch-size.
@@ -130,7 +133,3 @@ with torch.no_grad():
         metrics.update(o, y)
 
 print(metrics.compute())
-
-# %%
-# Output:
-#   {'AUROC': 0.8069181442260742, 'AUPR-IN': 0.07396415621042252, 'AUPR-OUT': 0.9966945648193359, 'FPR95TPR': 0.7595465183258057}
