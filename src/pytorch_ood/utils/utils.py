@@ -3,12 +3,14 @@
 """
 import logging
 import math
+import random
 from collections import defaultdict
-from typing import TypeVar, Union
+from typing import Any, Dict, KeysView, List, TypeVar, Union
 
 import numpy as np
 import torch
 import torch.nn.functional as F
+from torch import Tensor
 
 log = logging.getLogger(__name__)
 
@@ -182,7 +184,7 @@ class TensorBuffer(object):
 
         :param device: device used to store buffers. Default is *cpu*.
         """
-        self._buffer = defaultdict(list)
+        self._buffer: Dict[Any, Tensor] = defaultdict(list)
         self.device = device
 
     def is_empty(self) -> bool:
@@ -220,6 +222,9 @@ class TensorBuffer(object):
         """
         index = torch.randint(0, len(self._buffer[key]), size=(1,))
         return self._buffer[key][index]
+
+    def keys(self) -> KeysView:
+        return self._buffer.keys()
 
     def get(self, key) -> torch.Tensor:
         """
@@ -265,3 +270,47 @@ def apply_reduction(tensor: torch.Tensor, reduction: str) -> torch.Tensor:
         return tensor
     else:
         raise ValueError
+
+
+def fix_random_seed(seed: int = 12345) -> None:
+    """
+    Set all random seeds.
+
+    :param seed: seed to set
+    """
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+
+
+def extract_features(data_loader, model, device):
+    """
+    Helper to extract from model. Ignores OOD inputs.
+
+    :param data_loader:
+    :param model:
+    :param device:
+    :return:
+    """
+    # TODO: add option to buffer to GPU
+    buffer = TensorBuffer()
+
+    with torch.no_grad():
+        for batch in data_loader:
+            x, y = batch
+            x = x.to(device)
+            y = y.to(device)
+            known = is_known(y)
+            if known.any():
+                z = model(x[known])
+                z = z.view(known.sum(), -1)  # flatten
+                buffer.append("embedding", z)
+                buffer.append("label", y[known])
+
+        if buffer.is_empty():
+            raise ValueError("No IN instances in loader")
+
+    z = buffer.get("embedding")
+    y = buffer.get("label")
+    return z, y

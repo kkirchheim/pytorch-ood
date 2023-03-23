@@ -20,10 +20,10 @@ class SegmentationModel(torch.nn.Module):
     Mock model for semantic segmentation
     """
 
-    def __init__(self, in_channels=3, our_channels=3):
+    def __init__(self, in_channels=3, out_channels=3):
         super(SegmentationModel, self).__init__()
         self.p = torch.nn.Conv2d(
-            in_channels=in_channels, out_channels=our_channels, kernel_size=1, padding=0
+            in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=0
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

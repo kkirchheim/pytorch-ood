@@ -21,9 +21,6 @@ from torch.hub import get_dir
 
 log = logging.getLogger(__name__)
 
-CHUNK_SIZE = 512 * 1024  # 512KB
-home = osp.expanduser("~")
-
 
 def parse_url(url, warning=True):
     """
@@ -149,7 +146,7 @@ def download(
     sess = requests.session()
 
     # Load cookies
-    cache_dir = osp.join(home, ".cache", "gdown")
+    cache_dir = osp.join(osp.expanduser("~"), ".cache", "gdown")
     if not osp.exists(cache_dir):
         os.makedirs(cache_dir)
     cookies_file = osp.join(cache_dir, "cookies.json")
@@ -271,7 +268,7 @@ def download(
 
             pbar = tqdm.tqdm(total=total, unit="B", unit_scale=True)
         t_start = time.time()
-        for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
+        for chunk in res.iter_content(chunk_size=512 * 1024):  # 512KB
             f.write(chunk)
             if not hide_progress:
                 pbar.update(len(chunk))

@@ -9,7 +9,8 @@ Utilities
       contains_unknown,
       contains_known_and_unknown,
       calc_openness,
-      TensorBuffer
+      TensorBuffer,
+      fix_random_seed
    :undoc-members:
 
 

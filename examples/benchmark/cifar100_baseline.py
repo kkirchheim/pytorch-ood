@@ -10,21 +10,20 @@ The evaluation is the same as for CIFAR 10.
 +=============+=======+=========+==========+==========+
 | MaxSoftmax  | 79.10 | 73.75   | 82.92    | 58.16    |
 +-------------+-------+---------+----------+----------+
-| KLMatching  | 80.14 | 75.26   | 82.48    | 60.73    |
+| KLMatching  | 80.47 | 75.53   | 82.70    | 57.91    |
 +-------------+-------+---------+----------+----------+
-| ODIN        | 81.46 | 76.67   | 84.88    | 55.55    |
+| ODIN        | 81.46 | 76.65   | 84.88    | 55.57    |
 +-------------+-------+---------+----------+----------+
-| Mahalanobis | 83.91 | 79.86   | 86.08    | 47.03    |
+| Entropy     | 81.52 | 77.09   | 84.38    | 57.12    |
 +-------------+-------+---------+----------+----------+
-| MaxLogit    | 84.64 | 79.95   | 87.11    | 48.51    |
+| Mahalanobis | 83.91 | 79.86   | 86.08    | 46.99    |
 +-------------+-------+---------+----------+----------+
-| EnergyBased | 84.90 | 80.27   | 87.32    | 47.84    |
+| MaxLogit    | 84.64 | 79.95   | 87.25    | 48.51    |
 +-------------+-------+---------+----------+----------+
-| ViM         | 85.86 | 81.18   | 88.81    | 41.82    |
+| EnergyBased | 84.90 | 80.27   | 87.46    | 47.85    |
 +-------------+-------+---------+----------+----------+
-
-
-
+| ViM         | 85.87 | 81.18   | 88.81    | 41.83    |
++-------------+-------+---------+----------+----------+
 
 """
 import pandas as pd  # additional dependency, used here for convenience
@@ -43,6 +42,7 @@ from pytorch_ood.dataset.img import (
 from pytorch_ood.detector import (
     ODIN,
     EnergyBased,
+    Entropy,
     KLMatching,
     Mahalanobis,
     MaxLogit,
@@ -85,6 +85,7 @@ model = WideResNet(num_classes=100, pretrained="cifar100-pt").eval().to(device)
 # Stage 2: Create OOD detector
 print("STAGE 2: Creating OOD Detectors")
 detectors = {}
+detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
 detectors["Mahalanobis"] = Mahalanobis(model.features, norm_std=std, eps=0.002)
 detectors["KLMatching"] = KLMatching(model)
