@@ -232,7 +232,7 @@ or check the existing implementations for bugs.
 📝 Citing
 ^^^^^^^^^^
 
-``pytorch-ood`` was presented on a CVPR Workshop in 2022.
+``pytorch-ood`` was presented at a CVPR Workshop in 2022.
 If you use it in a scientific publication, please consider citing::
 
     @InProceedings{kirchheim2022pytorch,
