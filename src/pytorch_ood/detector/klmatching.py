@@ -16,7 +16,7 @@ import torch
 from torch.nn import Parameter, ParameterDict
 from torch.utils.data import DataLoader
 
-from pytorch_ood.utils import TensorBuffer, is_known
+from pytorch_ood.utils import TensorBuffer, extract_features, is_known
 
 from ..api import Detector, RequiresFittingException
 
@@ -57,18 +57,9 @@ class KLMatching(Detector):
         :param data_loader: validation data loader
         :param device: device which should be used for calculations
         """
-        buffer = TensorBuffer()
-        with torch.no_grad():
-            for x, y in data_loader:
-                x = x.to(device)
-                known = is_known(y)
-                logits = self.model(x[known])
-                y_hat = logits.argmax(dim=1)
-                buffer.append("logits", logits)
-                buffer.append("label", y_hat)
-
-        probabilities = buffer.get("logits").softmax(dim=1)
-        labels = buffer.get("label")
+        logits, labels = extract_features(data_loader, self.model, device)
+        y_hat = logits.max(dim=1).indices
+        probabilities = logits.softmax(dim=1)
 
         for label in labels.unique():
             log.debug(f"Fitting class {label}")

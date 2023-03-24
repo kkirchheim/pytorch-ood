@@ -7,14 +7,13 @@ from typing import Dict, TypeVar
 
 import numpy as np
 import torch
-import torchmetrics
 from torch import Tensor
 from torchmetrics.functional.classification import (
-    binary_accuracy,
     binary_auroc,
+    binary_precision_recall_curve,
     binary_roc,
-    precision_recall_curve,
 )
+from torchmetrics.utilities.compute import auc
 
 from .utils import TensorBuffer, is_unknown
 
@@ -116,27 +115,78 @@ class OODMetrics(object):
         labels = torch.Tensor([1,2,-1])
         metrics.update(outlier_scores, labels)
         metric_dict = metrics.compute()
+
+    In ``classification`` mode, the inputs will be flattened, so we treat each value as an individual text example.
+    Using this mode for segmentation tasks can require a lot of memory and compute.
+
+    In ``segmentation`` mode, the inputs will be flattened along the first (batch) dimension so that the shape is
+    :math:`B \\times D` afterwards.
+    The scores will then be calculated for each sample in the batch (i.e., over :math:`D` values each), and the final
+    score will be the mean over all :math:`B` samples.
     """
 
-    def __init__(self, device="cpu"):
+    def __init__(self, device: str = "cpu", mode: str = "classification"):
         """
         :param device: where tensors should be stored
+        :param mode: either ``classification`` or ``segmentation``.
         """
         super(OODMetrics, self).__init__()
         self.device = device
         self.buffer = TensorBuffer(device=self.device)
 
-    def update(self: Self, outlier_scores: Tensor, y: Tensor) -> Self:
+        if mode not in ["segmentation", "classification"]:
+            raise ValueError("mode must be 'segmentation' or 'classification'")
+
+        self.mode = mode
+
+    def update(self: Self, scores: Tensor, y: Tensor) -> Self:
         """
         Add batch of results to collection.
 
-        :param outlier_scores: outlier score
+        :param scores: outlier score
         :param y: target label
         """
         label = is_unknown(y).detach().to(self.device).long()
-        self.buffer.append("scores", outlier_scores)
-        self.buffer.append("labels", label)
+        scores = scores.detach().to(self.device)
+
+        if self.mode == "classification":
+            self.buffer.append("scores", scores)
+            self.buffer.append("labels", label)
+
+        elif self.mode == "segmentation":
+            # loop along batch dimension
+            for i in range(scores.shape[0]):
+                metrics = self._compute(label[i].view(-1), scores[i].view(-1))
+                for key, value in metrics.items():
+                    self.buffer.append(key, value.view(1, -1))
+
         return self
+
+    def _compute(self, labels: Tensor, scores: Tensor) -> Dict[str, Tensor]:
+        """ """
+        if len(torch.unique(labels)) != 2:
+            raise ValueError("Data must contain IN and OOD samples.")
+
+        scores, scores_idx = torch.sort(scores, stable=True)
+        labels = labels[scores_idx]
+
+        auroc = binary_auroc(scores, labels)
+
+        # num_classes=None for binary
+        p, r, t = binary_precision_recall_curve(scores, labels)
+        aupr_in = auc(r, p)
+
+        p, r, t = binary_precision_recall_curve(-scores, 1 - labels)
+        aupr_out = auc(r, p)
+
+        fpr = fpr_at_tpr(scores, labels)
+
+        return {
+            "AUROC": auroc,
+            "AUPR-IN": aupr_in,
+            "AUPR-OUT": aupr_out,
+            "FPR95TPR": fpr,
+        }
 
     def compute(self) -> Dict[str, float]:
         """
@@ -148,32 +198,21 @@ class OODMetrics(object):
         if self.buffer.is_empty():
             raise ValueError("Must be given data to calculate metrics.")
 
-        labels = self.buffer.get("labels").view(-1)
-        scores = self.buffer.get("scores").view(-1)
+        if self.mode == "segmentation":
+            metrics = {key: self.buffer[key].mean() for key in self.buffer.keys()}
 
-        if len(torch.unique(labels)) != 2:
-            raise ValueError("Data must contain IN and OOD samples.")
+        elif self.mode == "classification":
 
-        scores, scores_idx = torch.sort(scores, stable=True)
-        labels = labels[scores_idx]
+            labels = self.buffer.get("labels").view(-1)
+            scores = self.buffer.get("scores").view(-1)
 
-        auroc = binary_auroc(scores, labels)
+            if len(torch.unique(labels)) != 2:
+                raise ValueError("Data must contain IN and OOD samples.")
 
-        # num_classes=None for binary
-        p, r, t = precision_recall_curve(scores, labels, pos_label=1, num_classes=None)
-        aupr_in = torchmetrics.functional.auc(r, p)
+            metrics = self._compute(labels, scores)
 
-        p, r, t = precision_recall_curve(-scores, labels, pos_label=0, num_classes=None)
-        aupr_out = torchmetrics.functional.auc(r, p)
-
-        fpr = fpr_at_tpr(scores, labels)
-
-        return {
-            "AUROC": auroc.item(),
-            "AUPR-IN": aupr_in.item(),
-            "AUPR-OUT": aupr_out.item(),
-            "FPR95TPR": fpr.item(),
-        }
+        metrics = {k: v.item() for k, v in metrics.items()}
+        return metrics
 
     def reset(self: Self) -> Self:
         """

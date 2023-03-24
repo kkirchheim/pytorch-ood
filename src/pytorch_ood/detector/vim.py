@@ -17,7 +17,7 @@ import torch
 from numpy.linalg import norm, pinv
 from scipy.special import logsumexp
 
-from pytorch_ood.utils import is_known
+from pytorch_ood.utils import TensorBuffer, extract_features, is_known
 
 from ..api import Detector, RequiresFittingException
 
@@ -58,9 +58,11 @@ class ViM(Detector):
         self.principal_subspace = None
         self.alpha: float = None  #: the computed :math:`\alpha` value
 
-    def _get_logits(self, features):
+    def _get_logits(self, features: np.ndarray):
         """
         Calculates logits from features
+
+        TODO: this could be done in pytorch
         """
         return np.matmul(features, self.w.T) + self.b
 
@@ -79,33 +81,35 @@ class ViM(Detector):
         # calculate residual
         x_p_t = norm(np.matmul(features - self.u, self.principal_subspace), axis=-1)
         vlogit = x_p_t * self.alpha
-        energy = logsumexp(logits, axis=-1)
+        # clip for numerical stability, float32 easily overflows in logsumexp
+        energy = logsumexp(np.clip(logits, -100, 100), axis=-1)
         score = -vlogit + energy
 
-        # TODO: negative?
         return -torch.Tensor(score)
+
+    def __repr__(self):
+        return f"ViM(d={self.n_dim})"
 
     def fit(self: Self, data_loader, device="cpu") -> Self:
         """
         Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
         """
-        # extract features
-        with torch.no_grad():
-            features_l = []
-
-            for x, y in data_loader:
-                known = is_known(y)
-                features = self.model(x[known].to(device)).cpu()
-                features = features.view(known.sum(), -1)  # flatten
-                features_l.append(features)
-
-        features = torch.cat(features_l).numpy()
-        logits = self._get_logits(features)
-
         try:
             from sklearn.covariance import EmpiricalCovariance
         except ImportError:
             raise Exception("You need to install sklearn to use ViM.")
+
+        features, labels = extract_features(data_loader, self.model, device)
+        features = features.numpy()
+
+        if features.shape[1] < self.n_dim:
+            n = features.shape[1] // 2
+            log.warning(
+                f"{features.shape[1]=} is smaller than {self.n_dim=}. Will be adjusted to {n}"
+            )
+            self.n_dim = n
+
+        logits = self._get_logits(features)
 
         log.info("Computing principal space ...")
         # calculate eigenvectors of the covariance matrix

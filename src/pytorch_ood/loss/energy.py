@@ -67,7 +67,7 @@ class EnergyRegularizedLoss(nn.Module):
         return apply_reduction(nll + self.alpha * regularization, reduction=self.reduction)
 
     def _regularization(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        energy = torch.zeros(logits.shape[0])
+        energy = torch.zeros(logits.shape[0]).to(logits.device)
 
         known = is_known(y)
         if known.any():

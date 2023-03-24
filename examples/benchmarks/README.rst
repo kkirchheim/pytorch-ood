@@ -1,6 +1,6 @@
+Image Benchmarks
+====================
 
-Benchmarks
-==================
 The goal of this section is to describe how to quickly obtain some baseline results to compare against.
 
 The following examples reproduces a common benchmark with 7 OOD detectors.
@@ -20,4 +20,4 @@ as additional dependencies:
 
 .. code-block:: shell
 
-    pip install pandas scikit-learn
+    pip install pandas scikit-learn pandas

@@ -107,24 +107,12 @@ Outlier Exposure Loss
     :members:
 
 
-MCHAD Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
-..  autoclass:: pytorch_ood.loss.MCHADLoss
-    :members:
-
-
 Entropic Open-Set Loss
 ----------------------------------------------
 
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
+.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
    :alt: classification badge
 
 .. autoclass:: pytorch_ood.loss.EntropicOpenSetLoss
@@ -155,6 +143,19 @@ Energy-Bounded Learning Loss
     :members:
 
 
+MCHAD Loss
+----------------------------------------------
+
+.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
+   :alt: classification badge
+.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
+   :alt: classification badge
+
+..  autoclass:: pytorch_ood.loss.MCHADLoss
+    :members:
+
+
+
 Background Class Loss
 ----------------------------------------------
 
@@ -173,9 +174,10 @@ from .center import CenterLoss
 from .conf import ConfidenceLoss
 from .crossentropy import CrossEntropyLoss
 from .energy import EnergyRegularizedLoss
+from .entropy import EntropicOpenSetLoss
 from .ii import IILoss
 from .mchad import MCHADLoss
-from .objectosphere import EntropicOpenSetLoss, ObjectosphereLoss
+from .objectosphere import ObjectosphereLoss
 from .oe import OutlierExposureLoss
 
 # from .triplet import TripletLoss

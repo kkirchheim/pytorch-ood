@@ -31,14 +31,21 @@ class GRUClassifier(nn.Module):
             batch_first=True,
             bidirectional=False,
         )
-        self.linear = nn.Linear(128, num_classes)
+        self.fc = nn.Linear(128, num_classes)
+
+    def features(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        :param x:
+        """
+        embeds = self.embedding(x)
+        return self.gru(embeds)[1][1]  # select h_n, and select the 2nd layer
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param: lists of list of tokens
+        :param x: lists of list of tokens
         :returns: logits
         """
         embeds = self.embedding(x)
         z = self.gru(embeds)[1][1]  # select h_n, and select the 2nd layer
-        logits = self.linear(z)
+        logits = self.fc(z)
         return logits

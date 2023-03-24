@@ -136,6 +136,8 @@ The package can be installed via PyPI:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Energy-Based OOD Detection  | Implements the Energy Score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Entropy                     | Uses entropy to detect OOD inputs.                                                             | 2021 | [#MaxEntropy]_     |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Maximum Logit               | Implements the MaxLogit method.                                                                | 2022 | [#StreeHaz]_       |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | KL-Matching                 | Implements the KL-Matching method for Multi-Class classification.                              | 2022 | [#StreeHaz]_       |
@@ -164,11 +166,14 @@ The package can be installed via PyPI:
 | CAC Loss                   | Class Anchor Clustering Loss from *Class Anchor Clustering: a Distance-based Loss for Training   | 2021 | [#CACLoss]_        |
 |                            | Open Set Classifiers*                                                                            |      |                    |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+| Entropy Maximization       | Entropy maximization and meta classification for OOD in semantic segmentation                    | 2021 | [#MaxEntropy]_     |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 | II Loss                    | Implementation of II Loss function from *Learning a neural network-based representation for      | 2022 | [#IILoss]_         |
 |                            | open set recognition*.                                                                           |      |                    |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 | MCHAD Loss                 | Implementation of the MCHAD Loss friom the paper *Multi Class Hypersphere Anomaly Detection*.    | 2022 | [#MCHAD]_          |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
+
 
 **Image Datasets**:
 
@@ -212,6 +217,9 @@ The package can be installed via PyPI:
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
 | WikiText103 | Texts from the wikipedia often used as auxiliary OOD training data.                                                       | 2016 | [#WikiText2]_   |
 +-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+| NewsGroup20 | Textx from different newsgroups, as used by Hendrycks et al. in the OOD baseline paper.                                   |      |                 |
++-------------+---------------------------------------------------------------------------------------------------------------------------+------+-----------------+
+
 
 
 
@@ -224,7 +232,7 @@ or check the existing implementations for bugs.
 📝 Citing
 ^^^^^^^^^^
 
-``pytorch-ood`` was presented on a CVPR Workshop in 2022.
+``pytorch-ood`` was presented at a CVPR Workshop in 2022.
 If you use it in a scientific publication, please consider citing::
 
     @InProceedings{kirchheim2022pytorch,
@@ -296,3 +304,5 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#ViM] Wang, H., Li, Z., Feng, L., Zhang, W. (2022) ViM: Out-Of-Distribution with Virtual-logit Matching. CVPR
 
 .. [#PixMix] Hendrycks, D, Zou, A,  et al. (2022) PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures. CVPR
+
+.. [#MaxEntropy] Chan R,  et al. (2021) Entropy maximization and meta classification for out-of-distribution detection in semantic segmentation. CVPR

@@ -17,7 +17,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from ..api import Detector, RequiresFittingException
-from ..utils import TensorBuffer, contains_unknown, is_known, is_unknown
+from ..utils import TensorBuffer, contains_unknown, extract_features, is_known, is_unknown
 
 log = logging.getLogger(__name__)
 
@@ -57,42 +57,6 @@ class Mahalanobis(Detector):
         self.eps: float = eps  #: epsilon
         self.norm_std = norm_std
 
-    @staticmethod
-    def _extract(data_loader, model, device):
-        """
-        Extract embeddings from model
-
-        .. note :: this should be moved into a dedicated function
-
-        :param data_loader:
-        :param model:
-        :param device:
-        :return:
-        """
-        # TODO: add option to buffer to GPU
-        buffer = TensorBuffer()
-
-        for batch in data_loader:
-            x, y = batch
-            x = x.to(device)
-            y = y.to(device)
-            known = is_known(y)
-            if known.any():
-                z = model(x[known])
-                # flatten
-                z = z.view(known.sum(), -1)
-                buffer.append("embedding", z)
-                buffer.append("label", y[known])
-
-        if buffer.is_empty():
-            raise ValueError("No IN instances in loader")
-
-        z = buffer.get("embedding")
-        y = buffer.get("label")
-
-        buffer.clear()
-        return z, y
-
     def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
         """
         Fit parameters of the multi variate gaussian.
@@ -101,12 +65,11 @@ class Mahalanobis(Detector):
         :param device: device to use
         :return:
         """
-
         if device is None:
             device = list(self.model.parameters())[0].device
             log.warning(f"No device given. Will use '{device}'.")
 
-        z, y = Mahalanobis._extract(data_loader, self.model, device)
+        z, y = extract_features(data_loader, self.model, device)
 
         log.debug("Calculating mahalanobis parameters.")
         classes = y.unique()
@@ -136,18 +99,15 @@ class Mahalanobis(Detector):
         if self.mu is None:
             raise RequiresFittingException
 
-        dev = x.device
-
         if self.eps > 0:
-            x = self._odin_preprocess(x, dev)
+            x = self._odin_preprocess(x, x.device)
 
         features = self.model(x)
         features = features.view(features.size(0), features.size(1), -1)
         features = torch.mean(features, 2)
-        noise_gaussian_score = 0
+        noise_gaussian_scores = []
 
         for clazz in range(self.n_classes):
-            # batch_sample_mean = sample_mean[layer_index][i]
             centered_features = features.data - self.mu[clazz]
             term_gau = (
                 -0.5
@@ -155,10 +115,10 @@ class Mahalanobis(Detector):
                     torch.mm(centered_features, self.precision), centered_features.t()
                 ).diag()
             )
-            if clazz == 0:
-                noise_gaussian_score = term_gau.view(-1, 1)
-            else:
-                noise_gaussian_score = torch.cat((noise_gaussian_score, term_gau.view(-1, 1)), 1)
+
+            noise_gaussian_scores.append(term_gau.view(-1, 1))
+
+        noise_gaussian_score = torch.cat(noise_gaussian_scores, 1)
 
         noise_gaussian_score = torch.max(noise_gaussian_score, dim=1).values
         return -noise_gaussian_score

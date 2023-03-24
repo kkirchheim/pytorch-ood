@@ -26,6 +26,22 @@ class StreetHazards(ImageDatasetBase):
     :see Website: `GitHub <https://github.com/hendrycks/anomaly-seg>`__
     """
 
+    classes: List[str] = [
+        "unlabeled",
+        "building",
+        "fence",
+        "other",
+        "pedestrian",
+        "pole",
+        "road line",
+        "road",
+        "sidewalk",
+        "vegetation",
+        "car",
+        "wall",
+        "traffic sign",
+    ]  #: class index to name mapping
+
     subset_list = ["test", "train", "validation"]
 
     root_dir_name = "streethazards"
@@ -33,7 +49,7 @@ class StreetHazards(ImageDatasetBase):
     base_folders = {
         "test": "test/images/",
         "train": "train/images/training/",
-        "validation": "validation",
+        "validation": "train/images/validation/",
     }
 
     url_list = {
@@ -110,8 +126,8 @@ class StreetHazards(ImageDatasetBase):
         # to return a PIL Image
         img = Image.open(file)
         target = to_tensor(Image.open(target)).squeeze(0)
-        target = (target * 255).long()  # labels to integer
-        target[target >= 14] = -1  # negative labels for outliers
+        target = (target * 255).long() - 1  # labels to integer
+        target[target >= 13] = -1  # negative labels for outliers
 
         if self.transform is not None:
             img, target = self.transform(img, target)
