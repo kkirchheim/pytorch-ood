@@ -57,7 +57,19 @@ class OpenMax(Detector):
         :param device: Device used for calculations
         """
         z, y = OpenMax._extract(data_loader, self.model, device=device)
-        self.openmax.fit(z.numpy(), y.numpy())
+        return self.fit_features(z, y)
+
+    def fit_features(self: Self, z: torch.Tensor, y: torch.Tensor, device: Optional[str] = "cpu") -> Self:
+        """
+        Determines parameters of the weibull functions for each class.
+
+        :param z: features
+        :param y: class labels
+        :param device: device to use
+        :return:
+        """
+        z, y = z.cpu().numpy(), y.cpu().numpy()
+        self.openmax.fit(z, y)
         return self
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:

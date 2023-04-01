@@ -54,6 +54,12 @@ class MCD(Detector):
         """
         return self
 
+    def fit_features(self: Self, data_loader) -> Self:
+        """
+        Not required
+        """
+        return self
+
     @staticmethod
     def run(model: torch.nn.Module, x: torch.Tensor, samples: int) -> torch.Tensor:
         """

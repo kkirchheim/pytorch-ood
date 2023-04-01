@@ -58,6 +58,12 @@ class MaxSoftmax(Detector):
         """
         return self
 
+    def fit_features(self: Self, *args, **kwargs) -> Self:
+        """
+        Not required
+        """
+        return self
+
     @staticmethod
     def score(logits: torch.Tensor, t: Optional[float] = 1) -> torch.Tensor:
         """

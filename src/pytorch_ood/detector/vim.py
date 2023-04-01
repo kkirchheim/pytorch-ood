@@ -93,6 +93,10 @@ class ViM(Detector):
     def fit(self: Self, data_loader, device="cpu") -> Self:
         """
         Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
+
+        :param data_loader: dataset to fit on
+        :param device: device to use
+        :return:
         """
         try:
             from sklearn.covariance import EmpiricalCovariance
@@ -100,7 +104,23 @@ class ViM(Detector):
             raise Exception("You need to install sklearn to use ViM.")
 
         features, labels = extract_features(data_loader, self.model, device)
-        features = features.numpy()
+        return self.fit_features(features, labels, device)
+
+    def fit_features(self: Self, features: torch.Tensor, labels: torch.Tensor, device="cpu") -> Self:
+        """
+        Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
+
+        :param features: features
+        :param labels: class labels
+        :param device: device to use
+        :return:
+        """
+        try:
+            from sklearn.covariance import EmpiricalCovariance
+        except ImportError:
+            raise Exception("You need to install sklearn to use ViM.")
+
+        features = features.cpu().numpy()
 
         if features.shape[1] < self.n_dim:
             n = features.shape[1] // 2

@@ -44,6 +44,12 @@ class EnergyBased(Detector):
         """
         return self
 
+    def fit_features(self: Self, *args, **kwargs) -> Self:
+        """
+        Not required.
+        """
+        return self
+
     def __init__(self, model: torch.nn.Module, t: Optional[float] = 1):
         """
         :param t: Temperature value :math:`T`. Default is 1.
