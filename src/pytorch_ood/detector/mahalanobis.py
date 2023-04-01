@@ -70,6 +70,23 @@ class Mahalanobis(Detector):
             log.warning(f"No device given. Will use '{device}'.")
 
         z, y = extract_features(data_loader, self.model, device)
+        return self.fit_features(z, y, device)
+
+    def fit_features(self: Self, z: torch.Tensor, y: torch.Tensor, device: str = None) -> Self:
+        """
+        Fit parameters of the multi variate gaussian.
+
+        :param z: features
+        :param y: class labels
+        :param device: device to use
+        :return:
+        """
+
+        if device is None:
+            device = list(self.model.parameters())[0].device
+            log.warning(f"No device given. Will use '{device}'.")
+
+        z, y = z.to(device), y.to(device)
 
         log.debug("Calculating mahalanobis parameters.")
         classes = y.unique()

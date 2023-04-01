@@ -49,6 +49,12 @@ class MaxLogit(Detector):
         """
         return self
 
+    def fit_features(self: Self, *args, **kwargs) -> Self:
+        """
+        Not required
+        """
+        return self
+
     @staticmethod
     def score(logits: torch.Tensor) -> torch.Tensor:
         """

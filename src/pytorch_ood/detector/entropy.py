@@ -39,6 +39,12 @@ class Entropy(Detector):
         """
         return self
 
+    def fit_features(self: Self, *args, **kwargs) -> Self:
+        """
+        Not required.
+        """
+        return self
+
     def __init__(self, model: nn.Module):
         """
         :param model: the model :math:`f`
