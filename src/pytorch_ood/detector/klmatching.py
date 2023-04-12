@@ -16,9 +16,8 @@ import torch
 from torch.nn import Parameter, ParameterDict
 from torch.utils.data import DataLoader
 
-from pytorch_ood.utils import TensorBuffer, extract_features, is_known
-
 from ..api import Detector, RequiresFittingException
+from ..utils import extract_features
 
 log = logging.getLogger()
 

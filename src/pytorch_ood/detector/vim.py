@@ -17,9 +17,8 @@ import torch
 from numpy.linalg import norm, pinv
 from scipy.special import logsumexp
 
-from pytorch_ood.utils import TensorBuffer, extract_features, is_known
-
 from ..api import Detector, RequiresFittingException
+from ..utils import TensorBuffer, extract_features, is_known
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -104,15 +103,14 @@ class ViM(Detector):
             raise Exception("You need to install sklearn to use ViM.")
 
         features, labels = extract_features(data_loader, self.model, device)
-        return self.fit_features(features, labels, device)
+        return self.fit_features(features, labels)
 
-    def fit_features(self: Self, features: torch.Tensor, labels: torch.Tensor, device="cpu") -> Self:
+    def fit_features(self: Self, features: torch.Tensor, labels: torch.Tensor) -> Self:
         """
         Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
 
         :param features: features
         :param labels: class labels
-        :param device: device to use
         :return:
         """
         try:

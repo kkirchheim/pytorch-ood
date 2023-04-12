@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from ...api import Detector
-from ...utils import TensorBuffer, is_known
+from ...utils import extract_features
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -56,16 +56,15 @@ class OpenMax(Detector):
         :param data_loader: Data to use for fitting
         :param device: Device used for calculations
         """
-        z, y = OpenMax._extract(data_loader, self.model, device=device)
+        z, y = extract_features(data_loader, self.model, device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: torch.Tensor, y: torch.Tensor, device: Optional[str] = "cpu") -> Self:
+    def fit_features(self: Self, z: torch.Tensor, y: torch.Tensor) -> Self:
         """
         Determines parameters of the weibull functions for each class.
 
         :param z: features
         :param y: class labels
-        :param device: device to use
         :return:
         """
         z, y = z.cpu().numpy(), y.cpu().numpy()
@@ -80,26 +79,3 @@ class OpenMax(Detector):
             z = self.model(x).cpu().numpy()
 
         return torch.tensor(self.openmax.predict(z)[:, 0])
-
-    @staticmethod
-    def _extract(data_loader, model: torch.nn.Module, device):
-        """
-        Extract embeddings from model. Ignores OOD data.
-        """
-        buffer = TensorBuffer()
-        log.debug("Extracting features")
-        for batch in data_loader:
-            x, y = batch
-            x = x.to(device)
-            known = is_known(y)
-            z = model(x[known])
-            # flatten
-            x = z.view(x.shape[0], -1)
-            buffer.append("embedding", z)
-            buffer.append("label", y[known])
-
-        z = buffer.get("embedding")
-        y = buffer.get("label")
-
-        buffer.clear()
-        return z, y

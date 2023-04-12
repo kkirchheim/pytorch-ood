@@ -38,7 +38,7 @@ class Detector(ABC):
     @abstractmethod
     def fit_features(self: Self, x: torch.Tensor, y: torch.Tensor) -> Self:
         """
-        Fit the model to a dataset. Some methods require this.
+        Fit the model directly on features. Some methods require this.
 
         :param x: training features to use for fitting.
         :param y: corresponding class labels.
