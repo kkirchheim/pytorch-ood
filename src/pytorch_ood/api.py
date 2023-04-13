@@ -36,6 +36,16 @@ class Detector(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def fit_features(self: Self, x: torch.Tensor, y: torch.Tensor) -> Self:
+        """
+        Fit the model directly on features. Some methods require this.
+
+        :param x: training features to use for fitting.
+        :param y: corresponding class labels.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         Calculates outlier scores.

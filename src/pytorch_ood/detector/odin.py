@@ -159,3 +159,9 @@ class ODIN(Detector):
         Not required
         """
         return self
+
+    def fit_features(self: Self, *args, **kwargs) -> Self:
+        """
+        Not required
+        """
+        return self

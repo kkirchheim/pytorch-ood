@@ -16,9 +16,8 @@ import torch
 from torch.nn import Parameter, ParameterDict
 from torch.utils.data import DataLoader
 
-from pytorch_ood.utils import TensorBuffer, extract_features, is_known
-
 from ..api import Detector, RequiresFittingException
+from ..utils import extract_features
 
 log = logging.getLogger()
 
@@ -58,6 +57,18 @@ class KLMatching(Detector):
         :param device: device which should be used for calculations
         """
         logits, labels = extract_features(data_loader, self.model, device)
+        return self.fit_features(logits, labels, device)
+
+    def fit_features(self: Self, logits: torch.Tensor, labels: torch.Tensor, device="cpu") -> Self:
+        """
+        Estimates typical distributions for each class.
+        Ignores OOD samples.
+
+        :param logits: logits
+        :param labels: class labels
+        :param device: device which should be used for calculations
+        """
+        logits, labels = logits.to(device), labels.to(device)
         y_hat = logits.max(dim=1).indices
         probabilities = logits.softmax(dim=1)
 

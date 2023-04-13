@@ -49,7 +49,7 @@ class OpenMax(object):
         self.distributions = dict()
         self.is_fitted = False
 
-    def fit(self, x, y):
+    def fit(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         """
         Fit Openmax layer
 
@@ -62,7 +62,9 @@ class OpenMax(object):
         assert x is not None
         assert y is not None
         assert self.alpha is not None
+
         log.debug(f"Input shape: {x.shape}")
+
         self.alpha = min(x.shape[1], self.alpha)
         for n, clazz in enumerate(classes):
             idxs = y == clazz
@@ -81,7 +83,7 @@ class OpenMax(object):
         self.is_fitted = True
         return self
 
-    def predict(self, x) -> np.ndarray:
+    def predict(self, x: np.ndarray) -> np.ndarray:
         """
         Calculate revised activation vector.
 
@@ -130,7 +132,6 @@ class OpenMax(object):
                     w = self.distributions[pred_class].w_score(dist)
                     ws[pred_class] = w
                 except KeyError:
-                    # print(f"Error: class not found: {pred_class}")
                     pass
             wscores = 1 - ws * ranked_alpha  # wscores will be 1 except for the top predictions
             # now that we have calculated the weights, calc the revised activation vector
