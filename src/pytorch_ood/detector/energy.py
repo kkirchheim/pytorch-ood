@@ -11,9 +11,10 @@
 """
 from typing import Optional, TypeVar
 
-import torch
+from torch import Tensor, logsumexp
+from torch.nn import Module
 
-from ..api import Detector
+from ..api import Detector, ModelNotSetException
 
 Self = TypeVar("Self")
 
@@ -50,7 +51,7 @@ class EnergyBased(Detector):
         """
         return self
 
-    def __init__(self, model: torch.nn.Module, t: Optional[float] = 1):
+    def __init__(self, model: Module, t: Optional[float] = 1.0):
         """
         :param t: Temperature value :math:`T`. Default is 1.
         """
@@ -58,7 +59,7 @@ class EnergyBased(Detector):
         self.t: float = t  #: Temperature
         self.model = model
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: Tensor) -> Tensor:
         """
         Calculate negative energy for inputs
 
@@ -66,12 +67,21 @@ class EnergyBased(Detector):
 
         :return: Energy score
         """
+        if self.model is None:
+            raise ModelNotSetException
+
         return self.score(self.model(x), t=self.t)
 
+    def predict_features(self, logits: Tensor) -> Tensor:
+        """
+        :param logits: logits given by the model
+        """
+        return EnergyBased.score(logits, t=self.t)
+
     @staticmethod
-    def score(logits: torch.Tensor, t: Optional[float] = 1) -> torch.Tensor:
+    def score(logits: Tensor, t: Optional[float] = 1.0) -> Tensor:
         """
         :param logits: logits of input
         :param t: temperature value
         """
-        return -t * torch.logsumexp(logits / t, dim=1)
+        return -t * logsumexp(logits / t, dim=1)

@@ -1,11 +1,15 @@
 Image Benchmarks
 ====================
 
-The goal of this section is to describe how to quickly obtain some baseline results to compare against.
+The objective of this section is to outline a quick method for obtaining
+baseline results for comparison purposes.
 
-The following examples reproduces a common benchmark with 7 OOD detectors.
-Each detector is tested against 5 OOD datasets. We then calculate the mean performance of each detector over all
-datasets and sort the results by their AUROC in ascending order.
+We provide an example that replicates a
+commonly used benchmark that includes 7 Out-of-Distribution detectors,
+each tested against 5 OOD datasets.
+We subsequently calculate the average performance of each detector
+across all datasets and sort the outcomes based on their
+Area Under Receiver Operating Characteristic (AUROC) score in ascending order.
 
 We test :class:`MaxSoftmax <pytorch_ood.detector.MaxSoftmax>`,
 :class:`Energy-Based Out-of-Distribution Detection  <pytorch_ood.detector.EnergyBased>`,

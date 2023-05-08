@@ -13,9 +13,10 @@ import logging
 from typing import Optional, TypeVar
 
 import torch
-from torch import nn
+from torch import Tensor, nn
+from torch.nn import Module
 
-from ..api import Detector
+from ..api import Detector, ModelNotSetException
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -39,7 +40,7 @@ class MCD(Detector):
 
     """
 
-    def __init__(self, model: nn.Module, samples: int = 30):
+    def __init__(self, model: Module, samples: int = 30):
         """
 
         :param model: the module to use for the forward pass. Should output logits.
@@ -54,14 +55,22 @@ class MCD(Detector):
         """
         return self
 
-    def fit_features(self: Self, data_loader) -> Self:
+    def fit_features(self: Self, x: Tensor, y: Tensor) -> Self:
         """
         Not required
         """
-        return self
+        raise NotImplementedError
+
+    def predict_features(self, x: Tensor) -> Tensor:
+        """
+        This method can not be used, as the input has to be passed several times through the model.
+
+        :raise Exception:
+        """
+        raise Exception("You must use a model for MCD")
 
     @staticmethod
-    def run(model: torch.nn.Module, x: torch.Tensor, samples: int) -> torch.Tensor:
+    def run(model: Module, x: Tensor, samples: int) -> Tensor:
         """
         Assumes that the model outputs logits.
 
@@ -72,6 +81,8 @@ class MCD(Detector):
         :param samples: number of rounds
         :return: averaged output of the model
         """
+        if model is None:
+            raise ModelNotSetException
 
         mode_switch = False
 
@@ -104,7 +115,7 @@ class MCD(Detector):
 
         return results
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input
         :return: negative maximum average class score of the model

@@ -1,21 +1,30 @@
 General Information
 **************************
 
-
 Scope
 -----------------------------------------
 
-While Out-of-Distribution Detection, Anomaly Detection, Novelty Detection, Open-Set Recognition etc. differ in details,
-we believe that these tasks are related. To out knowledge, the nomenclature is not fully settled, and different
-researchers tend to use different terminologies.
-Sometimes, some of these terms are used interchangeably.
-Therefore, while this library aims at Out-of-Distribution methods,
-it may also cover methods from closely related fields.
+Out-of-Distribution Detection, Anomaly Detection, Novelty Detection,
+Open-Set Recognition, and other related tasks share similarities in their
+objectives and methodologies.
+However, different researchers may use different terminologies, and there is,
+to our knowledge, currently no clear consensus on the nomenclature.
+Consequently, some of the terms may be used interchangeably.
 
+This library aims to provide methods for Out-of-Distribution Detection.
+However, it may also cover approaches from closely related fields,
+such as Anomaly Detection or Novelty Detection.
+
+Our goal is to provide a flexible and adaptable solution that can be easily
+integrated into existing research workflows, enabling researchers
+to test and compare various methods in a standardized and reproducible manner.
+We intend to continue to update and expand the library to keep up with
+the latest developments.
 
 
 Assumptions
------------------------------------------
+-------------
+
 While PyTorch-OOD aims to be as general as possible, there are certain assumptions that we have to make.
 These are as follows:
 
@@ -23,13 +32,17 @@ These are as follows:
 OOD as Binary Classification
 ==============================
 
-
-PyTorch-OOD casts OOD detection as binary classification with the goal to discriminate between
-in-distribution (IN) and out-of-distribution (OOD) data. This
-detection is performed in addition to other tasks, like classification or segmentation.
-Thus, it is assumed that each **OOD detector produces outlier scores**, where high values indicate greater
-outlierness. While these are strong assumptions that some detectors, like OpenMax, might not adhere to,
-we argue that most methods can be reformulated in such a fashion.
+PyTorch-OOD approaches Out-of-Distribution (OOD) detection as a binary
+classification task with the objective of distinguishing between
+in-distribution (IN) and out-of-distribution (OOD) data.
+This binary classification is performed in addition to other tasks,
+such as classification or segmentation.
+PyTorch-OOD assumes that each OOD detector produces outlier scores,
+which are numerical values that indicate the degree of outlierness of a
+given sample.
+While this assumption may not be applicable to some detectors,
+such as OpenMax, we believe that most methods can be modified
+to produce outlier scores.
 
 Workflow
 ===============
@@ -43,16 +56,28 @@ We assume a workflow involving 3 Steps:
 Labeling
 ===============
 
-We adopt the following convention: samples from in-distribution data use target class labels :math:`>= 0`.
-Samples from out-of-distribution data (known or unknown during training) will be
-assigned target values :math:`< 0`.
+PyTorch-OOD follows a labeling convention in which in-distribution data
+samples are assigned target class labels greater
+than or equal to zero (:math:`>= 0`). Out-of-distribution
+data samples, whether known or unknown during training, are
+assigned target values less than zero (:math:`< 0`).
 
 
 Getting Started
 ****************
 
-You can install PyTorch-OOD directly via the Python Packaging Index (PyPI)
+You can install PyTorch-OOD directly via Python Packaging Index (PyPI)
 
 .. code-block:: shell
 
    pip install pytorch-ood
+
+Editable Version
+-----------------
+
+You can install an editable version (developer version) by cloning the repository
+to some directory ``<dir>`` and executing
+
+.. code-block:: shell
+
+   pip install -e <dir>

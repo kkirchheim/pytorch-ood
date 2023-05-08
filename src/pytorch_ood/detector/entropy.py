@@ -11,9 +11,10 @@
 """
 from typing import Optional, TypeVar
 
-from torch import Tensor, nn
+from torch import Tensor
+from torch.nn import Module
 
-from ..api import Detector
+from ..api import Detector, ModelNotSetException
 
 Self = TypeVar("Self")
 
@@ -45,7 +46,7 @@ class Entropy(Detector):
         """
         return self
 
-    def __init__(self, model: nn.Module):
+    def __init__(self, model: Module):
         """
         :param model: the model :math:`f`
         """
@@ -60,7 +61,16 @@ class Entropy(Detector):
 
         :return: Entropy score
         """
+        if self.model is None:
+            raise ModelNotSetException
+
         return self.score(self.model(x))
+
+    def predict_features(self, logits: Tensor) -> Tensor:
+        """
+        :param logits: logits given by your model
+        """
+        return self.score(logits)
 
     @staticmethod
     def score(logits: Tensor) -> Tensor:

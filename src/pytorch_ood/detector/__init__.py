@@ -2,12 +2,12 @@
 Detectors
 ******************
 
-This package contains a collection of different Out-of-Distribution Detectors.
+This module provides a collection of different Out-of-Distribution Detectors.
 
 API
 ------
 Each detector implements a common API which contains a ``predict`` and a ``fit`` method, where ``fit`` is optional.
-The objects ``__call__`` methods become an alias for the ``predict`` function, so you can use
+The objects ``__call__`` methods is delegated to the the ``predict`` function, so you can use
 
 .. code:: python
 
@@ -16,14 +16,28 @@ The objects ``__call__`` methods become an alias for the ``predict`` function, s
     scores = detector(x)
 
 
+Feature-based Interface
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Alternatively, you can also use the ``fit_features`` and ``predict_features`` methods.
+In that case, inputs will not be passed through the model. This can help to avoid passing
+data through the model multiple times when fitting several detectors. Detectors who do not
+support this will raise an exception.
+
+.. code:: python
+
+    detector = Detector(model=None)
+    detector.fit_features(train_features, train_labels)
+    scores = detector.predict_features(test_features)
+
 Some of the detectors support grid-like input, so that they can be used for anomaly segmentation
-without the need for further adjustment.
+without further adjustment.
 
 
 ..  autoclass:: pytorch_ood.api.Detector
     :members:
 
-Maximum Softmax
+Maximum Softmax (MSP)
 -------------------------------
 .. automodule:: pytorch_ood.detector.softmax
 

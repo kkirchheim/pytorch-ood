@@ -10,9 +10,10 @@
 """
 from typing import TypeVar
 
-import torch
+from torch import Tensor
+from torch.nn import Module
 
-from ..api import Detector
+from ..api import Detector, ModelNotSetException
 
 Self = TypeVar("Self")
 
@@ -30,18 +31,27 @@ class MaxLogit(Detector):
        `ArXiv <https://.org/abs/1911.11132>`__
     """
 
-    def __init__(self, model: torch.nn.Module):
+    def __init__(self, model: Module):
         """
         :param t: temperature value T. Default is 1.
         """
         super(MaxLogit, self).__init__()
         self.model = model
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: Tensor) -> Tensor:
         """
         :param x:  model inputs
         """
+        if self.model is None:
+            raise ModelNotSetException
+
         return self.score(self.model(x))
+
+    def predict_features(self, logits: Tensor) -> Tensor:
+        """
+        :param logits: logits as given by the model
+        """
+        return MaxLogit.score(logits)
 
     def fit(self: Self, *args, **kwargs) -> Self:
         """
@@ -56,7 +66,7 @@ class MaxLogit(Detector):
         return self
 
     @staticmethod
-    def score(logits: torch.Tensor) -> torch.Tensor:
+    def score(logits: Tensor) -> Tensor:
         """
         :param logits: logits for samples
         """

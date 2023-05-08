@@ -33,7 +33,6 @@ class ImageNetA(DatasetFolder):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ):
-
         self.root = root
 
         if download:

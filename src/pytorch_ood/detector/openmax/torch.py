@@ -1,10 +1,15 @@
+"""
+Torch wrapper for a numpy implementation of openmax.
+"""
 import logging
 from typing import Optional, TypeVar
 
 import torch
+from torch import Tensor
+from torch.nn import Module
 from torch.utils.data import DataLoader
 
-from ...api import Detector
+from ...api import Detector, ModelNotSetException
 from ...utils import extract_features
 
 log = logging.getLogger(__name__)
@@ -31,7 +36,7 @@ class OpenMax(Detector):
 
     def __init__(
         self,
-        model: torch.nn.Module,
+        model: Module,
         tailsize: int = 25,
         alpha: int = 10,
         euclid_weight: float = 1.0,
@@ -45,9 +50,9 @@ class OpenMax(Detector):
         self.model = model
 
         # we import it here because of its dependency to the broken libmr
-        from .numpy import OpenMax as NPOpenMax
+        from .numpy import OpenMax as NumpyOpenMax
 
-        self.openmax = NPOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
+        self._openmax = NumpyOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
 
     def fit(self: Self, data_loader: DataLoader, device: Optional[str] = "cpu") -> Self:
         """
@@ -56,26 +61,39 @@ class OpenMax(Detector):
         :param data_loader: Data to use for fitting
         :param device: Device used for calculations
         """
+        if self.model is None:
+            raise ModelNotSetException
+
         z, y = extract_features(data_loader, self.model, device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: torch.Tensor, y: torch.Tensor) -> Self:
+    def fit_features(self: Self, logits: Tensor, y: Tensor) -> Self:
         """
         Determines parameters of the weibull functions for each class.
 
-        :param z: features
+        :param logits: logits given by the model
         :param y: class labels
         :return:
         """
-        z, y = z.cpu().numpy(), y.cpu().numpy()
-        self.openmax.fit(z, y)
+        logits, y = logits.cpu().numpy(), y.cpu().numpy()
+        self._openmax.fit(logits, y)
         return self
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input, will be passed through the model to obtain logits
         """
-        with torch.no_grad():
-            z = self.model(x).cpu().numpy()
+        if self.model is None:
+            raise ModelNotSetException
 
-        return torch.tensor(self.openmax.predict(z)[:, 0])
+        with torch.no_grad():
+            logits = self.model(x)
+
+        return self.predict_features(logits)
+
+    def predict_features(self, logits: Tensor) -> Tensor:
+        """
+        :param logits: logits given by model
+        """
+        logits = logits.cpu().numpy()
+        return torch.tensor(self._openmax.predict(logits)[:, 0])
