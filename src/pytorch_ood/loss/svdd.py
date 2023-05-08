@@ -27,7 +27,10 @@ class DeepSVDDLoss(torch.nn.Module):
     """
 
     def __init__(
-        self, n_dim: int, reduction: Optional[str] = "mean", center: Optional[torch.Tensor] = None
+        self,
+        n_dim: int,
+        reduction: Optional[str] = "mean",
+        center: Optional[torch.Tensor] = None,
     ):
         """
         :param n_dim: dimensionality of the output space

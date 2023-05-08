@@ -13,10 +13,11 @@ import logging
 from typing import TypeVar
 
 import torch
-from torch.nn import Parameter, ParameterDict
+from torch import Tensor
+from torch.nn import Module, Parameter, ParameterDict
 from torch.utils.data import DataLoader
 
-from ..api import Detector, RequiresFittingException
+from ..api import Detector, ModelNotSetException, RequiresFittingException
 from ..utils import extract_features
 
 log = logging.getLogger()
@@ -40,7 +41,7 @@ class KLMatching(Detector):
     :see Paper: `ArXiv <https://arxiv.org/abs/1911.11132>`__
     """
 
-    def __init__(self, model: torch.nn.Module):
+    def __init__(self, model: Module):
         """
         :param model: neural network, is assumed to output logits.
         """
@@ -56,10 +57,13 @@ class KLMatching(Detector):
         :param data_loader: validation data loader
         :param device: device which should be used for calculations
         """
+        if self.model is None:
+            raise ModelNotSetException
+
         logits, labels = extract_features(data_loader, self.model, device)
         return self.fit_features(logits, labels, device)
 
-    def fit_features(self: Self, logits: torch.Tensor, labels: torch.Tensor, device="cpu") -> Self:
+    def fit_features(self: Self, logits: Tensor, labels: Tensor, device="cpu") -> Self:
         """
         Estimates typical distributions for each class.
         Ignores OOD samples.
@@ -79,7 +83,27 @@ class KLMatching(Detector):
 
         return self
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict_features(self, p: Tensor) -> Tensor:
+        """
+        :param p: probabilities predicted by the model
+        """
+        device = p.device
+        predictions = p.argmax(dim=1)
+        scores = torch.empty(size=(p.shape[0],), device=device)
+
+        for label in predictions.unique():
+            if str(label.item()) not in self.dists:
+                raise ValueError(f"Label {label.item()} not fitted.")
+
+            dist = self.dists[str(label.item())]
+            class_p = p[predictions == label]
+            class_d = dist.unsqueeze(0).repeat(class_p.shape[0], 1)
+            d_kl = (class_p * (class_p / class_d).log()).sum(dim=1)
+            scores[predictions == label] = d_kl
+
+        return scores
+
+    def predict(self, x: Tensor) -> Tensor:
         """
         Calculates KL-Divergence between predicted posteriors and typical posteriors.
 
@@ -89,22 +113,13 @@ class KLMatching(Detector):
         if len(self.dists) == 0:
             raise RequiresFittingException("KL-Matching has to be fitted on validation data.")
 
-        #
+        if self.model is None:
+            raise ModelNotSetException
+
+        # we move the dict with the typical posteriors to the same device as the input
+        # this might be not desirable in some cases, but avoids errors
         device = x.device
         self.dists.to(device)
 
-        probs = self.model(x).softmax(dim=1)
-        predictions = probs.argmax(dim=1)
-        scores = torch.empty(size=(probs.shape[0],), device=device)
-
-        for label in predictions.unique():
-            if str(label.item()) not in self.dists:
-                raise ValueError(f"Label {label.item()} not fitted.")
-
-            dist = self.dists[str(label.item())]
-            class_p = probs[predictions == label]
-            class_d = dist.unsqueeze(0).repeat(class_p.shape[0], 1)
-            d_kl = (class_p * (class_p / class_d).log()).sum(dim=1)
-            scores[predictions == label] = d_kl
-
-        return scores
+        p = self.model(x).softmax(dim=1)
+        return self.predict_features(p)

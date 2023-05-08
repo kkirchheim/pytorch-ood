@@ -202,7 +202,6 @@ class OODMetrics(object):
             metrics = {key: self.buffer[key].mean() for key in self.buffer.keys()}
 
         elif self.mode == "classification":
-
             labels = self.buffer.get("labels").view(-1)
             scores = self.buffer.get("scores").view(-1)
 
