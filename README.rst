@@ -5,6 +5,10 @@ PyTorch Out-of-Distribution Detection
    :target: https://pytorch-ood.readthedocs.io/en/latest/
    :alt: Documentation
 
+.. image:: https://img.shields.io/pypi/v/pytorch-ood?color=light
+   :target: https://pypi.org/project/pytorch-ood/
+   :alt: License
+
 .. image:: https://img.shields.io/pypi/l/pytorch-ood
    :target: https://gitlab.com/kkirchheim/pytorch-ood/-/blob/master/LICENSE
    :alt: License
@@ -41,7 +45,7 @@ The library provides:
 - Neural Network Architectures as well as pretrained weights
 - Useful Utilities
 
-and is designed such that it should be compatible with frameworks like,
+and is designed such that it should be compatible with frameworks
 like `pytorch-lightning <https://www.pytorchlightning.ai>`_ and
 `pytorch-segmentation-models <https://github.com/qubvel/segmentation_models.pytorch>`_.
 The library also covers some methods from closely related fields such as Open-Set Recognition, Novelty Detection,

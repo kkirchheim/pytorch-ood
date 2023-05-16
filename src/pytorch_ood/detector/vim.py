@@ -16,10 +16,10 @@ import numpy as np
 import torch
 from numpy.linalg import norm, pinv
 from scipy.special import logsumexp
+from torch import Tensor
 
-from pytorch_ood.utils import TensorBuffer, extract_features, is_known
-
-from ..api import Detector, RequiresFittingException
+from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..utils import extract_features
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -66,26 +66,20 @@ class ViM(Detector):
         """
         return np.matmul(features, self.w.T) + self.b
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: Tensor) -> Tensor:
         """
         :param x: model input, will be passed through neural network
         """
+        if self.model is None:
+            raise ModelNotSetException
+
         if self.principal_subspace is None or self.alpha is None:
             raise RequiresFittingException()
 
         with torch.no_grad():
-            features = self.model(x).cpu()
+            features = self.model(x)
 
-        logits = self._get_logits(features)
-
-        # calculate residual
-        x_p_t = norm(np.matmul(features - self.u, self.principal_subspace), axis=-1)
-        vlogit = x_p_t * self.alpha
-        # clip for numerical stability, float32 easily overflows in logsumexp
-        energy = logsumexp(np.clip(logits, -100, 100), axis=-1)
-        score = -vlogit + energy
-
-        return -torch.Tensor(score)
+        return self.predict_features(features)
 
     def __repr__(self):
         return f"ViM(d={self.n_dim})"
@@ -93,14 +87,51 @@ class ViM(Detector):
     def fit(self: Self, data_loader, device="cpu") -> Self:
         """
         Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
+
+        :param data_loader: dataset to fit on
+        :param device: device to use
+        :return:
         """
         try:
             from sklearn.covariance import EmpiricalCovariance
         except ImportError:
             raise Exception("You need to install sklearn to use ViM.")
 
+        if self.model is None:
+            raise ModelNotSetException
+
         features, labels = extract_features(data_loader, self.model, device)
-        features = features.numpy()
+        return self.fit_features(features, labels)
+
+    def predict_features(self, x: Tensor) -> Tensor:
+        """
+        :param x: features as given by the model
+        """
+        x = x.detach().cpu().numpy()
+        logits = self._get_logits(x)
+
+        # calculate residual
+        x_p_t = norm(np.matmul(x - self.u, self.principal_subspace), axis=-1)
+        vlogit = x_p_t * self.alpha
+        # clip for numerical stability, float32 easily overflows in logsumexp
+        energy = logsumexp(np.clip(logits, -100, 100), axis=-1)
+        score = -vlogit + energy
+        return -Tensor(score)
+
+    def fit_features(self: Self, features: Tensor, labels: Tensor) -> Self:
+        """
+        Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
+
+        :param features: features
+        :param labels: class labels
+        :return:
+        """
+        try:
+            from sklearn.covariance import EmpiricalCovariance
+        except ImportError:
+            raise Exception("You need to install sklearn to use ViM.")
+
+        features = features.cpu().numpy()
 
         if features.shape[1] < self.n_dim:
             n = features.shape[1] // 2

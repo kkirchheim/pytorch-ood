@@ -11,16 +11,17 @@
 """
 from typing import Optional, TypeVar
 
-import torch
+from torch import Tensor
+from torch.nn import Module
 
-from ..api import Detector
+from ..api import Detector, ModelNotSetException
 
 Self = TypeVar("Self")
 
 
 class MaxSoftmax(Detector):
     """
-    Implements the Maximum Softmax Thresholding Baseline for OOD detection.
+    Implements the Maximum Softmax Probability (MSP) Thresholding baseline for OOD detection.
 
     Optionally, implements temperature scaling, which divides the logits by a constant temperature :math:`T`
     before calculating the softmax.
@@ -37,20 +38,23 @@ class MaxSoftmax(Detector):
 
     """
 
-    def __init__(self, model: torch.nn.Module, t: Optional[float] = 1):
+    def __init__(self, model: Module, t: Optional[float] = 1.0):
         """
         :param model: neural network to use
-        :param t: temperature value T. Default is 1.
+        :param t: temperature value :math:`T`. Default is 1.
         """
         super(MaxSoftmax, self).__init__()
         self.t = t
         self.model = model
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: model input, will be passed through neural network
+        :param x: input, will be passed through model
         """
-        return self.score(self.model(x), t=1)
+        if self.model is None:
+            raise ModelNotSetException
+
+        return self.score(self.model(x), t=self.t)
 
     def fit(self: Self, *args, **kwargs) -> Self:
         """
@@ -58,8 +62,20 @@ class MaxSoftmax(Detector):
         """
         return self
 
+    def fit_features(self: Self, *args, **kwargs) -> Self:
+        """
+        Not required
+        """
+        return self
+
+    def predict_features(self, logits: Tensor) -> Tensor:
+        """
+        :param logits: logits given by the model
+        """
+        return MaxSoftmax.score(logits, self.t)
+
     @staticmethod
-    def score(logits: torch.Tensor, t: Optional[float] = 1) -> torch.Tensor:
+    def score(logits: Tensor, t: Optional[float] = 1.0) -> Tensor:
         """
         :param logits: logits for samples
         :param t: temperature value

@@ -5,12 +5,13 @@ import logging
 import math
 import random
 from collections import defaultdict
-from typing import Any, Dict, KeysView, List, TypeVar, Union
+from typing import Any, Callable, Dict, KeysView, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import Tensor
+from torch.utils.data import DataLoader
 
 log = logging.getLogger(__name__)
 
@@ -19,8 +20,8 @@ Self = TypeVar("Self")
 
 
 def temperature_calibration(
-    logits: torch.Tensor,
-    labels: torch.Tensor,
+    logits: Tensor,
+    labels: Tensor,
     lower: float = 0.2,
     upper: float = 5.0,
     eps: float = 0.0001,
@@ -83,35 +84,35 @@ def calc_openness(n_train, n_test, n_target):
 #######################################
 # Helpers for labels
 #######################################
-def is_known(labels) -> Union[bool, torch.Tensor]:
+def is_known(labels) -> Union[bool, Tensor]:
     """
     :returns: True, if label :math:`>= 0`
     """
     return labels >= 0
 
 
-def is_unknown(labels) -> Union[bool, torch.Tensor]:
+def is_unknown(labels) -> Union[bool, Tensor]:
     """
     :returns: True, if label :math:`< 0`
     """
     return labels < 0
 
 
-def contains_known_and_unknown(labels) -> Union[bool, torch.Tensor]:
+def contains_known_and_unknown(labels) -> Union[bool, Tensor]:
     """
     :return: true if the labels contain *IN* and *OOD* classes
     """
     return contains_known(labels) and contains_unknown(labels)
 
 
-def contains_known(labels) -> Union[bool, torch.Tensor]:
+def contains_known(labels) -> Union[bool, Tensor]:
     """
     :return: true if the labels contains any *IN* labels
     """
     return is_known(labels).any()
 
 
-def contains_unknown(labels) -> Union[bool, torch.Tensor]:
+def contains_unknown(labels) -> Union[bool, Tensor]:
     """
     :return: true if the labels contains any *OOD* labels
     """
@@ -121,9 +122,7 @@ def contains_unknown(labels) -> Union[bool, torch.Tensor]:
 #######################################
 # Distance functions etc.
 #######################################
-def estimate_class_centers(
-    embedding: torch.Tensor, target: torch.Tensor, num_centers: int = None
-) -> torch.Tensor:
+def estimate_class_centers(embedding: Tensor, target: Tensor, num_centers: int = None) -> Tensor:
     """
     Estimates class centers from the given embeddings and labels, using mean as estimator.
 
@@ -150,7 +149,7 @@ def torch_get_distances(centers, embeddings):
     return distances
 
 
-def pairwise_distances(x, y=None) -> torch.Tensor:
+def pairwise_distances(x, y=None) -> Tensor:
     """
     Calculate pairwise distance by quadratic expansion.
 
@@ -193,14 +192,14 @@ class TensorBuffer(object):
         """
         return len(self._buffer) == 0
 
-    def append(self: Self, key, value: torch.Tensor) -> Self:
+    def append(self: Self, key, value: Tensor) -> Self:
         """
         Appends a tensor to the buffer.
 
         :param key: tensor identifier
         :param value: tensor
         """
-        if not isinstance(value, torch.Tensor):
+        if not isinstance(value, Tensor):
             raise ValueError(f"Can not handle value type {type(value)}")
 
         value = value.detach().to(self.device)
@@ -210,10 +209,10 @@ class TensorBuffer(object):
     def __contains__(self, elem) -> bool:
         return elem in self._buffer
 
-    def __getitem__(self, item) -> torch.Tensor:
+    def __getitem__(self, item) -> Tensor:
         return self.get(item)
 
-    def sample(self, key) -> torch.Tensor:
+    def sample(self, key) -> Tensor:
         """
         Samples a random tensor from the buffer
 
@@ -226,7 +225,7 @@ class TensorBuffer(object):
     def keys(self) -> KeysView:
         return self._buffer.keys()
 
-    def get(self, key) -> torch.Tensor:
+    def get(self, key) -> Tensor:
         """
         Retrieves tensor from the buffer
 
@@ -258,7 +257,7 @@ class TensorBuffer(object):
         return self
 
 
-def apply_reduction(tensor: torch.Tensor, reduction: str) -> torch.Tensor:
+def apply_reduction(tensor: Tensor, reduction: str) -> Tensor:
     """
     Apply specific reduction to a tensor
     """
@@ -284,14 +283,16 @@ def fix_random_seed(seed: int = 12345) -> None:
     np.random.seed(seed)
 
 
-def extract_features(data_loader, model, device):
+def extract_features(
+    data_loader: DataLoader, model: Callable[[Tensor], Tensor], device: Optional[str]
+) -> Tuple[Tensor, Tensor]:
     """
-    Helper to extract from model. Ignores OOD inputs.
+    Helper to extract outputs from model. Ignores OOD inputs.
 
-    :param data_loader:
-    :param model:
-    :param device:
-    :return:
+    :param data_loader: dataset to extract from
+    :param model: neural network to pass inputs to
+    :param device: device used for calculations
+    :return: Tuple with outputs and labels
     """
     # TODO: add option to buffer to GPU
     buffer = TensorBuffer()

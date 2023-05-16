@@ -1,11 +1,16 @@
+"""
+Torch wrapper for a numpy implementation of openmax.
+"""
 import logging
 from typing import Optional, TypeVar
 
 import torch
+from torch import Tensor
+from torch.nn import Module
 from torch.utils.data import DataLoader
 
-from ...api import Detector
-from ...utils import TensorBuffer, is_known
+from ...api import Detector, ModelNotSetException
+from ...utils import extract_features
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -31,7 +36,7 @@ class OpenMax(Detector):
 
     def __init__(
         self,
-        model: torch.nn.Module,
+        model: Module,
         tailsize: int = 25,
         alpha: int = 10,
         euclid_weight: float = 1.0,
@@ -45,9 +50,9 @@ class OpenMax(Detector):
         self.model = model
 
         # we import it here because of its dependency to the broken libmr
-        from .numpy import OpenMax as NPOpenMax
+        from .numpy import OpenMax as NumpyOpenMax
 
-        self.openmax = NPOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
+        self._openmax = NumpyOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
 
     def fit(self: Self, data_loader: DataLoader, device: Optional[str] = "cpu") -> Self:
         """
@@ -56,38 +61,39 @@ class OpenMax(Detector):
         :param data_loader: Data to use for fitting
         :param device: Device used for calculations
         """
-        z, y = OpenMax._extract(data_loader, self.model, device=device)
-        self.openmax.fit(z.numpy(), y.numpy())
+        if self.model is None:
+            raise ModelNotSetException
+
+        z, y = extract_features(data_loader, self.model, device)
+        return self.fit_features(z, y)
+
+    def fit_features(self: Self, logits: Tensor, y: Tensor) -> Self:
+        """
+        Determines parameters of the weibull functions for each class.
+
+        :param logits: logits given by the model
+        :param y: class labels
+        :return:
+        """
+        logits, y = logits.cpu().numpy(), y.cpu().numpy()
+        self._openmax.fit(logits, y)
         return self
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input, will be passed through the model to obtain logits
         """
+        if self.model is None:
+            raise ModelNotSetException
+
         with torch.no_grad():
-            z = self.model(x).cpu().numpy()
+            logits = self.model(x)
 
-        return torch.tensor(self.openmax.predict(z)[:, 0])
+        return self.predict_features(logits)
 
-    @staticmethod
-    def _extract(data_loader, model: torch.nn.Module, device):
+    def predict_features(self, logits: Tensor) -> Tensor:
         """
-        Extract embeddings from model. Ignores OOD data.
+        :param logits: logits given by model
         """
-        buffer = TensorBuffer()
-        log.debug("Extracting features")
-        for batch in data_loader:
-            x, y = batch
-            x = x.to(device)
-            known = is_known(y)
-            z = model(x[known])
-            # flatten
-            x = z.view(x.shape[0], -1)
-            buffer.append("embedding", z)
-            buffer.append("label", y[known])
-
-        z = buffer.get("embedding")
-        y = buffer.get("label")
-
-        buffer.clear()
-        return z, y
+        logits = logits.cpu().numpy()
+        return torch.tensor(self._openmax.predict(logits)[:, 0])

@@ -2,13 +2,16 @@
 PyTorch Out-of-Distribution Detection
 ==========================================
 
-PyTorch-OOD is a library for Out-of-Distribution Detection based on PyTorch.
-PyTorch-OOD aims to provide modular, well-tested, and documented implementations of OOD detection methods
-with a unified interface, as well as training and benchmark datasets, pre-trained models, and utility functions.
+PyTorch-OOD is a PyTorch-based library that offers a range of modular,
+tested, and well-documented implementations of Out-of-Distribution (OOD)
+detection methods.
+This library is designed to provide users with a unified interface,
+pre-trained models, utility functions, and benchmark datasets
+for OOD detection.
 
-This documentation provides a user guide with general information on the
-assumptions, nomenclature, as well as a structured API documentation to aid implementation.
-
+This documentation serves as a user guide, presenting
+comprehensive information on the library's assumptions,
+nomenclature, and structured API documentation.
 
 .. toctree::
    :maxdepth: 2

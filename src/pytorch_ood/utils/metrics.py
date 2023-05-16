@@ -94,6 +94,9 @@ def fpr_at_tpr(pred, target, k=0.95):
     # results will be sorted in reverse order
     fpr, tpr, _ = binary_roc(pred, target)
     idx = torch.searchsorted(tpr, k)
+    if idx == fpr.shape[0]:
+        return fpr[idx - 1]
+
     return fpr[idx]
 
 
@@ -202,7 +205,6 @@ class OODMetrics(object):
             metrics = {key: self.buffer[key].mean() for key in self.buffer.keys()}
 
         elif self.mode == "classification":
-
             labels = self.buffer.get("labels").view(-1)
             scores = self.buffer.get("scores").view(-1)
 

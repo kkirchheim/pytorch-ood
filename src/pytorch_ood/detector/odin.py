@@ -16,10 +16,12 @@ import warnings
 from typing import Callable, List, Optional, TypeVar
 
 import torch
+from torch import Tensor
 from torch.autograd import Variable
+from torch.nn import Module
 from torch.nn import functional as F
 
-from ..api import Detector
+from ..api import Detector, ModelNotSetException
 
 log = logging.getLogger(__name__)
 
@@ -27,15 +29,15 @@ Self = TypeVar("Self")
 
 
 def zero_grad(x):
-    if type(x) is torch.Tensor():
+    if type(x) is Tensor():
         torch.fill_(x, 0)
 
 
 def odin_preprocessing(
     model: torch.nn.Module,
-    x: torch.Tensor,
-    y: Optional[torch.Tensor] = None,
-    criterion: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+    x: Tensor,
+    y: Optional[Tensor] = None,
+    criterion: Optional[Callable[[Tensor], Tensor]] = None,
     eps: float = 0.05,
     temperature: float = 1000,
     norm_std: Optional[List[float]] = None,
@@ -53,6 +55,9 @@ def odin_preprocessing(
     :param temperature: temperature :math:`T` to use for scaling
     :param norm_std: standard deviations used during preprocessing
     """
+    if model is None:
+        raise ModelNotSetException
+
     # does not work in inference mode, this sometimes collides with pytorch-lightning
     if torch.is_inference_mode_enabled():
         warnings.warn("ODIN not compatible with inference mode. Will be deactivated.")
@@ -110,10 +115,10 @@ class ODIN(Detector):
 
     def __init__(
         self,
-        model: torch.nn.Module,
-        criterion: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+        model: Module,
+        criterion: Optional[Callable[[Tensor], Tensor]] = None,
         eps: float = 0.05,
-        temperature: float = 1000,
+        temperature: float = 1000.0,
         norm_std: Optional[List[float]] = None,
     ):
         """
@@ -136,7 +141,7 @@ class ODIN(Detector):
         self.temperature = temperature  #: temperature value :math:`T`
         self.norm_std = norm_std
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: Tensor) -> Tensor:
         """
         Calculates softmax outlier scores on ODIN pre-processed inputs.
 
@@ -159,3 +164,17 @@ class ODIN(Detector):
         Not required
         """
         return self
+
+    def fit_features(self: Self, *args, **kwargs) -> Self:
+        """
+        Not required
+        """
+        return self
+
+    def predict_features(self, x: Tensor) -> Tensor:
+        """
+        Since ODIN requires backpropagating through the model, this method can not be used.
+
+        :raise Exception:
+        """
+        raise Exception("You must use a model for ODIN")

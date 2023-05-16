@@ -13,10 +13,11 @@ import warnings
 from typing import Callable, List, Optional, TypeVar
 
 import torch
+from torch import Tensor
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from ..api import Detector, RequiresFittingException
+from ..api import Detector, ModelNotSetException, RequiresFittingException
 from ..utils import TensorBuffer, contains_unknown, extract_features, is_known, is_unknown
 
 log = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class Mahalanobis(Detector):
 
     def __init__(
         self,
-        model: Callable[[torch.Tensor], torch.Tensor],
+        model: Callable[[Tensor], Tensor],
         eps: float = 0.002,
         norm_std: Optional[List] = None,
     ):
@@ -51,9 +52,9 @@ class Mahalanobis(Detector):
         """
         super(Mahalanobis, self).__init__()
         self.model = model
-        self.mu: torch.Tensor = None  #: Centers
-        self.cov: torch.Tensor = None  #: Covariance Matrix
-        self.precision: torch.Tensor = None  #: Precision Matrix
+        self.mu: Tensor = None  #: Centers
+        self.cov: Tensor = None  #: Covariance Matrix
+        self.precision: Tensor = None  #: Precision Matrix
         self.eps: float = eps  #: epsilon
         self.norm_std = norm_std
 
@@ -70,6 +71,23 @@ class Mahalanobis(Detector):
             log.warning(f"No device given. Will use '{device}'.")
 
         z, y = extract_features(data_loader, self.model, device)
+        return self.fit_features(z, y, device)
+
+    def fit_features(self: Self, z: Tensor, y: Tensor, device: str = None) -> Self:
+        """
+        Fit parameters of the multi variate gaussian.
+
+        :param z: features
+        :param y: class labels
+        :param device: device to use
+        :return:
+        """
+
+        if device is None:
+            device = list(self.model.parameters())[0].device
+            log.warning(f"No device given. Will use '{device}'.")
+
+        z, y = z.to(device), y.to(device)
 
         log.debug("Calculating mahalanobis parameters.")
         classes = y.unique()
@@ -92,18 +110,14 @@ class Mahalanobis(Detector):
         self.precision = torch.linalg.inv(self.cov)
         return self
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
+    def predict_features(self, x: Tensor) -> Tensor:
         """
-        :param x: input tensor
+        Calculates mahalanobis distance directly on features.
+        ODIN preprocessing will not be applied.
+
+        :param x: features, as given by the model.
         """
-        if self.mu is None:
-            raise RequiresFittingException
-
-        if self.eps > 0:
-            x = self._odin_preprocess(x, x.device)
-
-        features = self.model(x)
-        features = features.view(features.size(0), features.size(1), -1)
+        features = x.view(x.size(0), x.size(1), -1)
         features = torch.mean(features, 2)
         noise_gaussian_scores = []
 
@@ -123,7 +137,23 @@ class Mahalanobis(Detector):
         noise_gaussian_score = torch.max(noise_gaussian_score, dim=1).values
         return -noise_gaussian_score
 
-    def _odin_preprocess(self, x, dev):
+    def predict(self, x: Tensor) -> Tensor:
+        """
+        :param x: input tensor
+        """
+        if self.mu is None:
+            raise RequiresFittingException
+
+        if self.model is None:
+            raise ModelNotSetException
+
+        if self.eps > 0:
+            x = self._odin_preprocess(x, x.device)
+
+        features = self.model(x)
+        return self.predict_features(features)
+
+    def _odin_preprocess(self, x: Tensor, dev: str):
         """
         NOTE: the original implementation uses mean over feature maps. here, we just flatten
         """
@@ -146,7 +176,8 @@ class Mahalanobis(Detector):
                     term_gau = (
                         -0.5
                         * torch.mm(
-                            torch.mm(centered_features, self.precision), centered_features.t()
+                            torch.mm(centered_features, self.precision),
+                            centered_features.t(),
                         ).diag()
                     )
 
@@ -155,8 +186,8 @@ class Mahalanobis(Detector):
                     else:
                         score = torch.cat((score, term_gau.view(-1, 1)), dim=1)
 
-                # Input_processing
-                # calculate gradient of inputs with respect to score of predicted class, according to mahalanobis distance
+                # calculate gradient of inputs with respect to score of predicted class,
+                # according to mahalanobis distance
                 sample_pred = score.max(dim=1).indices
                 batch_sample_mean = self.mu.index_select(0, sample_pred)
                 centered_features = features - Variable(batch_sample_mean)
@@ -185,4 +216,10 @@ class Mahalanobis(Detector):
 
     @property
     def n_classes(self):
+        """
+        Number of classes the model is fitted for
+        """
+        if self.mu is None:
+            raise RequiresFittingException
+
         return self.mu.shape[0]

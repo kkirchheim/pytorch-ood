@@ -14,12 +14,6 @@ Wide ResNet
 ..  autoclass:: pytorch_ood.model.WideResNet
     :members:
 
-Vision Transformer
----------------------
-..  autoclass:: pytorch_ood.model.VisionTransformer
-    :members:
-
-
 Natural Language Processing
 ==============================
 
@@ -47,5 +41,4 @@ Class Centers
 """
 from .centers import ClassCenters, RunningCenters
 from .gru import GRUClassifier
-from .vit import VisionTransformer
 from .wrn import WideResNet

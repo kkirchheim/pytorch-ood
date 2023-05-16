@@ -88,7 +88,6 @@ class Chars74k(ImageDatasetBase):
         return check_integrity(join(self.root, self.filename_dataset), self.tgz_dataset_md5)
 
     def _download(self):
-
         if self._check_integrity():
             return
 
