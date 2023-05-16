@@ -5,6 +5,10 @@ PyTorch Out-of-Distribution Detection
    :target: https://pytorch-ood.readthedocs.io/en/latest/
    :alt: Documentation
 
+.. image:: https://img.shields.io/pypi/v/pytorch-ood?color=light
+   :target: https://pypi.org/project/pytorch-ood/
+   :alt: License
+
 .. image:: https://img.shields.io/pypi/l/pytorch-ood
    :target: https://gitlab.com/kkirchheim/pytorch-ood/-/blob/master/LICENSE
    :alt: License
