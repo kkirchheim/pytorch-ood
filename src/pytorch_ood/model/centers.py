@@ -49,7 +49,7 @@ class ClassCenters(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         :param x: samples
-        :returns: pairwise distance of samples to each center
+        :returns: pairwise squared distance of samples to each center
         """
         assert x.shape[1] == self.n_features
         return utils.pairwise_distances(x, self.params)

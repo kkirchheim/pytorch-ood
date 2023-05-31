@@ -23,9 +23,9 @@ from torchvision.datasets import MNIST, FashionMNIST
 from torchvision.transforms import ToTensor
 
 from pytorch_ood.loss import DeepSVDDLoss
-from pytorch_ood.utils import OODMetrics, ToUnknown
+from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
-torch.manual_seed(1234)
+fix_random_seed(1234)
 
 device = "cuda:0"
 
@@ -102,7 +102,7 @@ def test():
     with torch.no_grad():
         for x, y in test_loader:
             z = model(x.to(device))
-            # calculate (squared) distance of points to the center in output space
+            # calculate distance of points to the center in output space
             distances = criterion.distance(z)
             metrics.update(distances, y)
 

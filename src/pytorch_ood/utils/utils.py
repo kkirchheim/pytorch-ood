@@ -149,23 +149,21 @@ def torch_get_distances(centers, embeddings):
     return distances
 
 
-def pairwise_distances(x, y=None) -> Tensor:
+def pairwise_distances(x: Tensor, y: Tensor = None) -> Tensor:
     """
-    Calculate pairwise distance by quadratic expansion.
+    Calculate pairwise squared euclidean distance by quadratic expansion.
 
-    :param x: is a Nxd matrix
-    :param y:  Mxd matrix
-
-    Output: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
+    :param x: is a :math:`N \\times D` matrix
+    :param y:  :math:`M \\times D` matrix
+    :returns: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
 
     :see Implementation: https://discuss.pytorch.org/t/efficient-distance-matrix-computation/9065/3
 
-    i.e. dist[i,j] = ||x[i,:]-y[j,:]||^2
     """
-    x_norm = (x**2).sum(1).view(-1, 1)
+    x_norm = x.pow(2).sum(1).view(-1, 1)
     if y is not None:
         y_t = torch.transpose(y, 0, 1)
-        y_norm = (y**2).sum(1).view(1, -1)
+        y_norm = y.pow(2).sum(1).view(1, -1)
     else:
         y_t = torch.transpose(x, 0, 1)
         y_norm = x_norm.view(1, -1)
