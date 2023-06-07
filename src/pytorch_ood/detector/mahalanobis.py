@@ -107,6 +107,7 @@ class Mahalanobis(Detector):
             self.mu[clazz] = zs.mean(dim=0)
             self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
 
+        self.cov += torch.eye(self.cov.shape[0], device=self.cov.device) * 1e-6
         self.precision = torch.linalg.inv(self.cov)
         return self
 
