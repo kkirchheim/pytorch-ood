@@ -74,7 +74,7 @@ Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the c
     from pytorch_ood.utils import OODMetrics
 
     # Create Neural Network
-    model = WideResNet(pretrained="er-cifar10-tune").eval().cuda()
+    model = WideResNet(10, pretrained="er-cifar10-tune").eval().cuda()
 
     # Create detector
     detector = EnergyBased(model)
