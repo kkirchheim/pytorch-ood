@@ -58,7 +58,8 @@ class TinyImageNetCrop(VisionDataset):
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
         path = os.path.join(self.root, self.base_folder, file)
-        img = Image.open(path)
+        img = Image.open(path).convert("RGB")
+
         if self.transform is not None:
             img = self.transform(img)
         if self.target_transform is not None:
