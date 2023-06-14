@@ -75,6 +75,10 @@ class CACLoss(nn.Module):
             non_target = torch.arange(
                 0, self.n_classes - 1, dtype=torch.long, device=distances.device
             ).expand(d_known.shape[0], self.n_classes - 1)
+
+            # required in newer versions of torch, before advances indexing
+            non_target = non_target.clone()
+
             is_last_class = target_known == self.n_classes
             non_target[is_last_class, target_known[is_last_class]] = self.n_classes - 1
 
@@ -94,7 +98,7 @@ class CACLoss(nn.Module):
         :param x: input points
         :return: matrix with squared distances from each point to each center with shape :math:`B \\times C`.
         """
-        return self.centers(x).pow(2)
+        return self.centers(x)
 
     @staticmethod
     def score(distance: torch.Tensor) -> torch.Tensor:
