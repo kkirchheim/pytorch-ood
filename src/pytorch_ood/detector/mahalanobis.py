@@ -84,7 +84,7 @@ class Mahalanobis(Detector):
         """
 
         if device is None:
-            device = list(self.model.parameters())[0].device
+            device = z.device
             log.warning(f"No device given. Will use '{device}'.")
 
         z, y = z.to(device), y.to(device)
