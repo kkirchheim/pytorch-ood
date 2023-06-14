@@ -12,6 +12,13 @@ class FoolingImages(ImageDatasetBase):
     """
     From the paper *Deep neural networks are easily fooled: High confidence predictions for unrecognizable images*.
 
+    .. image::  https://i.stack.imgur.com/pBm48.png
+        :width: 800px
+        :alt: Fooling Images
+        :align: center
+
+
+
     :see Website: `Link <https://anhnguyen.me/project/fooling/>`__
     :see Paper: `ArXiv <https://arxiv.org/.*>`__
     """
@@ -36,4 +43,4 @@ class FoolingImages(ImageDatasetBase):
         self.files = []
         for d in self.dirs:
             p = join(self.basedir, d, "map_gen_5000")
-            self.files += [join(p, f) for f in os.listdir(p) if f.endswith(".png")]
+            self.files += [join(d, "map_gen_5000", f) for f in os.listdir(p) if f.endswith(".png")]

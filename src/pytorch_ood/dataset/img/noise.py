@@ -15,7 +15,7 @@ class NoiseDataset(Dataset, ABC):
     Base Class for noise datasets
     """
 
-    def __init__(self, seed=None):
+    def __init__(self, seed: int = None):
         """
         :param seed: seed used to initialize the random number generator
         """
@@ -30,13 +30,13 @@ class GaussianNoise(NoiseDataset):
 
     def __init__(
         self,
-        length,
+        length: int,
         size=(224, 224, 3),
         transform=None,
         target_transform=None,
-        loc=128,
-        scale=128,
-        seed=None,
+        loc: int = 128,
+        scale: int = 128,
+        seed: int = None,
     ):
         """
         :param length: number of samples in the dataset
@@ -48,6 +48,10 @@ class GaussianNoise(NoiseDataset):
         :param seed: random seed
         """
         super(GaussianNoise, self).__init__(seed=seed)
+
+        if not isinstance(length, int):
+            raise ValueError("length parameter must be an integer")
+
         self.size = size
         self.num = length
         self.transform = transform
@@ -82,11 +86,11 @@ class UniformNoise(NoiseDataset):
 
     def __init__(
         self,
-        length,
+        length: int,
         size=(224, 224, 3),
         transform=None,
         target_transform=None,
-        seed=None,
+        seed: int = None,
     ):
         """
         :param length: number of samples in the dataset
@@ -97,6 +101,10 @@ class UniformNoise(NoiseDataset):
         """
 
         super(UniformNoise, self).__init__(seed=seed)
+
+        if not isinstance(length, int):
+            raise ValueError("length parameter must be an integer")
+
         self.size = size
         self.num = length
         self.transform = transform

@@ -60,7 +60,7 @@ The documentation is available `here <https://pytorch-ood.readthedocs.io/en/late
 **NOTE**: An important convention adopted in ``pytorch-ood`` is that **OOD detectors predict outlier scores**
 that should be larger for outliers than for inliers.
 If you notice that the scores predicted by a detector do not match the formulas in the corresponding publication,
-it may be possible that we multiplied the scores with negative one to comply with this convention.
+it may be possible that we multiplied the scores by negative one to comply with this convention.
 
 ⏳ Quick Start
 ^^^^^^^^^^^^^^^^^
@@ -74,7 +74,7 @@ Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the c
     from pytorch_ood.utils import OODMetrics
 
     # Create Neural Network
-    model = WideResNet(10, pretrained="er-cifar10-tune").eval().cuda()
+    model = WideResNet(num_classes=10, pretrained="er-cifar10-tune").eval().cuda()
 
     # Create detector
     detector = EnergyBased(model)
