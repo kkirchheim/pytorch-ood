@@ -27,9 +27,13 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        # test requirements 
         python -m pip install flake8 pytest coverage
+        # install depedencies 
         python -m pip install .
-        python -m pip install cython numpy libmr scikit-learn
+        # optional dependencies 
+        python -m pip install cython numpy scikit-learn 
+        python -m pip install libmr
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
