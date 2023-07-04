@@ -28,6 +28,7 @@ nomenclature, and structured API documentation.
    data
    models
    utils
+   benchmarks
 
 
 .. toctree::
