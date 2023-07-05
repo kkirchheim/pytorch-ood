@@ -1,6 +1,6 @@
 
 Image Segmentation
-==================
+******************
 
 Examples for anomaly segmentation.
 

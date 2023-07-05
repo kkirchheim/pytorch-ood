@@ -108,7 +108,6 @@ model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
 
-model.to(device)
 
 # %% Train model
 for epoch in range(n_epochs):

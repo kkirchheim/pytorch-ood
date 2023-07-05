@@ -11,11 +11,16 @@ Pretrained on downscaled imagenet:
 """
 import copy
 import math
+from typing import List
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.transforms as tvt
+from torch import Tensor
 from torch.hub import load_state_dict_from_url
+
+from pytorch_ood.utils import ToRGB
 
 
 class BasicBlock(nn.Module):
@@ -120,6 +125,8 @@ class WideResNet(nn.Module):
         :param in_channels: number of input planes
         :param pretrained: identifier of pretrained weights to load
 
+        Pretrained weights are taken from the corresponding publications.
+
         .. list-table:: Available Pre-Trained weights
            :widths: 25 75
            :header-rows: 1
@@ -180,7 +187,38 @@ class WideResNet(nn.Module):
         if pretrained:
             self._from_pretrained(pretrained)
 
-    def forward(self, x) -> torch.Tensor:
+    @staticmethod
+    def norm_std_for(pretrained: str) -> List[float]:
+        """
+        Return normalization standard deviation values for pretrained model
+        """
+        if pretrained in ["cifar10-pt", "cifar100-pt"]:
+            return [x / 255 for x in [63.0, 62.1, 66.7]]
+
+        raise ValueError("Unknown Model")
+
+    @staticmethod
+    def transform_for(pretrained: str) -> tvt.Compose:
+        """
+        Return evaluation transform for pretrained model
+        """
+        if pretrained in ["cifar10-pt", "cifar100-pt"]:
+            # Setup preprocessing
+            mean = [x / 255 for x in [125.3, 123.0, 113.9]]
+            std = [x / 255 for x in [63.0, 62.1, 66.7]]
+            trans = tvt.Compose(
+                [
+                    tvt.Resize(size=(32, 32)),
+                    ToRGB(),
+                    tvt.ToTensor(),
+                    tvt.Normalize(std=std, mean=mean),
+                ]
+            )
+            return trans
+
+        raise ValueError("Unknown Model")
+
+    def forward(self, x: Tensor) -> Tensor:
         """
         Forward propagate
 
@@ -196,7 +234,7 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return self.fc(out)
 
-    def features(self, x) -> torch.Tensor:
+    def features(self, x: Tensor) -> Tensor:
         """
         Extracts (flattened) features before the last fully connected layer.
         """
@@ -209,9 +247,9 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return out
 
-    def feature_list(self, x):
+    def feature_list(self, x: Tensor) -> List[Tensor]:
         """
-        Extracts features from several layers
+        Extracts features after encoder, pooling, and fully connected layer
         """
         out_list = []
         out = self.conv1(x)
@@ -223,9 +261,10 @@ class WideResNet(nn.Module):
         out = F.avg_pool2d(out, 8)
         out_list.append(out)
         out = out.view(-1, self.nChannels)
-        return self.fc(out), out_list
+        out_list.append(self.fc(out))
+        return out_list
 
-    def _from_pretrained(self, name):
+    def _from_pretrained(self, name: str):
         """
         Load pre-trained weights
         """

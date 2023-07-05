@@ -38,7 +38,6 @@ project = "pytorch-ood"
 copyright = "2023, K. Kirchheim"
 author = "Konstantin Kirchheim"
 
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -47,13 +46,24 @@ author = "Konstantin Kirchheim"
 extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinx_gallery.gen_gallery"]
 
 sphinx_gallery_conf = {
-    "examples_dirs": "../examples",  # path to your example scripts
-    "gallery_dirs": "auto_examples",  # path to where to save gallery generated output,
+    # path to your example scripts
+    "examples_dirs": ["../examples/benchmarks",
+                      "../examples/detectors",
+                      "../examples/loss",
+                      "../examples/segmentation",
+                      "../examples/text"
+                      ],
+    # path to where to save gallery generated output,
+    "gallery_dirs": ["auto_examples/benchmarks",
+                     "auto_examples/detectors",
+                     "auto_examples/loss",
+                     "auto_examples/segmentation",
+                     "auto_examples/text",
+                     ],
     "nested_sections": False,
     "line_numbers": True,
     "min_reported_time": 20,
 }
-
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -62,7 +72,6 @@ templates_path = ["_templates"]
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-
 
 # -- Options for HTML output -------------------------------------------------
 
