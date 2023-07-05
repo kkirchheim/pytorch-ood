@@ -208,7 +208,7 @@ class WideResNet(nn.Module):
 
         raise ValueError("Unknown Model")
 
-    def forward(self, x) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Forward propagate
 
@@ -224,7 +224,7 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return self.fc(out)
 
-    def features(self, x) -> Tensor:
+    def features(self, x: Tensor) -> Tensor:
         """
         Extracts (flattened) features before the last fully connected layer.
         """
@@ -237,7 +237,7 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return out
 
-    def feature_list(self, x) -> List[Tensor]:
+    def feature_list(self, x: Tensor) -> List[Tensor]:
         """
         Extracts features after encoder, pooling, and fully connected layer
         """
@@ -254,7 +254,7 @@ class WideResNet(nn.Module):
         out_list.append(self.fc(out))
         return out_list
 
-    def _from_pretrained(self, name):
+    def _from_pretrained(self, name: str):
         """
         Load pre-trained weights
         """
