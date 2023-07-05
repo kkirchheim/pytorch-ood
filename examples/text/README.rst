@@ -1,5 +1,5 @@
 Text Benchmarks
-==================
+******************
 
 Examples for OOD detection on text.
 

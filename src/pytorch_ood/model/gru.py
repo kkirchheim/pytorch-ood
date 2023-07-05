@@ -35,14 +35,15 @@ class GRUClassifier(nn.Module):
 
     def features(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param x:
+        :param x: batch of tokens
+        :returns: features
         """
         embeds = self.embedding(x)
         return self.gru(embeds)[1][1]  # select h_n, and select the 2nd layer
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param x: lists of list of tokens
+        :param x: batch of tokens
         :returns: logits
         """
         embeds = self.embedding(x)

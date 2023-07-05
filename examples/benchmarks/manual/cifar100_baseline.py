@@ -1,9 +1,11 @@
 """
 
-
 CIFAR 100
 ==============================
+
 The evaluation is the same as for CIFAR 10.
+
+
 
 +-------------+-------+---------+----------+----------+
 | Detector    | AUROC | AUPR-IN | AUPR-OUT | FPR95TPR |
@@ -28,7 +30,6 @@ The evaluation is the same as for CIFAR 10.
 """
 import pandas as pd  # additional dependency, used here for convenience
 import torch
-import torchvision.transforms as tvt
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR100
 
@@ -50,18 +51,15 @@ from pytorch_ood.detector import (
     ViM,
 )
 from pytorch_ood.model import WideResNet
-from pytorch_ood.utils import OODMetrics, ToRGB, ToUnknown
+from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
 device = "cuda:0"
 
-torch.manual_seed(123)
+fix_random_seed(123)
 
 # setup preprocessing
-mean = [x / 255 for x in [125.3, 123.0, 113.9]]
-std = [x / 255 for x in [63.0, 62.1, 66.7]]
-trans = tvt.Compose(
-    [tvt.Resize(size=(32, 32)), ToRGB(), tvt.ToTensor(), tvt.Normalize(std=std, mean=mean)]
-)
+trans = WideResNet.transform_for("cifar100-pt")
+norm_std = WideResNet.norm_std_for("cifar100-pt")
 
 # %%
 # Setup datasets
@@ -87,12 +85,12 @@ print("STAGE 2: Creating OOD Detectors")
 detectors = {}
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
-detectors["Mahalanobis"] = Mahalanobis(model.features, norm_std=std, eps=0.002)
+detectors["Mahalanobis"] = Mahalanobis(model.features, norm_std=norm_std, eps=0.002)
 detectors["KLMatching"] = KLMatching(model)
 detectors["MaxSoftmax"] = MaxSoftmax(model)
 detectors["EnergyBased"] = EnergyBased(model)
 detectors["MaxLogit"] = MaxLogit(model)
-detectors["ODIN"] = ODIN(model, norm_std=std, eps=0.002)
+detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
 
 # %%
 # **Stage 2**: fit detectors to training data (some require this, some do not)

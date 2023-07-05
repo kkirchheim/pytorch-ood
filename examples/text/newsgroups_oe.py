@@ -108,7 +108,6 @@ loader_in_test = DataLoader(dataset_in_test, batch_size=16, shuffle=True, collat
 # %% Create a neural network
 print("STAGE 1: Train Model")
 model = GRUClassifier(num_classes=20, n_vocab=len(vocab))
-model.to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
@@ -125,7 +124,6 @@ for epoch in range(n_epochs):
     correct = 0
     total = 0
 
-    model.train()
     for n, batch in enumerate(loader_train):
         inputs, labels = batch
 
