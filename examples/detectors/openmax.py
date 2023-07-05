@@ -10,25 +10,21 @@ for Open Set Recognition but can be adapted for Out-of-Distribution tasks.
 
 
 """
-import torch
-import torchvision.transforms as tvt
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import OpenMax
 from pytorch_ood.model import WideResNet
-from pytorch_ood.utils import OODMetrics, ToUnknown
+from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
-torch.manual_seed(123)
+fix_random_seed(123)
+
 device = "cuda:0"
 
 # %%
 # Setup preprocessing and data
-mean = [x / 255 for x in [125.3, 123.0, 113.9]]
-std = [x / 255 for x in [63.0, 62.1, 66.7]]
-
-trans = tvt.Compose([tvt.Resize(size=(32, 32)), tvt.ToTensor(), tvt.Normalize(std=std, mean=mean)])
+trans = WideResNet.transform_for("cifar10-pt")
 
 dataset_train = CIFAR10(root="data", train=True, download=True, transform=trans)
 dataset_in_test = CIFAR10(root="data", train=False, download=True, transform=trans)

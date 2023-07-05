@@ -28,15 +28,18 @@ nomenclature, and structured API documentation.
    data
    models
    utils
-   benchmarks
+   benchmark
 
 
 .. toctree::
    :maxdepth: 2
    :caption: Examples
 
-   auto_examples/index
-
+   auto_examples/benchmarks/index
+   auto_examples/detectors/index
+   auto_examples/loss/index
+   auto_examples/segmentation/index
+   auto_examples/text/index
 
 Indices and tables
 ===================

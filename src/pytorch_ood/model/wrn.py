@@ -192,7 +192,7 @@ class WideResNet(nn.Module):
         """
         Return normalization standard deviation values for pretrained model
         """
-        if pretrained == "cifar10-pt":
+        if pretrained in ["cifar10-pt", "cifar100-pt"]:
             return [x / 255 for x in [63.0, 62.1, 66.7]]
 
         raise ValueError("Unknown Model")
@@ -202,7 +202,7 @@ class WideResNet(nn.Module):
         """
         Return evaluation transform for pretrained model
         """
-        if pretrained == "cifar10-pt":
+        if pretrained in ["cifar10-pt", "cifar100-pt"]:
             # Setup preprocessing
             mean = [x / 255 for x in [125.3, 123.0, 113.9]]
             std = [x / 255 for x in [63.0, 62.1, 66.7]]

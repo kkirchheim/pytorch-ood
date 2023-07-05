@@ -18,6 +18,8 @@ from pytorch_ood.utils import OODMetrics, ToUnknown
 torch.manual_seed(123)
 device = "cuda:0"
 
+trans = WideResNet.transform_for("cifar10-pt")
+
 mean = [x / 255 for x in [125.3, 123.0, 113.9]]
 std = [x / 255 for x in [63.0, 62.1, 66.7]]
 
