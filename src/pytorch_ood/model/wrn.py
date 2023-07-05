@@ -188,6 +188,16 @@ class WideResNet(nn.Module):
             self._from_pretrained(pretrained)
 
     @staticmethod
+    def norm_std_for(pretrained: str) -> List[float]:
+        """
+        Return normalization standard deviation values for pretrained model
+        """
+        if pretrained == "cifar10-pt":
+            return [x / 255 for x in [63.0, 62.1, 66.7]]
+
+        raise ValueError("Unknown Model")
+
+    @staticmethod
     def transform_for(pretrained: str) -> tvt.Compose:
         """
         Return evaluation transform for pretrained model

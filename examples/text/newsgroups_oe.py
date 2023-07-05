@@ -125,7 +125,6 @@ for epoch in range(n_epochs):
     correct = 0
     total = 0
 
-    model.train()
     for n, batch in enumerate(loader_train):
         inputs, labels = batch
 

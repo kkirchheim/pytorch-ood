@@ -41,11 +41,12 @@ loader_kwargs = {"batch_size": 64}
 # %%
 model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
 trans = WideResNet.transform_for("cifar10-pt")
+norm_std = WideResNet.norm_std_for("cifar10-pt")
 
 # %%
 detectors = {
     "MSP": MaxSoftmax(model),
-    "ODIN": ODIN(model, eps=0.002, norm_std=[x / 255 for x in [63.0, 62.1, 66.7]]),
+    "ODIN": ODIN(model, eps=0.002, norm_std=norm_std),
 }
 
 # %%
