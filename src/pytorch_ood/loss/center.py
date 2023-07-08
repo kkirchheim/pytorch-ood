@@ -66,9 +66,9 @@ class CenterLoss(nn.Module):
         # inter-class-discriminability term.
         # The Class Anchor Clustering initializes the centers as scaled unit vectors.
         if self.num_classes == self.feat_dim:
-            torch.nn.init.eye_(self.centers.centers)
-            if not self.centers.centers.requires_grad:
-                self.centers.centers.mul_(self.magnitude)
+            torch.nn.init.eye_(self._centers._params)
+            if not self._centers._params.requires_grad:
+                self._centers._params.mul_(self.magnitude)
         # Orthogonal could also be a good option. this can also be used if the embedding dimensionality is
         # different then the number of classes
         # torch.nn.init.orthogonal_(self.centers, gain=10)
