@@ -215,6 +215,18 @@ class WideResNet(nn.Module):
                 ]
             )
             return trans
+        elif pretrained in ["imagenet32-nocifar"]:
+            mean = [0.5] * 3
+            std = [0.5] * 3
+            trans = tvt.Compose(
+                [
+                    tvt.Resize(size=(32, 32)),
+                    ToRGB(),
+                    tvt.ToTensor(),
+                    tvt.Normalize(std=std, mean=mean),
+                ]
+            )
+            return trans
 
         raise ValueError("Unknown Model")
 

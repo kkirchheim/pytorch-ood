@@ -12,8 +12,8 @@ Here, we train the model for 10 epochs on the CIFAR10 dataset, using a backbone 
 :math:`32 \\times 32` resized version of the ImageNet as a foundation.
 """
 import torch
-import torchvision.transforms as tvt
 from torch.optim import Adam
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10
@@ -29,7 +29,7 @@ fix_random_seed(123)
 n_epochs = 10
 device = "cuda:0"
 
-trans = tvt.Compose([tvt.Resize(size=(32, 32)), tvt.ToTensor()])
+trans = WideResNet.transform_for("imagenet32-nocifar")
 
 # setup IN training data
 dataset_in_train = CIFAR10(root="data", train=True, download=True, transform=trans)
@@ -43,8 +43,8 @@ dataset_out_test = Textures(
 )
 
 # create data loaders
-train_loader = DataLoader(dataset_in_train, batch_size=64, shuffle=True)
-test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
+train_loader = DataLoader(dataset_in_train, batch_size=64, shuffle=True, num_workers=16)
+test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64, num_workers=16)
 
 # %%
 # Create DNN, pretrained on the imagenet excluding cifar10 classes.
@@ -55,6 +55,7 @@ model.to(device)
 
 opti = Adam(model.parameters())
 criterion = CACLoss(n_classes=10, magnitude=5, alpha=2).to(device)
+scheduler = CosineAnnealingLR(opti, T_max=n_epochs * len(train_loader))
 
 # %%
 # Define a function that evaluates the model
@@ -80,7 +81,7 @@ def test():
                 acc.update(distances[known].min(dim=1).indices, y[known])
 
     print(metrics.compute())
-    print(f"Accuracy: {acc.compute().item()}")
+    print(f"Accuracy: {acc.compute().item():.2%}")
     model.train()
 
 
@@ -102,8 +103,9 @@ for epoch in range(n_epochs):
             opti.zero_grad()
             loss.backward()
             opti.step()
+            scheduler.step()
 
-            loss_ema = 0.8 * loss_ema + 0.2 * loss.item()
-            bar.set_postfix_str(f"loss: {loss.item()}")
+            loss_ema = loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
+            bar.set_postfix_str(f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}")
 
     test()
