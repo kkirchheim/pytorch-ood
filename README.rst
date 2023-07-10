@@ -88,7 +88,7 @@ Energy-based Out-of-Distribution Detection [#EnergyBasedOOD]_, calculating the c
     print(metrics.compute())
 
 
-You can find more examples in the `documentation <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/index.html>`_.
+You can find more examples in the `documentation <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/benchmarks/>`_.
 
 🛠 ️️Installation
 ^^^^^^^^^^^^^^^^^
