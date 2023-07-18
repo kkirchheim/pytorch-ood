@@ -50,8 +50,8 @@ class CIFAR10_ODIN(Benchmark):
             LSUNCrop(
                 root, download=True, transform=transform, target_transform=ToUnknown()
             ),
-            UniformNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown()),
-            GaussianNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown())
+            UniformNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown(), seed=123),
+            GaussianNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown(), seed=123)
         ]
 
         self.ood_names: List[str] = []  #: OOD Dataset names
