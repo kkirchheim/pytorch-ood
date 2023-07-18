@@ -1,8 +1,11 @@
 import logging
+import os
 from os.path import exists, join
+from PIL import Image
 
-from torchvision.datasets import ImageFolder, VisionDataset
+from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import download_and_extract_archive
+
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +23,7 @@ class TinyImageNet(VisionDataset):
 
     This dataset is often used for training, but not included in Torchvision.
 
-    :see Website: `<Stanford http://cs231n.stanford.edu/>`__
+    :see Website: `Stanford <http://cs231n.stanford.edu/>`__
 
     """
 
@@ -30,7 +33,13 @@ class TinyImageNet(VisionDataset):
     filename = "tiny-imagenet-200.zip"
     subsets = ["train", "val", "test"]
 
-    def __init__(self, root, subset, download=False, transform=None, target_transform=None):
+    def __init__(self, root, subset="train", download=False, transform=None, target_transform=None):
+        """
+        :para subset: can be one of ``train``, ``val`` and ``test``
+        """
+        if subset not in self.subsets:
+            raise ValueError(f"Invalid subset: {subset}. Possible values are {self.subsets}")
+
         super(TinyImageNet, self).__init__(
             root, target_transform=target_transform, transform=transform
         )
@@ -45,10 +54,33 @@ class TinyImageNet(VisionDataset):
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
-        if subset not in self.subsets:
-            raise ValueError(f"Invalid subset: {subset}. Possible values are {self.subsets}")
+        classes = os.listdir(join(self.root, self.dir_name, "train"))
+        classes.sort()
+        self.class_map = {c: n for n, c in enumerate(classes)}  # : map class_names to integers
+        self.basename = join(self.root, self.dir_name, self.subset)
+        self.paths = []
+        self.labels = []
 
-        self.data = ImageFolder(root=join(self.root, self.dir_name, self.subset))
+        if subset == "train":
+            for d in classes:
+                p = join(self.basename, d, "images")
+                files = [join(p, img) for img in os.listdir(p)]
+
+                self.paths += files
+                self.labels += [self.class_map[d]] * len(files)
+
+        elif subset == "val":
+            anno_file = join(self.basename, "val_annotations.txt")
+            with open(anno_file, "r") as f:
+                for line in f.readlines():
+                    path, label, x, y, z, t = " ".join(line.split())
+                    self.paths.append(join(self.basename, "images", path))
+                    self.labels = self.class_map[label]
+
+        elif subset == "test":
+            d = join(self.basename, "images")
+            self.paths = [join(d, img) for img in os.listdir(d)]
+            self.labels = [-1] * len(self.paths)
 
     def download(self):
         if self._check_integrity():
@@ -67,7 +99,9 @@ class TinyImageNet(VisionDataset):
         Returns:
             tuple: (image, target) where target is index of the target class.
         """
-        img, target = self.data[index]
+        img, target = self.paths[index], self.labels[index]
+
+        img = Image.open(img)
 
         if self.transform is not None:
             img = self.transform(img)
@@ -78,9 +112,5 @@ class TinyImageNet(VisionDataset):
         return img, target
 
     def __len__(self):
-        return len(self.dataset)
+        return len(self.paths)
 
-
-if __name__ == "__main__":
-    ds = TinyImageNet(root="/home/ki/datasets/", subset="train", download=True)
-    print(ds[0])
