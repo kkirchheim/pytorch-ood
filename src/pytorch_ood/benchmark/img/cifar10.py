@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from torch.utils.data import DataLoader, Dataset
 from torchvision.datasets import CIFAR10
+from random import randint
 
 from pytorch_ood.api import Detector
 from pytorch_ood.dataset.img import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize, GaussianNoise, UniformNoise
@@ -50,8 +51,8 @@ class CIFAR10_ODIN(Benchmark):
             LSUNCrop(
                 root, download=True, transform=transform, target_transform=ToUnknown()
             ),
-            UniformNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown()),
-            GaussianNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown())
+            UniformNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown(), seed=123),
+            GaussianNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown(), seed=123)
         ]
 
         self.ood_names: List[str] = []  #: OOD Dataset names
