@@ -5,7 +5,6 @@ from typing import Dict, List
 
 from torch.utils.data import DataLoader, Dataset
 from torchvision.datasets import CIFAR10
-from random import randint
 
 from pytorch_ood.api import Detector
 from pytorch_ood.dataset.img import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize, GaussianNoise, UniformNoise
