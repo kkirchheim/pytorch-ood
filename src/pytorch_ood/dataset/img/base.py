@@ -5,8 +5,13 @@ from typing import Any, Callable, Optional, Tuple
 from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
+from os.path import join, dirname
 
 log = logging.getLogger(__name__)
+
+
+def _get_resource_file(name):
+    return join(dirname(__file__), "resources", name)
 
 
 class ImageDatasetBase(VisionDataset):
@@ -41,7 +46,7 @@ class ImageDatasetBase(VisionDataset):
             )
 
         self.basedir = os.path.join(self.root, self.base_folder)
-        self.files = os.listdir(self.basedir)
+        self.files = [join(self.basedir, img) for img in os.listdir(self.basedir)]
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
@@ -51,11 +56,10 @@ class ImageDatasetBase(VisionDataset):
         Returns:
             tuple: (image, target) where target is index of the target class.
         """
-        file, target = self.files[index], -1
+        path, target = self.files[index], -1
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
-        path = os.path.join(self.root, self.base_folder, file)
         img = Image.open(path)
 
         if self.transform is not None:

@@ -35,6 +35,11 @@ TinyImageNet
 ..  autoclass:: pytorch_ood.dataset.img.TinyImageNet
     :members:
 
+Places365
+``````````````````````````
+..  autoclass:: pytorch_ood.dataset.img.Places365
+    :members:
+
 80M TinyImages
 ``````````````````````````
 ..  autoclass:: pytorch_ood.dataset.img.TinyImages
@@ -79,6 +84,16 @@ CIFAR100-C
 ImageNet-C
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.ImageNetC
+    :members:
+
+OpenImages-O
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.OpenImagesO
+    :members:
+
+iNaturalist
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.iNaturalist
     :members:
 
 Chars74k
@@ -147,3 +162,4 @@ from .streethazards import StreetHazards
 from .textures import Textures
 from .tinyimagenet import TinyImageNet
 from .tinyimages import TinyImages, TinyImages300k
+from .openood import OpenImagesO, iNaturalist, Places365

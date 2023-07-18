@@ -1,9 +1,10 @@
 """
 
-ODIN - CIFAR 10
+ODIN - CIFAR10
 ==================
 
-Reproduces the ODIN benchmark for OOD detection.
+Reproduces the ODIN benchmark for OOD detection, from the paper
+*Enhancing the reliability of out-of-distribution image detection in neural networks*.
 
 
 """

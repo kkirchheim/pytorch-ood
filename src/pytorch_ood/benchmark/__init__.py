@@ -9,7 +9,7 @@ OOD detection benchmarks used in the literature.
 API
 ==================
 
-Each benchmark implements a common API.
+Each benchmark implements a common interface.
 
 .. note :: This is currently a draft and likely subject to change in the
     future.
@@ -44,6 +44,12 @@ ODIN Benchmark
     :members:
 
 
+OpenOOD Benchmark
+-----------------
+
+.. autoclass:: pytorch_ood.benchmark.CIFAR10_OpenOOD
+    :members:
+
 
 CIFAR 100
 ^^^^^^^^^^^
@@ -54,7 +60,23 @@ ODIN Benchmark
 .. autoclass:: pytorch_ood.benchmark.CIFAR100_ODIN
     :members:
 
+OpenOOD Benchmark
+-----------------
+
+.. autoclass:: pytorch_ood.benchmark.CIFAR100_OpenOOD
+    :members:
+
+
+ImageNet
+^^^^^^^^^^^
+
+OpenOOD Benchmark
+-----------------
+
+.. autoclass:: pytorch_ood.benchmark.ImageNet_OpenOOD
+    :members:
+
 
 """
 from .base import Benchmark
-from .img import CIFAR10_ODIN, CIFAR100_ODIN
+from .img import CIFAR10_ODIN, CIFAR100_ODIN, CIFAR10_OpenOOD, CIFAR100_OpenOOD, ImageNet_OpenOOD
