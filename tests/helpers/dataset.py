@@ -14,7 +14,7 @@ def sample_dataset(
     seed=None,
 ) -> TensorDataset:
     """
-    Sample from some gaussians
+    Sample from some Gaussian's
 
     :param n_samples: number of samples from each cluster
     :param n_dim: number of dimensions

@@ -73,9 +73,9 @@ class TinyImageNet(VisionDataset):
             anno_file = join(self.basename, "val_annotations.txt")
             with open(anno_file, "r") as f:
                 for line in f.readlines():
-                    path, label, x, y, z, t = " ".join(line.split())
+                    path, label, x, y, z, t = " ".join(line.split()).split()
                     self.paths.append(join(self.basename, "images", path))
-                    self.labels = self.class_map[label]
+                    self.labels.append(self.class_map[label])
 
         elif subset == "test":
             d = join(self.basename, "images")

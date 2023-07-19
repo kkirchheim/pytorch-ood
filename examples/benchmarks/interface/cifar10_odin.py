@@ -19,7 +19,7 @@ from pytorch_ood.utils import fix_random_seed
 fix_random_seed(123)
 
 device = "cuda:0"
-loader_kwargs = {"batch_size": 64}
+loader_kwargs = {"batch_size": 64, "num_workers": 12}
 
 # %%
 model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
@@ -30,6 +30,7 @@ norm_std = WideResNet.norm_std_for("cifar10-pt")
 detectors = {
     "MSP": MaxSoftmax(model),
     "ODIN": ODIN(model, eps=0.002, norm_std=norm_std),
+
 }
 
 # %%

@@ -246,6 +246,19 @@ class WideResNet(nn.Module):
         out = out.view(-1, self.nChannels)
         return self.fc(out)
 
+    def features_before_pool(self, x: Tensor) -> Tensor:
+        out = self.conv1(x)
+        out = self.block1(out)
+        out = self.block2(out)
+        out = self.block3(out)
+        out = self.relu(self.bn1(out))
+        return out
+
+    def forward_from_before_pool(self, x: Tensor) -> Tensor:
+        out = F.avg_pool2d(x, 8)
+        out = out.view(-1, self.nChannels)
+        return self.fc(out)
+
     def features(self, x: Tensor) -> Tensor:
         """
         Extracts (flattened) features before the last fully connected layer.

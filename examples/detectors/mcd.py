@@ -2,25 +2,22 @@
 Monte Carlo Dropout
 ==============================
 
+Uses MCD based on a pre-trained model from the Hendrycks baseline paper.
 """
-
 import torch
-import torchvision.transforms as tvt
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
-from pytorch_ood.detector import MCD, MaxSoftmax
+from pytorch_ood.detector import MCD
 from pytorch_ood.model import WideResNet
-from pytorch_ood.utils import OODMetrics, ToUnknown
+from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
-torch.manual_seed(123)
+fix_random_seed(123)
 device = "cuda:0"
 
-mean = [x / 255 for x in [125.3, 123.0, 113.9]]
-std = [x / 255 for x in [63.0, 62.1, 66.7]]
+trans = WideResNet.transform_for("cifar10-pt")
 
-trans = tvt.Compose([tvt.Resize(size=(32, 32)), tvt.ToTensor(), tvt.Normalize(std=std, mean=mean)])
 
 # setup IN test data
 dataset_in_test = CIFAR10(root="data", train=False, download=True, transform=trans)
