@@ -41,6 +41,10 @@ Maximum Softmax (MSP)
 -------------------------------
 .. automodule:: pytorch_ood.detector.softmax
 
+Temperature Scaling
+-------------------------------
+.. automodule:: pytorch_ood.detector.tscaling
+
 Maximum Logit
 -------------------------------
 .. automodule:: pytorch_ood.detector.maxlogit
@@ -53,19 +57,19 @@ ODIN Preprocessing
 -------------------------------
 .. automodule:: pytorch_ood.detector.odin
 
-Energy Based
+Energy Based (EBO)
 -------------------------------
 .. automodule:: pytorch_ood.detector.energy
 
-Mahalanobis Method
+Mahalanobis
 -------------------------------
 .. automodule:: pytorch_ood.detector.mahalanobis
 
-Monte Carlo Dropout
+Monte Carlo Dropout (MCD)
 -------------------------------
 .. automodule:: pytorch_ood.detector.mcd
 
-Virtual Logit Matching
+Virtual Logit Matching (ViM)
 -------------------------------
 .. automodule:: pytorch_ood.detector.vim
 
@@ -77,6 +81,17 @@ Entropy
 -------------------------------
 .. automodule:: pytorch_ood.detector.entropy
 
+Nearest Neighbor (kNN)
+-------------------------------
+.. automodule:: pytorch_ood.detector.knn
+
+Activation Shaping (ASH)
+-------------------------------
+.. automodule:: pytorch_ood.detector.ash
+
+ReAct
+-------------------------------
+.. automodule:: pytorch_ood.detector.react
 
 """
 from .energy import EnergyBased
@@ -88,4 +103,9 @@ from .mcd import MCD
 from .odin import ODIN, odin_preprocessing
 from .openmax import OpenMax
 from .softmax import MaxSoftmax
+from .tscaling import TemperatureScaling
 from .vim import ViM
+from .knn import KNN
+from .ash import ASH
+from .react import ReAct
+

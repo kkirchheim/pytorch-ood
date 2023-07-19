@@ -1,7 +1,14 @@
-import sys
-
 from .dataset import sample_dataset
 from .model import ClassificationModel, SegmentationModel
+
+import sys
+import logging
+
+# set for testing
+logger = logging.getLogger()
+logger.level = logging.DEBUG
+stream_handler = logging.StreamHandler(sys.stdout)
+logger.addHandler(stream_handler)
 
 
 def for_examples(*parameters):

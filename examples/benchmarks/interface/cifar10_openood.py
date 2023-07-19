@@ -13,7 +13,7 @@ import pandas as pd  # additional dependency, used here for convenience
 import torch
 
 from pytorch_ood.benchmark import CIFAR10_OpenOOD
-from pytorch_ood.detector import ODIN, MaxSoftmax
+from pytorch_ood.detector import MaxSoftmax, ReAct, ASH
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import fix_random_seed
 
@@ -28,8 +28,18 @@ trans = WideResNet.transform_for("cifar10-pt")
 norm_std = WideResNet.norm_std_for("cifar10-pt")
 
 # %%
+# Just add more detectors here if you want to test more
 detectors = {
     "MSP": MaxSoftmax(model),
+    "ASH-S": ASH(
+        backbone=model.features_before_pool,
+        head=model.forward_from_before_pool,
+    ),
+    "ReAct": ReAct(
+        backbone=model.features,
+        head=model.fc,
+        threshold=10.0
+    ),
 }
 
 # %%
