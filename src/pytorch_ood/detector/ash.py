@@ -140,10 +140,19 @@ class ASH(Detector):
         return EnergyBased.score(x)
 
     def predict_features(self, x: Tensor) -> Tensor:
+        """
+        :raises: NotImplementedError
+        """
         raise NotImplementedError
 
-    def fit_features(self: Self, x: Tensor, y: Tensor) -> Self:
+    def fit_features(self: Self, *args, **kwargs) -> Self:
+        """
+        Not required
+        """
         raise self
 
     def fit(self: Self, *args, **kwargs) -> Self:
+        """
+        Not required
+        """
         return self
