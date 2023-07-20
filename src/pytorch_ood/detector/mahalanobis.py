@@ -32,6 +32,9 @@ class Mahalanobis(Detector):
 
     This method calculates a class center :math:`\\mu_y` for each class,
     and a shared covariance matrix :math:`\\Sigma` from the data.
+    The outlier scores are then calculated as
+
+    .. math :: - \\max_k \\lbrace (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k) \\rbrace
 
     Also uses ODIN preprocessing.
 
@@ -40,10 +43,10 @@ class Mahalanobis(Detector):
     """
 
     def __init__(
-        self,
-        model: Callable[[Tensor], Tensor],
-        eps: float = 0.002,
-        norm_std: Optional[List] = None,
+            self,
+            model: Callable[[Tensor], Tensor],
+            eps: float = 0.002,
+            norm_std: Optional[List] = None,
     ):
         """
         :param model: the Neural Network, should output features
@@ -82,7 +85,6 @@ class Mahalanobis(Detector):
         :param device: device to use
         :return:
         """
-
         if device is None:
             device = z.device
             log.warning(f"No device given. Will use '{device}'.")
@@ -97,13 +99,13 @@ class Mahalanobis(Detector):
         assert not contains_unknown(classes)
 
         n_classes = len(classes)
-        self.mu = torch.zeros(size=(n_classes, z.shape[-1])).to(device)
-        self.cov = torch.zeros(size=(z.shape[-1], z.shape[-1])).to(device)
+        self.mu = torch.zeros(size=(n_classes, z.shape[-1]), device=device)
+        self.cov = torch.zeros(size=(z.shape[-1], z.shape[-1]), device=device)
 
         for clazz in range(n_classes):
             idxs = y.eq(clazz)
             assert idxs.sum() != 0
-            zs = z[idxs].to(device)
+            zs = z[idxs]
             self.mu[clazz] = zs.mean(dim=0)
             self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
 
@@ -111,40 +113,40 @@ class Mahalanobis(Detector):
         self.precision = torch.linalg.inv(self.cov)
         return self
 
-    def predict_features(self, x: Tensor) -> Tensor:
+    def _calc_gaussian_scores(self, z: Tensor) -> Tensor:
+        """
+
+        """
+        features = z.view(z.size(0), z.size(1), -1)
+        features = torch.mean(features, 2)
+        md_k = []
+
+        # calculate per class scores
+        for clazz in range(self.n_classes):
+            centered_z = features.data - self.mu[clazz]
+            term_gau = -0.5 * torch.mm(torch.mm(centered_z, self.precision), centered_z.t()).diag()
+            md_k.append(term_gau.view(-1, 1))
+
+        return torch.cat(md_k, 1)
+
+    def predict_features(self, z: Tensor) -> Tensor:
         """
         Calculates mahalanobis distance directly on features.
         ODIN preprocessing will not be applied.
 
-        :param x: features, as given by the model.
+        :param z: features, as given by the model.
         """
-        features = x.view(x.size(0), x.size(1), -1)
-        features = torch.mean(features, 2)
-        noise_gaussian_scores = []
+        if self.mu is None:
+            raise RequiresFittingException
 
-        for clazz in range(self.n_classes):
-            centered_features = features.data - self.mu[clazz]
-            term_gau = (
-                -0.5
-                * torch.mm(
-                    torch.mm(centered_features, self.precision), centered_features.t()
-                ).diag()
-            )
-
-            noise_gaussian_scores.append(term_gau.view(-1, 1))
-
-        noise_gaussian_score = torch.cat(noise_gaussian_scores, 1)
-
-        noise_gaussian_score = torch.max(noise_gaussian_score, dim=1).values
-        return -noise_gaussian_score
+        md_k = self._calc_gaussian_scores(z)
+        score = - torch.max(md_k, dim=1).values
+        return score
 
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input tensor
         """
-        if self.mu is None:
-            raise RequiresFittingException
-
         if self.model is None:
             raise ModelNotSetException
 
@@ -175,11 +177,11 @@ class Mahalanobis(Detector):
                 for clazz in range(self.n_classes):
                     centered_features = features.data - self.mu[clazz]
                     term_gau = (
-                        -0.5
-                        * torch.mm(
-                            torch.mm(centered_features, self.precision),
-                            centered_features.t(),
-                        ).diag()
+                            -0.5
+                            * torch.mm(
+                        torch.mm(centered_features, self.precision),
+                        centered_features.t(),
+                    ).diag()
                     )
 
                     if clazz == 0:
@@ -193,11 +195,11 @@ class Mahalanobis(Detector):
                 batch_sample_mean = self.mu.index_select(0, sample_pred)
                 centered_features = features - Variable(batch_sample_mean)
                 pure_gau = (
-                    -0.5
-                    * torch.mm(
-                        torch.mm(centered_features, Variable(self.precision)),
-                        centered_features.t(),
-                    ).diag()
+                        -0.5
+                        * torch.mm(
+                    torch.mm(centered_features, Variable(self.precision)),
+                    centered_features.t(),
+                ).diag()
                 )
                 loss = torch.mean(-pure_gau)
                 loss.backward()

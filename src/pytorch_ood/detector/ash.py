@@ -102,6 +102,7 @@ class ASH(Detector):
         detector = ASH(
             backbone = model.features_before_pool,
             head = model.forward_from_before_pool,
+            detector=EnergyBased.score
         )
         scores = detector(images)
 
@@ -116,12 +117,13 @@ class ASH(Detector):
     }
 
     def __init__(self, backbone: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor],
-                 variant="ash-s", percentile: float = 0.65):
+                 variant="ash-s", percentile: float = 0.65, detector: Callable[[Tensor], Tensor] = None):
         """
         :param variant: one of ``ash-p``, ``ash-b``, ``ash-s``
         :param backbone: first part of model to use, should output feature maps
         :param head: second part of model used after applying ash, should output logits
         :param percentile: amount of activations to modify
+        :param detector: detector that maps model outputs to outlier scores. Default is Energy based.
         """
         assert variant in self.variants
 
@@ -129,6 +131,7 @@ class ASH(Detector):
         self.head = head
         self.percentile = percentile
         self.ash: Callable[[Tensor, float], Tensor] = self.variants[variant]
+        self.detector = detector or EnergyBased.score
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -137,7 +140,7 @@ class ASH(Detector):
         x = self.backbone(x)
         x = self.ash(x, self.percentile)
         x = self.head(x)
-        return EnergyBased.score(x)
+        return self.detector(x)
 
     def predict_features(self, x: Tensor) -> Tensor:
         """

@@ -1,4 +1,4 @@
-Objective Functions
+Losses
 *************************
 
 Objective functions usually aim to improve the discriminability of IN and OOD points in the output space (or embedding space)

@@ -42,7 +42,7 @@ class TemperatureScaling(MaxSoftmax,  torch.nn.Module):
     where :math:`\\sigma` is the softmax function, :math:`T` is the optimal temperature and :math:`\\sigma_y`
     indicates the :math:`y^{th}` value of the resulting probability vector.
 
-    :see Paper: `arXiv <https://arxiv.org/pdf/1706.04599.pdf>`__
+    :see Paper: `ArXiv <https://arxiv.org/pdf/1706.04599.pdf>`__
     """
     def __init__(self, model: Module):
         """

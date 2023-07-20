@@ -1,5 +1,5 @@
 
-Objective Functions
+Losses
 *********************
 
-Examples of how to use certain objective functions.
+Examples of how to train models with different objective functions.
