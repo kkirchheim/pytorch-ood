@@ -1,5 +1,5 @@
 
-Image Benchmarks
+Image Classification
 ====================
 
 The objective of this section is to outline a quick method for obtaining

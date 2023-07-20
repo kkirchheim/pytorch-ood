@@ -97,8 +97,12 @@ def collate_batch(batch):
     return torch.stack(padded, dim=0), labels
 
 
-loader_in_train = DataLoader(train_dataset, batch_size=20, shuffle=True, collate_fn=collate_batch)
-loader_in_test = DataLoader(dataset_in_test, batch_size=16, shuffle=True, collate_fn=collate_batch)
+loader_in_train = DataLoader(
+    train_dataset, batch_size=20, shuffle=True, collate_fn=collate_batch
+)
+loader_in_test = DataLoader(
+    dataset_in_test, batch_size=16, shuffle=True, collate_fn=collate_batch
+)
 
 # %% Create a neural network
 print("STAGE 1: Train Model")

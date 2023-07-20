@@ -30,7 +30,6 @@ norm_std = WideResNet.norm_std_for("cifar10-pt")
 detectors = {
     "MSP": MaxSoftmax(model),
     "ODIN": ODIN(model, eps=0.002, norm_std=norm_std),
-
 }
 
 # %%

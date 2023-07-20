@@ -36,7 +36,13 @@ from torch.utils.data import DataLoader
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 
-from pytorch_ood.dataset.txt import Multi30k, NewsGroup20, Reuters52, WikiText2, WMT16Sentences
+from pytorch_ood.dataset.txt import (
+    Multi30k,
+    NewsGroup20,
+    Reuters52,
+    WikiText2,
+    WMT16Sentences,
+)
 from pytorch_ood.detector import (
     ODIN,
     EnergyBased,
@@ -101,9 +107,14 @@ def collate_batch(batch):
 
 
 loader_train = DataLoader(
-    train_dataset_in + train_ood_dataset, batch_size=20, shuffle=True, collate_fn=collate_batch
+    train_dataset_in + train_ood_dataset,
+    batch_size=20,
+    shuffle=True,
+    collate_fn=collate_batch,
 )
-loader_in_test = DataLoader(dataset_in_test, batch_size=16, shuffle=True, collate_fn=collate_batch)
+loader_in_test = DataLoader(
+    dataset_in_test, batch_size=16, shuffle=True, collate_fn=collate_batch
+)
 
 # %% Create a neural network
 print("STAGE 1: Train Model")
@@ -139,7 +150,9 @@ for epoch in range(n_epochs):
         loss_ema = loss_ema * 0.9 + loss.data.cpu().item() * 0.1
 
         pred = logits.max(dim=1).indices
-        correct += pred[is_known(labels)].eq(labels[is_known(labels)]).sum().data.cpu().item()
+        correct += (
+            pred[is_known(labels)].eq(labels[is_known(labels)]).sum().data.cpu().item()
+        )
         total += is_known(labels).sum()
 
         if n % 10 == 0:

@@ -70,7 +70,11 @@ train_loader = DataLoader(train_dataset, num_workers=5, batch_size=128, shuffle=
 
 test_dataset_in = MNIST(root="data", download=True, train=False, transform=ToTensor())
 test_dataset_out = FashionMNIST(
-    root="data", download=True, train=False, transform=ToTensor(), target_transform=ToUnknown()
+    root="data",
+    download=True,
+    train=False,
+    transform=ToTensor(),
+    target_transform=ToUnknown(),
 )
 
 test_loader = DataLoader(

@@ -40,6 +40,8 @@ nomenclature, and structured API documentation.
    auto_examples/loss/index
    auto_examples/segmentation/index
    auto_examples/text/index
+   auto_examples/osr/index
+
 
 Indices and tables
 ===================

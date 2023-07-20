@@ -27,7 +27,7 @@ class KNN(Detector):
     Implements the detector from the paper
     *Out-of-Distribution Detection with Deep Nearest Neighbors*.
 
-    Fits a nearest neighbor to model to the IN samples an uses the distance
+    Fits a nearest neighbor model to the IN samples an uses the distance
     from the nearest neighbor as outlier score:
 
     .. math:: \\min_{z \\in \\mathcal{D}} \\lVert f(x) - f(z) \\rVert_2

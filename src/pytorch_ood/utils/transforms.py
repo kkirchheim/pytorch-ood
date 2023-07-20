@@ -9,6 +9,9 @@
 ..  autoclass:: pytorch_ood.utils.TargetMapping
     :members:
 """
+from typing import Set
+
+import torch
 
 
 class ToUnknown(object):
@@ -48,22 +51,22 @@ class TargetMapping(object):
     Target mappings have to be known at evaluation time.
     """
 
-    def __init__(self, train_in_classes, train_out_classes, test_out_classes):
-        self.train_in_classes = train_in_classes
-        self.train_out_classes = train_out_classes
-        self.test_out_classes = test_out_classes
+    def __init__(self, known: Set, unknown: Set):
         self._map = dict()
-        self._map.update({clazz: index for index, clazz in enumerate(train_in_classes)})
-        # mapping test_out classes to < -1000
-        self._map.update({clazz: (-clazz - 1000) for index, clazz in enumerate(test_out_classes)})
+        self._map.update({clazz: index for index, clazz in enumerate(set(known))})
         # mapping train_out classes to < 0
-        self._map.update({clazz: (-clazz) for index, clazz in enumerate(train_out_classes)})
+        self._map.update({clazz: (-clazz) for index, clazz in enumerate(set(unknown))})
 
     def __call__(self, target):
-        # log.info(f"Target: {target} known: {target in self._map}")
+        if isinstance(target, torch.Tensor):
+            return self._map.get(target.item(), -1)
+
         return self._map.get(target, -1)
 
     def __getitem__(self, item):
+        if isinstance(item, torch.Tensor):
+            return self._map[item.item()]
+
         return self._map[item]
 
     def items(self):

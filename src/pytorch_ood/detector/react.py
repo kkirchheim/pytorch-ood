@@ -10,12 +10,8 @@
 
 """
 from typing import TypeVar, Callable
-
-import torch.nn
 from torch import Tensor
-
 import logging
-import numpy as np
 
 from ..api import Detector
 from pytorch_ood.detector import EnergyBased
@@ -31,8 +27,10 @@ class ReAct(Detector):
 
     ReAct clips the activations in some layer of the network (backbone) and forward propagates the
     result through the remainder of the model (head).
-    In the paper, reacti is applied to the penultimate layer of the network.
-    We then use the energy-based outlier score based on the output of the model.
+    In the paper, ReAct is applied to the penultimate layer of the network.
+
+    The output of the network is then passed to an outlier detector that maps the output of
+    the model to outlier scores.
 
     Example Code:
 
@@ -42,6 +40,7 @@ class ReAct(Detector):
         detector = ReAct(
             backbone = model.features,
             head = model.fc,
+            detector = EnergyBased.score
         )
         scores = detector(images)
 
@@ -49,15 +48,17 @@ class ReAct(Detector):
     """
 
     def __init__(self, backbone: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor],
-                 threshold: float = 1.0):
+                 threshold: float = 1.0, detector: Callable[[Tensor], Tensor] = None):
         """
         :param backbone: first part of model to use, should output feature maps
         :param head: second part of model used after applying ash, should output logits
         :param threshold: cutoff for activations
+        :param detector: detector that maps outputs to outlier scores. Default is energy based.
         """
         self.backbone = backbone
         self.head = head
         self.threshold = threshold
+        self.detector = detector or EnergyBased.score
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -66,7 +67,7 @@ class ReAct(Detector):
         x = self.backbone(x)
         x = x.clip(max=self.threshold)
         x = self.head(x)
-        return EnergyBased.score(x)
+        return self.detector(x)
 
     def predict_features(self, x: Tensor) -> Tensor:
         """
