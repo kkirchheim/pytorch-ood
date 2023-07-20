@@ -31,15 +31,6 @@ norm_std = WideResNet.norm_std_for("cifar10-pt")
 # Just add more detectors here if you want to test more
 detectors = {
     "MSP": MaxSoftmax(model),
-    "ASH-S": ASH(
-        backbone=model.features_before_pool,
-        head=model.forward_from_before_pool,
-    ),
-    "ReAct": ReAct(
-        backbone=model.features,
-        head=model.fc,
-        threshold=10.0
-    ),
 }
 
 # %%

@@ -107,7 +107,7 @@ Nearest Neighbor (kNN)
 
 
 Simplified Hopfield Energy (SHE)
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.she
 
 Activation Pruning

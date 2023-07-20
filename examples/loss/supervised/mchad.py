@@ -61,16 +61,22 @@ tiny300k = TinyImages300k(
 data_in_test = CIFAR10(root=data_root, train=False, transform=trans)
 
 # setup OOD test data, use ToUnknown() to mark labels as OOD
-data_out_test = Textures(root=data_root, download=True, transform=trans, target_transform=ToUnknown())
+data_out_test = Textures(
+    root=data_root, download=True, transform=trans, target_transform=ToUnknown()
+)
 
 
 # create data loaders
-test_loader = DataLoader(data_in_test + data_out_test, batch_size=batch_size, num_workers=16)
+test_loader = DataLoader(
+    data_in_test + data_out_test, batch_size=batch_size, num_workers=16
+)
 
 data_out_train, _ = random_split(
     tiny300k, [len(data_in_train), len(tiny300k) - len(data_in_train)]
 )
-train_loader = DataLoader(data_in_train + data_out_train, batch_size=batch_size, shuffle=True, num_workers=16)
+train_loader = DataLoader(
+    data_in_train + data_out_train, batch_size=batch_size, shuffle=True, num_workers=16
+)
 
 # %%
 # Create DNN, pretrained on the imagenet excluding cifar10 classes.
@@ -80,7 +86,9 @@ model.fc = torch.nn.Linear(model.fc.in_features, embedding_dim)
 model.to(device)
 
 opti = Adam(model.parameters())
-criterion = MCHADLoss(n_classes=10, n_dim=embedding_dim, weight_oe=0.01, weight_center=2, margin=margin).to(device)
+criterion = MCHADLoss(
+    n_classes=10, n_dim=embedding_dim, weight_oe=0.01, weight_center=2, margin=margin
+).to(device)
 scheduler = CosineAnnealingLR(opti, T_max=n_epochs * len(train_loader))
 
 # %%
@@ -113,7 +121,6 @@ def test():
 # Start training
 
 for epoch in range(n_epochs):
-
     print(f"Epoch {epoch}")
     loss_ema = None
 
@@ -130,8 +137,12 @@ for epoch in range(n_epochs):
             opti.step()
             scheduler.step()
 
-            loss_ema = loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
-            bar.set_postfix_str(f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}")
+            loss_ema = (
+                loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
+            )
+            bar.set_postfix_str(
+                f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}"
+            )
 
     test()
 
@@ -139,5 +150,9 @@ for epoch in range(n_epochs):
     data_out_train, _ = random_split(
         tiny300k, [len(data_in_train), len(tiny300k) - len(data_in_train)]
     )
-    train_loader = DataLoader(data_in_train + data_out_train, batch_size=batch_size,
-                              shuffle=True, num_workers=16)
+    train_loader = DataLoader(
+        data_in_train + data_out_train,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=16,
+    )

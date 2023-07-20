@@ -51,7 +51,8 @@ sphinx_gallery_conf = {
                       "../examples/detectors",
                       "../examples/loss",
                       "../examples/segmentation",
-                      "../examples/text"
+                      "../examples/text",
+                      "../examples/osr"
                       ],
     # path to where to save gallery generated output,
     "gallery_dirs": ["auto_examples/benchmarks",
@@ -59,6 +60,7 @@ sphinx_gallery_conf = {
                      "auto_examples/loss",
                      "auto_examples/segmentation",
                      "auto_examples/text",
+                     "auto_examples/osr",
                      ],
     "nested_sections": False,
     "line_numbers": True,

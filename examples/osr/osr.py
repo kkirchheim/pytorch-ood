@@ -2,6 +2,7 @@
 CIFAR10
 -------------------------
 
+Open Set Simulation on CIFAR 10
 
 """
 import torch.nn
@@ -33,7 +34,8 @@ dataset_2 = CIFAR10(root="data", train=False, transform=trans, download=True)
 dataset = dataset_1 + dataset_2
 
 # %%
-# **Stage 1**: Create DNN with pre-trained on a downscaled version of the image net, excluding cifar images
+# Create DNN with pre-trained on a downscaled version of the image net, excluding cifar images
+# adjust it to output 7 logits
 print("Creating a Model")
 model = WideResNet(num_classes=1000, pretrained="imagenet32-nocifar")
 model.fc = torch.nn.Linear(model.fc.in_features, 7)
@@ -41,7 +43,17 @@ model.to(device)
 
 # %%
 # Create open set simulation and dataloaders
-ossim = DynamicOSS(dataset=dataset, train_size=0.9, val_size=0.0, test_size=0.1, kuc=0, uuc_val=0, uuc_test=3, seed=1)
+# We use 3 classes as unknown unknown (OOD), and a data split of 90% train and 10% test
+ossim = DynamicOSS(
+    dataset=dataset,
+    train_size=0.9,
+    val_size=0.0,
+    test_size=0.1,
+    kuc=0,
+    uuc_val=0,
+    uuc_test=3,
+    seed=1,
+)
 print(f"Known Classes: {ossim.kkc}")
 print(f"Unknown Classes: {ossim.uuc}")
 
@@ -56,7 +68,8 @@ criterion = CrossEntropyLoss()
 opti = torch.optim.Adam(model.parameters(), lr=0.001)
 
 
-# %% define function for testing
+# %%
+# Define function for testing
 @torch.no_grad()
 def test():
     metrics = OODMetrics()
@@ -82,7 +95,7 @@ def test():
     print(acc.compute().item())
 
 
-#%%
+# %%
 # Start training
 for epoch in range(num_epochs):
     bar = tqdm(train_loader)
@@ -102,7 +115,11 @@ for epoch in range(num_epochs):
         loss.backward()
         opti.step()
 
-        loss_ema = loss_ema * 0.95 + loss.item() * 0.05 if loss_ema is not None else loss.item()
+        loss_ema = (
+            loss_ema * 0.95 + loss.item() * 0.05
+            if loss_ema is not None
+            else loss.item()
+        )
         bar.set_postfix_str(f"loss: {loss_ema:.2f}")
 
     test()

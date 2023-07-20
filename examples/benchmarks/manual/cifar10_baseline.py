@@ -45,7 +45,8 @@ from pytorch_ood.dataset.img import (
     LSUNResize,
     Textures,
     TinyImageNetCrop,
-    TinyImageNetResize, Places365,
+    TinyImageNetResize,
+    Places365,
 )
 from pytorch_ood.detector import (
     ODIN,
@@ -57,7 +58,8 @@ from pytorch_ood.detector import (
     MaxSoftmax,
     ViM,
     RMD,
-    DICE, SHE
+    DICE,
+    SHE,
 )
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
@@ -77,13 +79,25 @@ norm_std = WideResNet.norm_std_for("cifar10-pt")
 dataset_in_test = CIFAR10(root="data", train=False, transform=trans, download=True)
 
 # create all OOD datasets
-ood_datasets = [Textures, TinyImageNetCrop, TinyImageNetResize, LSUNCrop, LSUNResize, Places365, CIFAR100, MNIST, FashionMNIST]
+ood_datasets = [
+    Textures,
+    TinyImageNetCrop,
+    TinyImageNetResize,
+    LSUNCrop,
+    LSUNResize,
+    Places365,
+    CIFAR100,
+    MNIST,
+    FashionMNIST,
+]
 datasets = {}
 for ood_dataset in ood_datasets:
     dataset_out_test = ood_dataset(
         root="data", transform=trans, target_transform=ToUnknown(), download=True
     )
-    test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=256, num_workers=12)
+    test_loader = DataLoader(
+        dataset_in_test + dataset_out_test, batch_size=256, num_workers=12
+    )
     datasets[ood_dataset.__name__] = test_loader
 
 # %%
@@ -97,7 +111,9 @@ print("STAGE 2: Creating OOD Detectors")
 detectors = {}
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
-detectors["Mahalanobis+ODIN"] = Mahalanobis(model.features, norm_std=norm_std, eps=0.002)
+detectors["Mahalanobis+ODIN"] = Mahalanobis(
+    model.features, norm_std=norm_std, eps=0.002
+)
 detectors["Mahalanobis"] = Mahalanobis(model.features)
 detectors["KLMatching"] = KLMatching(model)
 detectors["SHE"] = SHE(model.features, model.fc)
@@ -105,12 +121,16 @@ detectors["MSP"] = MaxSoftmax(model)
 detectors["EnergyBased"] = EnergyBased(model)
 detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
-detectors["DICE"] = DICE(model=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
+detectors["DICE"] = DICE(
+    model=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65
+)
 detectors["RMD"] = RMD(model.features)
 
 # fit detectors to training data (some require this, some do not)
 print(f"> Fitting {len(detectors)} detectors")
-loader_in_train = DataLoader(CIFAR10(root="data", train=True, transform=trans), batch_size=256, num_workers=12)
+loader_in_train = DataLoader(
+    CIFAR10(root="data", train=True, transform=trans), batch_size=256, num_workers=12
+)
 for name, detector in detectors.items():
     print(f"--> Fitting {name}")
     detector.fit(loader_in_train, device=device)
