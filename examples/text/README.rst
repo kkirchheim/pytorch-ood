@@ -8,4 +8,4 @@ can install with:
 
 .. code-block:: shell
 
-    pip install torchtext
+    pip install torchtext==0.14.0

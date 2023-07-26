@@ -34,6 +34,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
+from tqdm import tqdm
 
 from pytorch_ood.dataset.txt import Multi30k, NewsGroup20, Reuters52, WMT16Sentences
 from pytorch_ood.detector import (
@@ -47,19 +48,20 @@ from pytorch_ood.detector import (
     ViM,
 )
 from pytorch_ood.model import GRUClassifier
-from pytorch_ood.utils import OODMetrics, ToUnknown
+from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
-torch.manual_seed(123)
+fix_random_seed(123)
 
 n_epochs = 10
 lr = 0.001
 device = "cuda:0"
+root = "data"
 
 # %%
 
 
 # download datasets
-train_dataset = NewsGroup20("data/", train=True, download=True)
+train_dataset = NewsGroup20(root, train=True, download=True)
 
 tokenizer = get_tokenizer("basic_english")
 
@@ -70,15 +72,15 @@ def yield_tokens(data_iter):
 
 
 vocab = build_vocab_from_iterator(yield_tokens(train_dataset))
-
+vocab.set_default_index(0)
 
 def prep(x):
     return torch.tensor([vocab[v] for v in tokenizer(x)], dtype=torch.int64)
 
 
 # %%
-train_dataset = NewsGroup20("data/", train=True, transform=prep)
-dataset_in_test = NewsGroup20("data/", train=False, transform=prep)
+train_dataset = NewsGroup20(root, train=True, transform=prep)
+dataset_in_test = NewsGroup20(root, train=False, transform=prep)
 
 # %%
 # Add padding, etc.
@@ -118,12 +120,15 @@ for epoch in range(n_epochs):
     print(f"Epoch {epoch}")
 
     model.train()
-    loss_ema = 0
+    loss_ema = None
     correct = 0
     total = 0
 
     model.train()
-    for n, batch in enumerate(loader_in_train):
+
+    bar = tqdm(loader_in_train)
+
+    for n, batch in enumerate(bar):
         inputs, labels = batch
 
         inputs = inputs.to(device)
@@ -135,14 +140,13 @@ for epoch in range(n_epochs):
         loss.backward()
         optimizer.step()
 
-        loss_ema = loss_ema * 0.9 + loss.data.cpu().item() * 0.1
+        loss_ema = loss.item() if not loss_ema else loss_ema * 0.99 + loss.item() * 0.01
 
         pred = logits.max(dim=1).indices
         correct += pred.eq(labels).sum().data.cpu().item()
         total += pred.shape[0]
 
-        if n % 10 == 0:
-            print(f"{loss_ema:.2f} {correct / total:.2%}")
+        bar.set_postfix_str(f"loss: {loss:.2f} acc: {correct / total:.2%}")
 
     with torch.no_grad():
         model.eval()
