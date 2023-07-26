@@ -24,7 +24,7 @@ class Multi30k(Dataset):
     test_url = "https://raw.githubusercontent.com/hendrycks/outlier-exposure/master/NLP_classification/multi30k/val.txt"
 
     test_md5 = "8d407ae05dbc61e3e61ffd3a3f9d39fb"
-    train_md5 = "4444a088dda968b44f7a6dec756698b3"
+    train_md5 = "094c68794632983239bf1bc1b37282a8"
     train_filename = "m30k-train.txt"
     test_filename = "m30k-test.txt"
 
