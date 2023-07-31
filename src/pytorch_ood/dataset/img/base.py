@@ -45,8 +45,11 @@ class ImageDatasetBase(VisionDataset):
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
+        self.files = self._load_files()
+
+    def _load_files(self):
         self.basedir = os.path.join(self.root, self.base_folder)
-        self.files = [join(self.basedir, img) for img in os.listdir(self.basedir)]
+        return [join(self.basedir, img) for img in os.listdir(self.basedir)]
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """

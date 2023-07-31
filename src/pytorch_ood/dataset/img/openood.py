@@ -137,9 +137,3 @@ class Places365(iNaturalist):
             if not os.path.isdir(join(p)):
                 continue
             self.files += [join(p, f) for f in os.listdir(p)]
-
-
-if __name__ == "__main__":
-    d = Places365(root="/home/ki/datasets/")
-    for i in range(len(d)):
-        print(d[i])

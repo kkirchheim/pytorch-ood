@@ -46,7 +46,8 @@ class TargetMapping(object):
     **Example:**
     If we split up a dataset so that the classes 2,3,4,9 are considered *known* or *IN*, these class
     labels have to be remapped to 0,1,2,3 to be able to train
-    using cross entropy with 1-of-K-vectors. All other classes have to be mapped to values :math:`<1`.
+    using cross entropy with 1-of-K-vectors. All other classes have to be mapped to values :math:`<0`
+    to be marked as OOD.
 
     Target mappings have to be known at evaluation time.
     """
