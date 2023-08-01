@@ -59,6 +59,8 @@ class TestViM(unittest.TestCase):
 
         x = torch.randn(size=(128, n_dim)) + torch.Tensor(n_dim * [0])
 
+        model.eval()
+
         detector = ViM(
             model.features, d=5, w=model.classifier.weight.data, b=model.classifier.bias.data
         )

@@ -7,7 +7,7 @@
 
 ..  autoclass:: pytorch_ood.detector.MaxSoftmax
     :members:
-
+    :exclude-members: fit, fit_features
 """
 from typing import Optional, TypeVar
 

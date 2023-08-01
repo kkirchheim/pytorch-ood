@@ -6,12 +6,12 @@
 
 ..  autoclass:: pytorch_ood.detector.SHE
     :members:
-
 """
 from typing import TypeVar, Callable
 
 import torch
 from torch import Tensor
+from torch.utils.data import DataLoader
 
 from ..api import Detector, ModelNotSetException
 from pytorch_ood.utils import extract_features, is_known
@@ -61,16 +61,22 @@ class SHE(Detector):
         scores = torch.sum(torch.mul(z, self.patterns[y_hat]), dim=1)
         return -scores
 
-    def fit(self: Self, loader, device="cpu") -> Self:
+    def fit(self: Self, loader: DataLoader, device: str = "cpu") -> Self:
         """
-        Not required
+        Extracts features and calculates mean patterns.
+
+        :param loader: data to fit
+        :param device: device to use for computations
         """
         x, y = extract_features(loader, self.model, device=device)
         return self.fit_features(x.to(device), y.to(device))
 
-    def fit_features(self: Self, z, y) -> Self:
+    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
         """
-        Not required
+        Calculates mean patterns per class.
+
+        :param z: features to fit
+        :param y: labels
         """
         known = is_known(y)
 

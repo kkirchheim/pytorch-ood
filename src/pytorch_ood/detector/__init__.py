@@ -77,13 +77,12 @@ Energy Based (EBO)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.energy
 
-
-Feature-based
--------------------------------
-
 ODIN Preprocessing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.odin
+
+Feature-based
+-------------------------------
 
 
 Mahalanobis Distance (MD)

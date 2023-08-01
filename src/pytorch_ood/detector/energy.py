@@ -7,7 +7,7 @@
 
 ..  autoclass:: pytorch_ood.detector.EnergyBased
     :members:
-
+    :exclude-members: fit, fit_features
 """
 from typing import Optional, TypeVar
 

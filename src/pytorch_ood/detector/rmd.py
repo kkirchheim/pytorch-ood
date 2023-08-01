@@ -7,6 +7,7 @@
 
 ..  autoclass:: pytorch_ood.detector.RMD
     :members:
+    :exclude-members: predict_features
 """
 import logging
 import warnings
@@ -58,9 +59,17 @@ class RMD(Mahalanobis):
         self.background_cov = None
         self.background_precision = None
 
+    def fit(self, loader: DataLoader, device: str = "cpu") -> Self:
+        """
+        Fit parameters of the multi variate gaussian for the given loader.
+        Ignores OOD Inputs.
+        """
+        z, y = extract_features(loader, self.model, device=device)
+        return self.fit_features(z, y, device=device)
+
     def fit_features(self: Self, z: Tensor, y: Tensor, device: str = None) -> Self:
         """
-        Fit parameters of the multi variate gaussian.
+        Fit parameters of the multi variate gaussian. Ignores OOD inputs.
 
         :param z: features
         :param y: class labels
@@ -72,12 +81,13 @@ class RMD(Mahalanobis):
             log.warning(f"No device given. Will use '{device}'.")
 
         z, y = z.to(device), y.to(device)
+        known = is_known(y)
 
         super(RMD, self).fit_features(z, y, device)
 
         log.debug("Fitting background gaussian.")
-        self.background_mu = z.mean(dim=0)
-        self.background_cov = (z - self.background_mu).T.mm(z - self.background_mu)
+        self.background_mu = z[known].mean(dim=0)
+        self.background_cov = (z[known] - self.background_mu).T.mm(z[known] - self.background_mu)
         self.background_cov += torch.eye(self.background_cov.shape[0], device=self.background_cov.device) * 1e-6
 
         self.background_precision = torch.linalg.inv(self.background_cov)

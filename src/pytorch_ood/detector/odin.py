@@ -7,6 +7,7 @@
 
 ..  autoclass:: pytorch_ood.detector.ODIN
     :members:
+    :exclude-members: fit, fit_features
 
 .. autofunction:: pytorch_ood.detector.odin_preprocessing
 

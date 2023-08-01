@@ -7,6 +7,7 @@
 
 ..  autoclass:: pytorch_ood.detector.ReAct
     :members:
+    :exclude-members: fit, fit_features, predict_features
 
 """
 from typing import TypeVar, Callable

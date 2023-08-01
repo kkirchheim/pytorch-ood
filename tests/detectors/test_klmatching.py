@@ -69,6 +69,7 @@ class TestKLMatching(unittest.TestCase):
                 loss.backward()
                 opti.step()
 
+        model.eval()
         detector = KLMatching(model)
         detector.fit(val_loader)
 

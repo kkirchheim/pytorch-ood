@@ -6,7 +6,7 @@
 
 ..  autoclass:: pytorch_ood.detector.MaxLogit
     :members:
-
+    :exclude-members: fit, fit_features
 """
 from typing import TypeVar
 

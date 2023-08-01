@@ -5,6 +5,7 @@ class ClassificationModel(torch.nn.Module):
     def __init__(self, num_inputs=10, n_hidden=10, num_outputs=3):
         super(ClassificationModel, self).__init__()
         self.layer1 = torch.nn.Linear(num_inputs, n_hidden)
+        self.dropout = torch.nn.Dropout(p=0.5)
         self.classifier = torch.nn.Linear(n_hidden, num_outputs)
 
     def features(self, x):
@@ -12,6 +13,7 @@ class ClassificationModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.features(x)
+        x = self.dropout(x)
         return self.classifier(x)
 
 
