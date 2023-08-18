@@ -72,7 +72,7 @@ class KNN(Detector):
         if not self._is_fitted:
             raise RequiresFittingException()
 
-        dist, idx = self.knn.kneighbors(z.detach().numpy(), n_neighbors=1, return_distance=True)
+        dist, idx = self.knn.kneighbors(z.detach().cpu().numpy(), n_neighbors=1, return_distance=True)
 
         return tensor(dist)
 
