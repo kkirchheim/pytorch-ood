@@ -20,6 +20,7 @@ class CIFAR10C(ImageDatasetBase):
     """
 
     subsets = [
+        "brightness",
         "contrast",
         "defocus_blur",
         "elastic_transform",
