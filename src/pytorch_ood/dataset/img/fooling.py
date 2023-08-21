@@ -18,7 +18,6 @@ class FoolingImages(ImageDatasetBase):
         :align: center
 
 
-
     :see Website: `Link <https://anhnguyen.me/project/fooling/>`__
     :see Paper: `ArXiv <https://arxiv.org/.*>`__
     """
@@ -39,8 +38,11 @@ class FoolingImages(ImageDatasetBase):
     ):
         super(FoolingImages, self).__init__(root, transform, target_transform, download)
 
+    def _load_files(self):
         self.basedir = os.path.join(self.root, self.base_folder)
-        self.files = []
+        files = []
         for d in self.dirs:
             p = join(self.basedir, d, "map_gen_5000")
-            self.files += [join(d, "map_gen_5000", f) for f in os.listdir(p) if f.endswith(".png")]
+            files += [join(p, f) for f in os.listdir(p) if f.endswith(".png")]
+
+        return files
