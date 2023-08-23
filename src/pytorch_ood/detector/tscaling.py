@@ -13,7 +13,7 @@ from typing import Optional, TypeVar
 
 import torch.nn
 from torch import Tensor, tensor
-from torch.nn.functional import nll_loss
+from torch.nn.functional import nll_loss, log_softmax
 from torch.nn import Module
 from torch.optim import LBFGS
 from torch.utils.data import DataLoader
@@ -81,20 +81,20 @@ class TemperatureScaling(MaxSoftmax,  torch.nn.Module):
         labels = labels[known].to(device)
 
         with torch.no_grad():
-            loss = nll_loss(logits / self.t, labels).item()
+            loss = nll_loss(log_softmax(logits / self.t), labels).item()
 
         log.info(f"Initial T/NLL: {self.t.item():.3f}/{loss:.3f}")
 
         def closure():
             optimizer.zero_grad()
-            loss = nll_loss(logits / self.t, labels)
+            loss = nll_loss(log_softmax(logits / self.t), labels)
             loss.backward()
             return loss
 
         optimizer.step(closure)
 
         with torch.no_grad():
-            loss = nll_loss(logits / self.t, labels).item()
+            loss = nll_loss(log_softmax(logits / self.t), labels).item()
 
         log.info(f"Optimal temperature: {self.t.item()}")
         log.info(f"NLL after scaling: {loss:.2f}'")
