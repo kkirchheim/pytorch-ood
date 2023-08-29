@@ -1,7 +1,7 @@
 """
 PyTorch Out-of-Distribution Detection
 """
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 from . import api, dataset, detector, loss, model, utils
 
