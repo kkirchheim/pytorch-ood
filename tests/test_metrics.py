@@ -69,3 +69,15 @@ class TestMetrics(unittest.TestCase):
         self.assertEqual(r["AUPR-IN"], 1.0)
         self.assertEqual(r["AUPR-OUT"], 1.0)
         self.assertEqual(r["FPR95TPR"], 0.0)
+
+    def test_segmentation3(self):
+        """
+        Test with unequal mask
+        """
+        metrics = OODMetrics(mode="segmentation")
+        x = torch.zeros(size=(2, 32, 32))
+        y = torch.zeros(size=(2, 48, 32))
+        y[:, 1, :] = -1
+
+        with self.assertRaises(ValueError) as context:
+            metrics.update(x, y)

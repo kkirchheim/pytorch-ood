@@ -170,6 +170,9 @@ class OODMetrics(object):
         if len(torch.unique(labels)) != 2:
             raise ValueError("Data must contain IN and OOD samples.")
 
+        if labels.shape != scores.shape:
+            raise ValueError(f"Inputs have wrong size: {labels.shape} and {scores.shape}")
+
         scores, scores_idx = torch.sort(scores, stable=True)
         labels = labels[scores_idx]
 
