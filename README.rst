@@ -254,7 +254,7 @@ The legal implications of using pre-trained models in commercial services are, t
 
 .. [#Mahalanobis] Lee, K., Lee, K., Lee, H., & Shin, J. (2018). A simple unified framework for detecting out-of-distribution samples and adversarial attacks. NeurIPS.
 
-.. [#MonteCarloDrop] Miok, K., Nguyen-Doan, D., Zaharie, D., & Robnik-Šikonja, M. (2016). Dropout as a bayesian approximation: Representing model uncertainty in deep learning. ICML.
+.. [#MonteCarloDrop] Gal, Y., & Ghahramani, Z. (2016). Dropout as a bayesian approximation: Representing model uncertainty in deep learning. ICML.
 
 .. [#Softmax] Hendrycks, D., & Gimpel, K. (2016). A baseline for detecting misclassified and out-of-distribution examples in neural networks. ICLR.
 
