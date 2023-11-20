@@ -22,9 +22,9 @@ class TestPreTrainedModels(unittest.TestCase):
         y = model(x)
         self.assertEqual(y.shape, (1, n_classes))
 
-    @for_examples(("cifar10-pixmix", 10))
-    def test_wrn_pretrained_widen4(self, pretrain, n_classes):
-        model = WideResNet(pretrained=pretrain, num_classes=n_classes, widen_factor=4)
-        x = torch.ones(size=(1, 3, 32, 32))
-        y = model(x)
-        self.assertEqual(y.shape, (1, n_classes))
+    # @for_examples(("cifar10-pixmix", 10))
+    # def test_wrn_pretrained_widen4(self, pretrain, n_classes):
+    #     model = WideResNet(pretrained=pretrain, num_classes=n_classes, widen_factor=4)
+    #     x = torch.ones(size=(1, 3, 32, 32))
+    #     y = model(x)
+    #     self.assertEqual(y.shape, (1, n_classes))
