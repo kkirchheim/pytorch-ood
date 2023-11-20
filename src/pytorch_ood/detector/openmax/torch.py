@@ -28,7 +28,7 @@ class OpenMax(Detector):
     We use the activation of the *unknown* class as outlier score.
 
     .. warning:: This methods requires ``libmr`` to be installed, which is broken at the moment. You can only use it
-       by installing ``cython`` and ``numpy``, and ``libmr`` manually afterwards.
+       by installing ``cython`` and ``numpy``, and ``libmr`` manually afterward.
 
     :see Paper: `ArXiv <https://arxiv.org/abs/1511.06233>`__
     :see Implementation: `GitHub <https://github.com/abhijitbendale/OSDN>`__
@@ -45,7 +45,7 @@ class OpenMax(Detector):
         :param model: neural network, assumed to output logits
         :param tailsize: length of the tail to fit the distribution to
         :param alpha: number of class activations to revise
-        :param euclid_weight: weight for the euclidean distance.
+        :param euclid_weight: weight for the Euclidean distance.
         """
         self.model = model
 

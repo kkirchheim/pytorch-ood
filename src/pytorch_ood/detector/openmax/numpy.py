@@ -1,13 +1,10 @@
-try:
-    import libmr
-except ImportError as e:
-    print("You will have to install libmr manually to use OpenMax")
-    raise e
-
 import logging
+from typing import TypeVar
 
 import numpy as np
 import scipy.spatial.distance as distance
+from .libnotmr import LibNotMR
+Self = TypeVar("Self")
 
 log = logging.getLogger(__name__)
 
@@ -22,11 +19,11 @@ class OpenMax(object):
 
 
     .. warning:: This methods requires `libmr` to be installed, which is broken at the moment. You can only use it
-        by installing `cython` and `numpy`, and `libmr` manually afterwards.
+        by installing `cython` and `numpy`, and `libmr` manually afterward.
 
     :param tailsize: length of the tail to fit the distribution to
     :param alpha: number of class activations to revise
-    :param euclid_weight: weight for the euclidean distance.
+    :param euclid_weight: weight for the Euclidean distance.
 
     :see Paper: `ArXiv <https://arxiv.org/abs/1511.06233>`__
     :see Implementation: `GitHub <https://github.com/abhijitbendale/OSDN>`__
@@ -49,7 +46,7 @@ class OpenMax(object):
         self.distributions = dict()
         self.is_fitted = False
 
-    def fit(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    def fit(self, x: np.ndarray, y: np.ndarray) -> Self:
         """
         Fit Openmax layer
 
@@ -74,11 +71,10 @@ class OpenMax(object):
                 pass
             # calculate distances of all elements
             dists = self._get_dists_to_center(clazz, x[idxs])
-            tailtofit = sorted(dists)[-self.tailsize :]
-            model = libmr.MR(alpha=self.alpha)
-            model.fit_high(tailtofit, len(tailtofit))
-            if not model.is_valid:
-                log.error(f"Fitting was invalid ({len(tailtofit)} instances for class {clazz})")
+
+            model = LibNotMR(tailsize=self.tailsize)
+            model.fit_high(dists)
+
             self.distributions[clazz] = model
         self.is_fitted = True
         return self
