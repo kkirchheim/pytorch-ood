@@ -32,8 +32,7 @@ jobs:
         # install depedencies 
         python -m pip install .
         # optional dependencies 
-        python -m pip install cython numpy scikit-learn 
-        python -m pip install libmr
+        python -m pip install scikit-learn
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names

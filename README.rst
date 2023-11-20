@@ -99,9 +99,6 @@ The package can be installed via PyPI:
 
 **Optional Dependencies**
 
-
-* ``libmr``  for the OpenMax Detector [#OpenMax]_ . The library is currently broken and unlikely to be repaired.
-  You will have to install ``cython`` and ``libmr`` afterwards manually.
 * ``scikit-learn`` for ViM
 * ``gdown`` to download some datasets and model weights
 * ``pandas`` for the `examples <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/index.html>`_.
