@@ -104,4 +104,4 @@ class CIFAR100C(CIFAR10C):
     base_folder = "CIFAR-100-C/"
     url = "https://zenodo.org/record/3555552/files/CIFAR-100-C.tar"
     filename = "CIFAR-100-C.tar"
-    md5hash = "11f0ed0f1191edbf9fa23466ae6021d3 "
+    md5hash = "11f0ed0f1191edbf9fa23466ae6021d3"
