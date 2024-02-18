@@ -124,6 +124,11 @@ DICE
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.dice
 
+VOS
+^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.vos
+
+
 """
 from .energy import EnergyBased
 from .entropy import Entropy
@@ -142,4 +147,4 @@ from .react import ReAct
 from .rmd import RMD
 from .dice import DICE
 from .she import SHE
-
+from .vos import VOSBased

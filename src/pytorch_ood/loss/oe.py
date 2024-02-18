@@ -53,13 +53,33 @@ class OutlierExposureLoss(nn.Module):
         :param target: labels for predictions
         :return: loss
         """
-        loss_oe = torch.zeros(logits.shape[0], device=logits.device)
-        loss_ce = cross_entropy(logits, target, reduction=None)
+        
+        # for classification
+        if len(logits.shape) == 2:
+            loss_oe = torch.zeros(logits.shape[0], device=logits.device)
+            loss_ce = cross_entropy(logits, target, reduction=None)
 
-        if contains_unknown(target):
-            unknown = is_unknown(target)
-            loss_oe[unknown] = -(
-                logits[unknown].mean(dim=1) - torch.logsumexp(logits[unknown], dim=1)
-            )
+            if contains_unknown(target):
+                unknown = is_unknown(target)
+                loss_oe[unknown] = -(
+                    logits[unknown].mean(dim=1) - torch.logsumexp(logits[unknown], dim=1)
+                )
 
-        return apply_reduction(loss_ce + self.alpha * loss_oe, reduction=self.reduction)
+            return apply_reduction(loss_ce + self.alpha * loss_oe, reduction=self.reduction)
+        
+        # for segmentation
+        elif len(logits.shape) == 4:
+            loss_ce = cross_entropy(logits, target, reduction=None)
+            logits = logits.permute(0,2,3,1)        
+            if contains_unknown(target):
+                unknown = is_unknown(target)
+                loss_oe= -(
+                    logits[unknown].mean(dim=1) - torch.logsumexp(logits[unknown], dim=1)
+                )
+            else:
+                loss_oe = torch.zeros(logits.shape[0], device=logits.device)
+
+
+            return apply_reduction(loss_ce.mean() + self.alpha * loss_oe.mean(), reduction=self.reduction)
+        else:
+            raise ValueError(f"Unsupported input shape: {logits.shape}")
