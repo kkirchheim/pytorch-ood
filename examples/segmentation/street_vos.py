@@ -5,9 +5,9 @@ StreetHazards with VOS Loss
 We train a Feature Pyramid Segmentation model
 with a ResNet-50 backbone pre-trained on the ImageNet
 on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` **test set** using
-the supervised :class:`EntropicOpenSetLoss<pytorch_ood.loss.EntropicOpenSetLoss>`.
+the supervised :class:`VOSRegLoss<pytorch_ood.loss.VOSRegLoss>`.
 
-We then use the :class:`Entropy<pytorch_ood.detector.Entropy>` OOD detector.
+We then use the :class:`VOSBased<pytorch_ood.detector.VOSBased>` OOD detector.
 
 This setup is merely made to demonstrate how to train a supervised anomaly segmentation model with
 this loss function.
@@ -18,6 +18,7 @@ this loss function.
 
 .. note :: Training with a batch-size of 4 requires slightly more than 12 GB of GPU memory.
     However, the models tend to also converge to reasonable performance with a smaller batch-size.
+    This loss is more effektive with a scheduler and a lot of epochs.
 
 """
 import segmentation_models_pytorch as smp
@@ -28,7 +29,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import StreetHazards
-from pytorch_ood.detector import Entropy, MaxSoftmax, VOSBased
+from pytorch_ood.detector import VOSBased
 from pytorch_ood.loss import VOSRegLoss
 from pytorch_ood.utils import OODMetrics, fix_random_seed
 import numpy as np
@@ -101,14 +102,7 @@ criterion = VOSRegLoss(phi,weights_energy, device=device)
 # %%
 # Train model for some epochs
 optimizer = torch.optim.Adam(params=model.parameters(), lr=lr)
-# setup scheduler for optimizer (recommended)
-scheduler = torch.optim.lr_scheduler.LambdaLR(
-                optimizer,
-                lr_lambda=lambda step: cosine_annealing(
-                    step,
-                    num_epochs * len(loader),
-                    1,  # since lr_lambda computes multiplicative factor
-                    1e-6 / lr))
+
 
 
 loader = DataLoader(
@@ -119,6 +113,15 @@ loader = DataLoader(
     worker_init_fn=fix_random_seed,
     generator=g,
 )
+
+# setup scheduler for optimizer (recommended)
+scheduler = torch.optim.lr_scheduler.LambdaLR(
+                optimizer,
+                lr_lambda=lambda step: cosine_annealing(
+                    step,
+                    num_epochs * len(loader),
+                    1,  # since lr_lambda computes multiplicative factor
+                    1e-6 / lr))
 
 ious = []
 loss_ema = 0
@@ -159,7 +162,7 @@ model.eval()
 loader = DataLoader(
     dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g
 )
-detector = VOSBased(model)
+detector = VOSBased(model,weights_energy)
 metrics = OODMetrics(mode="segmentation")
 
 with torch.no_grad():
@@ -174,3 +177,8 @@ with torch.no_grad():
         metrics.update(o, y)
 
 print(metrics.compute())
+
+
+# %%
+# Output:
+# {'AUROC': 0.9346237778663635, 'AUPR-IN': 0.15255042910575867, 'AUPR-OUT': 0.9993401169776917, 'FPR95TPR': 0.18086743354797363}

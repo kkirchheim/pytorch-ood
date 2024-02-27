@@ -28,9 +28,10 @@ from torch.utils.data import DataLoader
 from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import StreetHazards
-from pytorch_ood.detector import Entropy, MaxSoftmax
+from pytorch_ood.detector import Entropy
 from pytorch_ood.loss import EntropicOpenSetLoss
 from pytorch_ood.utils import OODMetrics, fix_random_seed
+
 
 device = "cuda:0"
 batch_size = 4
@@ -143,3 +144,8 @@ with torch.no_grad():
         metrics.update(o, y)
 
 print(metrics.compute())
+
+
+# %%
+# Output:
+#   {'AUROC': 0.9705050587654114, 'AUPR-IN': 0.3917403519153595, 'AUPR-OUT': 0.9997314214706421, 'FPR95TPR': 0.10926716774702072}

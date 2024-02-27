@@ -2,10 +2,12 @@
 from typing import Optional, TypeVar
 
 import torch
+from torch import Tensor
 import torch.nn.functional as F
 
 from ..api import Detector, ModelNotSetException
 
+Self = TypeVar("Self")
 
 
 class VOSBased(Detector):
@@ -63,7 +65,12 @@ class VOSBased(Detector):
             raise ModelNotSetException
         
         return self.score(self.model(x), self.weights_energy)
- 
+    
+    def predict_features(self, logits: Tensor) -> Tensor:
+        """
+        :param logits: logits given by your model
+        """
+        return self.score(logits)
 
     @staticmethod
     def score(logits: torch.Tensor, weights_energy: torch.nn.Module) -> torch.Tensor:
