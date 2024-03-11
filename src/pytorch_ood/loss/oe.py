@@ -80,6 +80,6 @@ class OutlierExposureLoss(nn.Module):
                 loss_oe = torch.zeros(logits.shape[0], device=logits.device)
 
 
-            return apply_reduction(loss_ce.mean() + self.alpha * loss_oe.mean(), reduction=self.reduction)
+            return apply_reduction(loss_ce + self.alpha * loss_oe, reduction=self.reduction)
         else:
             raise ValueError(f"Unsupported input shape: {logits.shape}")

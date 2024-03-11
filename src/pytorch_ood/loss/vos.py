@@ -34,7 +34,7 @@ class VOSRegLoss(nn.Module):
     Notice, that this loss is more effective with scheduled and low (e.g 0.001) learningrate see https://github.com/deeplearning-wisc/vos/blob/a449b03c7d6e120087007f506d949569c845b2ec/classification/CIFAR/train_virtual.py#L152
     """
 
-    def __init__(self, logistic_regression,weights_energy, alpha=0.1 ,device='cuda:0'):
+    def __init__(self, logistic_regression,weights_energy, alpha=0.1 ,device='cuda:0',reduction='mean'):
         """
         :param logistic_regression: torch.nn.Linear(1, 2)
         :param weights_energy: torch.nn.Linear(num_classes, 1); torch.nn.init.uniform_(weights_energy.weight)
@@ -45,6 +45,7 @@ class VOSRegLoss(nn.Module):
         self.weights_energy=weights_energy
         self.alpha = alpha
         self.device=device
+        self.reduction=reduction
 
     def  forward(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
@@ -53,12 +54,17 @@ class VOSRegLoss(nn.Module):
         """
 
         regularization = self._regularization(logits, y)
-        loss =cross_entropy(logits, y)
-        return loss + self.alpha * regularization
+        loss =cross_entropy(logits, y,reduction=self.reduction)
+        return apply_reduction(loss,self.reduction) + apply_reduction(self.alpha * regularization,self.reduction)
 
     def _regularization(self, logits, y):
         # Permutation depends on shape of logits
-        logits_form = logits.permute(0,2,3,1)
+        
+        if len(logits.shape)==4:
+            
+            logits_form = logits.permute(0,2,3,1)
+        else: 
+            logits_form=logits
         
         # code snippet from https://github.com/deeplearning-wisc/vos/blob/a449b03c7d6e120087007f506d949569c845b2ec/classification/CIFAR/train_virtual.py#L245
         energy_x_in =self._energy(logits_form[is_known(y)])
@@ -72,7 +78,7 @@ class VOSRegLoss(nn.Module):
             labels_for_lr = torch.cat((torch.ones(len(energy_x_in)),
                                     torch.zeros(len(energy_v_out))), -1)
 
-        criterion = torch.nn.CrossEntropyLoss()
+        criterion = torch.nn.CrossEntropyLoss(reduction=self.reduction)
         output1 = self.logistic_regression(input_for_lr.view(-1, 1))
         lr_reg_loss = criterion(output1, labels_for_lr.long())
 
