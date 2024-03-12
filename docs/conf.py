@@ -47,21 +47,23 @@ extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinx_gallery.gen_g
 
 sphinx_gallery_conf = {
     # path to your example scripts
-    "examples_dirs": ["../examples/benchmarks",
-                      "../examples/detectors",
-                      "../examples/loss",
-                      "../examples/segmentation",
-                      "../examples/text",
-                      "../examples/osr"
-                      ],
+    "examples_dirs": [
+        "../examples/benchmarks",
+        "../examples/detectors",
+        "../examples/loss",
+        "../examples/segmentation",
+        "../examples/text",
+        "../examples/osr",
+    ],
     # path to where to save gallery generated output,
-    "gallery_dirs": ["auto_examples/benchmarks",
-                     "auto_examples/detectors",
-                     "auto_examples/loss",
-                     "auto_examples/segmentation",
-                     "auto_examples/text",
-                     "auto_examples/osr",
-                     ],
+    "gallery_dirs": [
+        "auto_examples/benchmarks",
+        "auto_examples/detectors",
+        "auto_examples/loss",
+        "auto_examples/segmentation",
+        "auto_examples/text",
+        "auto_examples/osr",
+    ],
     "nested_sections": False,
     "line_numbers": True,
     "min_reported_time": 20,

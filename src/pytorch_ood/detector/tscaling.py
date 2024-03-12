@@ -9,25 +9,26 @@
     :members:
 
 """
+import logging
 from typing import Optional, TypeVar
 
 import torch.nn
 from torch import Tensor, tensor
-from torch.nn.functional import nll_loss, log_softmax
 from torch.nn import Module
+from torch.nn.functional import log_softmax, nll_loss
 from torch.optim import LBFGS
 from torch.utils.data import DataLoader
-import logging
 
-from ..api import RequiresFittingException
 from pytorch_ood.detector.softmax import MaxSoftmax
 from pytorch_ood.utils import extract_features, is_known
+
+from ..api import RequiresFittingException
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class TemperatureScaling(MaxSoftmax,  torch.nn.Module):
+class TemperatureScaling(MaxSoftmax, torch.nn.Module):
     """
     Implements temperature scaling from the paper
     *On Calibration of Modern Neural Networks*.
@@ -44,6 +45,7 @@ class TemperatureScaling(MaxSoftmax,  torch.nn.Module):
 
     :see Paper: `ArXiv <https://arxiv.org/pdf/1706.04599.pdf>`__
     """
+
     def __init__(self, model: Module):
         """
         :param model: neural network to use

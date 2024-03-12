@@ -225,6 +225,7 @@ class PixMixExampleDatasets(VisionDataset):
         except ImportError:
             raise ImportError(f"You have to install 'gdown' to use this dataset.")
 
+
 class FeatureVisDataset(PixMixExampleDatasets):
     """
     Dataset with Feature visualizations, as used in
@@ -245,7 +246,7 @@ class FeatureVisDataset(PixMixExampleDatasets):
             subset="features",
             transform=transform,
             target_transform=target_transform,
-            download=download
+            download=download,
         )
 
 
@@ -262,12 +263,12 @@ class FractalDataset(PixMixExampleDatasets):
         root: str,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-        download=False
+        download=False,
     ) -> None:
         super(FractalDataset, self).__init__(
             root,
             subset="fractals",
             transform=transform,
             target_transform=target_transform,
-            download=download
+            download=download,
         )

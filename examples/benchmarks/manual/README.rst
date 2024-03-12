@@ -10,4 +10,3 @@ each tested against 9 OOD datasets.
 We subsequently calculate the average performance of each detector
 across all datasets and sort the outcomes based on their
 Area Under Receiver Operating Characteristic (AUROC) score in ascending order.
-

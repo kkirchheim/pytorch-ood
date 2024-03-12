@@ -1,11 +1,10 @@
 import logging
 import os
 from os.path import exists, join
-from PIL import Image
 
+from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import download_and_extract_archive
-
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +32,9 @@ class TinyImageNet(VisionDataset):
     filename = "tiny-imagenet-200.zip"
     subsets = ["train", "val", "test"]
 
-    def __init__(self, root, subset="train", download=False, transform=None, target_transform=None):
+    def __init__(
+        self, root, subset="train", download=False, transform=None, target_transform=None
+    ):
         """
         :para subset: can be one of ``train``, ``val`` and ``test``
         """
@@ -113,4 +114,3 @@ class TinyImageNet(VisionDataset):
 
     def __len__(self):
         return len(self.paths)
-

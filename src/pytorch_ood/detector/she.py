@@ -7,14 +7,15 @@
 ..  autoclass:: pytorch_ood.detector.SHE
     :members:
 """
-from typing import TypeVar, Callable
+from typing import Callable, TypeVar
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from ..api import Detector, ModelNotSetException
 from pytorch_ood.utils import extract_features, is_known
+
+from ..api import Detector, ModelNotSetException
 
 Self = TypeVar("Self")
 

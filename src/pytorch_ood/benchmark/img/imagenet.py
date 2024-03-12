@@ -1,13 +1,13 @@
-from typing import List, Dict
+from typing import Dict, List
 
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, Dataset
+from torchvision.datasets import MNIST, SVHN, ImageNet
 from torchvision.transforms import Compose
-from torchvision.datasets import ImageNet, MNIST, SVHN
 
 from pytorch_ood.api import Detector
 from pytorch_ood.benchmark import Benchmark
-from pytorch_ood.dataset.img import Textures, OpenImagesO, ImageNetO
-from pytorch_ood.utils import ToUnknown, ToRGB, OODMetrics
+from pytorch_ood.dataset.img import ImageNetO, OpenImagesO, Textures
+from pytorch_ood.utils import OODMetrics, ToRGB, ToUnknown
 
 
 class ImageNet_OpenOOD(Benchmark):
@@ -43,12 +43,20 @@ class ImageNet_OpenOOD(Benchmark):
 
         self.test_oods = [
             ImageNetO(root, download=True, transform=self.transform, target_transform=ToUnknown()),
-            OpenImagesO(root, download=True, transform=self.transform, target_transform=ToUnknown()),
-            Textures(
+            OpenImagesO(
                 root, download=True, transform=self.transform, target_transform=ToUnknown()
             ),
-            SVHN(root, split="test", download=True, transform=self.transform, target_transform=ToUnknown()),
-            MNIST(root, root, download=True, transform=self.transform, target_transform=ToUnknown())
+            Textures(root, download=True, transform=self.transform, target_transform=ToUnknown()),
+            SVHN(
+                root,
+                split="test",
+                download=True,
+                transform=self.transform,
+                target_transform=ToUnknown(),
+            ),
+            MNIST(
+                root, root, download=True, transform=self.transform, target_transform=ToUnknown()
+            ),
         ]
 
         self.ood_names: List[str] = []  #: OOD Dataset names
@@ -89,7 +97,7 @@ class ImageNet_OpenOOD(Benchmark):
         raise ValueError()
 
     def evaluate(
-            self, detector: Detector, loader_kwargs: Dict = None, device: str = "cpu"
+        self, detector: Detector, loader_kwargs: Dict = None, device: str = "cpu"
     ) -> List[Dict]:
         """
         Evaluates the given detector on all datasets and returns a list with the results

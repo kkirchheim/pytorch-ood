@@ -21,6 +21,7 @@ this loss function.
     This loss is more effektive with a scheduler and a lot of epochs.
 
 """
+import numpy as np
 import segmentation_models_pytorch as smp
 import torch
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
@@ -32,13 +33,12 @@ from pytorch_ood.dataset.img import StreetHazards
 from pytorch_ood.detector import VOSBased
 from pytorch_ood.loss import VOSRegLoss
 from pytorch_ood.utils import OODMetrics, fix_random_seed
-import numpy as np
 
 device = "cuda:0"
 batch_size = 4
 num_epochs = 1
-lr=0.0001
-num_classes=13
+lr = 0.0001
+num_classes = 13
 
 fix_random_seed(12345)
 g = torch.Generator()
@@ -61,19 +61,15 @@ def my_transform(img, target):
     target = pad(target, [0, 8])
     return img, target
 
+
 def cosine_annealing(step, total_steps, lr_max, lr_min):
-    return lr_min + (lr_max - lr_min) * 0.5 * (
-            1 + np.cos(step / total_steps * np.pi))
-    
+    return lr_min + (lr_max - lr_min) * 0.5 * (1 + np.cos(step / total_steps * np.pi))
+
 
 # %%
 # Setup datasets, train on ood images for demonstration purposes.
-dataset = StreetHazards(
-    root="data", subset="test", transform=my_transform, download=True
-)
-dataset_test = StreetHazards(
-    root="data", subset="test", transform=my_transform, download=True
-)
+dataset = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
+dataset_test = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
 
 
 # %%
@@ -89,20 +85,17 @@ model = smp.FPN(
 # Create non-linear neural network functions
 phi = torch.nn.Linear(1, 2)
 weights_energy = torch.nn.Linear(num_classes, 1)
-if 'cuda' in device:
+if "cuda" in device:
     phi.cuda()
     weights_energy.cuda()
 torch.nn.init.uniform_(weights_energy.weight)
 
-criterion = VOSRegLoss(phi,weights_energy, device=device)
-
-
+criterion = VOSRegLoss(phi, weights_energy, device=device)
 
 
 # %%
 # Train model for some epochs
 optimizer = torch.optim.Adam(params=model.parameters(), lr=lr)
-
 
 
 loader = DataLoader(
@@ -116,12 +109,14 @@ loader = DataLoader(
 
 # setup scheduler for optimizer (recommended)
 scheduler = torch.optim.lr_scheduler.LambdaLR(
-                optimizer,
-                lr_lambda=lambda step: cosine_annealing(
-                    step,
-                    num_epochs * len(loader),
-                    1,  # since lr_lambda computes multiplicative factor
-                    1e-6 / lr))
+    optimizer,
+    lr_lambda=lambda step: cosine_annealing(
+        step,
+        num_epochs * len(loader),
+        1,  # since lr_lambda computes multiplicative factor
+        1e-6 / lr,
+    ),
+)
 
 ious = []
 loss_ema = 0
@@ -136,8 +131,7 @@ for epoch in range(num_epochs):
         loss = criterion(y_hat, y)
         loss.backward()
         optimizer.step()
-        scheduler.step()             
-
+        scheduler.step()
 
         tp, fp, fn, tn = smp.metrics.get_stats(
             y_hat.softmax(dim=1).max(dim=1).indices.long(),
@@ -159,10 +153,8 @@ for epoch in range(num_epochs):
 # Evaluate
 print("Evaluating")
 model.eval()
-loader = DataLoader(
-    dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g
-)
-detector = VOSBased(model,weights_energy)
+loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
+detector = VOSBased(model, weights_energy)
 metrics = OODMetrics(mode="segmentation")
 
 with torch.no_grad():

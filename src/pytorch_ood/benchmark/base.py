@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import Dict, List
 
 from torch.utils.data import Dataset
+
 from pytorch_ood.api import Detector
 
 
@@ -28,9 +29,7 @@ class Benchmark(ABC):
         pass
 
     @abstractmethod
-    def evaluate(
-            self, detector: Detector, *args, **kwargs
-    ) -> List[Dict]:
+    def evaluate(self, detector: Detector, *args, **kwargs) -> List[Dict]:
         """
         Evaluates the given detector on all datasets and returns a list with the results
         """

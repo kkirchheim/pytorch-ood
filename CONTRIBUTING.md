@@ -2,7 +2,7 @@
 
 All kinds of contributions are welcome, including but not limited to the following.
 
-- Adding additional detectors 
+- Adding additional detectors
 - Fixing typos or bugs
 - Improving documentation
 

@@ -18,9 +18,10 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
+from pytorch_ood.detector.mahalanobis import Mahalanobis
+
 from ..api import Detector, ModelNotSetException, RequiresFittingException
 from ..utils import TensorBuffer, contains_unknown, extract_features, is_known, is_unknown
-from pytorch_ood.detector.mahalanobis import Mahalanobis
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +89,9 @@ class RMD(Mahalanobis):
         log.debug("Fitting background gaussian.")
         self.background_mu = z[known].mean(dim=0)
         self.background_cov = (z[known] - self.background_mu).T.mm(z[known] - self.background_mu)
-        self.background_cov += torch.eye(self.background_cov.shape[0], device=self.background_cov.device) * 1e-6
+        self.background_cov += (
+            torch.eye(self.background_cov.shape[0], device=self.background_cov.device) * 1e-6
+        )
 
         self.background_precision = torch.linalg.inv(self.background_cov)
         return self

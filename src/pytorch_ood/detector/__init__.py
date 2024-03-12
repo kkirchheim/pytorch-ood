@@ -130,21 +130,21 @@ VOS
 
 
 """
+from .ash import ASH
+from .dice import DICE
 from .energy import EnergyBased
 from .entropy import Entropy
 from .klmatching import KLMatching
+from .knn import KNN
 from .mahalanobis import Mahalanobis
 from .maxlogit import MaxLogit
 from .mcd import MCD
 from .odin import ODIN, odin_preprocessing
 from .openmax import OpenMax
+from .react import ReAct
+from .rmd import RMD
+from .she import SHE
 from .softmax import MaxSoftmax
 from .tscaling import TemperatureScaling
 from .vim import ViM
-from .knn import KNN
-from .ash import ASH
-from .react import ReAct
-from .rmd import RMD
-from .dice import DICE
-from .she import SHE
 from .vos import VOSBased

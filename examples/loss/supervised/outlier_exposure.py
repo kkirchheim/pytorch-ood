@@ -51,9 +51,7 @@ dataset_out_test = Textures(
 )
 
 # create data loaders
-train_loader = DataLoader(
-    dataset_in_train + dataset_out_train, batch_size=64, shuffle=True
-)
+train_loader = DataLoader(dataset_in_train + dataset_out_train, batch_size=64, shuffle=True)
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
 
 # %%

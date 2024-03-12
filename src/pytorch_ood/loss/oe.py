@@ -53,7 +53,7 @@ class OutlierExposureLoss(nn.Module):
         :param target: labels for predictions
         :return: loss
         """
-        
+
         # for classification
         if len(logits.shape) == 2:
             loss_oe = torch.zeros(logits.shape[0], device=logits.device)
@@ -66,19 +66,16 @@ class OutlierExposureLoss(nn.Module):
                 )
 
             return apply_reduction(loss_ce + self.alpha * loss_oe, reduction=self.reduction)
-        
+
         # for segmentation
         elif len(logits.shape) == 4:
             loss_ce = cross_entropy(logits, target, reduction=None)
-            logits = logits.permute(0,2,3,1)        
+            logits = logits.permute(0, 2, 3, 1)
             if contains_unknown(target):
                 unknown = is_unknown(target)
-                loss_oe= -(
-                    logits[unknown].mean(dim=1) - torch.logsumexp(logits[unknown], dim=1)
-                )
+                loss_oe = -(logits[unknown].mean(dim=1) - torch.logsumexp(logits[unknown], dim=1))
             else:
                 loss_oe = torch.zeros(logits.shape[0], device=logits.device)
-
 
             return apply_reduction(loss_ce + self.alpha * loss_oe, reduction=self.reduction)
         else:

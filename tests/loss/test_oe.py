@@ -36,7 +36,6 @@ class TestOutlierExposure(unittest.TestCase):
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)
 
-
     def test_segmentation_with_unknown(self):
         model = SegmentationModel()
         criterion = OutlierExposureLoss(reduction="none")
@@ -50,4 +49,3 @@ class TestOutlierExposure(unittest.TestCase):
         self.assertEqual(loss.shape, (10, 32, 32))
         self.assertNotEqual(loss[0, 0, 0], 0)
         loss.mean().backward()
-        

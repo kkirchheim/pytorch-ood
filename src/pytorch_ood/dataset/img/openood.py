@@ -3,13 +3,12 @@ Some of the datasets used in OpenOOD 1.5 benchmark.
 
 """
 import json
+import logging
 import os
+from os.path import dirname, exists, join
 from typing import Callable, Optional
 
-from os.path import exists, join, dirname
 from torchvision.datasets.utils import extract_archive
-import logging
-
 
 from pytorch_ood.dataset.img.base import ImageDatasetBase, _get_resource_file
 
@@ -28,21 +27,24 @@ class iNaturalist(ImageDatasetBase):
 
 
     """
+
     gdrive_id = "1zfLfMvoUD0CUlKNnkk7LgxZZBnTBipdj"
     filename = "iNaturalist.zip"
     target_dir = "iNaturalist"
     base_folder = join(target_dir, "images")
 
-    def __init__(self,
-                 root: str,
-                 transform: Optional[Callable] = None,
-                 target_transform: Optional[Callable] = None,
-                 download: bool = False,
-                 ) -> None:
+    def __init__(
+        self,
+        root: str,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        download: bool = False,
+    ) -> None:
 
         self.archive_file = join(root, self.filename)
-        super(iNaturalist, self).__init__(root=root, transform=transform, target_transform=target_transform,
-                                          download=download)
+        super(iNaturalist, self).__init__(
+            root=root, transform=transform, target_transform=target_transform, download=download
+        )
 
     def download(self) -> None:
         if self._check_integrity():
@@ -51,6 +53,7 @@ class iNaturalist(ImageDatasetBase):
 
         try:
             import gdown
+
             gdown.download(id=self.gdrive_id, output=self.archive_file)
         except ImportError:
             raise RuntimeError("You have to install 'gdown' to download this dataset")
@@ -71,6 +74,7 @@ class OpenImagesO(iNaturalist):
 
     The test set contains 15869 , the validation set 1763 images.
     """
+
     gdrive_id = "1VUFXnB_z70uHfdgJG2E_pjYOcEgqM7tE"
     filename = "openimage_o.zip"
     target_dir = "OpenImagesO"
@@ -81,19 +85,21 @@ class OpenImagesO(iNaturalist):
         "val": "val_openimage_o.json",
     }
 
-    def __init__(self,
-                 root: str,
-                 subset="test",
-                 transform: Optional[Callable] = None,
-                 target_transform: Optional[Callable] = None,
-                 download: bool = False,
-                 ) -> None:
+    def __init__(
+        self,
+        root: str,
+        subset="test",
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        download: bool = False,
+    ) -> None:
         """
         :param subset: can be either ``val`` or ``test``
         """
         assert subset in list(self.inclusion_json.keys())
-        super(OpenImagesO, self).__init__(root=root, transform=transform, target_transform=target_transform,
-                                          download=download)
+        super(OpenImagesO, self).__init__(
+            root=root, transform=transform, target_transform=target_transform, download=download
+        )
 
         p = _get_resource_file(self.inclusion_json[subset])
         with open(p, "r") as f:
@@ -116,19 +122,22 @@ class Places365(iNaturalist):
       :alt: Places 365 examples
 
     """
+
     gdrive_id = "1Ec-LRSTf6u5vEctKX9vRp9OA6tqnJ0Ay"
     filename = "places365.zip"
     target_dir = "places365"
     base_folder = target_dir
 
-    def __init__(self,
-                 root: str,
-                 transform: Optional[Callable] = None,
-                 target_transform: Optional[Callable] = None,
-                 download: bool = False,
-                 ) -> None:
-        super(Places365, self).__init__(root=root, transform=transform, target_transform=target_transform,
-                                          download=download)
+    def __init__(
+        self,
+        root: str,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        download: bool = False,
+    ) -> None:
+        super(Places365, self).__init__(
+            root=root, transform=transform, target_transform=target_transform, download=download
+        )
 
         self.files = []
 

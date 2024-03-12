@@ -11,7 +11,7 @@
 
 """
 import logging
-from typing import TypeVar, Tuple
+from typing import Tuple, TypeVar
 
 import torch
 from torch import Tensor, nn
@@ -48,7 +48,9 @@ class MCD(Detector):
 
     """
 
-    def __init__(self, model: Module, samples: int = 30, mode: str = "var", batch_norm: bool = True):
+    def __init__(
+        self, model: Module, samples: int = 30, mode: str = "var", batch_norm: bool = True
+    ):
         """
 
         :param model: the module to use for the forward pass. Should output logits.
@@ -189,4 +191,8 @@ class MCD(Detector):
             print("calculating variance")
             return MCD.run(self.model, x, self.n_samples, batch_norm=self.batch_norm)[1]
 
-        return -MCD.run_mean(self.model, x, self.n_samples, batch_norm=self.batch_norm).max(dim=1).values
+        return (
+            -MCD.run_mean(self.model, x, self.n_samples, batch_norm=self.batch_norm)
+            .max(dim=1)
+            .values
+        )

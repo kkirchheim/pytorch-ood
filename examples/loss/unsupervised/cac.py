@@ -44,9 +44,7 @@ dataset_out_test = Textures(
 
 # create data loaders
 train_loader = DataLoader(dataset_in_train, batch_size=64, shuffle=True, num_workers=16)
-test_loader = DataLoader(
-    dataset_in_test + dataset_out_test, batch_size=64, num_workers=16
-)
+test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64, num_workers=16)
 
 # %%
 # Create DNN, pretrained on the imagenet excluding cifar10 classes.
@@ -107,11 +105,7 @@ for epoch in range(n_epochs):
             opti.step()
             scheduler.step()
 
-            loss_ema = (
-                loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
-            )
-            bar.set_postfix_str(
-                f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}"
-            )
+            loss_ema = loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
+            bar.set_postfix_str(f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}")
 
     test()

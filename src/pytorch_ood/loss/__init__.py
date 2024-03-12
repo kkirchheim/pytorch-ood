@@ -152,7 +152,7 @@ VOS Energy-Based Loss
 
 .. autoclass:: pytorch_ood.loss.EnergyRegularizedLoss
     :members:
-    
+
 MCHAD Loss
 ----------------------------------------------
 
@@ -189,7 +189,7 @@ from .ii import IILoss
 from .mchad import MCHADLoss
 from .objectosphere import ObjectosphereLoss
 from .oe import OutlierExposureLoss
-from .vos import VOSRegLoss
 
 # from .triplet import TripletLoss
 from .svdd import DeepSVDDLoss, SSDeepSVDDLoss
+from .vos import VOSRegLoss
