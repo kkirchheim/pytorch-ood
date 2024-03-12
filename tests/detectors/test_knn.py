@@ -3,9 +3,9 @@ import unittest
 import torch
 from torch.utils.data import DataLoader
 
+from src.pytorch_ood.detector import KNN
 from src import pytorch_ood
 from src.pytorch_ood.api import RequiresFittingException
-from src.pytorch_ood.detector import KNN
 from tests.helpers import ClassificationModel, sample_dataset
 
 
@@ -30,7 +30,8 @@ class TestKNN(unittest.TestCase):
         self.assertTrue(True)
 
     def test_input(self):
-        """ """
+        """
+        """
         model = ClassificationModel()
         detector = KNN(model)
 

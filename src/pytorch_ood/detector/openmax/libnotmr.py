@@ -5,19 +5,18 @@ https://github.com/ashafaei/OD-test/blob/8252aace84e2ae1ab95067876985f62a1060aad
 
 """
 
-import logging
-
 import numpy as np
-import scipy.stats
 from scipy.stats import exponweib
+import logging
+import scipy.stats
 
 log = logging.getLogger(__name__)
 
 
 class LibNotMR(object):
     """
-    Instead of using LibMR (https://github.com/abhijitbendale/OSDN/tree/master/libMR) we implemented
-    the simple operations with Scipy. The output is checked against the original library for verification.
+        Instead of using LibMR (https://github.com/abhijitbendale/OSDN/tree/master/libMR) we implemented
+        the simple operations with Scipy. The output is checked against the original library for verification.
     """
 
     def __init__(self, tailsize: int = 20):
@@ -32,7 +31,7 @@ class LibNotMR(object):
         self.scale = None
 
     def fit_high(self, inputs: np.ndarray) -> None:
-        tailtofit = sorted(inputs)[-self.tailsize :]
+        tailtofit = sorted(inputs)[-self.tailsize:]
         self.min_val = np.min(tailtofit)
         new_inputs = [i + self.translation - self.min_val for i in tailtofit]
         params = exponweib.fit(new_inputs, floc=0, f0=1)
@@ -45,4 +44,4 @@ class LibNotMR(object):
         return new_score
 
     def __str__(self):
-        return "Weib: C=%.2f scale=%.2f min_val=%.2f" % (self.c, self.scale, self.min_val)
+        return 'Weib: C=%.2f scale=%.2f min_val=%.2f' % (self.c, self.scale, self.min_val)

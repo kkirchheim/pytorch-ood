@@ -26,10 +26,7 @@ class NINCO(ImageDatasetBase):
     :see Download: `Zenodo <https://zenodo.org/record/8013288>`__
 
     """
-
-    base_folders = [
-        "NINCO_OOD_classes"
-    ]  # , "NINCO_OOD_unit_tests", "NINCO_popular_datasets_subsamples"
+    base_folders = ["NINCO_OOD_classes"] # , "NINCO_OOD_unit_tests", "NINCO_popular_datasets_subsamples"
     url = "https://zenodo.org/record/8013288/files/NINCO_all.tar.gz"
     filename = "NINCO_all.tar.gz"
     tgz_md5s = "b9ffae324363cd900a81ce3c367cd834"
@@ -53,7 +50,6 @@ class NINCO(ImageDatasetBase):
                 files += [join(path, subdir, img) for img in os.listdir(join(path, subdir))]
 
         return files
-
 
 if __name__ == "__main__":
     d = NINCO(root="/home/ki/datasets/", download=True)

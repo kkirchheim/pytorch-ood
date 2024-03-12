@@ -1,8 +1,9 @@
+
 from typing import Optional, TypeVar
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor
+import torch.nn.functional as F
 
 from ..api import Detector, ModelNotSetException
 
@@ -48,9 +49,9 @@ class VOSBased(Detector):
         :param t: Temperature value :math:`T`. Default is 1.
         """
         super(VOSBased, self).__init__()
-
+        
         self.model = model
-        self.weights_energy = weights_energy
+        self.weights_energy=weights_energy
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -62,9 +63,9 @@ class VOSBased(Detector):
         """
         if self.model is None:
             raise ModelNotSetException
-
+        
         return self.score(self.model(x), self.weights_energy)
-
+    
     def predict_features(self, logits: Tensor) -> Tensor:
         """
         :param logits: logits given by your model
@@ -78,12 +79,9 @@ class VOSBased(Detector):
         :param weights_energy: energy weights as torch.nn.module
         """
         # Permutation depends on shape of logits
-        tmp_scores_ = logits.permute(0, 2, 3, 1)
-
-        conf = torch.log(
-            torch.sum(
-                (F.relu(weights_energy.weight) * torch.exp(tmp_scores_)), dim=3, keepdim=False
-            )
-        )
-
+        tmp_scores_=logits.permute(0,2,3,1)
+        
+        conf= torch.log(torch.sum(
+            (F.relu(weights_energy.weight) * torch.exp(tmp_scores_)), dim=3, keepdim=False))
+        
         return -conf

@@ -58,8 +58,12 @@ def my_transform(img, target):
 
 # %%
 # Setup datasets
-dataset = StreetHazards(root="data", subset="train", transform=my_transform, download=True)
-dataset_test = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
+dataset = StreetHazards(
+    root="data", subset="train", transform=my_transform, download=True
+)
+dataset_test = StreetHazards(
+    root="data", subset="test", transform=my_transform, download=True
+)
 
 
 # %%
@@ -118,7 +122,9 @@ for epoch in range(num_epochs):
 # Evaluate
 print("Evaluating")
 model.eval()
-loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
+loader = DataLoader(
+    dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g
+)
 detector = EnergyBased(model)
 metrics = OODMetrics(mode="segmentation")
 

@@ -6,16 +6,16 @@ Open Set Simulation on CIFAR 10
 
 """
 import torch.nn
-from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
-from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10
+from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
+from torchmetrics import Accuracy
 
 from pytorch_ood.dataset.ossim import DynamicOSS
-from pytorch_ood.detector import MaxSoftmax
 from pytorch_ood.model import WideResNet
-from pytorch_ood.utils import OODMetrics, TargetMapping, fix_random_seed, is_known
+from pytorch_ood.detector import MaxSoftmax
+from pytorch_ood.utils import fix_random_seed, TargetMapping, OODMetrics, is_known
 
 device = "cuda:0"
 num_epochs = 10
@@ -115,7 +115,11 @@ for epoch in range(num_epochs):
         loss.backward()
         opti.step()
 
-        loss_ema = loss_ema * 0.95 + loss.item() * 0.05 if loss_ema is not None else loss.item()
+        loss_ema = (
+            loss_ema * 0.95 + loss.item() * 0.05
+            if loss_ema is not None
+            else loss.item()
+        )
         bar.set_postfix_str(f"loss: {loss_ema:.2f}")
 
     test()

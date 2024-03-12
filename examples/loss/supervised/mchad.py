@@ -24,15 +24,14 @@ You can run this example with:
     python examples/loss/supervised/mchad.py
 
 """
-import math
-
 import torch
-from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim import Adam
 from torch.utils.data import DataLoader, random_split
 from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10
 from tqdm import tqdm
+import math
 
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.loss import MCHADLoss
@@ -68,7 +67,9 @@ data_out_test = Textures(
 
 
 # create data loaders
-test_loader = DataLoader(data_in_test + data_out_test, batch_size=batch_size, num_workers=16)
+test_loader = DataLoader(
+    data_in_test + data_out_test, batch_size=batch_size, num_workers=16
+)
 
 data_out_train, _ = random_split(
     tiny300k, [len(data_in_train), len(tiny300k) - len(data_in_train)]
@@ -136,8 +137,12 @@ for epoch in range(n_epochs):
             opti.step()
             scheduler.step()
 
-            loss_ema = loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
-            bar.set_postfix_str(f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}")
+            loss_ema = (
+                loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
+            )
+            bar.set_postfix_str(
+                f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}"
+            )
 
     test()
 

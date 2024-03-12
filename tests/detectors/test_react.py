@@ -13,7 +13,8 @@ class TestASH(unittest.TestCase):
     """
 
     def test_input(self):
-        """ """
+        """
+        """
         model = WideResNet(num_classes=10).eval()
         detector = ReAct(
             backbone=model.features_before_pool,

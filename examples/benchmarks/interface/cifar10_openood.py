@@ -13,7 +13,7 @@ import pandas as pd  # additional dependency, used here for convenience
 import torch
 
 from pytorch_ood.benchmark import CIFAR10_OpenOOD
-from pytorch_ood.detector import ASH, MaxSoftmax, ReAct
+from pytorch_ood.detector import MaxSoftmax, ReAct, ASH
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import fix_random_seed
 

@@ -3,9 +3,7 @@ from typing import TypeVar
 
 import numpy as np
 import scipy.spatial.distance as distance
-
 from .libnotmr import LibNotMR
-
 Self = TypeVar("Self")
 
 log = logging.getLogger(__name__)

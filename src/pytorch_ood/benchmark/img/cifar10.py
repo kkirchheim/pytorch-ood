@@ -8,19 +8,10 @@ from torchvision.datasets import CIFAR10, CIFAR100, MNIST, FashionMNIST
 from torchvision.transforms import Compose
 
 from pytorch_ood.api import Detector
+from pytorch_ood.dataset.img import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize, GaussianNoise, \
+    UniformNoise, TinyImageNet, Textures, Places365
+from pytorch_ood.utils import OODMetrics, ToUnknown, ToRGB
 from pytorch_ood.benchmark import Benchmark
-from pytorch_ood.dataset.img import (
-    GaussianNoise,
-    LSUNCrop,
-    LSUNResize,
-    Places365,
-    Textures,
-    TinyImageNet,
-    TinyImageNetCrop,
-    TinyImageNetResize,
-    UniformNoise,
-)
-from pytorch_ood.utils import OODMetrics, ToRGB, ToUnknown
 
 
 class CIFAR10_ODIN(Benchmark):
@@ -55,14 +46,14 @@ class CIFAR10_ODIN(Benchmark):
             TinyImageNetResize(
                 root, download=True, transform=transform, target_transform=ToUnknown()
             ),
-            LSUNResize(root, download=True, transform=transform, target_transform=ToUnknown()),
-            LSUNCrop(root, download=True, transform=transform, target_transform=ToUnknown()),
-            UniformNoise(
-                1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown(), seed=123
+            LSUNResize(
+                root, download=True, transform=transform, target_transform=ToUnknown()
             ),
-            GaussianNoise(
-                1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown(), seed=123
+            LSUNCrop(
+                root, download=True, transform=transform, target_transform=ToUnknown()
             ),
+            UniformNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown(), seed=123),
+            GaussianNoise(1000, size=(32, 32, 3), transform=transform, target_transform=ToUnknown(), seed=123)
         ]
 
         self.ood_names: List[str] = []  #: OOD Dataset names
@@ -95,7 +86,7 @@ class CIFAR10_ODIN(Benchmark):
         raise ValueError()
 
     def evaluate(
-        self, detector: Detector, loader_kwargs: Dict = None, device: str = "cpu"
+            self, detector: Detector, loader_kwargs: Dict = None, device: str = "cpu"
     ) -> List[Dict]:
         """
         Evaluates the given detector on all datasets and returns a list with the results
@@ -156,35 +147,23 @@ class CIFAR10_OpenOOD(Benchmark):
 
         self.test_oods = [
             CIFAR100(
-                root,
-                download=True,
-                transform=self.transform,
-                target_transform=ToUnknown(),
-                train=False,
+                root, download=True, transform=self.transform, target_transform=ToUnknown(), train=False
             ),
             TinyImageNet(
-                root,
-                download=True,
-                transform=self.transform,
-                target_transform=ToUnknown(),
-                subset="val",
+                root, download=True, transform=self.transform, target_transform=ToUnknown(), subset="val"
             ),
             MNIST(
-                root,
-                download=True,
-                transform=self.transform,
-                target_transform=ToUnknown(),
-                train=False,
+                root, download=True, transform=self.transform, target_transform=ToUnknown(), train=False
             ),
             FashionMNIST(
-                root,
-                download=True,
-                transform=self.transform,
-                target_transform=ToUnknown(),
-                train=False,
+                root, download=True, transform=self.transform, target_transform=ToUnknown(), train=False
             ),
-            Textures(root, download=True, transform=self.transform, target_transform=ToUnknown()),
-            Places365(root, download=True, transform=self.transform, target_transform=ToUnknown()),
+            Textures(
+                root, download=True, transform=self.transform, target_transform=ToUnknown()
+            ),
+            Places365(
+                root, download=True, transform=self.transform, target_transform=ToUnknown()
+            )
         ]
 
         self.ood_names: List[str] = []  #: OOD Dataset names
@@ -217,7 +196,7 @@ class CIFAR10_OpenOOD(Benchmark):
         raise ValueError()
 
     def evaluate(
-        self, detector: Detector, loader_kwargs: Dict = None, device: str = "cpu"
+            self, detector: Detector, loader_kwargs: Dict = None, device: str = "cpu"
     ) -> List[Dict]:
         """
         Evaluates the given detector on all datasets and returns a list with the results

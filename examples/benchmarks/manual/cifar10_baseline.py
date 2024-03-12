@@ -43,16 +43,13 @@ from torchvision.datasets import CIFAR10, CIFAR100, MNIST, FashionMNIST
 from pytorch_ood.dataset.img import (
     LSUNCrop,
     LSUNResize,
-    Places365,
     Textures,
     TinyImageNetCrop,
     TinyImageNetResize,
+    Places365,
 )
 from pytorch_ood.detector import (
-    DICE,
     ODIN,
-    RMD,
-    SHE,
     EnergyBased,
     Entropy,
     KLMatching,
@@ -60,6 +57,9 @@ from pytorch_ood.detector import (
     MaxLogit,
     MaxSoftmax,
     ViM,
+    RMD,
+    DICE,
+    SHE,
 )
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
@@ -95,7 +95,9 @@ for ood_dataset in ood_datasets:
     dataset_out_test = ood_dataset(
         root="data", transform=trans, target_transform=ToUnknown(), download=True
     )
-    test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=256, num_workers=12)
+    test_loader = DataLoader(
+        dataset_in_test + dataset_out_test, batch_size=256, num_workers=12
+    )
     datasets[ood_dataset.__name__] = test_loader
 
 # %%
@@ -109,7 +111,9 @@ print("STAGE 2: Creating OOD Detectors")
 detectors = {}
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
-detectors["Mahalanobis+ODIN"] = Mahalanobis(model.features, norm_std=norm_std, eps=0.002)
+detectors["Mahalanobis+ODIN"] = Mahalanobis(
+    model.features, norm_std=norm_std, eps=0.002
+)
 detectors["Mahalanobis"] = Mahalanobis(model.features)
 detectors["KLMatching"] = KLMatching(model)
 detectors["SHE"] = SHE(model.features, model.fc)
@@ -117,7 +121,9 @@ detectors["MSP"] = MaxSoftmax(model)
 detectors["EnergyBased"] = EnergyBased(model)
 detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
-detectors["DICE"] = DICE(model=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
+detectors["DICE"] = DICE(
+    model=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65
+)
 detectors["RMD"] = RMD(model.features)
 
 # fit detectors to training data (some require this, some do not)

@@ -43,10 +43,10 @@ class Mahalanobis(Detector):
     """
 
     def __init__(
-        self,
-        model: Callable[[Tensor], Tensor],
-        eps: float = 0.002,
-        norm_std: Optional[List] = None,
+            self,
+            model: Callable[[Tensor], Tensor],
+            eps: float = 0.002,
+            norm_std: Optional[List] = None,
     ):
         """
         :param model: the Neural Network, should output features
@@ -114,7 +114,9 @@ class Mahalanobis(Detector):
         return self
 
     def _calc_gaussian_scores(self, z: Tensor) -> Tensor:
-        """ """
+        """
+
+        """
         features = z.view(z.size(0), z.size(1), -1)
         features = torch.mean(features, 2)
         md_k = []
@@ -138,7 +140,7 @@ class Mahalanobis(Detector):
             raise RequiresFittingException
 
         md_k = self._calc_gaussian_scores(z)
-        score = -torch.max(md_k, dim=1).values
+        score = - torch.max(md_k, dim=1).values
         return score
 
     def predict(self, x: Tensor) -> Tensor:
@@ -175,11 +177,11 @@ class Mahalanobis(Detector):
                 for clazz in range(self.n_classes):
                     centered_features = features.data - self.mu[clazz]
                     term_gau = (
-                        -0.5
-                        * torch.mm(
-                            torch.mm(centered_features, self.precision),
-                            centered_features.t(),
-                        ).diag()
+                            -0.5
+                            * torch.mm(
+                        torch.mm(centered_features, self.precision),
+                        centered_features.t(),
+                    ).diag()
                     )
 
                     if clazz == 0:
@@ -193,11 +195,11 @@ class Mahalanobis(Detector):
                 batch_sample_mean = self.mu.index_select(0, sample_pred)
                 centered_features = features - Variable(batch_sample_mean)
                 pure_gau = (
-                    -0.5
-                    * torch.mm(
-                        torch.mm(centered_features, Variable(self.precision)),
-                        centered_features.t(),
-                    ).diag()
+                        -0.5
+                        * torch.mm(
+                    torch.mm(centered_features, Variable(self.precision)),
+                    centered_features.t(),
+                ).diag()
                 )
                 loss = torch.mean(-pure_gau)
                 loss.backward()

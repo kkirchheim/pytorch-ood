@@ -1,8 +1,8 @@
-import logging
-import sys
-
 from .dataset import sample_dataset
 from .model import ClassificationModel, SegmentationModel
+
+import sys
+import logging
 
 # set for testing
 logger = logging.getLogger()

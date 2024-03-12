@@ -37,7 +37,13 @@ from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from tqdm import tqdm
 
-from pytorch_ood.dataset.txt import Multi30k, NewsGroup20, Reuters52, WikiText2, WMT16Sentences
+from pytorch_ood.dataset.txt import (
+    Multi30k,
+    NewsGroup20,
+    Reuters52,
+    WikiText2,
+    WMT16Sentences,
+)
 from pytorch_ood.detector import (
     ODIN,
     EnergyBased,
@@ -50,7 +56,7 @@ from pytorch_ood.detector import (
 )
 from pytorch_ood.loss import OutlierExposureLoss
 from pytorch_ood.model import GRUClassifier
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed, is_known
+from pytorch_ood.utils import OODMetrics, ToUnknown, is_known, fix_random_seed
 
 fix_random_seed(123)
 
@@ -73,7 +79,6 @@ def yield_tokens(data_iter):
 
 vocab = build_vocab_from_iterator(yield_tokens(train_dataset_in))
 vocab.set_default_index(0)
-
 
 def prep(x):
     return torch.tensor([vocab[v] for v in tokenizer(x)], dtype=torch.int64)
@@ -109,7 +114,9 @@ loader_train = DataLoader(
     shuffle=True,
     collate_fn=collate_batch,
 )
-loader_in_test = DataLoader(dataset_in_test, batch_size=16, shuffle=True, collate_fn=collate_batch)
+loader_in_test = DataLoader(
+    dataset_in_test, batch_size=16, shuffle=True, collate_fn=collate_batch
+)
 
 # %% Create a neural network
 print("STAGE 1: Train Model")
@@ -147,7 +154,9 @@ for epoch in range(n_epochs):
         loss_ema = loss.item() if not loss_ema else loss_ema * 0.99 + loss.item() * 0.01
 
         pred = logits.max(dim=1).indices
-        correct += pred[is_known(labels)].eq(labels[is_known(labels)]).sum().data.cpu().item()
+        correct += (
+            pred[is_known(labels)].eq(labels[is_known(labels)]).sum().data.cpu().item()
+        )
         total += is_known(labels).sum()
 
         bar.set_postfix_str(f"loss: {loss:.2f} acc: {correct / total:.2%}")

@@ -9,19 +9,18 @@
     :members:
     :exclude-members: fit, fit_features
 """
-import logging
 from typing import Optional, TypeVar
 
 import torch.nn
 from torch import Tensor, tensor
-from torch.nn import Module
 from torch.nn.functional import nll_loss
+from torch.nn import Module
 from torch.optim import LBFGS
 from torch.utils.data import DataLoader
-
-from pytorch_ood.utils import extract_features, is_known
+import logging
 
 from ..api import Detector, ModelNotSetException, RequiresFittingException
+from pytorch_ood.utils import extract_features, is_known
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -89,3 +88,4 @@ class MaxSoftmax(Detector):
         :param t: temperature value
         """
         return -logits.div(t).softmax(dim=1).max(dim=1).values
+

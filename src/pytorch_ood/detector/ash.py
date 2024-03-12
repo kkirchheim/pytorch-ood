@@ -9,16 +9,16 @@
     :members:
     :exclude-members: fit, fit_features, predict_features
 """
-import logging
-from typing import Callable, TypeVar
+from typing import TypeVar, Callable
 
-import numpy as np
 import torch.nn
 from torch import Tensor
 
-from pytorch_ood.detector import EnergyBased
+import logging
+import numpy as np
 
 from ..api import Detector
+from pytorch_ood.detector import EnergyBased
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -116,14 +116,8 @@ class ASH(Detector):
         "ash-b": ash_b,
     }
 
-    def __init__(
-        self,
-        backbone: Callable[[Tensor], Tensor],
-        head: Callable[[Tensor], Tensor],
-        variant="ash-s",
-        percentile: float = 0.65,
-        detector: Callable[[Tensor], Tensor] = None,
-    ):
+    def __init__(self, backbone: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor],
+                 variant="ash-s", percentile: float = 0.65, detector: Callable[[Tensor], Tensor] = None):
         """
         :param variant: one of ``ash-p``, ``ash-b``, ``ash-s``
         :param backbone: first part of model to use, should output feature maps
