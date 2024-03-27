@@ -64,10 +64,12 @@ class TestDatasetAvailability(unittest.TestCase):
         status = urlopen(StreetHazards.url_list["validation"]).getcode()
         self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable because of changed permissions in s3")
     def test_download_Wiki2(self):
         status = urlopen(WikiText2.url).getcode()
         self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable because of changed permissions in s3")
     def test_download_Wiki103(self):
         status = urlopen(WikiText103.url).getcode()
         self.assertEqual(status, 200)
