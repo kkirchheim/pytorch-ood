@@ -10,4 +10,4 @@ as additional dependencies:
 
 .. code-block:: shell
 
-    pip install pandas scikit-learn pandas
+    pip install pandas scikit-learn
