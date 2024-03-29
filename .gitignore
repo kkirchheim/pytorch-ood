@@ -254,3 +254,13 @@ dmypy.json
 cython_debug/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,intellij
+.github/workflows/python-package.yml
+.vscode/settings.json
+.pre-commit-config.yaml
+.pre-commit-config.yaml
+.gitignore
+.github/workflows/python-package.yml
+docs/sg_execution_times.rst
+.pre-commit-config.yaml
+.pre-commit-config.yaml
+.gitignore

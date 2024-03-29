@@ -145,14 +145,14 @@ Energy-Bounded Learning Loss
 VOS Energy-Based Loss
 ----------------------------------------------
 
-.. image:: https://img.shields.io/badge/classification-no-red?style=flat-square
+.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
    :alt: classification badge
 
-.. autoclass:: pytorch_ood.loss.EnergyRegularizedLoss
+.. autoclass:: pytorch_ood.loss.VOSRegLoss
     :members:
-    
+
 MCHAD Loss
 ----------------------------------------------
 
