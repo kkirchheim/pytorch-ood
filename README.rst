@@ -23,6 +23,14 @@ PyTorch Out-of-Distribution Detection
 
 -----
 
+.. image:: docs/_static/pytorch-ood-logo.jpg
+   :align: center
+   :width: 100%
+   :alt: pytorch-ood-logo
+
+-----
+
+
 Out-of-Distribution (OOD) Detection with Deep Neural Networks based on PyTorch.
 
 The library provides:
