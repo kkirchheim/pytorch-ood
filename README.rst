@@ -1,23 +1,22 @@
 PyTorch Out-of-Distribution Detection
 ****************************************
 
-.. image:: https://img.shields.io/badge/docs-online-blue?style=for-the-badge
+|docs| |version| |license| |python-version| |downloads|
+
+
+.. |docs| image:: https://img.shields.io/badge/docs-online-blue?style=for-the-badge
    :target: https://pytorch-ood.readthedocs.io/en/latest/
    :alt: Documentation
-
-.. image:: https://img.shields.io/pypi/v/pytorch-ood?color=light&style=for-the-badge
+.. |version| image:: https://img.shields.io/pypi/v/pytorch-ood?color=light&style=for-the-badge
    :target: https://pypi.org/project/pytorch-ood/
    :alt: License
-
-.. image:: https://img.shields.io/pypi/l/pytorch-ood?style=for-the-badge
+.. |license| image:: https://img.shields.io/pypi/l/pytorch-ood?style=for-the-badge
    :target: https://gitlab.com/kkirchheim/pytorch-ood/-/blob/master/LICENSE
    :alt: License
-
-.. image:: https://img.shields.io/badge/-Python 3.8+-blue?logo=python&logoColor=white&style=for-the-badge
+.. |python-version| image:: https://img.shields.io/badge/-Python 3.8+-blue?logo=python&logoColor=white&style=for-the-badge
    :target: https://www.python.org/
    :alt: Python
-
-.. image:: https://img.shields.io/pypi/dm/pytorch-ood?style=for-the-badge
+.. |downloads| image:: https://img.shields.io/pypi/dm/pytorch-ood?style=for-the-badge
    :target: https://pepy.tech/project/pytorch-ood
    :alt: Downloads
 
