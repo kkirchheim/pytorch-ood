@@ -155,6 +155,16 @@ MVTech-AD
 ..  autoclass:: pytorch_ood.dataset.img.MVTechAD
     :members:
 
+
+Object Detection
+----------------------
+
+SuMNIST
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.SuMNIST
+    :members:
+
+
 """
 from .chars74k import Chars74k
 from .cifar import CIFAR10C, CIFAR100C
@@ -171,3 +181,4 @@ from .tinyimagenet import TinyImageNet
 from .tinyimages import TinyImages, TinyImages300k
 from .openood import OpenImagesO, iNaturalist, Places365
 from .ninco import NINCO
+from .sumnist import SuMNIST
