@@ -149,22 +149,27 @@ class OODMetrics(object):
         :param scores: outlier score
         :param y: target label
         """
-        label = is_unknown(y).detach().to(self.device).long()
-        scores = scores.detach().to(self.device)
+        label = is_unknown(y).detach().long()
 
         if self.mode == "classification":
             self.buffer.append("scores", scores)
             self.buffer.append("labels", label)
 
         elif self.mode == "segmentation":
+            assert scores.device == y.device, "Score and target tensor must be on same device"
+
             # loop along batch dimension
             for i in range(scores.shape[0]):
+                # computation will be carried out on the device where the data currently resides
+                # since this is usually a gpu, this speeds up the processing drastically,
+                # since only the reduced results have to be stored.
                 metrics = self._compute(label[i].view(-1), scores[i].view(-1))
                 for key, value in metrics.items():
                     self.buffer.append(key, value.view(1, -1))
 
         return self
 
+    @torch.no_grad()
     def _compute(self, labels: Tensor, scores: Tensor) -> Dict[str, Tensor]:
         """ """
         if len(torch.unique(labels)) != 2:
@@ -188,10 +193,10 @@ class OODMetrics(object):
         fpr = fpr_at_tpr(scores, labels)
 
         return {
-            "AUROC": auroc,
-            "AUPR-IN": aupr_in,
-            "AUPR-OUT": aupr_out,
-            "FPR95TPR": fpr,
+            "AUROC": auroc.cpu(),
+            "AUPR-IN": aupr_in.cpu(),
+            "AUPR-OUT": aupr_out.cpu(),
+            "FPR95TPR": fpr.cpu(),
         }
 
     def compute(self) -> Dict[str, float]:
