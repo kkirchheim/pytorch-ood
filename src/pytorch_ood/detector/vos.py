@@ -1,3 +1,14 @@
+"""
+
+.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
+   :alt: classification badge
+.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
+   :alt: classification badge
+
+..  autoclass:: pytorch_ood.detector.VOSBased
+    :members:
+    :exclude-members: fit, fit_features
+"""
 from typing import TypeVar
 
 import torch
