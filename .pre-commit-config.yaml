@@ -10,30 +10,30 @@ repos:
       - id: debug-statements
       - id: detect-private-key
 
-  # # python code formatting
-  # - repo: https://github.com/psf/black
-  #   rev: 22.1.0
-  #   hooks:
-  #     - id: black
-  #       args: [--line-length, "99"]
-  #       # https://github.com/psf/black/issues/2964
-  #       additional_dependencies: ["click==8.0.4"]
+  # python code formatting
+  - repo: https://github.com/psf/black
+    rev: 22.1.0
+    hooks:
+      - id: black
+        args: [--line-length, "99"]
+        # https://github.com/psf/black/issues/2964
+        additional_dependencies: ["click==8.0.4"]
 
-  # # python import sorting
-  # - repo: https://github.com/PyCQA/isort
-  #   rev: 5.12.0
-  #   hooks:
-  #     - id: isort
+  # python import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
 
-  # # yaml formatting
-  # - repo: https://github.com/pre-commit/mirrors-prettier
-  #   rev: v2.3.0
-  #   hooks:
-  #     - id: prettier
-  #       types: [yaml]
+  # yaml formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v2.3.0
+    hooks:
+      - id: prettier
+        types: [yaml]
 
   # python code analysis
-  # - repo: https://github.com/PyCQA/flake8
-  #   rev: 3.9.2
-  #   hooks:
-  #     - id: flake8
+  - repo: https://github.com/PyCQA/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
