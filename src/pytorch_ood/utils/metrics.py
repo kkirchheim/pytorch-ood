@@ -119,7 +119,7 @@ class OODMetrics(object):
         metrics.update(outlier_scores, labels)
         metric_dict = metrics.compute()
 
-    In ``classification`` mode, the inputs will be flattened, so we treat each value as an individual text example.
+    In ``classification`` mode, the inputs will be flattened, so we treat each value as an individual example.
     Using this mode for segmentation tasks can require a lot of memory and compute.
 
     In ``segmentation`` mode, the inputs will be flattened along the first (batch) dimension so that the shape is
