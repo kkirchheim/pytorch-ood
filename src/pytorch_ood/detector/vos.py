@@ -54,9 +54,10 @@ class VOSBased(Detector):
         """
         return self
 
-    def __init__(self, model: torch.nn.Module, weights_energy: torch.nn.Module):
+    def __init__(self, model: torch.nn.Module, weights_energy: torch.nn.Linear):
         """
-        :param t: Temperature value :math:`T`. Default is 1.
+        :param model: neural network to use, is assumed to output features
+        :param weights_energy: neural network layer, with num_classes inputs. (For example torch.nn.Linear(num_classes, 1))
         """
         super(VOSBased, self).__init__()
 
@@ -89,12 +90,24 @@ class VOSBased(Detector):
         :param weights_energy: energy weights as torch.nn.module
         """
         # Permutation depends on shape of logits
-        tmp_scores_ = logits.permute(0, 2, 3, 1)
 
-        conf = torch.log(
-            torch.sum(
-                (F.relu(weights_energy.weight) * torch.exp(tmp_scores_)), dim=3, keepdim=False
+        if len(logits.shape) == 2:
+            conf = torch.log(
+                torch.sum(
+                    (F.relu(weights_energy.weight) * torch.exp(logits)), dim=1, keepdim=False
+                )
             )
-        )
 
-        return -conf
+            return -conf
+        elif len(logits.shape) == 4:
+            tmp_scores_ = logits.permute(0, 2, 3, 1)
+
+            conf = torch.log(
+                torch.sum(
+                    (F.relu(weights_energy.weight) * torch.exp(tmp_scores_)), dim=3, keepdim=False
+                )
+            )
+
+            return -conf
+        else:
+            raise ValueError(f"Unsupported input shape: {logits.shape}")

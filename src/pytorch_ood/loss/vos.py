@@ -33,12 +33,19 @@ class VOSRegLoss(nn.Module):
     """
 
     def __init__(
-        self, logistic_regression, weights_energy, alpha=0.1, device="cuda:0", reduction="mean"
+        self,
+        logistic_regression: torch.nn.Linear,
+        weights_energy: torch.nn.Linear,
+        alpha: float = 0.1,
+        device: str = "cuda:0",
+        reduction: str = "mean",
     ):
         """
         :param logistic_regression: torch.nn.Linear(1, 2)
-        :param weights_energy: torch.nn.Linear(num_classes, 1); torch.nn.init.uniform_(weights_energy.weight)
+        :param weights_energy: neural network layer, with num_classes inputs. (For example torch.nn.Linear(num_classes, 1))        :param alpha: weighting parameter
         :param alpha: weighting parameter
+        :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
+        :param device: For example cpu od cuda:0
         """
         super(VOSRegLoss, self).__init__()
         self.logistic_regression = logistic_regression
