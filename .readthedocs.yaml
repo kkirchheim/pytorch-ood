@@ -5,18 +5,30 @@
 # Required
 version: 2
 
-# Set the version of Python and other tools you might need
-build:
-  os: ubuntu-22.04
-  tools:
-    python: "3.11"
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   configuration: docs/conf.py
+  fail_on_warning: true
 
-python:
-  install:
-    - method: setuptools
-      path: .
-    - requirements: docs/requirements.txt
+build:
+  os: "ubuntu-22.04"
+  tools:
+    python: "3.9"
+  commands:
+    - pwd ; ls -lh
+    - >
+      pip install -e . -q -r docs/requirements.txt \
+          -f 'https://download.pytorch.org/whl/cpu/torch_stable.html';
+      pip list
+    # this need to be split so `sphinx-build` is picked from previous installation
+    - cd docs; make html 
+    - mkdir -p _readthedocs ; mv docs/build/html $READTHEDOCS_OUTPUT/html/
+
+# Set the version of Python and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.9"
+
+
