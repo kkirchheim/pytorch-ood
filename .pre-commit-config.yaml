@@ -33,7 +33,7 @@ repos:
         types: [yaml]
 
   # python code analysis
-  # - repo: https://github.com/PyCQA/flake8
-  #   rev: 5.0.4
-  #   hooks:
-  #     - id: flake8
+  - repo: https://github.com/PyCQA/flake8
+    rev: 5.0.4
+    hooks:
+      - id: flake8
