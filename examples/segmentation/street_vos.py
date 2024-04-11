@@ -30,7 +30,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import StreetHazards
-from pytorch_ood.detector import VOSBased
+from pytorch_ood.detector import WeightedEBO
 from pytorch_ood.loss import VOSRegLoss
 from pytorch_ood.utils import OODMetrics, fix_random_seed
 
@@ -151,7 +151,7 @@ for epoch in range(num_epochs):
 print("Evaluating")
 model.eval()
 loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
-detector = VOSBased(model, weights_energy)
+detector = WeightedEBO(model, weights_energy)
 metrics = OODMetrics(mode="segmentation")
 
 with torch.no_grad():

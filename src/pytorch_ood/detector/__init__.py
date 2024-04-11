@@ -78,6 +78,11 @@ Energy Based (EBO)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.energy
 
+Weighted Energy Based (WEBO)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.webo
+
+
 ODIN Preprocessing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.odin
@@ -125,9 +130,6 @@ DICE
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.dice
 
-VOS
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.vos
 
 
 """
@@ -148,4 +150,4 @@ from .she import SHE
 from .softmax import MaxSoftmax
 from .tscaling import TemperatureScaling
 from .vim import ViM
-from .vos import VOSBased
+from .webo import WeightedEBO

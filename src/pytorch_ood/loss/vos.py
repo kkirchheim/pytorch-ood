@@ -11,6 +11,8 @@ from ..utils import apply_reduction, is_known, is_unknown
 
 class VOSRegLoss(nn.Module):
     """
+    Implements the loss function of  *VOS: Learning what you don’t know by virtual outlier synthesis*.
+
     Adds a regularization term to the cross-entropy that aims to increase the energy gap between IN and OOD samples without hyperparameter.
 
     The regularization term is defined as:
