@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.detector import VOSBased
+from src.pytorch_ood.detector import WeightedEBO
 from tests.helpers import ClassificationModel, SegmentationModel
 
 torch.manual_seed(123)
@@ -10,13 +10,13 @@ torch.manual_seed(123)
 
 class TestEnergy(unittest.TestCase):
     """
-    Tests for Energy based Out-of-Distribution Detection
+    Tests for Weighted Energy based Out-of-Distribution Detection
     """
 
     def init_detektor(self, model, num_classes):
         weights_energy = torch.nn.Linear(num_classes, 1).cpu()
         torch.nn.init.uniform_(weights_energy.weight)
-        detector = VOSBased(model, weights_energy)
+        detector = WeightedEBO(model, weights_energy)
         return detector
 
     def test_classification_input(self):
