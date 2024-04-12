@@ -21,7 +21,8 @@ class VOSRegLoss(nn.Module):
         L_{\\text{uncertainly}} = \\mathbb{E}_{(v \\sim V)} \\left[ -\\text {log}\\frac{1}{1+\\text{exp}^{-\\phi(E(v;0))}}\\right] +  \\mathbb{E}_{(x \\sim D)} \\left[ -\\text {log} \\frac{\\text{exp}^{-\\phi(E(x;0))}}{1+\\text{exp}^{-\\phi(E(x;0))}}\\right]
 
 
-    where :math:`\\phi()` is a nonlinear MLP function
+    where :math:`\\phi()` is a nonlinear MLP function.
+
 
     :see Paper:
         `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
@@ -29,7 +30,16 @@ class VOSRegLoss(nn.Module):
     :see Implementation:
         `GitHub <https://github.com/deeplearning-wisc/vos/>`__
 
-    For initialisation of :math:`\\phi` and :math:`weights\\_energy`  see `GitHub <https://github.com/deeplearning-wisc/vos/blob/a449b03c7d6e120087007f506d949569c845b2ec/classification/CIFAR/train_virtual.py#L132>`__ .
+    For initialisation of :math:`\\phi` and :math:`weights\\_energy`:
+
+    .. code :: python
+
+        phi = torch.nn.Linear(1, 2)
+        weights = torch.nn.Linear(num_classes, 1))
+        torch.nn.init.uniform_(weights_energy.weight)
+        criterion = VOSRegLoss(phi, weights_energy)
+
+
 
     Notice, that this loss is more effective with scheduler and low (e.g 0.001) learningrate see `GitHub <https://github.com/deeplearning-wisc/vos/blob/a449b03c7d6e120087007f506d949569c845b2ec/classification/CIFAR/train_virtual.py#L152>`__.
     """
@@ -43,8 +53,8 @@ class VOSRegLoss(nn.Module):
         reduction: str = "mean",
     ):
         """
-        :param logistic_regression: torch.nn.Linear(1, 2)
-        :param weights_energy: neural network layer, with num_classes inputs. (For example torch.nn.Linear(num_classes, 1))        :param alpha: weighting parameter
+        :param logistic_regression:
+        :param weights_energy: neural network layer, with num_classes inputs.
         :param alpha: weighting parameter
         :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
         :param device: For example cpu od cuda:0
@@ -55,6 +65,7 @@ class VOSRegLoss(nn.Module):
         self.alpha = alpha
         self.device = device
         self.reduction = reduction
+        self.nll = cross_entropy
 
     def forward(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
@@ -63,7 +74,7 @@ class VOSRegLoss(nn.Module):
         """
 
         regularization = self._regularization(logits, y)
-        loss = cross_entropy(logits, y, reduction=self.reduction)
+        loss = self.nll(logits, y, reduction=self.reduction)
         return apply_reduction(loss, self.reduction) + apply_reduction(
             self.alpha * regularization, self.reduction
         )
@@ -82,18 +93,16 @@ class VOSRegLoss(nn.Module):
         energy_v_out = self._energy(logits_form[is_unknown(y)])
 
         input_for_lr = torch.cat((energy_x_in, energy_v_out), -1)
-        if "cuda" in self.device:
-            labels_for_lr = torch.cat(
-                (torch.ones(len(energy_x_in)).cuda(), torch.zeros(len(energy_v_out)).cuda()), -1
-            )
-        else:
-            labels_for_lr = torch.cat(
-                (torch.ones(len(energy_x_in)), torch.zeros(len(energy_v_out))), -1
-            )
+        labels_for_lr = torch.cat(
+            (
+                torch.ones(len(energy_x_in)).to(self.device),
+                torch.zeros(len(energy_v_out)).to(self.device),
+            ),
+            -1,
+        )
 
-        criterion = torch.nn.CrossEntropyLoss(reduction=self.reduction)
         output1 = self.logistic_regression(input_for_lr.view(-1, 1))
-        lr_reg_loss = criterion(output1, labels_for_lr.long())
+        lr_reg_loss = self.nll(output1, labels_for_lr.long(), reduction=self.reduction)
 
         return lr_reg_loss
 

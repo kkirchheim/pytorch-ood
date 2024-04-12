@@ -28,6 +28,15 @@ class TestEnergy(unittest.TestCase):
         self.assertIsNotNone(y)
         self.assertEqual(y.shape, (128,))
 
+    def test_classification_predict_features(self):
+        model = ClassificationModel()
+        detector = self.init_detektor(model, num_classes=3)
+
+        x = torch.zeros(size=(128, 3))
+        y = detector.predict_features(x)
+        self.assertIsNotNone(y)
+        self.assertEqual(y.shape, (128,))
+
     def test_segmentation_input(self):
         """
         Tests input map for semantic segmentation
@@ -37,5 +46,14 @@ class TestEnergy(unittest.TestCase):
 
         x = torch.zeros(size=(128, 3, 32, 32))
         y = detector(x)
+        self.assertIsNotNone(y)
+        self.assertEqual(y.shape, (128, 32, 32))
+
+    def test_segmentation_predict_features(self):
+        model = SegmentationModel()
+        detector = self.init_detektor(model, num_classes=3)
+
+        x = torch.zeros(size=(128, 3, 32, 32))
+        y = detector.predict_features(x)
         self.assertIsNotNone(y)
         self.assertEqual(y.shape, (128, 32, 32))

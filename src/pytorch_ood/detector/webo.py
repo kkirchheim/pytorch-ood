@@ -73,11 +73,11 @@ class WeightedEBO(Detector):
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Calculate negative energy for inputs
+        Calculate weighted energy for inputs
 
         :param x: input tensor, will be passed through model
 
-        :return: Energy score
+        :return: Weighted Energy score
         """
         if self.model is None:
             raise ModelNotSetException
@@ -88,7 +88,7 @@ class WeightedEBO(Detector):
         """
         :param logits: logits given by your model
         """
-        return self.score(logits)
+        return self.score(logits, self.weights)
 
     @staticmethod
     def score(logits: torch.Tensor, weights: torch.nn.Module) -> torch.Tensor:

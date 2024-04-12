@@ -82,7 +82,7 @@ model = smp.FPN(
 ).to(device)
 
 # %%
-# Create non-linear neural network functions
+# Create neural network functions (layers)
 phi = torch.nn.Linear(1, 2).to(device)
 weights_energy = torch.nn.Linear(num_classes, 1).to(device)
 torch.nn.init.uniform_(weights_energy.weight)
