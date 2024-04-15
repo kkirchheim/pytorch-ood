@@ -100,7 +100,7 @@ Outlier Exposure Loss
 
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
+.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
    :alt: classification badge
 
 .. autoclass:: pytorch_ood.loss.OutlierExposureLoss
@@ -140,6 +140,17 @@ Energy-Bounded Learning Loss
    :alt: classification badge
 
 .. autoclass:: pytorch_ood.loss.EnergyRegularizedLoss
+    :members:
+
+VOS Energy-Based Loss
+----------------------------------------------
+
+.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
+   :alt: classification badge
+.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
+   :alt: classification badge
+
+.. autoclass:: pytorch_ood.loss.VOSRegLoss
     :members:
 
 
@@ -182,3 +193,4 @@ from .oe import OutlierExposureLoss
 
 # from .triplet import TripletLoss
 from .svdd import DeepSVDDLoss, SSDeepSVDDLoss
+from .vos import VOSRegLoss

@@ -9,17 +9,18 @@
     :members:
 
 """
-from typing import TypeVar, Callable
+import logging
+from typing import Callable, TypeVar
 
+import numpy as np
 import torch.nn
 from torch import Tensor
 from torch.utils.data import DataLoader
-import logging
-import numpy as np
+
+from pytorch_ood.utils import extract_features, is_known
 
 from ..api import Detector
-from pytorch_ood.utils import extract_features, is_known
-from pytorch_ood.detector import EnergyBased
+from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -33,8 +34,14 @@ class DICE(Detector):
     :see Paper: `ArXiv <https://arxiv.org/abs/2111.09805>`__
     """
 
-    def __init__(self, model: Callable[[Tensor], Tensor], w: torch.Tensor, b: torch.Tensor, p: float,
-                 detector: Callable[[Tensor], Tensor] = None):
+    def __init__(
+        self,
+        model: Callable[[Tensor], Tensor],
+        w: torch.Tensor,
+        b: torch.Tensor,
+        p: float,
+        detector: Callable[[Tensor], Tensor] = None,
+    ):
         """
         :param model: feature extractor
         :param w: weights of last layer

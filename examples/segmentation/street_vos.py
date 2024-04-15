@@ -1,13 +1,13 @@
 """
-StreetHazards with Entropic Loss
+StreetHazards with VOS Loss
 -------------------------------------
 
 We train a Feature Pyramid Segmentation model
 with a ResNet-50 backbone pre-trained on the ImageNet
 on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` **test set** using
-the supervised :class:`EntropicOpenSetLoss<pytorch_ood.loss.EntropicOpenSetLoss>`.
+the supervised :class:`VOSRegLoss<pytorch_ood.loss.VOSRegLoss>`.
 
-We then use the :class:`Entropy<pytorch_ood.detector.Entropy>` OOD detector.
+We then use the :class:`VOSBased<pytorch_ood.detector.VOSBased>` OOD detector.
 
 This setup is merely made to demonstrate how to train a supervised anomaly segmentation model with
 this loss function.
@@ -18,8 +18,10 @@ this loss function.
 
 .. note :: Training with a batch-size of 4 requires slightly more than 12 GB of GPU memory.
     However, the models tend to also converge to reasonable performance with a smaller batch-size.
+    This loss is more effektive with a scheduler and a lot of epochs.
 
 """
+import numpy as np
 import segmentation_models_pytorch as smp
 import torch
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
@@ -28,14 +30,15 @@ from torch.utils.data import DataLoader
 from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import StreetHazards
-from pytorch_ood.detector import Entropy
-from pytorch_ood.loss import EntropicOpenSetLoss
+from pytorch_ood.detector import WeightedEBO
+from pytorch_ood.loss import VOSRegLoss
 from pytorch_ood.utils import OODMetrics, fix_random_seed
-
 
 device = "cuda:0"
 batch_size = 4
 num_epochs = 1
+lr = 0.0001
+num_classes = 13
 
 fix_random_seed(12345)
 g = torch.Generator()
@@ -59,14 +62,14 @@ def my_transform(img, target):
     return img, target
 
 
+def cosine_annealing(step, total_steps, lr_max, lr_min):
+    return lr_min + (lr_max - lr_min) * 0.5 * (1 + np.cos(step / total_steps * np.pi))
+
+
 # %%
 # Setup datasets, train on ood images for demonstration purposes.
-dataset = StreetHazards(
-    root="data", subset="test", transform=my_transform, download=True
-)
-dataset_test = StreetHazards(
-    root="data", subset="test", transform=my_transform, download=True
-)
+dataset = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
+dataset_test = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
 
 
 # %%
@@ -75,14 +78,23 @@ model = smp.FPN(
     encoder_name="resnet50",
     encoder_weights="imagenet",
     in_channels=3,
-    classes=13,
+    classes=num_classes,
 ).to(device)
 
 # %%
-# Train model for some epochs
+# Create neural network functions (layers)
+phi = torch.nn.Linear(1, 2).to(device)
+weights_energy = torch.nn.Linear(num_classes, 1).to(device)
+torch.nn.init.uniform_(weights_energy.weight)
 
-criterion = EntropicOpenSetLoss()
-optimizer = torch.optim.Adam(params=model.parameters(), lr=0.0001)
+criterion = VOSRegLoss(phi, weights_energy, device=device)
+
+
+# %%
+# Train model for some epochs
+optimizer = torch.optim.Adam(params=model.parameters(), lr=lr)
+
+
 loader = DataLoader(
     dataset,
     batch_size=batch_size,
@@ -90,6 +102,17 @@ loader = DataLoader(
     num_workers=10,
     worker_init_fn=fix_random_seed,
     generator=g,
+)
+
+# setup scheduler for optimizer (recommended)
+scheduler = torch.optim.lr_scheduler.LambdaLR(
+    optimizer,
+    lr_lambda=lambda step: cosine_annealing(
+        step,
+        num_epochs * len(loader),
+        1,  # since lr_lambda computes multiplicative factor
+        1e-6 / lr,
+    ),
 )
 
 ious = []
@@ -105,6 +128,7 @@ for epoch in range(num_epochs):
         loss = criterion(y_hat, y)
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         tp, fp, fn, tn = smp.metrics.get_stats(
             y_hat.softmax(dim=1).max(dim=1).indices.long(),
@@ -126,10 +150,8 @@ for epoch in range(num_epochs):
 # Evaluate
 print("Evaluating")
 model.eval()
-loader = DataLoader(
-    dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g
-)
-detector = Entropy(model)
+loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
+detector = WeightedEBO(model, weights_energy)
 metrics = OODMetrics(mode="segmentation")
 
 with torch.no_grad():
@@ -148,4 +170,4 @@ print(metrics.compute())
 
 # %%
 # Output:
-#   {'AUROC': 0.9705050587654114, 'AUPR-IN': 0.3917403519153595, 'AUPR-OUT': 0.9997314214706421, 'FPR95TPR': 0.10926716774702072}
+# {'AUROC': 0.9346237778663635, 'AUPR-IN': 0.15255042910575867, 'AUPR-OUT': 0.9993401169776917, 'FPR95TPR': 0.18086743354797363}

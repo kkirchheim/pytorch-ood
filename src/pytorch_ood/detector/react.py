@@ -10,12 +10,13 @@
     :exclude-members: fit, fit_features, predict_features
 
 """
-from typing import TypeVar, Callable
-from torch import Tensor
 import logging
+from typing import Callable, TypeVar
+
+from torch import Tensor
 
 from ..api import Detector
-from pytorch_ood.detector import EnergyBased
+from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -48,8 +49,13 @@ class ReAct(Detector):
     :see Paper: `ArXiv <https://arxiv.org/abs/2111.12797>`__
     """
 
-    def __init__(self, backbone: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor],
-                 threshold: float = 1.0, detector: Callable[[Tensor], Tensor] = None):
+    def __init__(
+        self,
+        backbone: Callable[[Tensor], Tensor],
+        head: Callable[[Tensor], Tensor],
+        threshold: float = 1.0,
+        detector: Callable[[Tensor], Tensor] = None,
+    ):
         """
         :param backbone: first part of model to use, should output feature maps
         :param head: second part of model used after applying ash, should output logits

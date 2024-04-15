@@ -3,6 +3,7 @@ import unittest
 import torch
 
 from src.pytorch_ood.loss import OutlierExposureLoss
+from tests.helpers.model import SegmentationModel
 
 
 class TestOutlierExposure(unittest.TestCase):
@@ -34,3 +35,19 @@ class TestOutlierExposure(unittest.TestCase):
         loss = criterion(logits, target)
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)
+
+
+    def test_segmentation_with_unknown(self):
+        model = SegmentationModel()
+        criterion = OutlierExposureLoss(reduction="none")
+        x = torch.randn(size=(10, 3, 32, 32))
+        target = torch.zeros(size=(10, 32, 32)).long()
+        target[0, 0, 0] = -1
+
+        logits = model(x)
+        loss = criterion(logits, target)
+        print(loss)
+        self.assertEqual(loss.shape, (10, 32, 32))
+        self.assertNotEqual(loss[0, 0, 0], 0)
+        loss.mean().backward()
+        
