@@ -135,7 +135,8 @@ class OODMetrics(object):
         """
         super(OODMetrics, self).__init__()
         self.device = device
-        self.buffer = TensorBuffer(device=self.device)
+        # always buffer on cpu to not exhaust gpu mem
+        self.buffer = TensorBuffer(device="cpu")
 
         if mode not in ["segmentation", "classification"]:
             raise ValueError("mode must be 'segmentation' or 'classification'")
