@@ -39,8 +39,8 @@ class EnergyRegularizedLoss(nn.Module):
     def __init__(
         self,
         alpha: float = 1.0,
-        margin_in: float = 1.0,
-        margin_out: float = 1.0,
+        margin_in: float = -1.0,
+        margin_out: float = -1.0,
         reduction: str = "mean",
     ):
         """
@@ -70,10 +70,30 @@ class EnergyRegularizedLoss(nn.Module):
         energy = torch.zeros(logits.shape[0]).to(logits.device)
 
         known = is_known(y)
-        if known.any():
-            energy[known] = (_energy(logits[is_known(y)]) - self.m_in).relu().pow(2)
 
-        if (~known).any():
-            energy[~known] = (self.m_out - _energy(logits[is_unknown(y)])).relu().pow(2)
+        # for classification
+        if len(logits.shape) == 2:
+            if known.any():
+                energy[known] = (_energy(logits[is_known(y)]) - self.m_in).relu().pow(2)
+
+            if (~known).any():
+                energy[~known] = (self.m_out - _energy(logits[is_unknown(y)])).relu().pow(2)
+
+        # for segmentation
+        elif len(logits.shape) == 4:
+            logits_form = logits.permute(0, 2, 3, 1)
+            if is_known(y).any():
+                energy_in = (_energy(logits_form[is_known(y)]) - self.m_in).relu().pow(2).mean()
+            else:
+                energy_in = 0
+            if is_unknown(y).any():
+                energy_out = (
+                    (_energy(self.m_out - logits_form[is_unknown(y)])).relu().pow(2).mean()
+                )
+            else:
+                energy_out = 0
+            energy = energy_in + energy_out
+        else:
+            raise ValueError(f"Unsupported input shape: {logits.shape}")
 
         return energy
