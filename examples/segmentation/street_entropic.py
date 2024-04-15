@@ -32,7 +32,6 @@ from pytorch_ood.detector import Entropy
 from pytorch_ood.loss import EntropicOpenSetLoss
 from pytorch_ood.utils import OODMetrics, fix_random_seed
 
-
 device = "cuda:0"
 batch_size = 4
 num_epochs = 1
@@ -61,12 +60,8 @@ def my_transform(img, target):
 
 # %%
 # Setup datasets, train on ood images for demonstration purposes.
-dataset = StreetHazards(
-    root="data", subset="test", transform=my_transform, download=True
-)
-dataset_test = StreetHazards(
-    root="data", subset="test", transform=my_transform, download=True
-)
+dataset = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
+dataset_test = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
 
 
 # %%
@@ -126,9 +121,7 @@ for epoch in range(num_epochs):
 # Evaluate
 print("Evaluating")
 model.eval()
-loader = DataLoader(
-    dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g
-)
+loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
 detector = Entropy(model)
 metrics = OODMetrics(mode="segmentation")
 

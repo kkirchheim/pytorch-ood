@@ -86,7 +86,7 @@ class DICE(Detector):
         known = is_known(y)
 
         if not known.any():
-            raise ValueError(f"No IN data")
+            raise ValueError("No IN data")
 
         z = z[known]
 

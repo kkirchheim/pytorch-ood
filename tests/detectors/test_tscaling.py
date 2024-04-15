@@ -1,11 +1,11 @@
 import unittest
 
 import torch
-
-from src.pytorch_ood.detector import TemperatureScaling
-from src.pytorch_ood.api import RequiresFittingException
-from tests.helpers import ClassificationModel, sample_dataset
 from torch.utils.data import DataLoader
+
+from src.pytorch_ood.api import RequiresFittingException
+from src.pytorch_ood.detector import TemperatureScaling
+from tests.helpers import ClassificationModel, sample_dataset
 
 
 class TestTScaling(unittest.TestCase):
@@ -23,8 +23,7 @@ class TestTScaling(unittest.TestCase):
             y = detector(x)
 
     def test_input(self):
-        """
-        """
+        """ """
         model = ClassificationModel()
         detector = TemperatureScaling(model)
 
@@ -39,8 +38,7 @@ class TestTScaling(unittest.TestCase):
         self.assertIsNotNone(scores)
 
     def test_input2(self):
-        """
-        """
+        """ """
         model = ClassificationModel()
         detector = TemperatureScaling(model)
 

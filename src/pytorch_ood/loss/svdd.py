@@ -85,7 +85,10 @@ class DeepSVDDLoss(torch.nn.Module):
 
     @staticmethod
     def svdd_loss(
-        x: Tensor, center: ClassCenters, radius: Tensor = 0.0, y: Optional[Tensor] = None
+        x: Tensor,
+        center: ClassCenters,
+        radius: Tensor = 0.0,
+        y: Optional[Tensor] = None,
     ) -> Tensor:
         """
         Calculates the loss. Treats all IN samples equally, and ignores all OOD samples.

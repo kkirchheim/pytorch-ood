@@ -83,7 +83,6 @@ class VOSRegLoss(nn.Module):
         # Permutation depends on shape of logits
 
         if len(logits.shape) == 4:
-
             logits_form = logits.permute(0, 2, 3, 1)
         else:
             logits_form = logits
@@ -107,7 +106,6 @@ class VOSRegLoss(nn.Module):
         return lr_reg_loss
 
     def _energy(self, logits, dim=1, keepdim=False):
-
         """Numerically stable implementation of the operation
         value.exp().sum(dim, keepdim).log()
         """

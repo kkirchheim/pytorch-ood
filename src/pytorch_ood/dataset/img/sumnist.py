@@ -34,7 +34,7 @@ class SuMNIST(Dataset):
 
     files = {
         "b-test.npz": "85a544301eff979e252b8946e31fd795",
-        "b-train.npz":    "44b6208a8675df1a78c981b5ad8c4e50",
+        "b-train.npz": "44b6208a8675df1a78c981b5ad8c4e50",
         "x-test.npz": "7db6727ec075cca1bb4dd0881087ac57",
         "x-train.npz": "c087f1c74a6f7ffcad9956be6f99cf10",
         "y-test.npz": "7239555b3d809657c06fbbc8da6f3e5e",
@@ -64,22 +64,22 @@ class SuMNIST(Dataset):
 
         if train:
             with np.load(join(self.root, "x-train.npz")) as data:
-                self.x = torch.tensor(data['arr_0'])
+                self.x = torch.tensor(data["arr_0"])
 
             with np.load(join(self.root, "y-train.npz")) as data:
-                self.y = torch.tensor(data['arr_0'])
+                self.y = torch.tensor(data["arr_0"])
 
             with np.load(join(self.root, "b-train.npz")) as data:
-                self.b = torch.tensor(data['arr_0'])
+                self.b = torch.tensor(data["arr_0"])
         else:
             with np.load(join(self.root, "x-test.npz")) as data:
-                self.x = torch.tensor(data['arr_0'])
+                self.x = torch.tensor(data["arr_0"])
 
             with np.load(join(self.root, "y-test.npz")) as data:
-                self.y = torch.tensor(data['arr_0'])
+                self.y = torch.tensor(data["arr_0"])
 
             with np.load(join(self.root, "b-test.npz")) as data:
-                self.b = torch.tensor(data['arr_0'])
+                self.b = torch.tensor(data["arr_0"])
 
     def __len__(self):
         return len(self.x)

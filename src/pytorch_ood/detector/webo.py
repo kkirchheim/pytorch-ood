@@ -109,7 +109,11 @@ class WeightedEBO(Detector):
             tmp_scores_ = logits.permute(0, 2, 3, 1)
 
             conf = torch.log(
-                torch.sum((F.relu(weights.weight) * torch.exp(tmp_scores_)), dim=3, keepdim=False)
+                torch.sum(
+                    (F.relu(weights.weight) * torch.exp(tmp_scores_)),
+                    dim=3,
+                    keepdim=False,
+                )
             )
 
             return -conf

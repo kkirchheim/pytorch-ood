@@ -172,13 +172,13 @@ from .fooling import FoolingImages
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from .mnistc import MNISTC
 from .mvtech import MVTechAD
+from .ninco import NINCO
 from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
+from .openood import OpenImagesO, Places365, iNaturalist
 from .pixmix import FeatureVisDataset, FractalDataset, PixMixDataset
 from .streethazards import StreetHazards
+from .sumnist import SuMNIST
 from .textures import Textures
 from .tinyimagenet import TinyImageNet
 from .tinyimages import TinyImages, TinyImages300k
-from .openood import OpenImagesO, iNaturalist, Places365
-from .ninco import NINCO
-from .sumnist import SuMNIST

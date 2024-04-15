@@ -10,12 +10,12 @@
 
 """
 import logging
-from typing import TypeVar, Callable
+from typing import Callable, TypeVar
 
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader
 
-from pytorch_ood.api import RequiresFittingException, Detector, ModelNotSetException
+from pytorch_ood.api import Detector, ModelNotSetException, RequiresFittingException
 from pytorch_ood.utils import extract_features, is_known
 
 log = logging.getLogger(__name__)
@@ -38,6 +38,7 @@ class KNN(Detector):
 
     :see PMLR: `arXiv <https://proceedings.mlr.press/v162/sun22d.html>`__
     """
+
     def __init__(self, model: Callable[[Tensor], Tensor], **knn_kwargs):
         """
         :param model: neural network to use
@@ -49,7 +50,7 @@ class KNN(Detector):
         try:
             from sklearn.neighbors import NearestNeighbors
         except ImportError:
-            raise Exception(f"You have to install scikit-learn to use this detector")
+            raise Exception("You have to install scikit-learn to use this detector")
 
         self.knn: NearestNeighbors = NearestNeighbors(n_neighbors=1, n_jobs=-1, **knn_kwargs)
 
@@ -72,7 +73,9 @@ class KNN(Detector):
         if not self._is_fitted:
             raise RequiresFittingException()
 
-        dist, idx = self.knn.kneighbors(z.detach().cpu().numpy(), n_neighbors=1, return_distance=True)
+        dist, idx = self.knn.kneighbors(
+            z.detach().cpu().numpy(), n_neighbors=1, return_distance=True
+        )
 
         return tensor(dist)
 
@@ -86,7 +89,7 @@ class KNN(Detector):
         known = is_known(labels)
 
         if not known.any():
-            raise ValueError(f"No IN samples")
+            raise ValueError("No IN samples")
 
         self.knn.fit(z[known].numpy())
 

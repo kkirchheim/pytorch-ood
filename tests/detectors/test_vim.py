@@ -16,7 +16,6 @@ class TestViM(unittest.TestCase):
     """
 
     def test_classification_input(self):
-
         model = ClassificationModel(n_hidden=10)
         w = model.classifier.weight.data
         b = model.classifier.bias.data
@@ -62,7 +61,10 @@ class TestViM(unittest.TestCase):
         model.eval()
 
         detector = ViM(
-            model.features, d=5, w=model.classifier.weight.data, b=model.classifier.bias.data
+            model.features,
+            d=5,
+            w=model.classifier.weight.data,
+            b=model.classifier.bias.data,
         )
 
         with torch.no_grad():
@@ -102,7 +104,10 @@ class TestViM(unittest.TestCase):
         y = torch.ones(size=(128,)) * -1
 
         detector = ViM(
-            model.features, d=5, w=model.classifier.weight.data, b=model.classifier.bias.data
+            model.features,
+            d=5,
+            w=model.classifier.weight.data,
+            b=model.classifier.bias.data,
         )
         detector.fit(train_loader)
 
