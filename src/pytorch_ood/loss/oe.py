@@ -69,16 +69,22 @@ class OutlierExposureLoss(nn.Module):
 
         # for segmentation
         elif len(logits.shape) == 4:
+
             loss_ce = cross_entropy(logits, target, reduction=None)
+            # move class axis to the back
             logits = logits.permute(0, 2, 3, 1)
+
             if contains_unknown(target):
                 unknown = is_unknown(target)
-                loss_oe = -(logits[unknown].mean(dim=1) - torch.logsumexp(logits[unknown], dim=1))
+                # mean over class axis
+                loss_oe = -(logits.mean(dim=-1) - torch.logsumexp(logits, dim=-1))
+
+                fp32zero = torch.zeros((1,), dtype=torch.float, device=logits.device)
+                loss_oe = torch.where(target.float() < 0, loss_oe, fp32zero)
+
             else:
                 loss_oe = torch.zeros(logits.shape[:3], device=logits.device)
 
-            # print(loss_ce.shape)
-            # print(loss_oe.shape)
             return apply_reduction(loss_ce + self.alpha * loss_oe, reduction=self.reduction)
         else:
             raise ValueError(f"Unsupported input shape: {logits.shape}")
