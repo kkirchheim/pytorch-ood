@@ -10,7 +10,6 @@
 
 # when executing examples creates a data folder
 data/
-src/pytorch_ood/utils/coco/__dev_theo/
 
 # User-specific stuff
 .idea/**/workspace.xml
