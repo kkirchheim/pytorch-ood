@@ -1,12 +1,12 @@
 import unittest
 
 import torch
-from helpers.model import ConvClassifier
 from torch.utils.data import DataLoader, TensorDataset
 
 from src.pytorch_ood.api import RequiresFittingException
 from src.pytorch_ood.detector import MultiMahalanobis
 from tests.helpers import ClassificationModel
+from tests.helpers.model import ConvClassifier
 
 
 class MultiMahalanobisTest(unittest.TestCase):
