@@ -95,6 +95,10 @@ Mahalanobis Distance (MD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.mahalanobis
 
+Multi-Layer Mahalanobis Distance (MD)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.mmahalanobis
+
 
 Relative Mahalanobis Distance (RMD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -142,6 +146,7 @@ from .knn import KNN
 from .mahalanobis import Mahalanobis
 from .maxlogit import MaxLogit
 from .mcd import MCD
+from .mmahalanobis import MultiMahalanobis
 from .odin import ODIN, odin_preprocessing
 from .openmax import OpenMax
 from .react import ReAct
