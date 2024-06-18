@@ -9,45 +9,19 @@
     :members:
 """
 import logging
-from typing import Callable, List, Optional, Tuple, TypeVar
+from typing import List, TypeVar
 
 import torch
 from torch import Tensor
-from torch.nn import Sequential
+from torch.nn import Module, Sequential
 from torch.utils.data import DataLoader
 
 from ..api import Detector, ModelNotSetException, RequiresFittingException
-from ..utils import TensorBuffer, contains_unknown, extract_features, is_known
+from ..utils import contains_unknown, extract_feature_avg
 
 log = logging.getLogger(__name__)
 
 Self = TypeVar("Self")
-
-
-def extract_feature_avg(
-    data_loader: DataLoader, model: Callable[[Tensor], Tensor], device: Optional[str]
-) -> Tuple[Tensor, Tensor]:
-    buffer = TensorBuffer()
-
-    with torch.no_grad():
-        for batch in data_loader:
-            x, y = batch
-            x = x.to(device)
-            y = y.to(device)
-            known = is_known(y)
-            if known.any():
-                z = model(x[known])
-
-                z = z.mean(dim=(2, 3)).view(known.sum(), -1)
-                buffer.append("embedding", z)
-                buffer.append("label", y[known])
-
-        if buffer.is_empty():
-            raise ValueError("No IN instances in loader")
-
-    z = buffer.get("embedding")
-    y = buffer.get("label")
-    return z, y
 
 
 class MultiMahalanobis(Detector):
@@ -55,11 +29,11 @@ class MultiMahalanobis(Detector):
     Implements the Mahalanobis Method from the paper *A Simple Unified Framework for Detecting
     Out-of-Distribution Samples and Adversarial Attacks* which supports several layers.
 
-    For each of the given layers, method calculates a class center :math:`\\mu_y` for each class,
-    and a shared covariance matrix :math:`\\Sigma` from the data.
-    The pay-layer outlier scores are calculated as
+    For each of the given :math:`i` layers, the method calculates a class center :math:`\\mu_{iy}` for each class,
+    and a shared covariance matrix :math:`\\Sigma_i` from the data.
+    The per-layer outlier scores are calculated as
 
-    .. math :: - \\max_k \\lbrace (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k) \\rbrace
+    .. math :: M_i(x) = - \\max_k \\lbrace (f_i(x) - \\mu_{ik})^{\\top} \\Sigma_i^{-1} (f_i(x) - \\mu_{ik}) \\rbrace
 
     The final outlier score is the sum of all scores, weighted by :math:`\\alpha`.
 
@@ -72,10 +46,10 @@ class MultiMahalanobis(Detector):
     :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
     """
 
-    def __init__(self, model: List[Callable[[Tensor], Tensor]], alpha: List[float] = None):
+    def __init__(self, model: List[Module], alpha: List[float] = None):
         """
-        :param model: the Neural Network, should output features
-        :param alpha: weights for individual layers
+        :param model: the neural network layers :math:`f_1(\\cdot),...,f_n(\\cdot)`, output of one will be used as input to the next.
+        :param alpha: weighting of the individual layers. Defaults to uniform weighting.
         """
         super(MultiMahalanobis, self).__init__()
 
@@ -84,20 +58,20 @@ class MultiMahalanobis(Detector):
 
         self.model = model
 
-        # parameters of gaussians
+        # parameters of Gaussians
         self.mu: List[Tensor] = []  #: Centers
-        self.cov: List[Tensor] = []  #: Covariance Matrix
-        self.precision: List[Tensor] = []  #: Precision Matrix
+        self.cov: List[Tensor] = []  #: Covariance Matrices
+        self.precision: List[Tensor] = []  #: Precision Matrices
 
         if alpha is None:
             # uniform weighting by default if alpha is not given
             alpha = [1.0] * len(model)
 
-        self.alpha = alpha  #: Weighting of the gaussians
+        self.alpha = alpha  #: Per-layer weighting factors
 
     def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
         """
-        Fit parameters of the multi variate gaussian.
+        Fit one gaussian to the features of each layer. Will average over feature maps.
 
         :param data_loader: dataset to fit on.
         :param device: device to use
@@ -111,11 +85,11 @@ class MultiMahalanobis(Detector):
         zs = []
 
         for layer_idx in range(len(self.model)):
-            # This could be done more efficiently
+            # NOTE: this could be done more efficiently
             model = Sequential(*self.model[: layer_idx + 1])
-            log.info(f"Extracting for layer {layer_idx}")
+            log.debug(f"Extracting for layer {layer_idx}")
             z, y = extract_feature_avg(data_loader, model, device)
-            log.info(f"Extracted {z.shape} features for {y.shape[0]} samples.")
+            log.debug(f"Extracted {z.shape} features for {y.shape[0]} samples.")
 
             zs.append(z)
 
@@ -123,7 +97,7 @@ class MultiMahalanobis(Detector):
 
     def fit_features(self: Self, zs: List[Tensor], y: Tensor, device: str = None) -> Self:
         """
-        Fit parameters of the multi variate gaussian.
+        Fit parameters of the multi variate gaussians.
 
         :param zs: list of features for each layer
         :param y: class labels
@@ -134,7 +108,6 @@ class MultiMahalanobis(Detector):
             device = zs[0].device
             log.warning(f"No device given. Will use '{device}'.")
 
-        # zs = [z.to(device) for z in zs]
         y = y.to(device)
 
         classes = y.unique()
@@ -195,6 +168,7 @@ class MultiMahalanobis(Detector):
         ODIN preprocessing will not be applied.
 
         :param zs: list of per-layer features
+        :param device: device to use for computations
         """
         if not self.mu:
             raise RequiresFittingException
@@ -207,11 +181,10 @@ class MultiMahalanobis(Detector):
         scores = torch.empty(batch_size, len(zs), device=device)
 
         for layer_idx, z in enumerate(zs):
+            org_device = z.device
             z = z.to(device)
             md_k = self._calc_gaussian_scores(z, layer_idx)
-
-            # offload again
-            z = z.cpu()
+            z = z.to(org_device)
 
             score = -torch.max(md_k, dim=1).values
             scores[:, layer_idx] = self.alpha[layer_idx] * score
@@ -233,14 +206,11 @@ class MultiMahalanobis(Detector):
         device = x.device
 
         for layer_idx in range(len(self.model)):
-            # This could be done more efficiently
+            # NOTE: This could be done more efficiently
             model = Sequential(*self.model[: layer_idx + 1])
             z = model(x)
             # TODO: use mean over feature planes?
             z = z.mean(dim=(2, 3)).view(z.shape[0], -1)
-            # log.info(f"Extracted {z.shape} features")
-            # offload to cpu
-            # z = z.cpu()
             zs.append(z)
 
         return self.predict_features(zs, device=device)

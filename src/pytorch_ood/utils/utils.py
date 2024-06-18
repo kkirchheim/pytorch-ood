@@ -281,6 +281,42 @@ def fix_random_seed(seed: int = 12345) -> None:
     np.random.seed(seed)
 
 
+def extract_feature_avg(
+    data_loader: DataLoader, model: Callable[[Tensor], Tensor], device: Optional[str]
+) -> Tuple[Tensor, Tensor]:
+    """
+    Helper to extract features from model. Will compute mean over feature maps. Ignores OOD inputs.
+
+    :param data_loader: dataset to extract from
+    :param model: neural network to pass inputs to
+    :param device: device used for calculations
+    :return: Tuple with outputs and labels
+    """
+    # TODO: add option to buffer to GPU
+    buffer = TensorBuffer()
+
+    with torch.no_grad():
+        for batch in data_loader:
+            x, y = batch
+            x = x.to(device)
+            y = y.to(device)
+            known = is_known(y)
+            if known.any():
+                z = model(x[known])
+
+                # average and flatten
+                z = z.mean(dim=(2, 3)).view(known.sum(), -1)
+                buffer.append("embedding", z)
+                buffer.append("label", y[known])
+
+        if buffer.is_empty():
+            raise ValueError("No IN instances in loader")
+
+    z = buffer.get("embedding")
+    y = buffer.get("label")
+    return z, y
+
+
 def extract_features(
     data_loader: DataLoader, model: Callable[[Tensor], Tensor], device: Optional[str]
 ) -> Tuple[Tensor, Tensor]:
