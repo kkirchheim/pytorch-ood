@@ -151,7 +151,7 @@ def torch_get_distances(centers, embeddings):
 
 def pairwise_distances(x: Tensor, y: Tensor = None) -> Tensor:
     """
-    Calculate pairwise squared euclidean distance by quadratic expansion.
+    Calculate pairwise squared Euclidean distance by quadratic expansion.
 
     :param x: is a :math:`N \\times D` matrix
     :param y:  :math:`M \\times D` matrix
@@ -168,7 +168,7 @@ def pairwise_distances(x: Tensor, y: Tensor = None) -> Tensor:
         y_t = torch.transpose(x, 0, 1)
         y_norm = x_norm.view(1, -1)
     dist = x_norm + y_norm - 2.0 * torch.mm(x, y_t)
-    return torch.clamp(dist, 0.0, np.Inf)
+    return torch.clamp(dist, 0.0, np.inf)
 
 
 class TensorBuffer(object):
