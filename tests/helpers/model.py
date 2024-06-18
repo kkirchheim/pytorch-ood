@@ -30,3 +30,22 @@ class SegmentationModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.p(x)
+
+
+class ConvClassifier(torch.nn.Module):
+    def __init__(self, in_channels=3, out_channels=16, n_hidden=10, num_outputs=3):
+        super(ConvClassifier, self).__init__()
+        self.layer1 = torch.nn.Conv2d(
+            in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=1
+        )
+        self.pool = torch.nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.dropout = torch.nn.Dropout(p=0.5)
+        self.classifier = torch.nn.Linear(n_hidden, num_outputs)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.layer1(x)
+        x = self.pool(x)
+        print(x.shape)
+        x = self.dropout(x)
+        x = self.classifier(x)
+        return x
