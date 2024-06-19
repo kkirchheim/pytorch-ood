@@ -28,7 +28,7 @@ class TinyImages(Dataset):
 
     ..  warning::
         The use of this dataset is discouraged by the authors.
-        If you are insterested in the underlying reasonse, see *Large image datasets:
+        If you are interested in the underlying reasons, see *Large image datasets:
         A pyrrhic win for computer vision?*
 
     """
