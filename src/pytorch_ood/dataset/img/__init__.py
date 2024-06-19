@@ -81,6 +81,13 @@ CIFAR100-C
 ..  autoclass:: pytorch_ood.dataset.img.CIFAR100C
     :members:
 
+
+CIFAR100-GAN
+````````````````````````````
+.. autoclass:: pytorch_ood.dataset.img.CIFAR100GAN
+    :members:
+
+
 ImageNet-C
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.ImageNetC
@@ -101,36 +108,30 @@ Chars74k
 ..  autoclass:: pytorch_ood.dataset.img.Chars74k
     :members:
 
-
 PixMix
 ``````````````````````````
 ..  autoclass:: pytorch_ood.dataset.img.PixMixDataset
     :members:
-
 
 Fractals
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.FractalDataset
     :members:
 
-
 Fooling Images
 ````````````````
 ..  autoclass:: pytorch_ood.dataset.img.FoolingImages
     :members:
-
 
 NINCO
 ````````````
 ..  autoclass:: pytorch_ood.dataset.img.NINCO
     :members:
 
-
 Feature Visualizations
 ``````````````````````````
 ..  autoclass:: pytorch_ood.dataset.img.FeatureVisDataset
     :members:
-
 
 Gaussian Noise
 ``````````````````````````
@@ -155,7 +156,6 @@ MVTech-AD
 ..  autoclass:: pytorch_ood.dataset.img.MVTechAD
     :members:
 
-
 Object Detection
 ----------------------
 
@@ -164,11 +164,11 @@ SuMNIST
 ..  autoclass:: pytorch_ood.dataset.img.SuMNIST
     :members:
 
-
 """
 from .chars74k import Chars74k
 from .cifar import CIFAR10C, CIFAR100C
 from .fooling import FoolingImages
+from .goe import CIFAR100GAN
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from .mnistc import MNISTC
 from .mvtech import MVTechAD
