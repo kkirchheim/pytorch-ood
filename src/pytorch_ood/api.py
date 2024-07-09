@@ -24,7 +24,13 @@ class ModelNotSetException(ValueError):
     def __init__(self, msg="When using predict(), model must not be None"):
         super(ModelNotSetException, self).__init__(msg)
 
+class AlreadyFittedException(Exception):
+    """
+    Raised when fit is called on a detector that has already been fitted.
+    """
 
+    def __init__(self, msg="Detector has already been fitted."):
+        super(AlreadyFittedException, self).__init__(msg)
 class Detector(ABC):
     """
     Abstract Base Class for an Out-of-Distribution Detector

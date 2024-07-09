@@ -53,7 +53,7 @@ class Mahalanobis(Detector):
         :param eps: magnitude for gradient based input preprocessing
         :param norm_std: Standard deviations for input normalization
         """
-        super(Mahalanobis, self).__init__()
+        super().__init__()
         self.model = model
         self.mu: Tensor = None  #: Centers
         self.cov: Tensor = None  #: Covariance Matrix

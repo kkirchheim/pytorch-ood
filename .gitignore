@@ -258,3 +258,8 @@ cython_debug/
 .gitignore
 .github/workflows/python-package.yml
 docs/sg_execution_times.rst
+Dockerfile
+docker-compose.yml
+devcontainer.json
+conditionalmahalanobis.*
+test_conditionalmahalanobis.py

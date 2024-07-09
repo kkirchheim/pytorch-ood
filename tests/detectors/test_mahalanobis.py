@@ -42,3 +42,20 @@ class MahalanobisTest(unittest.TestCase):
 
         with self.assertRaises(RequiresFittingException):
             model(x)
+            
+    def test_mu_shape(self):
+        number_classes = 5
+        embedding_size = 10
+        nn = ClassificationModel(num_inputs=30, num_outputs=number_classes, embedding_dim=embedding_size)
+
+        x = torch.randn(size=(64,30))
+        y = torch.randint(0, number_classes, (64,))
+        dataset = TensorDataset(x, y)
+        loader = DataLoader(dataset,batch_size=64)
+
+        model = Mahalanobis(nn.encoder)
+        model.fit(loader)
+        
+        self.assertEqual(model.mu.shape[0], number_classes)
+        self.assertEqual(model.mu.shape[1], embedding_size)
+        

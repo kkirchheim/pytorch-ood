@@ -156,3 +156,4 @@ from .softmax import MaxSoftmax
 from .tscaling import TemperatureScaling
 from .vim import ViM
 from .webo import WeightedEBO
+from .distance2clusters import Distance2Clusters
