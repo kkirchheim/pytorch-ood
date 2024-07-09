@@ -1,12 +1,12 @@
 import logging
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Optional, Tuple
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 
 from pytorch_ood.utils import extract_features, is_known, contains_unknown
-from pytorch_ood.api import ModelNotSetException, Detector, RequiresFittingException
+from pytorch_ood.api import  Detector, RequiresFittingException
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -17,62 +17,39 @@ def _circfuncs_common(samples, high, low):
     return samples, sin_samp, cos_samp
 
 def circmean(samples, high=2*torch.pi, low=0, axis=None):
+    "Compute the circular mean of a set of samples. Assumes samples are in radians."
     samples, sin_samp, cos_samp = _circfuncs_common(samples, high, low)
     sin_sum = torch.sum(sin_samp, axis)
     cos_sum = torch.sum(cos_samp, axis)
     res = torch.atan2(sin_sum, cos_sum) % (2*torch.pi)
     return res * (high - low) / (2. * torch.pi) + low
 import logging
-from typing import Callable, TypeVar, Optional, Tuple
 
-import torch
-from torch import Tensor
-from torch.utils.data import DataLoader
-
-from pytorch_ood.utils import extract_features
-from pytorch_ood.api import Detector, RequiresFittingException
-
-log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 class Distance2Clusters(Detector):
-    """
-    Implements Distance to Clusters OOD detection.
-
-    This method calculates the distance to the nearest cluster center for each sample.
-    The distance is measured as the angle between the input features and the cluster centers.
-    It supports multiple subclusters per class for more fine-grained modeling.
-    Ideally, the cluster centers should be given to the model as they are the weights of the final layer of the model.
-    One can use pytorch_metric_learning library to train with ArcFace Loss to get the cluster centers.
-
-    Attributes:
-        model (Callable[[Tensor], Tensor]): The feature extraction model.
-        subclusters (int): The number of subclusters per class.
-        return_cluster_index (bool): Whether to return the index of the nearest cluster.
-        clusters (Optional[Tensor]): The cluster centers after fitting.
-        n_classes (Optional[int]): The number of classes in the dataset.
-    """
-
     def __init__(
         self,
         model: Callable[[Tensor], Tensor],
+        cluster_centers: Optional[Tensor] = None,
         subclusters: int = 1,
-        return_cluster_index: bool = False
+        n_classes: Optional[int] = None,
+        return_cluster_index: bool = False,
     ):
-        """
-        Initialize the Distance2Clusters detector.
-
-        Args:
-            model (Callable[[Tensor], Tensor]): The feature extraction model.
-            subclusters (int, optional): The number of subclusters per class. Defaults to 1.
-            return_cluster_index (bool, optional): Whether to return the index of the nearest cluster. Defaults to False.
-        """
         super().__init__()
         self.model = model
+        self.cluster_centers = cluster_centers
         self.subclusters = subclusters
+        self.n_classes = n_classes
         self.return_cluster_index = return_cluster_index
-        self.clusters: Optional[Tensor] = None
-        self.n_classes: Optional[int] = None
+        if self.cluster_centers is not None:
+            self.sanity_check()
+
+    def sanity_check(self):
+        if self.cluster_centers is None:
+            return
+        n_clusters = self.n_classes * self.subclusters
+        self.cluster_centers = torch.nn.functional.normalize(self.cluster_centers, p=2, dim=1)
+        assert n_clusters == self.cluster_centers.shape[1], "Number of clusters should be equal to n_classes * subclusters"
 
     def fit(self, data_loader: DataLoader, device: Optional[str] = None) -> Self:
         """
@@ -148,23 +125,16 @@ class Distance2Clusters(Detector):
         Raises:
             RequiresFittingException: If the detector hasn't been fitted yet.
         """
-        if self.clusters is None:
+        if self.cluster_centers is None:
             raise RequiresFittingException("Model needs to be fitted before prediction.")
 
-        # Normalize input features
         x_norm = torch.nn.functional.normalize(x, p=2, dim=1)
-        
-        # Calculate cosine similarity
-        cos_sim = torch.matmul(x_norm, self.clusters.T)
-        
-        # Convert to angles (in degrees)
+        cos_sim = torch.matmul(x_norm, self.cluster_centers)
         angles = torch.arccos(cos_sim.clamp(-1, 1)) * (180 / torch.pi)
 
         if y is None:
-            # If no labels provided, find the minimum distance to any cluster
             distances, indices = torch.min(angles, dim=1)
         else:
-            # If labels provided, only consider subclusters of the given class
             angles = angles.view(x.shape[0], self.n_classes, self.subclusters)
             relevant_angles = angles[torch.arange(x.shape[0]), y]
             distances, indices = torch.min(relevant_angles, dim=1)
