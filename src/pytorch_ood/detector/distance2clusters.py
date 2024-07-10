@@ -57,12 +57,10 @@ class Distance2Clusters(Detector):
 
         This method extracts features from the data loader and calls fit_features.
 
-        Args:
-            data_loader (DataLoader): The data loader containing the training data.
-            device (Optional[str], optional): The device to use for computations. Defaults to None.
-
-        Returns:
-            Self: The fitted detector.
+        :param data_loader: The data loader containing the training data.
+        :param device: The device to use for computations. Defaults to None.
+        
+        :returns: The fitted detector.
         """
         raise NotImplemented # not tested yet
 
