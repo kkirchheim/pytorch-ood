@@ -76,13 +76,11 @@ class Distance2Clusters(Detector):
 
         This method calculates cluster centers for each class and subclass.
 
-        Args:
-            z (Tensor): The extracted features.
-            y (Tensor): The corresponding labels.
-            device (Optional[str], optional): The device to use for computations. Defaults to None.
+        :param z: The extracted features.
+        :param y: The corresponding labels.
+        :param device: The device to use for computations. Defaults to None.
 
-        Returns:
-            Self: The fitted detector.
+        :returns: Self: The fitted detector.
         """
         raise NotImplemented # not tested yet
         device = device or next(self.model.parameters()).device
@@ -113,17 +111,15 @@ class Distance2Clusters(Detector):
 
         This method calculates the angular distance between input features and cluster centers.
 
-        Args:
-            x (Tensor): The input features.
-            y (Optional[Tensor], optional): The corresponding labels. If provided, only considers
+        
+        :param x (Tensor): The input features.
+        :param y (Optional[Tensor], optional): The corresponding labels. If provided, only considers
                                             subclusters of the given class. Defaults to None.
 
-        Returns:
-            Tuple[Tensor, Optional[Tensor]]: The OOD scores (distances) and optionally the indices
+        :returns: The OOD scores (distances) and optionally the indices
                                              of the nearest clusters.
 
-        Raises:
-            RequiresFittingException: If the detector hasn't been fitted yet.
+        :raises: RequiresFittingException: If the detector hasn't been fitted yet.
         """
         if self.cluster_centers is None:
             raise RequiresFittingException("Model needs to be fitted before prediction.")
@@ -147,14 +143,11 @@ class Distance2Clusters(Detector):
 
         This method first extracts features using the model, then calls predict_features.
 
-        Args:
-            x (Tensor): The input samples.
-            y (Optional[Tensor], optional): The corresponding labels. If provided, only considers
+        :param x: The input samples.
+        :param y: The corresponding labels. If provided, only considers
                                             subclusters of the given class. Defaults to None.
 
-        Returns:
-            Tuple[Tensor, Optional[Tensor]]: The OOD scores (distances) and optionally the indices
-                                             of the nearest clusters.
+        :returns: The OOD scores (distances) and optionally the indices  of the nearest clusters.
         """
         z = self.model(x)
         return self.predict_features(z, y)

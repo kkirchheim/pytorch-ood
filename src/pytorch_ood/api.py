@@ -92,8 +92,7 @@ class Detector(ABC):
         """
         Prepare the object's state for pickling.
 
-        Returns:
-            Dict[str, Any]: A copy of the object's __dict__ with the PyTorch model handled separately.
+        :return: A copy of the object's __dict__ with the PyTorch model handled separately.
         """
         state = self.__dict__.copy()
         if hasattr(self, 'model') and isinstance(self.model, torch.nn.Module):
@@ -106,8 +105,7 @@ class Detector(ABC):
         """
         Restore the object's state after unpickling.
 
-        Args:
-            state (Dict[str, Any]): The unpickled state dictionary.
+        :param state: The unpickled state dictionary.
         """
         model_state_dict = state.pop('model_state_dict', None)
         model_class = state.pop('model_class', None)
@@ -121,12 +119,10 @@ class Detector(ABC):
         """
         Load a detector from a file.
 
-        Args:
-            path (str): The path to the file.
-
-        Returns:
-            Self: The loaded detector.
+        :param path: The path to the file.
+        :return: The loaded detector.
         """
+        
         import pickle
         with open(path, 'rb') as f:
             return pickle.load(f)
@@ -135,8 +131,8 @@ class Detector(ABC):
         """
         Save the detector to a file.
 
-        Args:
-            path (str): The path to the file.
+        :param path: The path to the file.
+        :return: None
         """
         import pickle
         with open(path, 'wb') as f:
