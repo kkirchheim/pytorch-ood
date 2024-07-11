@@ -154,6 +154,17 @@ VOS Energy-Based Loss
     :members:
 
 
+VIRTUALOUTLIERSYNTHESIZER
+----------------------------------------------
+
+.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
+   :alt: classification badge
+.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
+   :alt: classification badge
+
+.. autoclass:: pytorch_ood.loss.VIRTUALOUTLIERSYNTHESIZER
+    :members:
+
 MCHAD Loss
 ----------------------------------------------
 
@@ -193,4 +204,4 @@ from .oe import OutlierExposureLoss
 
 # from .triplet import TripletLoss
 from .svdd import DeepSVDDLoss, SSDeepSVDDLoss
-from .vos import VOSRegLoss
+from .vos import VOSRegLoss, VIRTUALOUTLIERSYNTHESIZER
