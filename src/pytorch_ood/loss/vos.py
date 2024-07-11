@@ -140,17 +140,20 @@ class VIRTUALOUTLIERSYNTHESIZER:
         num_classes,
         num_input_last_layer,
         fc,
-        start_epoch=40,
         sample_number=1000,
         select=1,
         sample_from=10000,
         loss_weight=0.1,
     ) -> None:
+        # TODO :
+        # device3 als param
+        # keine epochen
+        # keine deutschen kommentare
+        # elim doppelter ConnectionAbortedErrorcall VOS REGLOS
         """
         :param num_classes: number of classes
         :param num_input_last_layer: number of input in the last layer of the network
         :param fc: fully connected last layer of the network
-        :param start_epoch: start epoch of virtual outlier synthesis
         :param sample_number: number of samples that are used for virtual outlier synthesis
         :param select: number of highes density samples that are used for virtual outlier synthesis
         :param sample_from: number of samples that are used for sampling the probability distribution
@@ -158,7 +161,6 @@ class VIRTUALOUTLIERSYNTHESIZER:
         self.num_classes = num_classes
         self.num_input_last_layer = num_input_last_layer
         self.fc = fc
-        self.start_epoch = start_epoch
         self.sample_number = sample_number
         self.select = select
         self.sample_from = sample_from
@@ -175,7 +177,7 @@ class VIRTUALOUTLIERSYNTHESIZER:
         logistic_regression = torch.nn.Linear(1, 2)
         self.logistic_regression = logistic_regression.cuda()
 
-    def __call__(self, prediction, second_last_layer_output, target, epoch_number):
+    def forward(self, prediction, features, target):
         # energy regularization.
         sum_temp = 0
         for index in range(self.num_classes):
@@ -187,9 +189,7 @@ class VIRTUALOUTLIERSYNTHESIZER:
             for index in range(len(target)):
                 dict_key = target_numpy[index]  #  in dict key ist die klasse
                 if self.number_dict[dict_key] < self.sample_number:
-                    self.data_dict[dict_key][
-                        self.number_dict[dict_key]
-                    ] = second_last_layer_output[index].detach()
+                    self.data_dict[dict_key][self.number_dict[dict_key]] = features[index].detach()
                     self.number_dict[dict_key] += 1
         # case enough samples collected
         else:
@@ -202,7 +202,7 @@ class VIRTUALOUTLIERSYNTHESIZER:
                 self.data_dict[dict_key] = torch.cat(
                     (
                         self.data_dict[dict_key][1:],
-                        second_last_layer_output[index].detach().view(1, -1),
+                        features[index].detach().view(1, -1),
                     ),
                     0,
                 )
@@ -252,7 +252,7 @@ class VIRTUALOUTLIERSYNTHESIZER:
                     input_for_lr = torch.cat((energy_score_for_fg, energy_score_for_bg), -1)
                     labels_for_lr = torch.cat(
                         (
-                            torch.ones(len(second_last_layer_output)).cuda(),
+                            torch.ones(len(features)).cuda(),
                             torch.zeros(len(ood_samples)).cuda(),
                         ),
                         -1,
@@ -262,7 +262,7 @@ class VIRTUALOUTLIERSYNTHESIZER:
                     output1 = self.logistic_regression(input_for_lr.view(-1, 1))
                     lr_reg_loss = criterion(output1, labels_for_lr.long())
 
-        print(lr_reg_loss)
+        return lr_reg_loss
 
     # duplicate of the _energy function in VOSRegLoss
     # TODO refactor

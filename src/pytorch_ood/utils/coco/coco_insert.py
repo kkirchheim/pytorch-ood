@@ -26,6 +26,7 @@ class InsertCOCO:
     ):
         self.coco_dir = coco_dir
         # check if dataset is known
+        # TODO: oder klassen als array bekommen
         if dataset not in ["bddAnomaly", "Streethazards"]:
             raise ValueError(
                 "Unknown dataset! Please choose between 'bddAnomaly' and 'Streethazards'!"
@@ -145,6 +146,7 @@ class InsertCOCO:
 
         return annott_img_arr
 
+    # TODO md5 sum
     def check_dataset(self):
         return False if not os.path.exists(self.annotation_dir) else True
 

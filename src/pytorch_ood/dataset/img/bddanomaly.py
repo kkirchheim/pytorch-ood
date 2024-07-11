@@ -143,7 +143,8 @@ class BDDAnomaly(ImageDatasetBase):
             # print(file)
             if file.startswith(folder_path):
                 zip_file.extract(join(self.root, file))  #
-        os.rename(join(self.root, "anomaly-seg-master/seg"), join(self.root, "seg"))
+        # TODO nicht umbenennen
+        os.rename(join(self.root, "anomaly-seg-master", "seg"), join(self.root, "seg"))
         # clean up
         shutil.rmtree(join(self.root, "anomaly-seg-master"))
         # TODO download dataset from http://bdd-data.berkeley.edu/download.html
@@ -206,7 +207,7 @@ class BDDAnomaly(ImageDatasetBase):
                 else:
                     in_count += 1
                     _files.append(dict_entry)
-
+        # TODO logging
         print("total images in = {} and out =  {}".format(in_count, out_count))
 
         # save odgt files
@@ -218,6 +219,7 @@ class BDDAnomaly(ImageDatasetBase):
         # TODO check if numbers of images per odgt is correct
         pass
 
+    # TODO check tqpm
     # code snippet from https://github.com/hendrycks/anomaly-seg/blob/master/create_dataset.py
     def convert_bdd(self, ann_dir):
         for img_loc in tqdm(os.listdir(join(self.root, ann_dir))):
