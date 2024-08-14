@@ -13,7 +13,7 @@ from ..utils import apply_reduction, is_known, is_unknown
 
 class VOSRegLoss(nn.Module):
     """
-    Implements the loss function of  *VOS: Learning what you don’t know by virtual outlier synthesis* without the synthesising of virtual outlier.
+    Implements a loss function, that is inspired by the loss function from  *VOS: Learning what you don’t know by virtual outlier synthesis* without the synthesising of virtual outlier.
 
     Adds a regularization term to the cross-entropy that aims to increase the (weighted) energy gap between
     IN and OOD samples.
@@ -65,7 +65,7 @@ class VOSRegLoss(nn.Module):
         """
         super(VOSRegLoss, self).__init__()
         self.logistic_regression = logistic_regression
-        self.weights_energy: torch.nn.Linear = weights_energy  #: weights for energy
+        self.weights_energy: torch.nn.Linear = weights_energy  
         self.alpha = alpha
         self.device = device
         self.reduction = reduction
@@ -84,6 +84,11 @@ class VOSRegLoss(nn.Module):
         )
 
     def _regularization(self, logits, y):
+        """
+       
+        :param logits: logits
+        :param y: labels
+        """
         # Permutation depends on shape of logits
 
         if len(logits.shape) == 4:
@@ -97,6 +102,12 @@ class VOSRegLoss(nn.Module):
         return self._calculate_reg_loss(energy_x_in, energy_v_out, energy_x_in, energy_v_out)
 
     def _calculate_reg_loss(self,energy_score_for_fg,energy_score_for_bg,features,ood_samples):
+        """
+        :param energy_score_for_fg: energy score for in-of-distribution samples
+        :param energy_score_for_bg: energy score for out-of-distribution samples
+        :param features: features of in-of-distribution samples
+        :param ood_samples: out-of-distribution samples
+        """
         input_for_lr = torch.cat((energy_score_for_fg, energy_score_for_bg), -1)
         labels_for_lr = torch.cat(
             (
@@ -113,6 +124,10 @@ class VOSRegLoss(nn.Module):
     def _energy(self, logits, dim=1, keepdim=False):
         """
         Numerically stable implementation of the energy calculation
+        :param logits: logits
+        :param dim: dimension to reduce
+        :param keepdim: keep dimension
+        
         """
         m, _ = torch.max(logits, dim=dim, keepdim=True)
         value0 = logits - m
@@ -141,33 +156,45 @@ class VIRTUALOUTLIERSYNTHESIZER(VOSRegLoss):
     Adds a regularization term to the cross-entropy that aims to increase the (weighted) energy gap between
     IN and OOD samples (which are synthesised from the IN data).
     
+    For more information see :class:`pytorch_ood.loss.vos.VOSRegLoss` and the paper.
+    
+    :see Paper:
+        `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
+
+    :see Implementation:
+        `GitHub <https://github.com/deeplearning-wisc/vos/>`__
+    
+    
     """
     def __init__(
         self,
-        logistic_regression,
-        weights_energy,
-        device,
-        num_classes,
-        num_input_last_layer,
-        fc,
-        alpha=0.1,
-        reduction="mean",
-        sample_number=1000,
-        select=1,
-        sample_from=10000,
-        loss_weight=0.1,
+        logistic_regression: torch.nn.Linear,
+        weights_energy: torch.nn.Linear,
+        device :str,
+        num_classes :int,
+        num_input_last_layer: int,
+        fc:torch.nn.Linear,
+        alpha:float=0.1,
+        reduction:str="mean",
+        sample_number:int =1000,
+        select:int =1,
+        sample_from:int =10000,
     ) -> None:
         # TODO :
-        # device3 als param
         # keine epochen
         # keine deutschen kommentare
         # elim doppelter ConnectionAbortedErrorcall VOS REGLOS
         """
+        :param logistic_regression: :math:`\\phi` function. Can be for example a linear layer.
+        :param weights_energy: neural network layer, with weights for the energy
+        :param device: For example ``cpu`` or ``cuda:0``
         :param num_classes: number of classes
-        :param num_input_last_layer: number of input in the last layer of the network
+        :param num_input_last_layer: number of inputs in the last layer of the network
         :param fc: fully connected last layer of the network
+        :param alpha: weighting parameter
+        :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
         :param sample_number: number of samples that are used for virtual outlier synthesis
-        :param select: number of highes density samples that are used for virtual outlier synthesis
+        :param select: number of highest density samples that are used for virtual outlier synthesis
         :param sample_from: number of samples that are used for sampling the probability distribution
         """
         super(VIRTUALOUTLIERSYNTHESIZER, self).__init__(logistic_regression,
@@ -181,7 +208,6 @@ class VIRTUALOUTLIERSYNTHESIZER(VOSRegLoss):
         self.sample_number = sample_number
         self.select = select
         self.sample_from = sample_from
-        self.loss_weight = loss_weight
 
         self.number_dict = {}
         for i in range(num_classes):
@@ -189,12 +215,12 @@ class VIRTUALOUTLIERSYNTHESIZER(VOSRegLoss):
         self.data_dict = torch.zeros(
             num_classes, self.sample_number, self.num_input_last_layer
         ).to(self.device)
-        # 128 ist die input anzahl der vorletzten schicht
-        self.eye_matrix = torch.eye(self.num_input_last_layer, device="cuda")
-        # logistic_regression = torch.nn.Linear(1, 2)
-        # self.logistic_regression = logistic_regression.to(self.device)
-
+        self.eye_matrix = torch.eye(self.num_input_last_layer, device=self.device)
+        
     def forward(self, logits, features, y):
+        # check for outlier targets (negative values)
+        if torch.any(y < 0):
+            raise ValueError("Outlier targets in VIRTUALOUTLIERSYNTHESIZER. This loss function only supports inlier targets.")
         regularization = self._regularization(logits, features, y)
         loss = self.nll(logits, y, reduction=self.reduction)
         return apply_reduction(loss, self.reduction) + apply_reduction(
