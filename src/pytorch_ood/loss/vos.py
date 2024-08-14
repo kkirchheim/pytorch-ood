@@ -218,6 +218,11 @@ class VIRTUALOUTLIERSYNTHESIZER(VOSRegLoss):
         self.eye_matrix = torch.eye(self.num_input_last_layer, device=self.device)
         
     def forward(self, logits, features, y):
+        """
+        :param logits: logits
+        :param features: features
+        :param y: labels
+        """
         # check for outlier targets (negative values)
         if torch.any(y < 0):
             raise ValueError("Outlier targets in VIRTUALOUTLIERSYNTHESIZER. This loss function only supports inlier targets.")
@@ -227,11 +232,21 @@ class VIRTUALOUTLIERSYNTHESIZER(VOSRegLoss):
             self.alpha * regularization, self.reduction)
     
     def _regularization(self, prediction, features, target):
+        """
+        :param prediction: logits
+        :param features: features
+        :param target: labels
+        """
         if len(target.shape) == 3:
             return self._regularization_segmentation(prediction, features, target) 
         else:
             return self._regularization_classification(prediction, features, target)
     def _regularization_classification(self, prediction, features, target):    
+        """
+        :param prediction: logits
+        :param features: features
+        :param target: labels
+        """
         # energy regularization.
         sum_temp = 0
         for index in range(self.num_classes):
@@ -308,4 +323,9 @@ class VIRTUALOUTLIERSYNTHESIZER(VOSRegLoss):
         return lr_reg_loss
         
     def _regularization_segmentation(self,prediction, features, target):
+        """
+        :param prediction: logits
+        :param features: features
+        :param target: labels
+        """
         raise NotImplementedError("Segmentation not implemented yet")
