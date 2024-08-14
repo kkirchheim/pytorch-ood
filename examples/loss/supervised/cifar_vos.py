@@ -17,7 +17,7 @@ from torchvision.transforms.functional import pad, to_tensor
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
 
 from pytorch_ood.detector import WeightedEBO
-from pytorch_ood.loss import VIRTUALOUTLIERSYNTHESIZER, CrossEntropyLoss
+from pytorch_ood.loss import VIRTUALOUTLIERSYNTHESIZER
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, fix_random_seed, ToUnknown
 from torchvision.datasets import CIFAR10,CIFAR100
