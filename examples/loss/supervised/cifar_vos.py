@@ -2,7 +2,7 @@
 Virtual  Outlier Synthesizer Loss
 -------------------------------------
 
-We train a model with class:´VIRTUALOUTLIERSYNTHESIZER´ on the CIFAR10.
+We train a model with :class:`Virtual Outlier Synthesizer Loss<pytorch_ood.loss.vos.VirtualOutlierSynthesizingRegLoss>` on the CIFAR10.
 
 We then use the :class:`WeightedEBO<pytorch_ood.detector.WeightedEBO>` OOD detector.
 
@@ -17,7 +17,7 @@ from torchvision.transforms.functional import pad, to_tensor
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
 
 from pytorch_ood.detector import WeightedEBO
-from pytorch_ood.loss import VIRTUALOUTLIERSYNTHESIZER
+from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, fix_random_seed, ToUnknown
 from torchvision.datasets import CIFAR10,CIFAR100
@@ -85,7 +85,7 @@ phi = torch.nn.Linear(1, 2).to(device)
 weights_energy = torch.nn.Linear(num_classes, 1).to(device)
 torch.nn.init.uniform_(weights_energy.weight)
 
-criterion = VIRTUALOUTLIERSYNTHESIZER(phi, weights_energy, device=device,
+criterion = VirtualOutlierSynthesizingRegLoss(phi, weights_energy, device=device,
                                       num_classes=num_classes,
                                       num_input_last_layer= 128, 
                                       fc = model.fc,

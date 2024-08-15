@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import VOSRegLoss, VIRTUALOUTLIERSYNTHESIZER
+from src.pytorch_ood.loss import VOSRegLoss, VirtualOutlierSynthesizingRegLoss
 from tests.helpers.model import ClassificationModel , SegmentationModel
 
 torch.manual_seed(123)
@@ -73,9 +73,9 @@ class TestVOSRegularization(unittest.TestCase):
         loss.mean().backward()
 
 
-class TestVIRTUALOUTLIERSYNTHESIZER(unittest.TestCase):
+class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
     """
-    Test code for VIRTUALOUTLIERSYNTHESIZER Loss
+    Test code for VirtualOutlierSynthesizingRegLoss 
     """
 
     def init_loss(self, num_classes, reduction="mean", alpha=0.1):
@@ -83,7 +83,7 @@ class TestVIRTUALOUTLIERSYNTHESIZER(unittest.TestCase):
         torch.nn.init.uniform_(weights_energy.weight)
         phi = torch.nn.Linear(1, 2).cpu()
         model=ClassificationModel()
-        criterion = VIRTUALOUTLIERSYNTHESIZER(phi, weights_energy, alpha=alpha, device="cpu", reduction=reduction,
+        criterion = VirtualOutlierSynthesizingRegLoss(phi, weights_energy, alpha=alpha, device="cpu", reduction=reduction,
                                               num_classes=num_classes,
                                             num_input_last_layer= 10, 
                                             fc = model.classifier,
@@ -115,7 +115,7 @@ class TestVIRTUALOUTLIERSYNTHESIZER(unittest.TestCase):
         
         with self.assertRaises(ValueError) as context:
             loss    = criterion(logits, features, target)        
-        self.assertEqual(str(context.exception), "Outlier targets in VIRTUALOUTLIERSYNTHESIZER. This loss function only supports inlier targets.")
+        self.assertEqual(str(context.exception), "Outlier targets in VirtualOutlierSynthesizingRegLoss. This loss function only supports inlier targets.")
 
     def test_forward_set_alpha(self):
         criterion,model = self.init_loss(10,alpha=2)

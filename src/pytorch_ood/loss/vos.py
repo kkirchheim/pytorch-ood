@@ -149,14 +149,14 @@ Parts of this code are taken from
 https://github.com/deeplearning-wisc/vos/blob/6dd9c2748de1f261c0ae898df130ec9558c60268/classification/CIFAR/train_virtual.py
 """
 
-class VIRTUALOUTLIERSYNTHESIZER(VOSRegLoss):
+class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
     """
     Implements the loss function of  *VOS: Learning what you don’t know by virtual outlier synthesis* with the synthesising of virtual outlier.
 
     Adds a regularization term to the cross-entropy that aims to increase the (weighted) energy gap between
     IN and OOD samples (which are synthesised from the IN data).
     
-    For more information see :class:`pytorch_ood.loss.vos.VOSRegLoss` and the paper.
+    For more information see :class:`VOS Energy-Based Loss<pytorch_ood.loss.vos.VOSRegLoss>` and the paper.
     
     :see Paper:
         `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
@@ -197,7 +197,7 @@ class VIRTUALOUTLIERSYNTHESIZER(VOSRegLoss):
         :param select: number of highest density samples that are used for virtual outlier synthesis
         :param sample_from: number of samples that are used for sampling the probability distribution
         """
-        super(VIRTUALOUTLIERSYNTHESIZER, self).__init__(logistic_regression,
+        super(VirtualOutlierSynthesizingRegLoss, self).__init__(logistic_regression,
                                                         weights_energy,
                                                         device=device,
                                                         alpha=alpha,
@@ -225,7 +225,7 @@ class VIRTUALOUTLIERSYNTHESIZER(VOSRegLoss):
         """
         # check for outlier targets (negative values)
         if torch.any(y < 0):
-            raise ValueError("Outlier targets in VIRTUALOUTLIERSYNTHESIZER. This loss function only supports inlier targets.")
+            raise ValueError("Outlier targets in VirtualOutlierSynthesizingRegLoss. This loss function only supports inlier targets.")
         regularization = self._regularization(logits, features, y)
         loss = self.nll(logits, y, reduction=self.reduction)
         return apply_reduction(loss, self.reduction) + apply_reduction(
