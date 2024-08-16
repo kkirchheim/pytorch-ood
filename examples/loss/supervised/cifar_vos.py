@@ -17,6 +17,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.transforms.functional import pad, to_tensor
 
+from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import WeightedEBO
 from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss
 from pytorch_ood.model import WideResNet
@@ -56,7 +57,14 @@ def cosine_annealing(step, total_steps, lr_max, lr_min):
 trans = WideResNet.transform_for("cifar10-pt")
 
 dataset = CIFAR10(root="data", train=False, transform=trans, download=True)
-dataset_test = CIFAR100(root="data", transform=trans, target_transform=ToUnknown(), download=True)
+# dataset_test = CIFAR100(root="data", transform=trans, target_transform=ToUnknown(), download=True)
+# setup IN test data
+dataset_in_test = CIFAR10(root="data", train=False, transform=trans)
+
+# setup OOD test data, use ToUnknown() to mark labels as OOD
+dataset_out_test = Textures(
+    root="data", download=True, transform=trans, target_transform=ToUnknown()
+)
 
 
 loader = DataLoader(
@@ -87,6 +95,7 @@ criterion = VirtualOutlierSynthesizingRegLoss(
     fc=model.fc,
     sample_number=10,
     sample_from=20,
+    alpha=0,
 )
 
 # %%
@@ -106,18 +115,15 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(
         1e-6 / lr,
     ),
 )
-
-ious = []
 loss_ema = 0
-ioe_ema = 0
 
 for epoch in range(num_epochs):
     for n, (x, y) in enumerate(loader):
         optimizer.zero_grad()
         y, x = y.to(device), x.to(device)
 
-        y_hat = model(x)
         features = model.features(x)
+        y_hat = model.fc(features)
         loss = criterion(y_hat, features, y)
 
         loss.backward()
@@ -133,17 +139,17 @@ for epoch in range(num_epochs):
 # Evaluate
 print("Evaluating")
 model.eval()
-loader = DataLoader(dataset + dataset_test, batch_size=batch_size, num_workers=12)
+test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
 detector = WeightedEBO(model, weights_energy)
 metrics = OODMetrics(mode="classification")
 
 with torch.no_grad():
-    for n, (x, y) in enumerate(loader):
+    for n, (x, y) in enumerate(test_loader):
         y, x = y.to(device), x.to(device)
         o = detector(x)
 
         metrics.update(o, y)
         if n % 10 == 0:
-            print(f"Epoch {epoch:03d} [{n:05d}/{len(loader):05d}] ")
+            print(f"Epoch {epoch:03d} [{n:05d}/{len(test_loader):05d}] ")
 
 print(metrics.compute())
