@@ -12,10 +12,8 @@ TinyImages database, which contains random images scraped from the internet.
 """
 import numpy as np
 import torch
-from segmentation_models_pytorch.encoders import get_preprocessing_fn
 from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10, CIFAR100
-from torchvision.transforms.functional import pad, to_tensor
+from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import WeightedEBO
@@ -26,7 +24,7 @@ from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 device = "cuda:0"
 batch_size = 256 * 4
 num_epochs = 20
-lr = 0.0001
+lr = 0.01
 num_classes = 10
 
 fix_random_seed(12345)
@@ -35,19 +33,6 @@ g.manual_seed(0)
 
 
 # %%
-# Setup preprocessing
-preprocess_input = get_preprocessing_fn("resnet50", pretrained="imagenet")
-
-
-def my_transform(img, target):
-    img = to_tensor(img)[:3, :, :]  # drop 4th channel
-    img = torch.moveaxis(img, 0, -1)
-    img = preprocess_input(img)
-    img = torch.moveaxis(img, -1, 0)
-
-    return img.float(), target
-
-
 def cosine_annealing(step, total_steps, lr_max, lr_min):
     return lr_min + (lr_max - lr_min) * 0.5 * (1 + np.cos(step / total_steps * np.pi))
 
@@ -56,7 +41,7 @@ def cosine_annealing(step, total_steps, lr_max, lr_min):
 # Setup datasets, train on cifar.
 trans = WideResNet.transform_for("cifar10-pt")
 
-dataset = CIFAR10(root="data", train=False, transform=trans, download=True)
+dataset = CIFAR10(root="data", train=True, transform=trans, download=True)
 # dataset_test = CIFAR100(root="data", transform=trans, target_transform=ToUnknown(), download=True)
 # setup IN test data
 dataset_in_test = CIFAR10(root="data", train=False, transform=trans)
@@ -93,9 +78,9 @@ criterion = VirtualOutlierSynthesizingRegLoss(
     num_classes=num_classes,
     num_input_last_layer=128,
     fc=model.fc,
-    sample_number=10,
-    sample_from=20,
-    alpha=0,
+    sample_number=100,
+    sample_from=200,
+    alpha=0.1,
 )
 
 # %%
@@ -141,7 +126,7 @@ print("Evaluating")
 model.eval()
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
 detector = WeightedEBO(model, weights_energy)
-metrics = OODMetrics(mode="classification")
+metrics = OODMetrics()
 
 with torch.no_grad():
     for n, (x, y) in enumerate(test_loader):
@@ -153,3 +138,5 @@ with torch.no_grad():
             print(f"Epoch {epoch:03d} [{n:05d}/{len(test_loader):05d}] ")
 
 print(metrics.compute())
+
+# {'AUROC': 0.7461214065551758, 'AUPR-IN': 0.5747935771942139, 'AUPR-OUT': 0.8320741057395935, 'FPR95TPR': 0.7110999822616577}
