@@ -11,6 +11,7 @@ towards the corresponding center :math:`\\mu_y`.
 Here, we train the model for 10 epochs on the CIFAR10 dataset, using a backbone pre-trained on the
 :math:`32 \\times 32` resized version of the ImageNet as a foundation.
 """
+
 import torch
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -44,9 +45,7 @@ dataset_out_test = Textures(
 
 # create data loaders
 train_loader = DataLoader(dataset_in_train, batch_size=64, shuffle=True, num_workers=16)
-test_loader = DataLoader(
-    dataset_in_test + dataset_out_test, batch_size=64, num_workers=16
-)
+test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64, num_workers=16)
 
 # %%
 # Create DNN, pretrained on the imagenet excluding cifar10 classes.
@@ -65,7 +64,7 @@ scheduler = CosineAnnealingLR(opti, T_max=n_epochs * len(train_loader))
 
 def test():
     metrics = OODMetrics()
-    acc = Accuracy(num_classes=10)
+    acc = Accuracy(num_classes=10, task="multiclass")
 
     model.eval()
 
@@ -91,7 +90,6 @@ def test():
 # Start training
 
 for epoch in range(n_epochs):
-    print(f"Epoch {epoch}")
     loss_ema = 0
 
     with tqdm(train_loader, desc=f"Epoch {epoch}") as bar:
@@ -107,11 +105,12 @@ for epoch in range(n_epochs):
             opti.step()
             scheduler.step()
 
-            loss_ema = (
-                loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
-            )
-            bar.set_postfix_str(
-                f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}"
-            )
+            loss_ema = loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
+            bar.set_postfix_str(f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}")
 
-    test()
+        test()
+
+# %%
+# {'AUROC': 0.8958120346069336, 'AUPR-IN': 0.8456918001174927, 'AUPR-OUT': 0.8196930885314941, 'FPR95TPR': 0.5187000036239624}
+#
+# Accuracy: 93.80%
