@@ -65,7 +65,7 @@ class VOSRegLoss(nn.Module):
         """
         super(VOSRegLoss, self).__init__()
         self.logistic_regression = logistic_regression
-        self.weights_energy: torch.nn.Linear = weights_energy  
+        self.weights_energy: torch.nn.Linear = weights_energy
         self.alpha = alpha
         self.device = device
         self.reduction = reduction
@@ -85,7 +85,7 @@ class VOSRegLoss(nn.Module):
 
     def _regularization(self, logits, y):
         """
-       
+
         :param logits: logits
         :param y: labels
         """
@@ -101,7 +101,7 @@ class VOSRegLoss(nn.Module):
 
         return self._calculate_reg_loss(energy_x_in, energy_v_out, energy_x_in, energy_v_out)
 
-    def _calculate_reg_loss(self,energy_score_for_fg,energy_score_for_bg,features,ood_samples):
+    def _calculate_reg_loss(self, energy_score_for_fg, energy_score_for_bg, features, ood_samples):
         """
         :param energy_score_for_fg: energy score for in-of-distribution samples
         :param energy_score_for_bg: energy score for out-of-distribution samples
@@ -127,7 +127,7 @@ class VOSRegLoss(nn.Module):
         :param logits: logits
         :param dim: dimension to reduce
         :param keepdim: keep dimension
-        
+
         """
         m, _ = torch.max(logits, dim=dim, keepdim=True)
         value0 = logits - m
@@ -144,10 +144,12 @@ class VOSRegLoss(nn.Module):
             )
         )
 
+
 """
 Parts of this code are taken from
 https://github.com/deeplearning-wisc/vos/blob/6dd9c2748de1f261c0ae898df130ec9558c60268/classification/CIFAR/train_virtual.py
 """
+
 
 class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
     """
@@ -155,30 +157,31 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
 
     Adds a regularization term to the cross-entropy that aims to increase the (weighted) energy gap between
     IN and OOD samples (which are synthesised from the IN data).
-    
+
     For more information see :class:`VOS Energy-Based Loss<pytorch_ood.loss.vos.VOSRegLoss>` and the paper.
-    
+
     :see Paper:
         `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
 
     :see Implementation:
         `GitHub <https://github.com/deeplearning-wisc/vos/>`__
-    
-    
+
+
     """
+
     def __init__(
         self,
         logistic_regression: torch.nn.Linear,
         weights_energy: torch.nn.Linear,
-        device :str,
-        num_classes :int,
+        device: str,
+        num_classes: int,
         num_input_last_layer: int,
-        fc:torch.nn.Linear,
-        alpha:float=0.1,
-        reduction:str="mean",
-        sample_number:int =1000,
-        select:int =1,
-        sample_from:int =10000,
+        fc: torch.nn.Linear,
+        alpha: float = 0.1,
+        reduction: str = "mean",
+        sample_number: int = 1000,
+        select: int = 1,
+        sample_from: int = 10000,
     ) -> None:
         # TODO :
         # keine epochen
@@ -197,11 +200,9 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         :param select: number of highest density samples that are used for virtual outlier synthesis
         :param sample_from: number of samples that are used for sampling the probability distribution
         """
-        super(VirtualOutlierSynthesizingRegLoss, self).__init__(logistic_regression,
-                                                        weights_energy,
-                                                        device=device,
-                                                        alpha=alpha,
-                                                        reduction=reduction)
+        super(VirtualOutlierSynthesizingRegLoss, self).__init__(
+            logistic_regression, weights_energy, device=device, alpha=alpha, reduction=reduction
+        )
         self.num_classes = num_classes
         self.num_input_last_layer = num_input_last_layer
         self.fc = fc
@@ -216,7 +217,7 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
             num_classes, self.sample_number, self.num_input_last_layer
         ).to(self.device)
         self.eye_matrix = torch.eye(self.num_input_last_layer, device=self.device)
-        
+
     def forward(self, logits, features, y):
         """
         :param logits: logits
@@ -225,12 +226,15 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         """
         # check for outlier targets (negative values)
         if torch.any(y < 0):
-            raise ValueError("Outlier targets in VirtualOutlierSynthesizingRegLoss. This loss function only supports inlier targets.")
+            raise ValueError(
+                "Outlier targets in VirtualOutlierSynthesizingRegLoss. This loss function only supports inlier targets."
+            )
         regularization = self._regularization(logits, features, y)
         loss = self.nll(logits, y, reduction=self.reduction)
         return apply_reduction(loss, self.reduction) + apply_reduction(
-            self.alpha * regularization, self.reduction)
-    
+            self.alpha * regularization, self.reduction
+        )
+
     def _regularization(self, prediction, features, target):
         """
         :param prediction: logits
@@ -238,10 +242,11 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         :param target: labels
         """
         if len(target.shape) == 3:
-            return self._regularization_segmentation(prediction, features, target) 
+            return self._regularization_segmentation(prediction, features, target)
         else:
             return self._regularization_classification(prediction, features, target)
-    def _regularization_classification(self, prediction, features, target):    
+
+    def _regularization_classification(self, prediction, features, target):
         """
         :param prediction: logits
         :param features: features
@@ -254,11 +259,9 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         lr_reg_loss = torch.zeros(1).to(self.device)[0]
         # case not enough samples are collected --> fill data_dict
         if sum_temp != self.num_classes * self.sample_number:
-            target_numpy = target.cpu().data.numpy()            
+            target_numpy = target.cpu().data.numpy()
             for index in range(len(target)):
-                dict_key = target_numpy[index]  #  in dict key ist die klasse
-                # print(dict_key)
-                # print(self.number_dict)
+                dict_key = target_numpy[index]  # get class id
                 if self.number_dict[dict_key] < self.sample_number:
                     self.data_dict[dict_key][self.number_dict[dict_key]] = features[index].detach()
                     self.number_dict[dict_key] += 1
@@ -279,20 +282,18 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
                 )
             # start epoch is reached and enough samples are collected
             # if epoch_number >= self.start_epoch:
-                # the covariance finder needs the data to be centered.
+            # the covariance finder needs the data to be centered.
             for index in range(self.num_classes):
                 if index == 0:
                     X = self.data_dict[index] - self.data_dict[index].mean(0)
                     mean_embed_id = self.data_dict[index].mean(0).view(1, -1)
                 else:
-                    X = torch.cat(
-                        (X, self.data_dict[index] - self.data_dict[index].mean(0)), 0
-                    )
+                    X = torch.cat((X, self.data_dict[index] - self.data_dict[index].mean(0)), 0)
                     mean_embed_id = torch.cat(
                         (mean_embed_id, self.data_dict[index].mean(0).view(1, -1)), 0
                     )
 
-            ## add the variance.
+            # add the variance.
             temp_precision = torch.mm(X.t(), X) / len(X)
             temp_precision += 0.0001 * self.eye_matrix
 
@@ -315,14 +316,16 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
                 # add some gaussian noise
                 energy_score_for_fg = self._energy(prediction, 1)
                 predictions_ood = self.fc(ood_samples)
-                
+
                 energy_score_for_bg = self._energy(predictions_ood, 1)
 
-                lr_reg_loss= self._calculate_reg_loss(energy_score_for_fg,energy_score_for_bg,features,ood_samples)
+                lr_reg_loss = self._calculate_reg_loss(
+                    energy_score_for_fg, energy_score_for_bg, features, ood_samples
+                )
 
         return lr_reg_loss
-        
-    def _regularization_segmentation(self,prediction, features, target):
+
+    def _regularization_segmentation(self, prediction, features, target):
         """
         :param prediction: logits
         :param features: features

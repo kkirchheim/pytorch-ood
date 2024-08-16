@@ -12,23 +12,21 @@ TinyImages database, which contains random images scraped from the internet.
 """
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
-from torchvision.transforms.functional import pad, to_tensor
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
+from torch.utils.data import DataLoader
+from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.detector import WeightedEBO
 from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss
 from pytorch_ood.model import WideResNet
-from pytorch_ood.utils import OODMetrics, fix_random_seed, ToUnknown
-from torchvision.datasets import CIFAR10,CIFAR100
-
-
+from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
 device = "cuda:0"
-batch_size = 256*4
+batch_size = 256 * 4
 num_epochs = 20
 lr = 0.0001
-num_classes = 10 
+num_classes = 10
 
 fix_random_seed(12345)
 g = torch.Generator()
@@ -61,7 +59,6 @@ dataset = CIFAR10(root="data", train=False, transform=trans, download=True)
 dataset_test = CIFAR100(root="data", transform=trans, target_transform=ToUnknown(), download=True)
 
 
-
 loader = DataLoader(
     dataset,
     batch_size=batch_size,
@@ -73,11 +70,7 @@ loader = DataLoader(
 
 # %%
 # Setup model
-model = WideResNet(
-    num_classes=num_classes,
-    in_channels=3,
-    depth=10
-).to(device)
+model = WideResNet(num_classes=num_classes, in_channels=3, depth=10).to(device)
 
 # %%
 # Create neural network functions (layers)
@@ -85,19 +78,22 @@ phi = torch.nn.Linear(1, 2).to(device)
 weights_energy = torch.nn.Linear(num_classes, 1).to(device)
 torch.nn.init.uniform_(weights_energy.weight)
 
-criterion = VirtualOutlierSynthesizingRegLoss(phi, weights_energy, device=device,
-                                      num_classes=num_classes,
-                                      num_input_last_layer= 128, 
-                                      fc = model.fc,
-                                      sample_number=10,
-                                      sample_from=20)
+criterion = VirtualOutlierSynthesizingRegLoss(
+    phi,
+    weights_energy,
+    device=device,
+    num_classes=num_classes,
+    num_input_last_layer=128,
+    fc=model.fc,
+    sample_number=10,
+    sample_from=20,
+)
 
 # %%
 # Train model for some epochs
-optimizer = torch.optim.Adam(list(model.parameters()) + list(phi.parameters()) +list(weights_energy.parameters())
-                             , lr=lr)
-
-
+optimizer = torch.optim.Adam(
+    list(model.parameters()) + list(phi.parameters()) + list(weights_energy.parameters()), lr=lr
+)
 
 
 # setup scheduler for optimizer (recommended)
@@ -121,27 +117,23 @@ for epoch in range(num_epochs):
         y, x = y.to(device), x.to(device)
 
         y_hat = model(x)
-        features=model.features(x)
-        loss = criterion(y_hat,features ,y)
+        features = model.features(x)
+        loss = criterion(y_hat, features, y)
 
         loss.backward()
         optimizer.step()
         scheduler.step()
 
-     
-
         loss_ema = 0.8 * loss_ema + 0.2 * loss.item()
 
         if n % 10 == 0:
-            print(
-                f"Epoch {epoch:03d} [{n:05d}/{len(loader):05d}] \t Loss: {loss_ema:02.2f}"
-            )
+            print(f"Epoch {epoch:03d} [{n:05d}/{len(loader):05d}] \t Loss: {loss_ema:02.2f}")
 
 # %%
 # Evaluate
 print("Evaluating")
 model.eval()
-loader= DataLoader(dataset + dataset_test, batch_size=batch_size, num_workers=12)
+loader = DataLoader(dataset + dataset_test, batch_size=batch_size, num_workers=12)
 detector = WeightedEBO(model, weights_energy)
 metrics = OODMetrics(mode="classification")
 
@@ -149,12 +141,11 @@ with torch.no_grad():
     for n, (x, y) in enumerate(loader):
         y, x = y.to(device), x.to(device)
         o = detector(x)
-        
+
         metrics.update(o, y)
         if n % 10 == 0:
-            print(
-                f"Epoch {epoch:03d} [{n:05d}/{len(loader):05d}] "
-            )
+            print(f"Epoch {epoch:03d} [{n:05d}/{len(loader):05d}] ")
 
 print(metrics.compute())
 
+# flake8: noqa: E231
