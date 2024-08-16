@@ -147,5 +147,3 @@ with torch.no_grad():
             print(f"Epoch {epoch:03d} [{n:05d}/{len(loader):05d}] ")
 
 print(metrics.compute())
-
-# flake8: noqa: E231
