@@ -2,7 +2,6 @@ import os
 import random
 from os.path import join
 
-import cv2
 import numpy as np
 import torch
 from PIL import Image
@@ -25,6 +24,9 @@ class InsertCOCO:
         min_size_of_img=480,
     ):
         self.coco_dir = coco_dir
+        # check if coco_dir exists
+        if not os.path.exists(self.coco_dir):
+            os.makedirs(self.coco_dir)
         # check if dataset is known
         # TODO: oder klassen als array bekommen
         if dataset not in ["bddAnomaly", "Streethazards"]:
@@ -54,7 +56,7 @@ class InsertCOCO:
         )
 
         # if data not prepared
-        if self.check_dataset():
+        if not self.check_dataset():
             self.download_prepare_data()
         self.files = os.listdir(self.annotation_dir)
 
@@ -148,10 +150,10 @@ class InsertCOCO:
 
     # TODO md5 sum
     def check_dataset(self):
-        return False if not os.path.exists(self.annotation_dir) else True
+        return os.path.exists(self.annotation_dir)
 
     def download_prepare_data(self):
-        if not self._check_integrity():
+        if not self.check_dataset():
             self.download()
 
         tools = COCO(self.annotation_dir)
@@ -207,7 +209,9 @@ class InsertCOCO:
             for j in range(len(annotations)):
                 mask[tools.annToMask(annotations[j]) == 1] = self.out_class_label
 
-            cv2.imwrite(join(save_dir, "{:012d}.png".format(img_id)), mask)
+            image = Image.fromarray(mask)
+            save_path = join(save_dir, "{:012d}.png".format(img_id))
+            image.save(save_path)
 
     def _check_integrity(self) -> bool:
         fpath = os.path.join(self.root, self.filename)
@@ -215,10 +219,10 @@ class InsertCOCO:
 
     # TODO hübsch machen
     def download(self) -> None:
-        if self._check_integrity():
-            # log.debug("Files already downloaded and verified")
-            print("Files already downloaded and verified")
-            return
+        # if self._check_integrity():
+        #     # log.debug("Files already downloaded and verified")
+        #     print("Files already downloaded and verified")
+        #     return
         download_and_extract_archive(
             self.img_url, self.coco_dir, filename=f"train{str(self.year)}.zip"
         )
