@@ -8,6 +8,10 @@ from PIL import Image
 from pycocotools.coco import COCO
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
+# TODO:
+# - [ ] Add docstrings
+# - [ ] improve check sachen unterschied beim anfang, wann runterladen, wann preparen
+
 
 class InsertCOCO:
     def __init__(
@@ -203,6 +207,11 @@ class InsertCOCO:
                     usable_image_ids.append(img_id)
 
         # start ground truth segmentaion mask creation
+        print(f"COCOdir: {self.coco_dir}")
+        save_dir = join(
+            self.coco_dir, f"/annotations/for_{self.dataset}_seg_train{str(self.year)}"
+        )
+        print(f"save_dir: {save_dir}")
         os.makedirs(save_dir, exist_ok=True)
         for i, img_id in enumerate(usable_image_ids):
             img = tools.loadImgs(img_id)[0]
