@@ -162,6 +162,10 @@ class LostAndFound(Dataset):
 
     :see Paper: `ArXiv <https://arxiv.org/abs/1609.04653>`__
     :see Website: `Website <http://wwwlehre.dhbw-stuttgart.de/~sgehrig/lostAndFoundDataset/index.html>`__
+
+
+    .. warning:: The image with index 79 does not contain any outlier pixels.
+
     """
 
     annotation_url = (
