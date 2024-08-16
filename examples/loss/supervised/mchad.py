@@ -24,6 +24,7 @@ You can run this example with:
     python examples/loss/supervised/mchad.py
 
 """
+
 import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim import Adam
@@ -67,9 +68,7 @@ data_out_test = Textures(
 
 
 # create data loaders
-test_loader = DataLoader(
-    data_in_test + data_out_test, batch_size=batch_size, num_workers=16
-)
+test_loader = DataLoader(data_in_test + data_out_test, batch_size=batch_size, num_workers=16)
 
 data_out_train, _ = random_split(
     tiny300k, [len(data_in_train), len(tiny300k) - len(data_in_train)]
@@ -97,7 +96,7 @@ scheduler = CosineAnnealingLR(opti, T_max=n_epochs * len(train_loader))
 
 def test():
     metrics = OODMetrics()
-    acc = Accuracy(num_classes=10)
+    acc = Accuracy(num_classes=10, task="multiclass")
 
     model.eval()
 
@@ -121,7 +120,6 @@ def test():
 # Start training
 
 for epoch in range(n_epochs):
-    print(f"Epoch {epoch}")
     loss_ema = None
 
     with tqdm(train_loader, desc=f"Epoch {epoch}") as bar:
@@ -137,14 +135,10 @@ for epoch in range(n_epochs):
             opti.step()
             scheduler.step()
 
-            loss_ema = (
-                loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
-            )
-            bar.set_postfix_str(
-                f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}"
-            )
+            loss_ema = loss.item() if not loss_ema else 0.99 * loss_ema + 0.01 * loss.item()
+            bar.set_postfix_str(f"loss: {loss_ema:.3f} lr: {scheduler.get_last_lr()[0]:.6f}")
 
-    test()
+        test()
 
     # create new random split
     data_out_train, _ = random_split(
