@@ -45,7 +45,7 @@ class InsertCOCO:
         # download 2017 trainset
         # link http://images.cocodataset.org/zips/train2017.zip
         self.img_url = "http://images.cocodataset.org/zips/train2017.zip"
-        self.images_dir = join(self.coco_dir, f"train{str(self.year)}.json")
+        self.images_dir = join(self.coco_dir, f"train{str(self.year)}")
 
         # http://images.cocodataset.org/annotations/annotations_trainval2017.zip
         self.annottations_url = (
@@ -56,9 +56,12 @@ class InsertCOCO:
         )
 
         # if data not prepared
-        if not self.check_dataset():
-            self.download_prepare_data()
-        self.files = os.listdir(self.annotation_dir)
+        # if not self.check_dataset():
+        self.download_prepare_data()
+        self.files = os.listdir(join(self.coco_dir, f"train{str(self.year)}"))
+        self.annott = join(
+            self.coco_dir, f"/annotations/for_{self.dataset}_seg_train{str(self.year)}"
+        )
 
     # inspired from https://github.com/tla93/InpaintingOutlierSynthesis/blob/main/src/train_coco.py
     def __call__(self, img, segm):
@@ -150,16 +153,19 @@ class InsertCOCO:
 
     # TODO md5 sum
     def check_dataset(self):
-        return os.path.exists(self.annotation_dir)
+        return os.path.exists(
+            join(self.coco_dir, f"annotations/instances_train{str(self.year)}.json")
+        )
 
     def download_prepare_data(self):
         if not self.check_dataset():
             self.download()
 
-        tools = COCO(self.annotation_dir)
+        tools = COCO(join(self.coco_dir, f"annotations/instances_train{str(self.year)}.json"))
         save_dir = join(
             self.coco_dir, f"/annotations/for_{self.dataset}_seg_train{str(self.year)}"
         )
+        print(f"Creating segmentation masks for {self.dataset} in {save_dir}")
         # Classes that are also in the main dataset --> don't use these overlap_classes for coco outlier
         if self.dataset == "bddAnomaly":
             overlap_classes = ["train", "bicycle", "motorcycle"]
@@ -182,6 +188,7 @@ class InsertCOCO:
         for id in tools.getCatIds(catNms=overlap_classes):
             prohibet_image_ids.append(tools.getImgIds(catIds=id))
         # Eliminate duplications
+        prohibet_image_ids = [item for sublist in prohibet_image_ids for item in sublist]
         prohibet_image_ids = set(prohibet_image_ids)
 
         # find all usable images
@@ -189,7 +196,7 @@ class InsertCOCO:
         for image in os.listdir(self.images_dir):
             img_id = image[:-4]
             if int(img_id) not in prohibet_image_ids:
-                img = tools.loadImgs(img_id)[0]
+                img = tools.loadImgs(int(img_id))[0]
                 # check size of the image
                 if img["height"] >= self.min_size_of_img and img["width"] >= self.min_size_of_img:
                     # append image id
@@ -227,5 +234,7 @@ class InsertCOCO:
             self.img_url, self.coco_dir, filename=f"train{str(self.year)}.zip"
         )
         download_and_extract_archive(
-            self.url, self.coco_dir, filename=f"annotations_trainval{str(self.year)}.zip"
+            self.annottations_url,
+            self.coco_dir,
+            filename=f"annotations_trainval{str(self.year)}.zip",
         )
