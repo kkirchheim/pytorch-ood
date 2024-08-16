@@ -28,6 +28,7 @@ The original results can not be reproduced, as the dictionaries (word-to-token-m
 +-------------+-------+---------+----------+----------+
 
 """
+
 import pandas as pd
 import torch
 import torch.nn.functional as F
@@ -38,7 +39,6 @@ from tqdm import tqdm
 
 from pytorch_ood.dataset.txt import Multi30k, NewsGroup20, Reuters52, WMT16Sentences
 from pytorch_ood.detector import (
-    ODIN,
     EnergyBased,
     Entropy,
     KLMatching,

@@ -128,15 +128,17 @@ class OODMetrics(object):
     score will be the mean over all :math:`B` samples.
     """
 
-    def __init__(self, device: str = "cpu", mode: str = "classification"):
+    def __init__(self, device: str = "cpu", mode: str = "classification", void_label: int = None):
         """
         :param device: where tensors should be stored
         :param mode: either ``classification`` or ``segmentation``.
+        :param void_label: label that will be ignored during score calculation
         """
         super(OODMetrics, self).__init__()
         self.device = device
         # always buffer on cpu to not exhaust gpu mem
         self.buffer = TensorBuffer(device="cpu")
+        self.void_label = void_label
 
         if mode not in ["segmentation", "classification"]:
             raise ValueError("mode must be 'segmentation' or 'classification'")
@@ -178,6 +180,11 @@ class OODMetrics(object):
 
         if labels.shape != scores.shape:
             raise ValueError(f"Inputs have wrong size: {labels.shape} and {scores.shape}")
+
+        if self.void_label:
+            void_mask = labels != self.void_label
+            labels = labels[void_mask]
+            scores = scores[void_mask]
 
         scores, scores_idx = torch.sort(scores, stable=True)
         labels = labels[scores_idx]

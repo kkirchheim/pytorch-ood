@@ -151,10 +151,21 @@ StreetHazards
 ..  autoclass:: pytorch_ood.dataset.img.StreetHazards
     :members:
 
+FishyScapes
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.FishyScapes
+    :members:
+
+LostAndFound
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.LostAndFound
+    :members:
+
 MVTech-AD
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.MVTechAD
     :members:
+
 
 Object Detection
 ----------------------
@@ -167,6 +178,7 @@ SuMNIST
 """
 from .chars74k import Chars74k
 from .cifar import CIFAR10C, CIFAR100C
+from .fishyscapes import FishyScapes, LostAndFound
 from .fooling import FoolingImages
 from .goe import CIFAR100GAN
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
