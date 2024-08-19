@@ -5,14 +5,15 @@ from os.path import join
 import numpy as np
 import torch
 from PIL import Image
-from pycocotools.coco import COCO
 
-# from .coco_utils import COCO
+# from pycocotools.coco import COCO
+
+from .coco_utils import COCO
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
 # TODO:
-# - [ ] Add docstrings
-# - [ ] improve check sachen unterschied beim anfang, wann runterladen, wann preparen
+# - [ ] speedup coco segmentation load
+# - [ ] refactor mask_gen into coco_utils
 
 
 class InsertCOCO:
@@ -168,13 +169,21 @@ class InsertCOCO:
         # load annotations from annotation id (based on image id)
         annotations = self.tools.loadAnns(self.tools.getAnnIds(imgIds=img["id"]))
         mask = np.ones((img["height"], img["width"]), dtype="uint8") * self.in_class_label
-        # TODO randomize the number of annotations picking if necassary
-        for j in range(min(len(annotations), self.annotation_per_coco_image)):
-            mask = np.maximum(self.tools.annToMask(annotations[j]) * self.out_class_label, mask)
+
+        # get masks
+
+        masks = self.tools.getMaskFromId(int(img_id))
+        for mask_ in masks:
+            mask = np.maximum(mask, mask_ * self.out_class_label)
+        # # TODO randomize the number of annotations picking if necassary
+        # for j in range(min(len(annotations), self.annotation_per_coco_image)):
+        #     mask = np.maximum(self.tools.annToMask(annotations[j]) * self.out_class_label, mask)
 
         # write mask
-        for j in range(min(len(annotations), self.annotation_per_coco_image)):
-            mask[self.tools.annToMask(annotations[j]) == 1] = self.out_class_label
+        # for j in range(min(len(annotations), self.annotation_per_coco_image)):
+        #     mask[self.tools.annToMask(annotations[j]) == 1] = self.out_class_label
+        for mask_ in masks:
+            mask[mask_ == 1] = self.out_class_label
 
         # TODO clean up
         annott_segm_arr = np.array(mask)
