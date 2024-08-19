@@ -59,13 +59,13 @@ class InsertCOCO:
             self.coco_dir, f"/annotations/instances_train{str(self.year)}.json"
         )
 
+        self.annott = join(
+            self.coco_dir, f"annotations/for_{self.dataset}_seg_train{str(self.year)}"
+        )
         # if data not prepared
         # if not self.check_dataset():
         self.download_prepare_data()
-        self.files = os.listdir(join(self.coco_dir, f"train{str(self.year)}"))
-        self.annott = join(
-            self.coco_dir, f"/annotations/for_{self.dataset}_seg_train{str(self.year)}"
-        )
+        self.files = os.listdir(self.annott)
 
     # inspired from https://github.com/tla93/InpaintingOutlierSynthesis/blob/main/src/train_coco.py
     def __call__(self, img, segm):
@@ -138,11 +138,11 @@ class InsertCOCO:
 
         number = self.files[np.random.randint(0, len(self.files))]
 
-        segm = Image.open(join(self.annott, number))
+        segm = Image.open(join(self.annott, number.replace("jpg", "png")))
         annott_segm_arr = np.array(segm)
 
         # load coco image
-        path = join(self.coco_dir, number.replace("png", "jpg"))
+        path = join(self.images_dir, number.replace("png", "jpg"))
         img = Image.open(path)
 
         annott_img_arr = np.array(img.convert("RGBA"))
@@ -161,9 +161,16 @@ class InsertCOCO:
             join(self.coco_dir, f"annotations/instances_train{str(self.year)}.json")
         )
 
+    def check_extracted_coco_images(self):
+        # check if this folder self.annott is not empty
+        return len(os.listdir(self.annott)) > 0
+
     def download_prepare_data(self):
         if not self.check_dataset():
             self.download()
+
+        if self.check_extracted_coco_images():
+            return
 
         tools = COCO(join(self.coco_dir, f"annotations/instances_train{str(self.year)}.json"))
         save_dir = join(
@@ -207,14 +214,11 @@ class InsertCOCO:
                     usable_image_ids.append(img_id)
 
         # start ground truth segmentaion mask creation
-        print(f"COCOdir: {self.coco_dir}")
-        save_dir = join(
-            self.coco_dir, f"/annotations/for_{self.dataset}_seg_train{str(self.year)}"
-        )
+        save_dir = join(self.coco_dir, f"annotations/for_{self.dataset}_seg_train{str(self.year)}")
         print(f"save_dir: {save_dir}")
         os.makedirs(save_dir, exist_ok=True)
         for i, img_id in enumerate(usable_image_ids):
-            img = tools.loadImgs(img_id)[0]
+            img = tools.loadImgs(int(img_id))[0]
             # load annotations from annotation id (based on image id)
             annotations = tools.loadAnns(tools.getAnnIds(imgIds=img["id"], iscrowd=None))
             mask = np.ones((img["height"], img["width"]), dtype="uint8") * self.in_class_label
@@ -226,7 +230,7 @@ class InsertCOCO:
                 mask[tools.annToMask(annotations[j]) == 1] = self.out_class_label
 
             image = Image.fromarray(mask)
-            save_path = join(save_dir, "{:012d}.png".format(img_id))
+            save_path = join(save_dir, "{:012d}.png".format(int(img_id)))
             image.save(save_path)
 
     def _check_integrity(self) -> bool:
