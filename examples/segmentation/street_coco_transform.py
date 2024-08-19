@@ -27,7 +27,8 @@ from torch.utils.data import DataLoader
 from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import StreetHazards
-from pytorch_ood.detector import EnergyBased
+from pytorch_ood.detector import Entropy
+from pytorch_ood.loss import EntropicOpenSetLoss
 from pytorch_ood.utils import OODMetrics, fix_random_seed
 from pytorch_ood.utils.coco.coco_insert import InsertCOCO
 
@@ -46,8 +47,8 @@ preprocess_input = get_preprocessing_fn("resnet50", pretrained="imagenet")
 
 coco_transform = InsertCOCO(
     coco_dir="data/coco",
-    dataset="Streethazards",
-    ood_rate=1,  # 0.1,
+    prohibet_classes="Streethazards",
+    probability_of_ood=1,  # 0.1,
     ood_per_image=1,
     ood_mask_value=-1,
     upscale=1.4150357439499515,
@@ -59,7 +60,7 @@ coco_transform = InsertCOCO(
 
 
 def my_transform(img, target):
-    img, segm = coco_transform(img, target)
+    img, target = coco_transform(img, target)
     img = to_tensor(img)[:3, :, :]  # drop 4th channel
     img = torch.moveaxis(img, 0, -1)
     img = preprocess_input(img)
@@ -88,7 +89,7 @@ model = smp.FPN(
 
 # %%
 # Train model for some epochs
-criterion = smp.losses.DiceLoss(mode="multiclass")
+criterion = EntropicOpenSetLoss()
 optimizer = torch.optim.Adam(params=model.parameters(), lr=0.0001)
 loader = DataLoader(
     dataset,
@@ -134,7 +135,7 @@ for epoch in range(num_epochs):
 print("Evaluating")
 model.eval()
 loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
-detector = EnergyBased(model)
+detector = Entropy(model)
 metrics = OODMetrics(mode="segmentation")
 
 with torch.no_grad():
