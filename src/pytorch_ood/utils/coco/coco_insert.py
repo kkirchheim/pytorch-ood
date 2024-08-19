@@ -6,6 +6,8 @@ import numpy as np
 import torch
 from PIL import Image
 from pycocotools.coco import COCO
+
+# from .coco_utils import COCO
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
 # TODO:
@@ -74,10 +76,16 @@ class InsertCOCO:
         self.download()
         self.tools = COCO(join(self.coco_dir, f"annotations/instances_train{str(self.year)}.json"))
 
-        self.usable_image_ids = self.init_ids(prohibet_classes)
+        self.usable_image_ids = self.init_ids()
 
     # inspired from https://github.com/tla93/InpaintingOutlierSynthesis/blob/main/src/train_coco.py
-    def __call__(self, img, segm):
+    def __call__(self, img, segm) -> tuple:
+        """
+        check if OOD should be added and add it with the given probability
+        :param img: image
+        :param segm: segmentation
+        :return: img, segm
+        """
         if random.random() <= self.ood_rate:
             segm = Image.fromarray(np.array(segm, dtype=np.uint8))
             img, segm = self.add_ood(img, segm)
@@ -85,8 +93,13 @@ class InsertCOCO:
 
         return img, segm
 
-    def add_ood(self, img, segm):
-        """ """
+    def add_ood(self, img, segm) -> tuple:
+        """
+        Add OOD objects to the image and manipulate the segmentation in the same way
+        :param img: image
+        :param segm: segmentation
+        :return: img, segm
+        """
         for elem in range(self.ood_per_image):
             # insert one OOD object
             w, h = segm.size
@@ -110,14 +123,15 @@ class InsertCOCO:
 
         return img, segm_arr
 
-    def _random_pos_and_scale(self, orig_img_dim):
-        """ """
+    def _random_pos_and_scale(self, orig_img_dim) -> tuple:
+        """
+        Load random coco image and scale it to a random size and rotate it by a random angle
+        :param orig_img_dim: original image dimensions
+        :return: rotated_ood_image, x_pixel, y_pixel
+        """
         clip_image = Image.fromarray(self.load_coco_annotation_dynamic())
 
-        # scale_range=[20,50]
         # we rescale since COCO images can be of different size
-        # upscale=1.4150357439499515
-
         scale_range = [int(20 * self.upscale), int(50 * self.upscale)]
         rotation = random.randint(0, 359)
 
@@ -130,48 +144,29 @@ class InsertCOCO:
         # rotate the clip image by the desired amount
         rotated_ood_image = resized_image.rotate(rotation)
 
-        # 10 pixel vom rand weg
+        # 10 pixel away from the edge
         pos_range_x = [10, orig_img_dim[1] - new_width - 10]
         pos_range_y = [10, orig_img_dim[0] - new_height - 10]
 
         x_pixel = random.randint(pos_range_x[0], pos_range_x[1])
         y_pixel = random.randint(pos_range_y[0], pos_range_y[1])
-        # new: random flip
+        # random flip
         if np.random.choice([0, 1]):
             rotated_ood_image = rotated_ood_image.transpose(Image.FLIP_LEFT_RIGHT)
 
         return rotated_ood_image, x_pixel, y_pixel
 
-    def load_coco_ood(self) -> np.ndarray:
-        """ """
-
-        # number = self.files[np.random.randint(0, len(self.files))]
-
-        # segm = Image.open(join(self.annott, number.replace("jpg", "png")))
-        # annott_segm_arr = np.array(segm)
-
-        # # load coco image
-        # path = join(self.images_dir, number.replace("png", "jpg"))
-        # img = Image.open(path)
-
-        # annott_img_arr = np.array(img.convert("RGBA"))
-
-        # # elim all not segmentated Pixels
-        # for i in range(annott_segm_arr.shape[0]):
-        #     for j in range(annott_segm_arr.shape[1]):
-        #         if annott_segm_arr[i, j] == 0:
-        #             annott_img_arr[i, j] = [0, 0, 0, 0]
-
-        # return annott_img_arr
-        return
-
-    def load_coco_annotation_dynamic(self):
-        """ """
+    # Parts of this function is inspired from https://github.com/robin-chan/meta-ood/blob/master/preparation/prepare_coco_segmentation.py
+    def load_coco_annotation_dynamic(self) -> np.ndarray:
+        """
+        Load a random coco image and return the annotation as a mask
+        :return: mask as annotation array
+        """
 
         img_id = self.usable_image_ids[np.random.randint(0, len(self.usable_image_ids))]
         img = self.tools.loadImgs(int(img_id))[0]
         # load annotations from annotation id (based on image id)
-        annotations = self.tools.loadAnns(self.tools.getAnnIds(imgIds=img["id"], iscrowd=None))
+        annotations = self.tools.loadAnns(self.tools.getAnnIds(imgIds=img["id"]))
         mask = np.ones((img["height"], img["width"]), dtype="uint8") * self.in_class_label
         # TODO randomize the number of annotations picking if necassary
         for j in range(min(len(annotations), self.annotation_per_coco_image)):
@@ -198,89 +193,15 @@ class InsertCOCO:
 
         return annott_img_arr
 
-    # TODO md5 sum
-    def check_dataset(self):
-        return os.path.exists(
-            join(self.coco_dir, f"annotations/instances_train{str(self.year)}.json")
-        )
-
-    def download_prepare_data(self):
-        return
-
-        #     self.tools = COCO(join(self.coco_dir, f"annotations/instances_train{str(self.year)}.json"))
-        #     save_dir = join(
-        #         self.coco_dir, f"/annotations/for_{self.dataset}_seg_train{str(self.year)}"
-        #     )
-        #     print(f"Creating segmentation masks for {self.dataset} in {save_dir}")
-        # Classes that are also in the main dataset --> don't use these overlap_classes for coco outlier
-
-        # prohibet_image_ids = []
-        # # Iterate overall overlap categories to find all prohibed image ids
-        # for id in self.tools.getCatIds(catNms=overlap_classes):
-        #     prohibet_image_ids.append(self.tools.getImgIds(catIds=id))
-        # # Eliminate duplications
-        # prohibet_image_ids = [item for sublist in prohibet_image_ids for item in sublist]
-        # prohibet_image_ids = set(prohibet_image_ids)
-
-        # # find all usable images
-        # usable_image_ids = []
-        # for image in os.listdir(self.images_dir):
-        #     img_id = image[:-4]
-        #     if int(img_id) not in prohibet_image_ids:
-        #         img = self.tools.loadImgs(int(img_id))[0]
-        #         # check size of the image
-        #         if img["height"] >= self.min_size_of_img and img["width"] >= self.min_size_of_img:
-        #             # append image id
-        #             usable_image_ids.append(img_id)
-
-        # start ground truth segmentaion mask creation
-        # save_dir = join(self.coco_dir, f"annotations/for_{self.dataset}_seg_train{str(self.year)}")
-        # print(f"save_dir: {save_dir}")
-        # os.makedirs(save_dir, exist_ok=True)
-        # for i, img_id in enumerate(usable_image_ids):
-        #     img = self.tools.loadImgs(int(img_id))[0]
-        #     # load annotations from annotation id (based on image id)
-        #     annotations = self.tools.loadAnns(self.tools.getAnnIds(imgIds=img["id"], iscrowd=None))
-        #     mask = np.ones((img["height"], img["width"]), dtype="uint8") * self.in_class_label
-        #     for j in range(len(annotations)):
-        #         mask = np.maximum(self.tools.annToMask(annotations[j]) * self.out_class_label, mask)
-
-        #     # write mask
-        #     for j in range(len(annotations)):
-        #         mask[self.tools.annToMask(annotations[j]) == 1] = self.out_class_label
-
-        #     image = Image.fromarray(mask)
-        #     save_path = join(save_dir, "{:012d}.png".format(int(img_id)))
-        #     image.save(save_path)
-
-    def _check_integrity(self) -> bool:
-        fpath = os.path.join(self.root, self.filename)
-        return check_integrity(fpath, self.md5hash)
-
-    # TODO hübsch machen
-    def download(self) -> None:
-        # if self._check_integrity():
-        #     # log.debug("Files already downloaded and verified")
-        #     print("Files already downloaded and verified")
-        #     return
-        # check if train images exist
-        if not os.path.exists(self.images_dir):
-            download_and_extract_archive(
-                self.img_url, self.coco_dir, filename=f"train{str(self.year)}.zip"
-            )
-        # check if annotation file exists
-        if not os.path.exists(self.annotation_dir):
-            download_and_extract_archive(
-                self.annottations_url,
-                self.coco_dir,
-                filename=f"annotations_trainval{str(self.year)}.zip",
-            )
-
-    def init_ids(self, prohibet_classes):
-
+    # Parts of this function is inspired from https://github.com/robin-chan/meta-ood/blob/master/preparation/prepare_coco_segmentation.py
+    def init_ids(self) -> list:
+        """
+        Determines all available ids of coco images that do not contain any of the prohibet classes
+        return: list of usable image ids
+        """
         prohibet_image_ids = []
         # Iterate overall overlap categories to find all prohibed image ids
-        for id in self.tools.getCatIds(catNms=prohibet_classes):
+        for id in self.tools.getCatIds(catNms=self.prohibet_classes):
             prohibet_image_ids.append(self.tools.getImgIds(catIds=id))
         # Eliminate duplications
         prohibet_image_ids = [item for sublist in prohibet_image_ids for item in sublist]
@@ -297,3 +218,20 @@ class InsertCOCO:
                     # append image id
                     usable_image_ids.append(img_id)
         return usable_image_ids
+
+    def download(self) -> None:
+        """
+        Donwload the coco dataset if not already downloaded
+        """
+        # check if train images exist
+        if not os.path.exists(self.images_dir):
+            download_and_extract_archive(
+                self.img_url, self.coco_dir, filename=f"train{str(self.year)}.zip"
+            )
+        # check if annotation file exists
+        if not os.path.exists(self.annotation_dir):
+            download_and_extract_archive(
+                self.annottations_url,
+                self.coco_dir,
+                filename=f"annotations_trainval{str(self.year)}.zip",
+            )

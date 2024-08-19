@@ -259,3 +259,6 @@ cython_debug/
 .github/workflows/python-package.yml
 docs/sg_execution_times.rst
 src/pytorch_ood/utils/coco/pycocotools.py
+src/pytorch_ood/utils/coco/coco_utils.py
+src/pytorch_ood/utils/coco/cocotools.py
+src/pytorch_ood/utils/coco/mask_utils.py

@@ -45,10 +45,11 @@ g.manual_seed(0)
 # Setup preprocessing
 preprocess_input = get_preprocessing_fn("resnet50", pretrained="imagenet")
 
+# for demonstration purposes, we set the probability of OOD to 1
 coco_transform = InsertCOCO(
     coco_dir="data/coco",
     prohibet_classes="Streethazards",
-    probability_of_ood=1,  # 0.1,
+    probability_of_ood=1,  # 0.1
     ood_per_image=1,
     ood_mask_value=-1,
     upscale=1.4150357439499515,
@@ -153,4 +154,4 @@ print(metrics.compute())
 
 # %%
 # Output:
-#   {'AUROC': 0.8069181442260742, 'AUPR-IN': 0.07396415621042252, 'AUPR-OUT': 0.9966945648193359, 'FPR95TPR': 0.7595465183258057}
+# {'AUROC': 0.9547666311264038, 'AUPR-IN': 0.49363014101982117, 'AUPR-OUT': 0.999082624912262, 'FPR95TPR': 0.16229870915412903}
