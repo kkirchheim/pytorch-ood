@@ -16,15 +16,15 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
-from pytorch_ood.detector import WeightedEBO
+from pytorch_ood.detector import EnergyBased, WeightedEBO
 from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
-device = "cuda:0"
-batch_size = 256 * 4
-num_epochs = 20
-lr = 0.01
+device = "cuda:5"
+batch_size = 128
+num_epochs = 10
+lr = 0.1
 num_classes = 10
 
 fix_random_seed(12345)
@@ -63,7 +63,7 @@ loader = DataLoader(
 
 # %%
 # Setup model
-model = WideResNet(num_classes=num_classes, in_channels=3, depth=10).to(device)
+model = WideResNet(num_classes=10, pretrained="cifar10-pt").to(device)
 
 # %%
 # Create neural network functions (layers)
@@ -78,15 +78,19 @@ criterion = VirtualOutlierSynthesizingRegLoss(
     num_classes=num_classes,
     num_input_last_layer=128,
     fc=model.fc,
-    sample_number=100,
-    sample_from=200,
+    sample_number=10000,
+    select=1,
+    sample_from=1000,
     alpha=0.1,
 )
 
 # %%
 # Train model for some epochs
-optimizer = torch.optim.Adam(
-    list(model.parameters()) + list(phi.parameters()) + list(weights_energy.parameters()), lr=lr
+optimizer = torch.optim.SGD(
+    list(model.parameters()) + list(phi.parameters()) + list(weights_energy.parameters()),
+    lr=lr,
+    momentum=0.9,
+    weight_decay=5e-4,
 )
 
 
@@ -126,17 +130,24 @@ print("Evaluating")
 model.eval()
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
 detector = WeightedEBO(model, weights_energy)
+detector1 = EnergyBased(model)
 metrics = OODMetrics()
+metrics1 = OODMetrics()
 
 with torch.no_grad():
     for n, (x, y) in enumerate(test_loader):
         y, x = y.to(device), x.to(device)
-        o = detector(x)
+        y_hat = model(x)
+        o = detector.predict_features(y_hat)
+        o1 = detector1.predict_features(y_hat)
 
         metrics.update(o, y)
+        metrics1.update(o1, y)
         if n % 10 == 0:
             print(f"Epoch {epoch:03d} [{n:05d}/{len(test_loader):05d}] ")
 
-print(metrics.compute())
-
-# {'AUROC': 0.7461214065551758, 'AUPR-IN': 0.5747935771942139, 'AUPR-OUT': 0.8320741057395935, 'FPR95TPR': 0.7110999822616577}
+print(f"WeightedEBO: {metrics.compute()}")
+print(f"EnergyBased: {metrics1.compute()}")
+# %%
+# Output:
+# {'AUROC': 0.8593780398368835, 'AUPR-IN': 0.744148850440979, 'AUPR-OUT': 0.9147135615348816, 'FPR95TPR': 0.4684000015258789}

@@ -99,9 +99,9 @@ class VOSRegLoss(nn.Module):
         energy_x_in = self._energy(logits_form[is_known(y)])
         energy_v_out = self._energy(logits_form[is_unknown(y)])
 
-        return self._calculate_reg_loss(energy_x_in, energy_v_out, energy_x_in, energy_v_out)
+        return self._calculate_reg_loss(energy_x_in, energy_v_out)
 
-    def _calculate_reg_loss(self, energy_score_for_fg, energy_score_for_bg, features, ood_samples):
+    def _calculate_reg_loss(self, energy_score_for_fg, energy_score_for_bg):
         """
         :param energy_score_for_fg: energy score for in-of-distribution samples
         :param energy_score_for_bg: energy score for out-of-distribution samples
@@ -111,8 +111,8 @@ class VOSRegLoss(nn.Module):
         input_for_lr = torch.cat((energy_score_for_fg, energy_score_for_bg), -1)
         labels_for_lr = torch.cat(
             (
-                torch.ones(len(features)).to(self.device),
-                torch.zeros(len(ood_samples)).to(self.device),
+                torch.ones(len(energy_score_for_fg)).to(self.device),
+                torch.zeros(len(energy_score_for_bg)).to(self.device),
             ),
             -1,
         )
@@ -319,9 +319,7 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
 
                 energy_score_for_bg = self._energy(predictions_ood, 1)
 
-                lr_reg_loss = self._calculate_reg_loss(
-                    energy_score_for_fg, energy_score_for_bg, features, ood_samples
-                )
+                lr_reg_loss = self._calculate_reg_loss(energy_score_for_fg, energy_score_for_bg)
 
         return lr_reg_loss
 
