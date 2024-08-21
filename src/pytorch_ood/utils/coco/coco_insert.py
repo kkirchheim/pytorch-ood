@@ -172,9 +172,17 @@ class InsertCOCO:
 
         # get masks
 
-        masks = self.tools.getMaskFromId(int(img_id))
-        for mask_ in masks:
-            mask = np.maximum(mask, mask_ * self.out_class_label)
+        # masks = self.tools.getMaskFromId(int(img_id))
+        # for mask_ in masks:
+        #     mask = np.maximum(mask, mask_ * self.out_class_label)
+            
+            
+        for j in range(min(len(annotations), self.annotation_per_coco_image)):
+            mask = np.maximum(self.tools.MYannToMask(annotations[j],(img["height"], img["width"])) * self.out_class_label, mask)
+
+        # write mask
+        for j in range(min(len(annotations), self.annotation_per_coco_image)):
+            mask[self.tools.MYannToMask(annotations[j],(img["height"], img["width"])) == 1] = self.out_class_label
         # # TODO randomize the number of annotations picking if necassary
         # for j in range(min(len(annotations), self.annotation_per_coco_image)):
         #     mask = np.maximum(self.tools.annToMask(annotations[j]) * self.out_class_label, mask)
@@ -182,8 +190,9 @@ class InsertCOCO:
         # write mask
         # for j in range(min(len(annotations), self.annotation_per_coco_image)):
         #     mask[self.tools.annToMask(annotations[j]) == 1] = self.out_class_label
-        for mask_ in masks:
-            mask[mask_ == 1] = self.out_class_label
+        
+        # for mask_ in masks:
+        #     mask[mask_ == 1] = self.out_class_label
 
         # TODO clean up
         annott_segm_arr = np.array(mask)

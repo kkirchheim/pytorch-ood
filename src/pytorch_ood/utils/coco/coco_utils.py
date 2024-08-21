@@ -2,7 +2,7 @@ from collections import defaultdict
 import numpy as np
 
 # from ._dev.mask_utils import decode, merge, area
-from .mask_gen import read_coco_annotations, generate_masks
+from .mask_gen import read_coco_annotations, generate_masks, create_mask_from_segmentation
 
 
 def _isArrayLike(obj):
@@ -138,6 +138,9 @@ class COCO:
 
         return [self.imgs[id] for id in ids]
 
+    def MYannToMask(self,ann, img_size):
+        # print(ann)
+        return create_mask_from_segmentation(ann["segmentation"], (img_size[1],img_size[0]))
     # def annToMask(self, ann):
     #     """
     #     Convert an annotation into a binary mask.
