@@ -29,7 +29,7 @@ def rle_decode(rle, img_shape):
     counts = rle["counts"]
     size = rle["size"]
 
-    if not size or size[0] != width or size[1] != height:
+    if not size or size[0] != height or size[1] != width:
         print(
             f"Warning: RLE size {size} does not match the provided image dimensions {img_shape}."
         )
@@ -43,7 +43,9 @@ def rle_decode(rle, img_shape):
             for start, length in zip(np.cumsum(rle_array[:-1]), rle_array[1:])
         ]
     )
-
+    # Ensure positions are integers
+    positions = positions.astype(int)
+    # print(positions)
     mask[positions] = 1
     mask = mask.reshape((height, width))
 
@@ -97,7 +99,7 @@ def generate_masks(coco_data, image_id):
     :param image_id: ID of the image to generate masks for. (int)
     :return: List of binary masks as numpy arrays. (list of np.ndarray)
     """
-    print(f"Image ID: {image_id}")
+    # print(f"Image ID: {image_id}")
     masks = []
     annotations = coco_data["annotations"]
     image_info = next(item for item in coco_data["images"] if item["id"] == image_id)
