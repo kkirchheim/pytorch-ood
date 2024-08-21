@@ -128,9 +128,7 @@ class FishyScapes(Dataset):
         orig = np.array(Image.open(orig_path)).astype(int)
         overlay = np.load(overlay_path)["rgb"].astype(int)
 
-        void_label_path = join(
-            self.root, self.dirname, overlay_path.replace("_rgb.npz", "_labels.png")
-        )
+        void_label_path = overlay_path.replace("_rgb.npz", "_labels.png")
         void_labels = np.array(Image.open(void_label_path)).astype(int)
 
         mask = np.where(np.where(overlay != 0, True, False).any(axis=2), -1, 0)
