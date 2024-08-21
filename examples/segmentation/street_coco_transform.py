@@ -60,8 +60,9 @@ coco_transform = InsertCOCO(
 )
 
 
-def my_transform(img, target):
-    img, target = coco_transform(img, target)
+def my_transform(img, target, use_coco_transform):
+    if use_coco_transform:
+        img, target = coco_transform(img, target)
     img = to_tensor(img)[:3, :, :]  # drop 4th channel
     img = torch.moveaxis(img, 0, -1)
     img = preprocess_input(img)
@@ -75,8 +76,18 @@ def my_transform(img, target):
 
 # %%
 # Setup datasets
-dataset = StreetHazards(root="data", subset="train", transform=my_transform, download=True)
-dataset_test = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
+dataset = StreetHazards(
+    root="data",
+    subset="train",
+    transform=lambda img, target: my_transform(img, target, True),
+    download=True,
+)
+dataset_test = StreetHazards(
+    root="data",
+    subset="test",
+    transform=lambda img, target: my_transform(img, target, False),
+    download=True,
+)
 
 
 # %%
@@ -154,4 +165,4 @@ print(metrics.compute())
 
 # %%
 # Output:
-# {'AUROC': 0.9547666311264038, 'AUPR-IN': 0.49363014101982117, 'AUPR-OUT': 0.999082624912262, 'FPR95TPR': 0.16229870915412903}
+# {'AUROC': 0.9573410749435425, 'AUPR-IN': 0.5151191353797913, 'AUPR-OUT': 0.9991346001625061, 'FPR95TPR': 0.16139476001262665}
