@@ -7,8 +7,6 @@ We train a model with :class:`Virtual Outlier Synthesizer Loss<pytorch_ood.loss.
 We then use the :class:`WeightedEBO<pytorch_ood.detector.WeightedEBO>` OOD detector.
 
 We can use a model pre-trained on the :math:`32 \\times 32` resized version of the ImageNet as a foundation.
-As outlier data, we use :class:`TinyImages300k <pytorch_ood.dataset.img.TinyImages300k>`, a cleaned version of the
-TinyImages database, which contains random images scraped from the internet.
 """
 import numpy as np
 import torch
@@ -129,25 +127,26 @@ for epoch in range(num_epochs):
 print("Evaluating")
 model.eval()
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64)
-detector = WeightedEBO(model, weights_energy)
-detector1 = EnergyBased(model)
-metrics = OODMetrics()
-metrics1 = OODMetrics()
+detector_weightedEBO = WeightedEBO(model, weights_energy)
+detector_energyBased = EnergyBased(model)
+metrics_weightedEBO = OODMetrics()
+metrics_energyBased = OODMetrics()
 
 with torch.no_grad():
     for n, (x, y) in enumerate(test_loader):
         y, x = y.to(device), x.to(device)
         y_hat = model(x)
-        o = detector.predict_features(y_hat)
-        o1 = detector1.predict_features(y_hat)
+        o = detector_weightedEBO.predict_features(y_hat)
+        o1 = detector_energyBased.predict_features(y_hat)
 
-        metrics.update(o, y)
-        metrics1.update(o1, y)
+        metrics_weightedEBO.update(o, y)
+        metrics_energyBased.update(o1, y)
         if n % 10 == 0:
             print(f"Epoch {epoch:03d} [{n:05d}/{len(test_loader):05d}] ")
 
-print(f"WeightedEBO: {metrics.compute()}")
-print(f"EnergyBased: {metrics1.compute()}")
+print(f"WeightedEBO: {metrics_weightedEBO.compute()}")
+print(f"EnergyBased: {metrics_energyBased.compute()}")
 # %%
 # Output:
-# {'AUROC': 0.8593780398368835, 'AUPR-IN': 0.744148850440979, 'AUPR-OUT': 0.9147135615348816, 'FPR95TPR': 0.4684000015258789}
+# WeightedEBO: {'AUROC': 0.9129159450531006, 'AUPR-IN': 0.8187302947044373, 'AUPR-OUT': 0.9503335356712341, 'FPR95TPR': 0.2969000041484833}
+# EnergyBased: {'AUROC': 0.9203259348869324, 'AUPR-IN': 0.8404836654663086, 'AUPR-OUT': 0.9553482532501221, 'FPR95TPR': 0.2775999903678894}
