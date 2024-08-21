@@ -19,7 +19,7 @@ from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
-device = "cuda:5"
+device = "cuda:0"
 batch_size = 128
 num_epochs = 10
 lr = 0.1
