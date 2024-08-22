@@ -99,7 +99,6 @@ class SuMNIST(Dataset):
 
         for file, hash in SuMNIST.files.items():
             url = SuMNIST.url + file
-            print(url)
             download_url(url, self.root, md5=hash)
 
     def __getitem__(self, index):
