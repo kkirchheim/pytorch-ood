@@ -30,7 +30,7 @@ from pytorch_ood.dataset.img import StreetHazards
 from pytorch_ood.detector import Entropy
 from pytorch_ood.loss import EntropicOpenSetLoss
 from pytorch_ood.utils import OODMetrics, fix_random_seed
-from pytorch_ood.utils.coco.coco_insert import InsertCOCO
+from pytorch_ood.utils.transforms import InsertCOCO
 
 device = "cuda:0"
 batch_size = 4
@@ -54,8 +54,6 @@ coco_transform = InsertCOCO(
     ood_mask_value=-1,
     upscale=1.4150357439499515,
     year=2017,
-    in_class_label=0,
-    out_class_label=254,
     min_size_of_img=480,
 )
 
