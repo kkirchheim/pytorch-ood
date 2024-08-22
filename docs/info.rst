@@ -111,6 +111,19 @@ You can install an editable version (developer version) with
    cd pytorch-ood
    pip install -e .
 
+
+Building Documentation
+========================
+
+To build the documentation, run
+
+.. code-block:: shell
+
+    pip install sphinx_gallery sphinx_rtd_theme sphinx
+    cd docs
+    make html
+
+
 Quick Start
 -----------------------------------------
 

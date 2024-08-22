@@ -1,11 +1,11 @@
 """
-
 MSP
 ==============================
 
 Uses MSP based on a pre-trained model from the Hendrycks baseline paper.
 
 """
+
 import torch
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
@@ -43,3 +43,6 @@ for x, y in test_loader:
     metrics.update(detector(x.to(device)), y)
 
 print(metrics.compute())
+
+# %%
+# {'AUROC': 0.8851456642150879, 'AUPR-IN': 0.7850020527839661, 'AUPR-OUT': 0.9299277067184448, 'FPR95TPR': 0.40860000252723694}

@@ -56,10 +56,3 @@ class NINCO(ImageDatasetBase):
                 files += [join(path, subdir, img) for img in os.listdir(join(path, subdir))]
 
         return files
-
-
-if __name__ == "__main__":
-    d = NINCO(root="/home/ki/datasets/", download=True)
-    for i in range(len(d)):
-        print(d[i])
-    print(len(d))
