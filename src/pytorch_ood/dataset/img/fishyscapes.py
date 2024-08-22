@@ -270,7 +270,7 @@ class LostAndFound(Dataset):
         ano_path = join(self.root, self.annotation_dir, ano_path)
 
         img = Image.open(img_path_abs)
-        targets = np.array(Image.open(ano_path))
+        targets = np.array(Image.open(ano_path), dtype=np.int32)
 
         targets = np.where(targets == 1, -1, targets)
         targets = np.where(targets == 255, self.VOID_LABEL, targets)
