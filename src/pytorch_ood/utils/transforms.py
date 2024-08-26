@@ -27,6 +27,7 @@ from PIL import Image, ImageDraw
 import torch
 from collections import defaultdict
 import json
+from typing import List
 from torchvision.datasets.utils import download_and_extract_archive
 
 
@@ -111,7 +112,7 @@ class InsertCOCO:
     def __init__(
         self,
         coco_dir: str,
-        prohibet_classes: list[str],
+        prohibet_classes: List[str],
         probability_of_ood: float = 0.1,
         ood_per_image: int = 1,
         annotation_per_coco_image: int = 1,
@@ -209,8 +210,6 @@ class InsertCOCO:
                         np.zeros(rotated_ood_image_arr.shape[2]),
                     ):
                         segm_arr[i + y_pos, j + x_pos] = self.ood_mask_value
-
-            segm = Image.fromarray(segm_arr)
 
         return img, segm_arr
 
