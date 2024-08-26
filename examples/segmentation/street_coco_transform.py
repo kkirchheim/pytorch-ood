@@ -1,22 +1,15 @@
 """
-StreetHazards
--------------------------
+StreetHazards + COCO objects
+-----------------------------------------------
 
 We train a Feature Pyramid Segmentation model
 with a ResNet-50 backbone pre-trained on the ImageNet
 on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>`.
-We then use the :class:`EnergyBased<pytorch_ood.detector.EnergyBased>` OOD detector.
-
-.. note :: Training with a batch-size of 4 requires slightly more than 12 GB of GPU memory.
-    However, the models tend to also converge to reasonable performance with a smaller batch-size.
+During training, we insert random COCO objects as anomalies into the image to regularize the model.
 
 .. warning :: The results produced by this script vary. It is impossible to ensure the
     reproducibility of the exact numerical values at the moment, because the model includes operations for
     which no deterministic implementation exists at the time of writing.
-
-.. note :: The license of the model originally used for the street hazards dataset
-    is not compatible with ``pytorch-ood``. This prevents us from re-using the implementation
-    from the original repository.
 
 """
 import segmentation_models_pytorch as smp
@@ -48,13 +41,8 @@ preprocess_input = get_preprocessing_fn("resnet50", pretrained="imagenet")
 # for demonstration purposes, we set the probability of OOD to 1
 coco_transform = InsertCOCO(
     coco_dir="data/coco",
-    prohibet_classes="Streethazards",
-    probability_of_ood=1,  # 0.1
-    ood_per_image=1,
-    ood_mask_value=-1,
-    upscale=1.4150357439499515,
-    year=2017,
-    min_size_of_img=480,
+    exclude_classes="Streethazards",
+    p=1,
 )
 
 

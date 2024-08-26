@@ -10,13 +10,10 @@
     :members:
 
 ..  autoclass:: pytorch_ood.utils.InsertCOCO
-    :members:
-
-..  autoclass:: pytorch_ood.utils.COCO
-    :members:
+    :members: __call__
 
 """
-from typing import Set
+from typing import Set, Callable, Union
 
 import os
 import random
@@ -27,7 +24,9 @@ from PIL import Image, ImageDraw
 import torch
 from collections import defaultdict
 import json
-from typing import List
+from typing import List, Tuple
+
+from torch import Tensor
 from torchvision.datasets.utils import download_and_extract_archive
 
 
@@ -94,64 +93,101 @@ class TargetMapping(object):
         return str(self._map)
 
 
-class InsertCOCO:
+class InsertCOCO(Callable):
     """
-    Transform to insert coco image snippets as OOD objects into the image.
+    Transformation that inserts cropped COCO objects into images, marking the corresponding pixels of
+    a segmentation mask as OOD.
 
-    :param coco_dir: Directory to store the coco dataset
-    :param prohibet_classes: List of classes that should not be used for the OOD generation
-    :param probability_of_ood: Probability of adding an OOD object to the image
-    :param ood_per_image: Number of OOD objects per image
-    :param annotation_per_coco_image: Number of different annotation that are used for the ood object per coco image. (e.g. that are two elefants on one coco image, if this parameter is one only one one lephant ist used)
-    :param ood_mask_value: Value of the OOD mask
-    :param upscale: Upscale factor for the OOD object
-    :param year: Year of the coco dataset
-    :param min_size_of_img: Minimum size of the used coco image
+    The inserted objects can be used as synthetic OOD objects for supervised training of OOD detectors.
+
+    This was proposed in the paper  *Entropy Maximization and Meta Classification for
+    Out-Of-Distribution Detection in Semantic Segmentation*.
+
+    .. code :: python
+
+        insert_coco = InsertCOCO(
+            coco_dir="data/coco",
+            exclude_classes=["train", "bicycle"],
+            p=0.1
+        )
+
+        img, mask = insert_coco(img, mask)
+
+
+    :see Paper:  `ArXiv <https://arxiv.org/abs/2012.06575>`__
     """
+
+    _class_exclusion = {
+        "bddAnomaly": ["train", "bicycle", "motorcycle"],
+        "Streethazards": [
+            "traffic light",
+            "stop sign",
+            "vase",
+            "refrigerator",
+            "sink",
+            "toaster",
+            "oven",
+            "dining table",
+            "chair",
+            "tennis racket",
+        ],
+    }
 
     def __init__(
         self,
         coco_dir: str,
-        prohibet_classes: List[str],
-        probability_of_ood: float = 0.1,
-        ood_per_image: int = 1,
-        annotation_per_coco_image: int = 1,
+        p: float = 0.1,
+        n: int = 1,
+        exclude_classes: Union[List[str], str] = None,
+        annotation_per_image: int = 1,
         ood_mask_value: int = -1,
         upscale: float = 1.4150357439499515,
         year: int = 2017,
-        min_size_of_img: int = 480,
+        min_img_size: int = 480,
+        download: bool = False,
     ):
+        """
+
+        :param coco_dir: Directory to store the coco dataset
+        :param p: Probability of inserting an OOD object to the image
+        :param n: Number of inserted OOD objects per image
+        :param exclude_classes: List of classes that should not be used for the OOD generation. Can also be
+            one of ``bddAnomaly`` or ``Streethazards``.
+        :param annotation_per_image: Number of different annotation that are used for the ood object per coco image.
+            (E.g. if there are 2 elephants on a COCO image, if this parameter is 1, only 1 elephant is inserted)
+        :param ood_mask_value: Value of the OOD segmentation mask pixels
+        :param upscale: Upscale factor for the OOD object
+        :param year: Year of the coco dataset
+        :param min_img_size: Minimum size of the used coco image
+        :param download: Set ``True`` to automatically download the COCO dataset
+        """
+        assert n > 0
+        assert 0 <= p <= 1
+        assert year in [2017]
+
+        if not exclude_classes:
+            exclude_classes = []
+
         self.coco_dir = coco_dir
         # check if coco_dir exists
         if not os.path.exists(self.coco_dir):
             os.makedirs(self.coco_dir)
-        if type(prohibet_classes) is not list:
-            if prohibet_classes == "bddAnomaly":
-                self.prohibet_classes = ["train", "bicycle", "motorcycle"]
-            elif prohibet_classes == "Streethazards":
-                self.prohibet_classes = [
-                    "traffic light",
-                    "stop sign",
-                    "vase",
-                    "refrigerator",
-                    "sink",
-                    "toaster",
-                    "oven",
-                    "dining table",
-                    "chair",
-                    "tennis racket",
-                ]
+        if isinstance(exclude_classes, str):
+            if exclude_classes not in self._class_exclusion:
+                raise ValueError(f"Unknown dataset: {exclude_classes}")
+            self.exclude_classes = self._class_exclusion[exclude_classes]
         else:
-            self.prohibet_classes = prohibet_classes
+            self.exclude_classes = exclude_classes
+
         self.year = year
         self.upscale = upscale
-        self.ood_rate = probability_of_ood
+        self.ood_rate = p
         self.ood_mask_value = ood_mask_value
-        self.ood_per_image = ood_per_image
-        self.annotation_per_coco_image = annotation_per_coco_image
+        self.ood_per_image = n
+        self.annotation_per_coco_image = annotation_per_image
         self.in_class_label = 0
         self.out_class_label = 254
-        self.min_size_of_img = min_size_of_img
+        self.min_size_of_img = min_img_size
         # download 2017 trainset
         self.img_url = "http://images.cocodataset.org/zips/train2017.zip"
         self.images_dir = join(self.coco_dir, f"train{str(self.year)}")
@@ -164,27 +200,30 @@ class InsertCOCO:
             self.coco_dir, f"annotations/instances_train{str(self.year)}.json"
         )
 
-        self.download()
+        if download:
+            self.download()
+
         self.tools = COCO(join(self.coco_dir, f"annotations/instances_train{str(self.year)}.json"))
 
         self.usable_image_ids = self._init_ids()
 
     # inspired from https://github.com/tla93/InpaintingOutlierSynthesis/blob/main/src/train_coco.py
-    def __call__(self, img, segm) -> tuple:
+    def __call__(self, img: Image.Image, target: Tensor) -> Tuple[Image.Image, Tensor]:
         """
-        check if OOD should be added and add it with the given probability
-        :param img: image
-        :param segm: segmentation
-        :return: img, segm
+        Check if OOD should be added and add it with the given probability
+
+        :param img: input image
+        :param target: segmentation mask for image
+        :return: Tuple with image and target tensor with inserted object(s)
         """
         if random.random() <= self.ood_rate:
-            segm = Image.fromarray(np.array(segm, dtype=np.uint8))
-            img, segm = self.add_ood(img, segm)
-            segm = torch.tensor(segm, dtype=torch.int64)
+            target = Image.fromarray(np.array(target, dtype=np.uint8))
+            img, target = self._add_ood(img, target)
+            target = torch.tensor(target, dtype=torch.int64)
 
-        return img, segm
+        return img, target
 
-    def add_ood(self, img, segm) -> tuple:
+    def _add_ood(self, img: Image.Image, segm: Image.Image) -> Tuple[Image.Image, np.ndarray]:
         """
         Add OOD objects to the image and manipulate the segmentation in the same way
 
@@ -219,7 +258,7 @@ class InsertCOCO:
         :param orig_img_dim: original image dimensions
         :return: rotated_ood_image, x_pixel, y_pixel
         """
-        clip_image = Image.fromarray(self.load_coco_annotation_dynamic())
+        clip_image = Image.fromarray(self._load_coco_annotation_dynamic())
 
         # we rescale since COCO images can be of different size
         scale_range = [int(20 * self.upscale), int(50 * self.upscale)]
@@ -246,16 +285,17 @@ class InsertCOCO:
 
         return rotated_ood_image, x_pixel, y_pixel
 
-    # Parts of this function is inspired from https://github.com/robin-chan/meta-ood/blob/master/preparation/prepare_coco_segmentation.py
-    def load_coco_annotation_dynamic(self) -> np.ndarray:
+    # Parts of this function is inspired from
+    # https://github.com/robin-chan/meta-ood/blob/master/preparation/prepare_coco_segmentation.py
+    def _load_coco_annotation_dynamic(self) -> np.ndarray:
         """
         Load a random coco image and return the snipped of the coco image with the ood object
 
         :return: snipped of the ood object
         """
 
-        img_id = self.usable_image_ids[np.random.randint(0, len(self.usable_image_ids))]
-        img = self.tools.loadImgs(int(img_id))[0]
+        img_id = int(self.usable_image_ids[np.random.randint(0, len(self.usable_image_ids))])
+        img = self.tools.loadImgs(img_id)[0]
         # load annotations from annotation id (based on image id)
         annotations = self.tools.loadAnns(self.tools.getAnnIds(imgIds=img["id"]))
         mask = np.ones((img["height"], img["width"]), dtype="uint8") * self.in_class_label
@@ -277,12 +317,12 @@ class InsertCOCO:
         annott_segm_arr = np.array(mask)
 
         # load coco image
-        path = join(self.images_dir, "{:012d}.png".format(int(img_id)).replace("png", "jpg"))
+        path = join(self.images_dir, f"{img_id:012d}.jpg")
         img = Image.open(path)
 
         annott_img_arr = np.array(img.convert("RGBA"))
 
-        # elim all not segmentated Pixels
+        # eliminate all not segmented pixels
         for i in range(annott_segm_arr.shape[0]):
             for j in range(annott_segm_arr.shape[1]):
                 if annott_segm_arr[i, j] == 0:
@@ -290,25 +330,24 @@ class InsertCOCO:
 
         return annott_img_arr
 
-    # Parts of this function is inspired from https://github.com/robin-chan/meta-ood/blob/master/preparation/prepare_coco_segmentation.py
     def _init_ids(self) -> list:
         """
-        Determines all available ids of coco images that do not contain any of the prohibet classes
+        Determines all available ids of coco images that do not contain any of the excluded classes
         :return: list of usable image ids
         """
-        prohibet_image_ids = []
-        # Iterate overall overlap categories to find all prohibed image ids
-        for id in self.tools.getCatIds(catNms=self.prohibet_classes):
-            prohibet_image_ids.append(self.tools.getImgIds(catIds=id))
+        exclude_img_ids = []
+        # Iterate overall overlap categories to find all excluded image ids
+        for id in self.tools.getCatIds(catNms=self.exclude_classes):
+            exclude_img_ids.append(self.tools.getImgIds(catIds=id))
         # Eliminate duplications
-        prohibet_image_ids = [item for sublist in prohibet_image_ids for item in sublist]
-        prohibet_image_ids = set(prohibet_image_ids)
+        exclude_img_ids = [item for sublist in exclude_img_ids for item in sublist]
+        exclude_img_ids = set(exclude_img_ids)
 
         # find all usable images
         usable_image_ids = []
         for image in os.listdir(self.images_dir):
             img_id = image[:-4]
-            if int(img_id) not in prohibet_image_ids:
+            if int(img_id) not in exclude_img_ids:
                 img = self.tools.loadImgs(int(img_id))[0]
                 # check size of the image
                 if img["height"] >= self.min_size_of_img and img["width"] >= self.min_size_of_img:
@@ -318,7 +357,7 @@ class InsertCOCO:
 
     def download(self) -> None:
         """
-        Donwload the coco dataset if not already downloaded
+        Download the coco dataset if not already downloaded
         """
         # check if train images exist
         if not os.path.exists(self.images_dir):
@@ -455,7 +494,7 @@ def generate_masks(coco_data, image_id):
     return masks
 
 
-class COCO:
+class COCO(object):
     """
     A simplified version of the COCO (Common Objects in Context) class,
     used for handling COCO dataset annotations without relying on the pycocotools library.
@@ -556,7 +595,7 @@ class COCO:
 
         return list(imgIdsList)
 
-    def loadAnns(self, ids=[]):
+    def loadAnns(self, ids=List[int]):
         """
         Load annotations with the specified IDs.
 
@@ -567,7 +606,7 @@ class COCO:
 
         return [self.anns[id] for id in ids]
 
-    def loadImgs(self, ids=[]):
+    def loadImgs(self, ids=List[int]):
         """
         Load images with the specified IDs.
 
