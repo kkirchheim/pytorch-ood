@@ -108,7 +108,7 @@ The package can be installed via PyPI:
 
 * ``scikit-learn`` for ViM
 * ``gdown`` to download some datasets and model weights
-* ``pandas`` for the `examples <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/index.html>`_.
+* ``pandas`` for the `examples <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/benchmarks/>`_.
 * ``segmentation-models-pytorch`` to run the examples for anomaly segmentation
 
 
