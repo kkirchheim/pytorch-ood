@@ -15,7 +15,7 @@ from torchmetrics.functional.classification import (
 )
 from torchmetrics.utilities.compute import auc
 
-from .utils import TensorBuffer, is_unknown
+from .utils import TensorBuffer, is_unknown, contains_known_and_unknown
 
 Self = TypeVar("Self")
 
@@ -152,13 +152,21 @@ class OODMetrics(object):
         :param scores: outlier score
         :param y: target label
         """
-        label = is_unknown(y).detach().long()
+        scores = scores.detach()
+        y = y.detach()
+
+        if y.shape != scores.shape:
+            raise ValueError(f"Inputs have wrong size: {y.shape} and {scores.shape}")
 
         if self.mode == "classification":
             self.buffer.append("scores", scores)
-            self.buffer.append("labels", label)
+            self.buffer.append("y", y)
 
         elif self.mode == "segmentation":
+            # Should contain BxHxW
+            assert len(scores.shape) == 3
+            assert len(y.shape) == 3
+
             assert scores.device == y.device, "Score and target tensor must be on same device"
 
             # loop along batch dimension
@@ -166,7 +174,7 @@ class OODMetrics(object):
                 # computation will be carried out on the device where the data currently resides
                 # since this is usually a gpu, this speeds up the processing drastically,
                 # since only the reduced results have to be stored.
-                metrics = self._compute(label[i].view(-1), scores[i].view(-1))
+                metrics = self._compute(y[i].view(-1), scores[i].view(-1))
                 for key, value in metrics.items():
                     self.buffer.append(key, value.view(1, -1))
 
@@ -175,16 +183,21 @@ class OODMetrics(object):
     @torch.no_grad()
     def _compute(self, labels: Tensor, scores: Tensor) -> Dict[str, Tensor]:
         """ """
-        if len(torch.unique(labels)) != 2:
-            raise ValueError("Data must contain IN and OOD samples.")
-
         if labels.shape != scores.shape:
             raise ValueError(f"Inputs have wrong size: {labels.shape} and {scores.shape}")
 
+        # filter all void labels
         if self.void_label:
             void_mask = labels != self.void_label
             labels = labels[void_mask]
             scores = scores[void_mask]
+
+        # map OOD to 1, map IN to 0
+        labels = is_unknown(labels).long()
+
+        # there must now be IN and OOD samples
+        if len(torch.unique(labels)) != 2:
+            raise ValueError("Data must contain IN and OOD samples.")
 
         scores, scores_idx = torch.sort(scores, stable=True)
         labels = labels[scores_idx]
@@ -221,11 +234,8 @@ class OODMetrics(object):
             metrics = {key: self.buffer[key].mean() for key in self.buffer.keys()}
 
         elif self.mode == "classification":
-            labels = self.buffer.get("labels").view(-1)
+            labels = self.buffer.get("y").view(-1)
             scores = self.buffer.get("scores").view(-1)
-
-            if len(torch.unique(labels)) != 2:
-                raise ValueError("Data must contain IN and OOD samples.")
 
             metrics = self._compute(labels, scores)
 
