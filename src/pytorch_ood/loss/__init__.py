@@ -177,6 +177,18 @@ Background Class Loss
 
 .. autoclass:: pytorch_ood.loss.BackgroundClassLoss
     :members:
+    
+
+Energy Margin  Loss
+----------------------------------------------
+
+.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
+   :alt: classification badge
+.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
+   :alt: classification badge
+
+.. autoclass:: pytorch_ood.loss.EnergyMarginLoss
+    :members:
 
 """
 from .background import BackgroundClassLoss
@@ -185,6 +197,7 @@ from .center import CenterLoss
 from .conf import ConfidenceLoss
 from .crossentropy import CrossEntropyLoss
 from .energy import EnergyRegularizedLoss
+from .scone import EnergyMarginLoss
 from .entropy import EntropicOpenSetLoss
 from .ii import IILoss
 from .mchad import MCHADLoss

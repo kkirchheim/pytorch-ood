@@ -8,8 +8,10 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, KeysView, Optional, Tuple, TypeVar, Union
 
 import numpy as np
+from numpy import floating
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 
@@ -349,3 +351,95 @@ def extract_features(
     z = buffer.get("embedding")
     y = buffer.get("label")
     return z, y
+
+
+def to_np(x: Tensor): return x.data.cpu().numpy()
+
+
+def evaluate_classification_loss_training(
+    model: Callable[[Tensor], Tensor], train_loader_in
+) -> floating[Any]:
+    """
+    Evaluate classification loss on ID training dataset.
+    
+    :param model: neural network to pass inputs to
+    :param train_loader_in: dataset to extract from
+    :return: ndarray with average loss
+    """
+    model.eval()
+    losses = []
+    for in_set in train_loader_in:
+        data = in_set[0]
+        target = in_set[1]
+
+        if torch.cuda.is_available():
+            data, target = data.cuda(), target.cuda()
+        # forward
+        y = model(data)
+
+        # in-distribution classification accuracy
+        loss_ce = F.cross_entropy(y, target, reduction='none')
+
+        losses.extend(list(to_np(loss_ce)))
+
+    avg_loss = np.mean(np.array(losses))
+    print("average loss fr classification {}".format(avg_loss))
+
+    return avg_loss
+
+
+def evaluate_energy_logistic_loss(
+    model: Callable[[Tensor], Tensor], train_loader_in: DataLoader, logistic_regression: Callable[[Tensor], Tensor]
+) -> Tuple[floating[Any], floating[Any], floating[Any]]:
+    """
+    Evaluate energy logistic loss on ID training dataset
+    
+    :param model: neural network to pass inputs to
+    :param train_loader_in: dataset to extract from
+    :param logistic_regression: logistic regression layer
+    :return: ndarray with average loss
+    """
+    model.eval()
+    sigmoid_energy_losses = []
+    logistic_energy_losses = []
+    ce_losses = []
+    for in_set in train_loader_in:
+        data = in_set[0]
+        target = in_set[1]
+
+        if torch.cuda.is_available():
+            data, target = data.cuda(), target.cuda()
+
+        # forward
+        y = model(data)
+
+        # compute energies
+        Ec_in = torch.logsumexp(y, dim=1)
+
+        # compute labels
+        binary_labels_1 = torch.ones(len(data)).cuda()
+
+        # compute in distribution logistic losses
+        logistic_loss_energy_in = F.binary_cross_entropy_with_logits(logistic_regression(
+            Ec_in.unsqueeze(1)).squeeze(), binary_labels_1, reduction='none')
+
+        logistic_energy_losses.extend(list(to_np(logistic_loss_energy_in)))
+
+        # compute in distribution sigmoid losses
+        sigmoid_loss_energy_in = torch.sigmoid(logistic_regression(
+            Ec_in.unsqueeze(1)).squeeze())
+
+        sigmoid_energy_losses.extend(list(to_np(sigmoid_loss_energy_in)))
+
+        # in-distribution classification losses
+        loss_ce = F.cross_entropy(y, target, reduction='none')
+
+        ce_losses.extend(list(to_np(loss_ce)))
+
+    avg_sigmoid_energy_losses = np.mean(np.array(sigmoid_energy_losses))
+
+    avg_logistic_energy_losses = np.mean(np.array(logistic_energy_losses))
+
+    avg_ce_loss = np.mean(np.array(ce_losses))
+
+    return avg_sigmoid_energy_losses, avg_logistic_energy_losses, avg_ce_loss
