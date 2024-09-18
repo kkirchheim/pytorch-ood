@@ -183,10 +183,6 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         select: int = 1,
         sample_from: int = 10000,
     ) -> None:
-        # TODO :
-        # keine epochen
-        # keine deutschen kommentare
-        # elim doppelter ConnectionAbortedErrorcall VOS REGLOS
         """
         :param logistic_regression: :math:`\\phi` function. Can be for example a linear layer.
         :param weights_energy: neural network layer, with weights for the energy
@@ -280,8 +276,6 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
                     ),
                     0,
                 )
-            # start epoch is reached and enough samples are collected
-            # if epoch_number >= self.start_epoch:
             # the covariance finder needs the data to be centered.
             for index in range(self.num_classes):
                 if index == 0:

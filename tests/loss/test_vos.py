@@ -135,20 +135,3 @@ class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
 
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)
-
-    # def test_segmentation(self):
-    #     model = SegmentationModel()
-    #     criterion = self.init_loss(3, reduction="sum")
-    #     x = torch.randn(size=(10, 3, 32, 32))
-    #     target = torch.zeros(size=(10, 32, 32)).long()
-    #     target[0, 0, 0] = -1
-
-    #     logits = model(x)
-    #     loss = criterion(logits, target)
-    #     # self.assertEqual(loss.shape, (10, 32, 32))
-    #     self.assertNotEqual(loss, 0)
-    #     loss.mean().backward()
-
-
-if __name__ == "__main__":
-    unittest.main()
