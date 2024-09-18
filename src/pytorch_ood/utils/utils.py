@@ -11,7 +11,6 @@ import numpy as np
 from numpy import floating
 import torch
 import torch.nn.functional as F
-import torch.nn as nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 
@@ -352,45 +351,11 @@ def extract_features(
     y = buffer.get("label")
     return z, y
 
-
 def to_np(x: Tensor): return x.data.cpu().numpy()
-
-
-def evaluate_classification_loss_training(
-    model: Callable[[Tensor], Tensor], train_loader_in
-) -> floating[Any]:
-    """
-    Evaluate classification loss on ID training dataset.
-    
-    :param model: neural network to pass inputs to
-    :param train_loader_in: dataset to extract from
-    :return: ndarray with average loss
-    """
-    model.eval()
-    losses = []
-    for in_set in train_loader_in:
-        data = in_set[0]
-        target = in_set[1]
-
-        if torch.cuda.is_available():
-            data, target = data.cuda(), target.cuda()
-        # forward
-        y = model(data)
-
-        # in-distribution classification accuracy
-        loss_ce = F.cross_entropy(y, target, reduction='none')
-
-        losses.extend(list(to_np(loss_ce)))
-
-    avg_loss = np.mean(np.array(losses))
-    print("average loss fr classification {}".format(avg_loss))
-
-    return avg_loss
-
 
 def evaluate_energy_logistic_loss(
     model: Callable[[Tensor], Tensor], train_loader_in: DataLoader, logistic_regression: Callable[[Tensor], Tensor]
-) -> Tuple[floating[Any], floating[Any], floating[Any]]:
+) -> Tuple[floating, floating, floating]:
     """
     Evaluate energy logistic loss on ID training dataset
     

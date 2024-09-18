@@ -13,22 +13,60 @@ TinyImages database, which contains random images scraped from the internet.
 """
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision.transforms as tvt
+from torch import Tensor
 from torch.optim import SGD
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
+
+from typing import Callable
+
+import numpy as np
+from numpy import floating
 
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.detector import EnergyBased
 from pytorch_ood.loss import EnergyMarginLoss
 from pytorch_ood.model import WideResNet
-from pytorch_ood.utils import OODMetrics, ToUnknown, evaluate_classification_loss_training
+from pytorch_ood.utils import OODMetrics, ToUnknown, to_np
 
 torch.manual_seed(123)
 
 # maximum number of epochs and training iterations
 n_epochs = 100
 device = "cuda:0"
+
+def evaluate_classification_loss_training(
+    model: Callable[[Tensor], Tensor], train_loader_in
+) -> floating:
+    """
+    Evaluate classification loss on ID training dataset.
+    
+    :param model: neural network to pass inputs to
+    :param train_loader_in: dataset to extract from
+    :return: ndarray with average loss
+    """
+    model.eval()
+    losses = []
+    for in_set in train_loader_in:
+        data = in_set[0]
+        target = in_set[1]
+
+        if torch.cuda.is_available():
+            data, target = data.cuda(), target.cuda()
+        # forward
+        y = model(data)
+
+        # in-distribution classification accuracy
+        loss_ce = F.cross_entropy(y, target, reduction='none')
+
+        losses.extend(list(to_np(loss_ce)))
+
+    avg_loss = np.mean(np.array(losses))
+    print("average loss fr classification {}".format(avg_loss))
+
+    return avg_loss
 
 # %%
 # Setup preprocessing and data
@@ -75,7 +113,10 @@ logistic_regression = nn.Linear(1, 1)
 logistic_regression.to(device)
 
 opti = SGD(list(model.parameters()) + list(logistic_regression.parameters()), lr=0.0001, momentum=0.9, weight_decay=0.0005, nesterov=True)
+
+# Calculate IN Classification Loss Before Fine-Tuning
 full_train_loss = evaluate_classification_loss_training(model=model, train_loader_in=train_loader_in)
+
 criterion = EnergyMarginLoss(full_train_loss=full_train_loss)
 
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer=opti,

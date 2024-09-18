@@ -6,10 +6,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from ..loss.crossentropy import cross_entropy
 from ..utils import apply_reduction, is_known, is_unknown, evaluate_energy_logistic_loss
 
-from typing import Callable, Tuple, Any
+from typing import Callable, Tuple
 from numpy import floating
 
 
@@ -22,11 +21,12 @@ class EnergyMarginLoss(nn.Module):
         `arxiv <https://arxiv.org/pdf/2306.09158>`__
 
     :see Implementation: `GitHub <https://github.com/deeplearning-wisc/scone>`__
+    :see Derivation: `arxiv <https://arxiv.org/pdf/2202.03299>`__
     """
 
     def __init__(
         self,
-        full_train_loss: floating[Any],
+        full_train_loss: floating,
         eta=1.00,
         false_alarm_cutoff=0.05,
         in_constraint_weight=1.00,
@@ -37,6 +37,22 @@ class EnergyMarginLoss(nn.Module):
         penalty_mult=1.50,
         constraint_tol=0.00
     ):
+        """
+        Constructor of EnergyMarginLoss
+        
+        :param full_train_loss: average classification loss of pre-trained model
+        :param eta: margin between IN and OOD; Covariate-shifted data should reside in-between
+        :param false_alarm_cutoff: false alarm cutoff
+        :param in_constraint_weight: penalty parameter for in-distribution constraint
+        :param lam: lagrangian multiplier for in-distribution constraint
+        :param lam2: lagrangian multiplier for multi-class model constraint
+        :param ce_tol: error threshold for the multi-class model
+        :param ce_constraint_weight: penalty parameter for multi-class model constraint
+        :param out_constraint_weight: 
+        :param lr_lam: learning rate of lagrangian multipliers
+        :param penalty_mult: penalty multiplier
+        :param constraint_tol: constraint tolerance
+        """
         super(EnergyMarginLoss, self).__init__()
         self.full_train_loss = torch.tensor(full_train_loss).float()
         self.eta = torch.tensor(eta).float()
@@ -53,7 +69,7 @@ class EnergyMarginLoss(nn.Module):
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor, logistic_regression: Callable[[torch.Tensor], torch.Tensor]) -> torch.Tensor:
         """
-        Calculates weighted sum of cross-entropy and the energy regularization term.
+        Calculates weighted sum of cross-entropy and the energy regularization term a.k.a classical Augmented Lagrangian function
 
         :param logits: logits
         :param targets: labels
@@ -73,8 +89,6 @@ class EnergyMarginLoss(nn.Module):
         self, logits: torch.Tensor, y: torch.Tensor, logistic_regression: Callable[[torch.Tensor], torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # for classification
-        known = is_known(y)
-        
         energy_loss_in = torch.mean(torch.sigmoid(logistic_regression(
             (torch.logsumexp(logits[is_known(y)], dim=1)).unsqueeze(1)).squeeze()))
         energy_loss_out = torch.mean(torch.sigmoid(-logistic_regression(
@@ -85,6 +99,7 @@ class EnergyMarginLoss(nn.Module):
         # for classification
         in_constraint_term = energy_loss_in - self.false_alarm_cutoff
         
+        # penalty function
         if self.in_constraint_weight * in_constraint_term + self.lam >= 0:
             in_loss = in_constraint_term * self.lam + self.in_constraint_weight / 2 * torch.pow(in_constraint_term, 2)
         else:
@@ -95,6 +110,7 @@ class EnergyMarginLoss(nn.Module):
         # for classification
         loss_ce_constraint = loss_ce - self.ce_tol * self.full_train_loss
         
+        # penalty function
         if self.ce_constraint_weight * loss_ce_constraint + self.lam2 >= 0:
             loss_ce = loss_ce_constraint * self.lam2 + self.ce_constraint_weight / 2 * torch.pow(loss_ce_constraint, 2)
         else:
@@ -104,10 +120,18 @@ class EnergyMarginLoss(nn.Module):
     def update_hyperparameters(
         self, model: Callable[[torch.Tensor], torch.Tensor], train_loader_in: DataLoader, logistic_regression: Callable[[torch.Tensor], torch.Tensor]
     ) -> None:
+        """
+        Update hyperparameters of the Augmented Lagrangian function
+
+        :param model: pytorch model
+        :param train_loader_in: loader of in-distribution data
+        :param logistic_regression: logistic regression layer
+        """
+        
         avg_sigmoid_energy_losses, _, avg_ce_loss = evaluate_energy_logistic_loss(model, train_loader_in, logistic_regression)
         
         # update lam
-        in_term_constraint = avg_sigmoid_energy_losses -  self.false_alarm_cutoff
+        in_term_constraint = avg_sigmoid_energy_losses - self.false_alarm_cutoff
         if in_term_constraint * self.in_constraint_weight + self.lam >= 0:
             self.lam += self.lr_lam * in_term_constraint
         else:
