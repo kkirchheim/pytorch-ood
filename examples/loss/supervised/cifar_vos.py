@@ -10,6 +10,7 @@ We can use a model pre-trained on the :math:`32 \\times 32` resized version of t
 """
 import numpy as np
 import torch
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
@@ -31,16 +32,11 @@ g.manual_seed(0)
 
 
 # %%
-def cosine_annealing(step, total_steps, lr_max, lr_min):
-    return lr_min + (lr_max - lr_min) * 0.5 * (1 + np.cos(step / total_steps * np.pi))
-
-
-# %%
 # Setup datasets, train on cifar.
 trans = WideResNet.transform_for("cifar10-pt")
 
 dataset = CIFAR10(root="data", train=True, transform=trans, download=True)
-# dataset_test = CIFAR100(root="data", transform=trans, target_transform=ToUnknown(), download=True)
+
 # setup IN test data
 dataset_in_test = CIFAR10(root="data", train=False, transform=trans)
 
@@ -93,14 +89,9 @@ optimizer = torch.optim.SGD(
 
 
 # setup scheduler for optimizer (recommended)
-scheduler = torch.optim.lr_scheduler.LambdaLR(
+scheduler = CosineAnnealingLR(
     optimizer,
-    lr_lambda=lambda step: cosine_annealing(
-        step,
-        num_epochs * len(loader),
-        1,  # since lr_lambda computes multiplicative factor
-        1e-6 / lr,
-    ),
+    T_max=num_epochs * len(loader),
 )
 loss_ema = 0
 
@@ -148,5 +139,5 @@ print(f"WeightedEBO: {metrics_weightedEBO.compute()}")
 print(f"EnergyBased: {metrics_energyBased.compute()}")
 # %%
 # Output:
-# WeightedEBO: {'AUROC': 0.9129159450531006, 'AUPR-IN': 0.8187302947044373, 'AUPR-OUT': 0.9503335356712341, 'FPR95TPR': 0.2969000041484833}
-# EnergyBased: {'AUROC': 0.9203259348869324, 'AUPR-IN': 0.8404836654663086, 'AUPR-OUT': 0.9553482532501221, 'FPR95TPR': 0.2775999903678894}
+# WeightedEBO: {'AUROC': 0.9192541837692261, 'AUPR-IN': 0.8389347195625305, 'AUPR-OUT': 0.954131007194519, 'FPR95TPR': 0.2897000014781952}
+# EnergyBased: {'AUROC': 0.9227883815765381, 'AUPR-IN': 0.8493221998214722, 'AUPR-OUT': 0.956129789352417, 'FPR95TPR': 0.2799000144004822}
