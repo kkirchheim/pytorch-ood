@@ -192,7 +192,7 @@ class OODMetrics(object):
             labels = labels[void_mask]
             scores = scores[void_mask]
 
-        # map OOD to 1, map IN to 0
+        # map OOD to 1 (positive), map IN to 0 (negative)
         labels = is_unknown(labels).long()
 
         # there must now be IN and OOD samples
@@ -206,10 +206,10 @@ class OODMetrics(object):
 
         # num_classes=None for binary
         p, r, t = binary_precision_recall_curve(scores, labels)
-        aupr_in = auc(r, p)
+        aupr_out = auc(r, p)
 
         p, r, t = binary_precision_recall_curve(-scores, 1 - labels)
-        aupr_out = auc(r, p)
+        aupr_in = auc(r, p)
 
         fpr = fpr_at_tpr(scores, labels)
 
