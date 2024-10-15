@@ -135,6 +135,7 @@ class MultiMahalanobis(Detector):
                 mu[clazz] = z_c.mean(dim=0)
                 cov += (z_c - mu[clazz]).T.mm(z_c - mu[clazz])
 
+            cov /= len(z) - 1
             cov += torch.eye(cov.shape[0], device=cov.device) * 1e-6
             precision = torch.linalg.inv(cov)
 
