@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar
+from typing import TypeVar, Dict, Any
 
 from torch import Tensor
 from torch.utils.data import DataLoader
-
+import torch
 Self = TypeVar("Self")
 
 
@@ -24,7 +24,13 @@ class ModelNotSetException(ValueError):
     def __init__(self, msg="When using predict(), model must not be None"):
         super(ModelNotSetException, self).__init__(msg)
 
+class AlreadyFittedException(Exception):
+    """
+    Raised when fit is called on a detector that has already been fitted.
+    """
 
+    def __init__(self, msg="Detector has already been fitted."):
+        super(AlreadyFittedException, self).__init__(msg)
 class Detector(ABC):
     """
     Abstract Base Class for an Out-of-Distribution Detector
@@ -81,3 +87,53 @@ class Detector(ABC):
         :raise RequiresFitException: if detector has to be fitted to some data
         """
         raise NotImplementedError
+    
+    def __getstate__(self) -> Dict[str, Any]:
+        """
+        Prepare the object's state for pickling.
+
+        :return: A copy of the object's __dict__ with the PyTorch model handled separately.
+        """
+        state = self.__dict__.copy()
+        if hasattr(self, 'model') and isinstance(self.model, torch.nn.Module):
+            state['model_state_dict'] = self.model.state_dict()
+            state['model_class'] = self.model.__class__
+            del state['model']
+        return state
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        """
+        Restore the object's state after unpickling.
+
+        :param state: The unpickled state dictionary.
+        """
+        model_state_dict = state.pop('model_state_dict', None)
+        model_class = state.pop('model_class', None)
+        self.__dict__.update(state)
+        if model_state_dict is not None and model_class is not None:
+            self.model = model_class()  # This assumes model_class can be instantiated without arguments
+            self.model.load_state_dict(model_state_dict)
+            
+    @classmethod    
+    def load(cls, path: str) -> Self:
+        """
+        Load a detector from a file.
+
+        :param path: The path to the file.
+        :return: The loaded detector.
+        """
+        
+        import pickle
+        with open(path, 'rb') as f:
+            return pickle.load(f)
+        
+    def save(self, path: str) -> None:
+        """
+        Save the detector to a file.
+
+        :param path: The path to the file.
+        :return: None
+        """
+        import pickle
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)

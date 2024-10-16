@@ -260,3 +260,8 @@ cython_debug/
 
 # sphinx galery execution times
 docs/sg_execution_times.rst
+Dockerfile
+docker-compose.yml
+devcontainer.json
+conditionalmahalanobis.*
+test_conditionalmahalanobis.py

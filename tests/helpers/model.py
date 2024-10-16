@@ -7,7 +7,7 @@ class ClassificationModel(torch.nn.Module):
         self.layer1 = torch.nn.Linear(num_inputs, n_hidden)
         self.dropout = torch.nn.Dropout(p=0.5)
         self.classifier = torch.nn.Linear(n_hidden, num_outputs)
-
+        self.encoder = torch.nn.Sequential(self.layer1, self.dropout)
     def features(self, x):
         return self.layer1(x).tanh()
 
