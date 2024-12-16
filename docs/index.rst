@@ -26,6 +26,7 @@ nomenclature, and structured API documentation.
    detector
    losses
    data
+   augmentations
    models
    utils
    benchmark

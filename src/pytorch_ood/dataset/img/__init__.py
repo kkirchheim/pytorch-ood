@@ -108,11 +108,6 @@ Chars74k
 ..  autoclass:: pytorch_ood.dataset.img.Chars74k
     :members:
 
-PixMix
-``````````````````````````
-..  autoclass:: pytorch_ood.dataset.img.PixMixDataset
-    :members:
-
 Fractals
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.FractalDataset
@@ -198,7 +193,6 @@ from .ninco import NINCO
 from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
 from .openood import OpenImagesO, Places365, iNaturalist
-from .pixmix import FeatureVisDataset, FractalDataset, PixMixDataset
 from .roadanomaly import RoadAnomaly
 from .smiyc import SegmentMeIfYouCan
 from .streethazards import StreetHazards
@@ -206,3 +200,4 @@ from .sumnist import SuMNIST
 from .textures import Textures
 from .tinyimagenet import TinyImageNet
 from .tinyimages import TinyImages, TinyImages300k
+from .pixmix import FeatureVisDataset, FractalDataset
