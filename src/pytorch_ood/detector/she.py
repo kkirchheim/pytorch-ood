@@ -71,8 +71,8 @@ class SHE(Detector):
         :param loader: data to fit
         :param device: device to use for computations
         """
-        self.model.to(device)
-        x, y = extract_features(loader, self.model, device=device)
+        self.backbone.to(device)
+        x, y = extract_features(loader, self.backbone, device=device)
         return self.fit_features(x, y, device=device)
 
     @torch.no_grad()
