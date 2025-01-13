@@ -69,13 +69,13 @@ class MCD(Detector):
         self.mode = mode
         self.batch_norm = batch_norm
 
-    def fit(self: Self, data_loader) -> Self:
+    def fit(self: Self, data_loader, **kwargs) -> Self:
         """
         Not required
         """
         return self
 
-    def fit_features(self: Self, x: Tensor, y: Tensor) -> Self:
+    def fit_features(self: Self, x: Tensor, y: Tensor, **kwargs) -> Self:
         """
         Not required
         """
@@ -92,6 +92,7 @@ class MCD(Detector):
         """
         Puts the model into training mode, except for variants of the batch-norm layer.
 
+        :param batch_norm: set to False if batch-norm should also be in training mode
         :returns: true if model was switched, false otherwise
         """
         mode_switch = False
