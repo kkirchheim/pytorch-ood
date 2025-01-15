@@ -3,15 +3,15 @@
 
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-brightred?style=flat-square
+.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
    :alt: segmentation badge
 
 ..  autoclass:: pytorch_ood.detector.Gram
     :members:
-    :exclude-members: fit, fit_features
+    :exclude-members: fit_features
 """
 import logging
-from typing import Optional, TypeVar, List
+from typing import Optional, TypeVar, List, Tuple
 
 import torch
 from torch import Tensor
@@ -23,7 +23,7 @@ from ..api import Detector, ModelNotSetException, RequiresFittingException
 
 import torch.nn.functional as F
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 Self = TypeVar("Self")
 
@@ -33,19 +33,19 @@ class Gram(Detector):
     Implements the on Gram matrices based Method from the paper *Detecting Out-of-Distribution Examples with
     In-distribution Examples and Gram Matrices*.
 
-    The GRAM Detector identifies OOD examples by analyzing feature correlations within the layers of a neural network using Gram matrices. These matrices capture pairwise correlations between feature maps. For enhanced sensitivity, higher-order Gram matrices are computed as:
+    The Gram detector identifies OOD examples by analyzing feature correlations within the layers of a neural network using Gram matrices,
+    which are computed as:
 
-    .. math :: G^p_l = \\left(F_l^p F_l^{pT}\\right)^{\\frac{1}{p}}
+    .. math :: G^p_l = \\left(F_l^p F_l^{p \\top}\\right)^{\\frac{1}{p}}
 
+    These matrices capture pairwise correlations between feature maps, which can be seen as capturing the image style.
+    For each layer, matrices for several values of :math:`p`, called *''poles''* are computed.
+    During training, class-specific minimum and maximum bounds are calculated for each entry in the Gram matrices
+    of the ID data in multiple layers of a neural network.
+    For a test input :math:`x`, deviations are calculated layer-wise by comparing the Gram matrix values against the stored bounds.
+    The total deviation across all layers :math:`l` is normalized using the expected deviation for that layer:
 
-    During training, class-specific minimum *Mins* and maximum *Maxs* bounds are calculated for each entry in the Gram matrices.
-    For a test input :math:`D`, deviations are calculated layer-wise by comparing the Gram matrix values against the stored bounds.
-    The total deviation across all layers is normalized using the expected deviation :math:`E[\\delta_l]`:
-
-    .. math :: \\Delta(D) = \\sum_{l} \\frac{\\delta_l(D)}{E[\\delta_l]}
-
-    This method detects OOD examples by identifying deviations from learned in-distribution patterns at multiple network layers.
-
+    .. math :: \\Delta(x) = \\sum_{l} \\frac{\\delta_l(x)}{\\mathbb{E}[\\delta_l]}
 
 
     :see Implementation: `GitHub <https://github.com/VectorInstitute/gram-ood-detection>`__
@@ -63,7 +63,7 @@ class Gram(Detector):
         :param head: the head of the model
         :param feature_layers: the layers of the model to be used for feature extraction
         :param num_classes: the number of classes in the dataset
-        :param num_poles_list: the list of poles to be used for higher-order Gram matrices
+        :param num_poles_list: the list of poles :math:`p`s to be used for higher-order Gram matrices
         """
         super(Gram, self).__init__()
         self.head = head
@@ -76,21 +76,20 @@ class Gram(Detector):
             self.num_poles_list = num_poles_list
         self.feature_min, self.feature_max = None, None
 
-    def _create_feature_list(self, data: Tensor):
+    @torch.no_grad()
+    def _create_feature_list(self, data: Tensor) -> Tuple[Tensor, List[Tensor]]:
         """
         :param data: input tensor
         :return: feature list
         """
-        with torch.no_grad():
-            feature_list = []
-            data_tmp = data.clone()
-            for idx in range(self.num_layer):
-                data_tmp = self.feature_layers[idx](data_tmp)
-                feature_list.append(data_tmp.clone())
+        feature_list = []
+        # data_tmp = data.clone()
+        for idx in range(self.num_layer):
+            data = self.feature_layers[idx](data)
+            feature_list.append(data.clone())
 
-            # calculate logits
-            logits = self.head(data_tmp)
-            return logits, feature_list
+        logits = self.head(data)
+        return logits, feature_list
 
     def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
         """
@@ -104,7 +103,7 @@ class Gram(Detector):
             [[None for x in range(num_poles)] for y in range(self.num_layer)]
             for z in range(self.num_classes)
         ]
-        label_list = []
+
         mins = [
             [[None for x in range(num_poles)] for y in range(self.num_layer)]
             for z in range(self.num_classes)
@@ -139,9 +138,9 @@ class Gram(Detector):
                                 feature_class[label][layer_idx][pole_idx] = feature
                             else:
                                 feature_class[label][layer_idx][pole_idx].extend(feature)
-                # print update steps using logging
+
                 if n % 100 == 0:
-                    log.info(f"Step {n}/{len(data_loader)}")
+                    log.debug(f"Fitting: {n}/{len(data_loader)}")
 
             for label in range(self.num_classes):
                 for layer_idx in range(self.num_layer):
@@ -162,14 +161,11 @@ class Gram(Detector):
                             maxs[label][layer_idx][poles_idx] = torch.max(
                                 current_min, maxs[label][layer_idx][poles_idx]
                             )
-            self.feature_min = mins
-            self.feature_max = maxs
+            self.feature_min = torch.tensor(mins)
+            self.feature_max = torch.tensor(maxs)
             return self
 
     def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not implemented.
-        """
         raise NotImplementedError("This method is not implemented. Use fit instead.")
 
     def predict(self, x: Tensor) -> Tensor:
@@ -178,7 +174,7 @@ class Gram(Detector):
 
         :param x: input tensor, will be passed through model
 
-        :return: Gram based Deviations
+        :return: Gram based deviations
         """
         if self.head is None:
             raise ModelNotSetException
@@ -202,51 +198,47 @@ class Gram(Detector):
     def _score(self, logits: Tensor, feature_list: List[Tensor]) -> Tensor:
         """
         Calculate deviation for inputs
+
         :param logits: logits of input
         :param feature_list: list of features extracted from the model
-        :return: Gram based Deviations
+
+        :return: Gram based deviations
         """
         if self.feature_min is None or self.feature_max is None:
             raise RequiresFittingException("Fit the detector first.")
 
-        exist = 1
-        pred_list = []
-        dev = [0 for x in range(logits.shape[0])]
+        device = logits.device
 
-        preds = torch.argmax(logits, dim=1)
+        deviations = torch.zeros(size=(logits.shape[0],), device=device)
 
-        for pred in preds:
-            exist = 1
-            if len(pred_list) == 0:
-                pred_list.extend([pred])
-            else:
-                for pred_now in pred_list:
-                    if pred_now == pred:
-                        exist = 0
-                if exist == 1:
-                    pred_list.extend([pred])
+        predictions = torch.argmax(logits, dim=1)
+
+        self.feature_min = self.feature_min.to(device)
+        self.feature_max = self.feature_max.to(device)
+
+        feature_min_prep = (self.feature_min + 10**-6).abs()
+        feature_max_prep = (self.feature_max + 10**-6).abs()
+
         # compute sample level deviation
         for layer_idx in range(self.num_layer):
             for pole_idx, p in enumerate(self.num_poles_list):
-                # get gram metirx
-                temp = feature_list[layer_idx].detach()
+                # get gram matrix
+                temp = feature_list[layer_idx].to(device)
                 temp = temp**p
                 temp = temp.reshape(temp.shape[0], temp.shape[1], -1)
-                temp = ((torch.matmul(temp, temp.transpose(dim0=2, dim1=1)))).sum(dim=2)
+                temp = (torch.matmul(temp, temp.transpose(dim0=2, dim1=1))).sum(dim=2)
                 temp = (temp.sign() * torch.abs(temp) ** (1 / p)).reshape(temp.shape[0], -1)
-                temp = temp.tolist()
+
+                temp_sums = temp.sum(dim=1)
+
+                min_norm = feature_min_prep[predictions, layer_idx, pole_idx]
+                max_norm = feature_max_prep[predictions, layer_idx, pole_idx]
+
+                features_min = self.feature_min[predictions, layer_idx, pole_idx]
+                features_max = self.feature_max[predictions, layer_idx, pole_idx]
 
                 # compute the deviations with train data
-                for idx in range(len(temp)):
-                    dev[idx] += (
-                        F.relu(self.feature_min[preds[idx]][layer_idx][pole_idx] - sum(temp[idx]))
-                        / torch.abs(self.feature_min[preds[idx]][layer_idx][pole_idx] + 10**-6)
-                    ).sum()
-                    dev[idx] += (
-                        F.relu(sum(temp[idx]) - self.feature_max[preds[idx]][layer_idx][pole_idx])
-                        / torch.abs(self.feature_max[preds[idx]][layer_idx][pole_idx] + 10**-6)
-                    ).sum()
+                deviations += F.relu(features_min - temp_sums) / min_norm
+                deviations += F.relu(temp_sums - features_max) / max_norm
 
-        conf = [i / 50 for i in dev]
-
-        return -torch.tensor(conf)
+        return -deviations / 50

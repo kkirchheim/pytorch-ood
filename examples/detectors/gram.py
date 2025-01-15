@@ -33,10 +33,10 @@ dataset_out_test = Textures(
     root="data", download=True, transform=trans, target_transform=ToUnknown()
 )
 
-train_loader = DataLoader(dataset_train, batch_size=128, shuffle=True)
+train_loader = DataLoader(dataset_train, batch_size=128, shuffle=True, num_workers=10)
 
 # create data loaders
-test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=128)
+test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=128, num_workers=10)
 
 # %%
 # Stage 1: Create DNN pre-trained on CIFAR 10
@@ -90,13 +90,12 @@ detector.fit(train_loader, device=device)
 # %%
 # Stage 3: Evaluate Detectors
 print("Testing...")
+
 metrics = OODMetrics()
 for x, y in test_loader:
     metrics.update(detector(x.to(device)), y)
 
-print(metrics.compute())
-
 # %%
 # This produces a table with the following output:
 
-# {'AUROC': 0.817498505115509, 'AUTC': 0.4554693349300657, 'AUPR-IN': 0.8400468826293945, 'AUPR-OUT': 0.7695349454879761, 'FPR95TPR': 0.808899998664856}
+# {'AUROC': 0.8175439834594727, 'AUTC': 0.4554872214794159, 'AUPR-IN': 0.8401336073875427, 'AUPR-OUT': 0.7695250511169434, 'FPR95TPR': 0.8087999820709229}
