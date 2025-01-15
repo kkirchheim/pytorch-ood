@@ -63,7 +63,7 @@ class Gram(Detector):
         :param head: the head of the model
         :param feature_layers: the layers of the model to be used for feature extraction
         :param num_classes: the number of classes in the dataset
-        :param num_poles_list: the list of poles :math:`p`s to be used for higher-order Gram matrices
+        :param num_poles_list: the list of poles to be used for higher-order Gram matrices
         """
         super(Gram, self).__init__()
         self.head = head
