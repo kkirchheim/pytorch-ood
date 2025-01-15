@@ -34,7 +34,7 @@ The library provides:
 - Loss Functions
 - Datasets
 - Neural Network Architectures, as well as pre-trained weights
-- Data Augmentations 
+- Data Augmentations
 - Useful Utilities
 
 and is designed to be compatible with frameworks
@@ -55,7 +55,7 @@ If you notice that the scores predicted by a detector do not match the formulas 
 ⏳ Quick Start
 ^^^^^^^^^^^^^^^^^
 Load a WideResNet-40 model (used in major publications), pre-trained on CIFAR-10 with the Energy-Bounded Learning Loss [#EnergyBasedOOD]_ (weights from to original paper), and predict on some dataset ``data_loader`` using
-Energy-based OOD Detection (EBO) [#EnergyBasedOOD]_, calculating the common metrics. 
+Energy-based OOD Detection (EBO) [#EnergyBasedOOD]_, calculating the common metrics.
 OOD data must be marked with labels < 0.
 
 .. code-block:: python
@@ -89,10 +89,10 @@ You can find more examples in the `documentation <https://pytorch-ood.readthedoc
 Benchmarks (Beta)
 ---------------------------
 
-Evaluate detectors against common benchmarks, for example the OpenOOD ImageNet benchmark 
-(including ImageNet-O, OpenImages-O, Textures, SVHN, MNIST).  All datasets (except for ImageNet itself) will be downloaded automatically. 
+Evaluate detectors against common benchmarks, for example the OpenOOD ImageNet benchmark
+(including ImageNet-O, OpenImages-O, Textures, SVHN, MNIST).  All datasets (except for ImageNet itself) will be downloaded automatically.
 
-.. code-block:: python 
+.. code-block:: python
 
    import pandas as pd
    from pytorch_ood.benchmark import ImageNet_OpenOOD
@@ -104,7 +104,7 @@ Evaluate detectors against common benchmarks, for example the OpenOOD ImageNet b
    trans = ResNet50_Weights.IMAGENET1K_V1.transforms()
 
    benchmark = ImageNet_OpenOOD(root="data", image_net_root="data/imagenet-2012/", transform=trans)
-  
+
    detector = MaxSoftmax(model)
    results = benchmark.evaluate(detector, loader_kwargs={"batch_size": 64}, device="cuda:0")
    df = pd.DataFrame(results)
@@ -176,11 +176,13 @@ The package can be installed via PyPI:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Mahalanobis                 | Implements the Mahalanobis Method.                                                             | 2018 | [#Mahalanobis]_    |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Energy-Based OOD Detection  | Implements the Energy Score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
+| GRAM                        | Detects OOD elements via deviations in the gram matrices                                       | 2019 | [#GramBased]_      |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Energy-Based OOD Detection  | Implements the energy score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Entropy                     | Uses entropy to detect OOD inputs.                                                             | 2021 | [#MaxEntropy]_     |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| ReAct                       | ReAct: Out-of-distribution Detection With Rectified Activations.                               | 2021 | [#ReAct]_          |
+| ReAct                       | ReAct: Out-of-distribution detection with Rectified Activations.                               | 2021 | [#ReAct]_          |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Maximum Logit               | Implements the MaxLogit method.                                                                | 2022 | [#StreeHaz]_       |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
@@ -444,3 +446,5 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#She] Zhang,  et al. (2023) Out-of-Distribution Detection Based on In-Distribution Data Patterns Memorization with Modern Hopfield Energy, ICLR.
 
 .. [#ReAct] Sun,  et al. (2023) ReAct: Out-of-distribution Detection With Rectified Activations, NeurIPS
+
+.. [#GramBased] Shama,  et al. (2019) Detecting Out-of-Distribution Examples with In-distribution Examples and Gram Matrices, NeurIPS
