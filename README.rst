@@ -371,7 +371,7 @@ The legal implications of using pre-trained models in commercial services are, t
 
 .. [#TempScaling] Guo, C., et al. (2017). On calibration of modern neural networks. ICML.
 
-.. [#ConfidenceLoss] DeVries, T., & Taylor, G. W. (2018). Learning confidence for out-of-distribution detection in neural networks. `ArXiv <https://arxiv.org/pdf/1802.04865>`_.
+.. [#ConfidenceLoss] DeVries, T., & Taylor, G. W. (2018). Learning confidence for out-of-distribution detection in neural networks. `ArXiv <https://arxiv.org/pdf/1802.04865>`__.
 
 .. [#EnergyBasedOOD] Liu, W., et al. (2020). Energy-based out-of-distribution detection. NeurIPS.
 
@@ -423,7 +423,7 @@ The legal implications of using pre-trained models in commercial services are, t
 
 .. [#Multi30k] Elliott, D., et al. (2016). Multi30k: Multilingual english-german image descriptions. Proceedings of the 5th Workshop on Vision and Language.
 
-.. [#WikiText2] Merity, S., et al. (2016). Pointer sentinel mixture models. `ArXiv <https://arxiv.org/abs/1609.07843>`_
+.. [#WikiText2] Merity, S., et al. (2016). Pointer sentinel mixture models. `ArXiv <https://arxiv.org/abs/1609.07843>`__
 
 .. [#INatural] Huang, R., & Li, Y. (2021) MOS: Towards Scaling Out-of-distribution Detection for Large Semantic Space. CVPR.
 
