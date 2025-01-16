@@ -100,6 +100,10 @@ class ViM(Detector):
         if self.model is None:
             raise ModelNotSetException
 
+        if isinstance(self.model, torch.nn.Module):
+            log.debug(f"Moving model to {device}")
+            self.model.to(device)
+
         features, labels = extract_features(data_loader, self.model, device)
         return self.fit_features(features, labels)
 

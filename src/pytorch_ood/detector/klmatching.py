@@ -60,6 +60,10 @@ class KLMatching(Detector):
         if self.model is None:
             raise ModelNotSetException
 
+        if isinstance(self.model, torch.nn.Module):
+            log.debug(f"Moving model to {device}")
+            self.model.to(device)
+
         logits, labels = extract_features(data_loader, self.model, device)
         return self.fit_features(logits, labels, device)
 
@@ -72,13 +76,12 @@ class KLMatching(Detector):
         :param labels: class labels
         :param device: device which should be used for calculations
         """
-        logits, labels = logits.to(device), labels.to(device)
-        y_hat = logits.max(dim=1).indices
+        labels = labels.to(device)
         probabilities = logits.softmax(dim=1)
 
         for label in labels.unique():
             log.debug(f"Fitting class {label}")
-            d_k = probabilities[labels == label].mean(dim=0)
+            d_k = probabilities[labels == label].to(device).mean(dim=0)
             self.dists[str(label.item())] = Parameter(d_k)
 
         return self

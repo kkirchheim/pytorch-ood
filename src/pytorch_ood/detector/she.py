@@ -7,17 +7,20 @@
 ..  autoclass:: pytorch_ood.detector.SHE
     :members:
 """
-from typing import Callable, TypeVar
+from typing import TypeVar, Callable
 
 import torch
+from torch import nn
 from torch import Tensor
 from torch.utils.data import DataLoader
-
-from pytorch_ood.utils import extract_features, is_known
+import logging
+from pytorch_ood.utils import extract_features, is_known, TensorBuffer
 
 from ..api import Detector, ModelNotSetException
 
 Self = TypeVar("Self")
+
+log = logging.getLogger(__name__)
 
 
 class SHE(Detector):
@@ -32,26 +35,25 @@ class SHE(Detector):
     :see Paper: `OpenReview <https://openreview.net/pdf?id=KkazG4lgKL>`__
     """
 
-    def __init__(self, model: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor]):
+    def __init__(self, backbone: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor]):
         """
-        :param model: feature extractor
+        :param backbone: feature extractor
         :param head: maps feature vectors to logits
         """
         super(SHE, self).__init__()
-        self.model = model
+        self.backbone = backbone
         self.head = head
         self.patterns = None
-
         self.is_fitted = False
 
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x:  model inputs
         """
-        if self.model is None:
+        if self.backbone is None:
             raise ModelNotSetException
 
-        z = self.model(x)
+        z = self.backbone(x)
         return self.predict_features(z)
 
     def predict_features(self, z: Tensor) -> Tensor:
@@ -67,18 +69,56 @@ class SHE(Detector):
         Extracts features and calculates mean patterns.
 
         :param loader: data to fit
-        :param device: device to use for computations
+        :param device: device to use for computations. If the backbone is a nn.Module, it will be moved to this device.
         """
-        x, y = extract_features(loader, self.model, device=device)
-        return self.fit_features(x.to(device), y.to(device))
+        if isinstance(self.backbone, nn.Module):
+            log.debug(f"Moving model to {device}")
+            self.backbone.to(device)
 
-    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+        x, y = extract_features(loader, self.backbone, device=device)
+        return self.fit_features(x, y, device=device)
+
+    @torch.no_grad()
+    def _filter_correct_predictions(
+        self, z: Tensor, y: Tensor, device: str = "cpu", batch_size: int = 1024
+    ):
+        """
+        :param z: a tensor of shape (N, D) or similar
+        :param y: labels of shape (N,)
+        :param device: device to use for computations
+        :param batch_size: how many samples we process at a time
+        """
+        buffer = TensorBuffer()
+
+        for start_idx in range(0, z.size(0), batch_size):
+            end_idx = start_idx + batch_size
+
+            z_batch = z[start_idx:end_idx].to(device)
+            y_batch = y[start_idx:end_idx].to(device)
+
+            y_hat_batch = self.head(z_batch).argmax(dim=1)
+
+            mask = y_hat_batch == y_batch
+            buffer.append("z", z_batch[mask])
+            buffer.append("y", y_hat_batch[mask])
+
+        return buffer["z"], buffer["y"]
+
+    def fit_features(
+        self: Self, z: Tensor, y: Tensor, device: str = "cpu", batch_size: int = 1024
+    ) -> Self:
         """
         Calculates mean patterns per class.
 
         :param z: features to fit
         :param y: labels
+        :param device: device to use for computations
+        :param batch_size: how many samples we process at a time
         """
+        if isinstance(self.backbone, nn.Module):
+            log.debug(f"Moving model to {device}")
+            self.backbone.to(device)
+
         known = is_known(y)
 
         if not known.any():
@@ -88,17 +128,18 @@ class SHE(Detector):
         z = z[known]
         classes = y.unique()
 
-        # assume all classes are present
+        # make sure all classes are present
         assert len(classes) == classes.max().item() + 1
 
-        # select correctly classified
-        y_hat = self.head(z).argmax(dim=1)
-        z = z[y_hat == y]
-        y = y[y_hat == y]
+        z, y = self._filter_correct_predictions(z, y, device=device, batch_size=batch_size)
 
         m = []
         for clazz in classes:
-            mav = z[y == clazz].mean(dim=0)
+            idx = y == clazz
+            if not idx.any():
+                raise ValueError(f"No correct predictions for class {clazz.item()}")
+
+            mav = z[idx].to(device).mean(dim=0)
             m.append(mav)
 
         self.patterns = torch.stack(m)

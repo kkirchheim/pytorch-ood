@@ -73,6 +73,10 @@ class Mahalanobis(Detector):
             device = list(self.model.parameters())[0].device
             log.warning(f"No device given. Will use '{device}'.")
 
+        if isinstance(self.model, torch.nn.Module):
+            log.debug(f"Moving model to device {device}")
+            self.model.to(device)
+
         z, y = extract_features(data_loader, self.model, device)
         return self.fit_features(z, y, device)
 
@@ -89,7 +93,7 @@ class Mahalanobis(Detector):
             device = z.device
             log.warning(f"No device given. Will use '{device}'.")
 
-        z, y = z.to(device), y.to(device)
+        y = y.to(device)
 
         log.debug("Calculating mahalanobis parameters.")
         classes = y.unique()
@@ -103,9 +107,10 @@ class Mahalanobis(Detector):
         self.cov = torch.zeros(size=(z.shape[-1], z.shape[-1]), device=device)
 
         for clazz in range(n_classes):
-            idxs = y.eq(clazz)
+            idxs = y.eq(clazz).to(z.device)
             assert idxs.sum() != 0
-            zs = z[idxs]
+            # we only move them to device after indexing to reduce ram usage.
+            zs = z[idxs].to(device)
             self.mu[clazz] = zs.mean(dim=0)
             self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
 

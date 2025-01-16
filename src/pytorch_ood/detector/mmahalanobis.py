@@ -82,6 +82,10 @@ class MultiMahalanobis(Detector):
             device = list(self.model[0].parameters())[0].device
             log.warning(f"No device given. Will use '{device}'.")
 
+        if isinstance(self.model, torch.nn.Module):
+            log.debug(f"Moving model to {device}")
+            self.model.to(device)
+
         zs = []
 
         for layer_idx in range(len(self.model)):
