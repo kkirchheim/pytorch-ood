@@ -8,36 +8,42 @@ The evaluation is the same as for CIFAR 10.
 +------------------+-------+-------+---------+----------+----------+
 | Detector         | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
 +==================+=======+=======+=========+==========+==========+
-| SHE              | 59.42 | 43.67 | 68.37   | 77.44    | 100.00   |
+| Gram             | 48.29 | 50.66 | 38.24   | 63.76    | 91.97    |
++------------------+-------+-------+---------+----------+----------+
+| SHE              | 59.43 | 43.67 | 68.37   | 77.44    | 100.00   |
 +------------------+-------+-------+---------+----------+----------+
 | Mahalanobis      | 75.35 | 45.59 | 65.62   | 81.59    | 58.87    |
 +------------------+-------+-------+---------+----------+----------+
-| MSP              | 78.78 | 37.31 | 71.34   | 82.36    | 57.68    |
+| MSP              | 78.78 | 37.32 | 71.34   | 82.37    | 57.67    |
 +------------------+-------+-------+---------+----------+----------+
-| Mahalanobis+ODIN | 79.24 | 44.89 | 68.69   | 84.59    | 55.94    |
+| Mahalanobis+ODIN | 79.24 | 44.89 | 68.69   | 84.58    | 55.91    |
 +------------------+-------+-------+---------+----------+----------+
-| KLMatching       | 79.88 | 41.07 | 68.23   | 83.52    | 60.04    |
+| KLMatching       | 79.88 | 41.07 | 68.23   | 83.53    | 60.02    |
 +------------------+-------+-------+---------+----------+----------+
-| ODIN             | 80.80 | 44.90 | 73.39   | 83.96    | 54.93    |
+| ODIN             | 80.80 | 44.90 | 73.40   | 83.96    | 54.92    |
 +------------------+-------+-------+---------+----------+----------+
-| Entropy          | 81.19 | 38.44 | 73.07   | 84.61    | 56.49    |
+| Entropy          | 81.19 | 38.44 | 73.08   | 84.61    | 56.49    |
 +------------------+-------+-------+---------+----------+----------+
-| ViM              | 81.73 | 43.50 | 72.91   | 85.86    | 49.85    |
+| ViM              | 81.73 | 43.50 | 72.91   | 85.87    | 49.86    |
 +------------------+-------+-------+---------+----------+----------+
-| RMD              | 83.23 | 39.43 | 74.56   | 86.95    | 50.56    |
+| RMD              | 83.23 | 39.43 | 74.56   | 86.94    | 50.55    |
 +------------------+-------+-------+---------+----------+----------+
-| MaxLogit         | 84.70 | 41.89 | 78.33   | 86.66    | 47.41    |
+| MaxLogit         | 84.70 | 41.89 | 78.33   | 86.66    | 47.40    |
 +------------------+-------+-------+---------+----------+----------+
 | EnergyBased      | 85.00 | 41.89 | 78.69   | 86.88    | 46.70    |
 +------------------+-------+-------+---------+----------+----------+
-| DICE             | 85.35 | 41.84 | 78.99   | 87.32    | 46.18    |
+| MultiMahalanobis | 85.33 | 45.93 | 77.84   | 89.51    | 39.25    |
 +------------------+-------+-------+---------+----------+----------+
+| DICE             | 85.35 | 41.84 | 78.99   | 87.32    | 46.17    |
++------------------+-------+-------+---------+----------+----------+
+
 
 """
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR100, CIFAR10, MNIST, FashionMNIST
+from torch import nn
 
 from pytorch_ood.dataset.img import (
     LSUNCrop,
@@ -46,7 +52,6 @@ from pytorch_ood.dataset.img import (
     TinyImageNetCrop,
     TinyImageNetResize,
     Places365,
-    TinyImageNet,
 )
 from pytorch_ood.detector import (
     ODIN,
@@ -60,6 +65,8 @@ from pytorch_ood.detector import (
     RMD,
     DICE,
     SHE,
+    Gram,
+    MultiMahalanobis,
 )
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
@@ -116,6 +123,20 @@ detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
 detectors["DICE"] = DICE(model=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
 detectors["RMD"] = RMD(model.features)
+detectors["MultiMahalanobis"] = MultiMahalanobis(
+    [model.conv1, model.block1, model.block2, model.block3, nn.Sequential(model.bn1, model.relu)]
+)
+detectors["Gram"] = Gram(
+    num_classes=100,
+    head=nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), model.fc),
+    feature_layers=[
+        model.conv1,
+        model.block1,
+        model.block2,
+        model.block3,
+        nn.Sequential(model.bn1, model.relu),
+    ],
+)
 
 # %%
 # **Stage 2**: fit detectors to training data (some require this, some do not)
@@ -147,5 +168,7 @@ with torch.no_grad():
 
 # calculate mean scores over all datasets, use percent
 df = pd.DataFrame(results)
-mean_scores = df.groupby("Detector").mean() * 100
+mean_scores = (
+    df.groupby("Detector")[["AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR"]].mean() * 100
+)
 print(mean_scores.sort_values("AUROC").to_csv(float_format="%.2f"))

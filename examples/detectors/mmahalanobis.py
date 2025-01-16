@@ -45,21 +45,7 @@ layer1 = model.conv1
 layer2 = model.block1
 layer3 = model.block2
 layer4 = model.block3
-
-
-class MyLayer(nn.Module):
-    def __init__(self, bn1, relu):
-        super(MyLayer, self).__init__()
-        self.bn1 = bn1
-        self.relu = relu
-
-    def forward(self, x):
-        x = self.bn1(x)
-        x = self.relu(x)
-        return x
-
-
-layer5 = MyLayer(model.bn1, model.relu)
+layer5 = nn.Sequential(model.bn1, model.relu)
 
 # %%
 # Stage 2: Create and fit model

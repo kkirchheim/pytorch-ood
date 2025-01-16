@@ -89,6 +89,11 @@ class Gram(Detector):
             feature_list.append(data.clone())
 
         logits = self.head(data)
+
+        assert (
+            logits.shape[1] == self.num_classes
+        ), f"You set num_classes={self.num_classes} but got {logits.shape[1]}"
+
         return logits, feature_list
 
     def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:

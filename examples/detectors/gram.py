@@ -46,36 +46,9 @@ layer1 = model.conv1
 layer2 = model.block1
 layer3 = model.block2
 layer4 = model.block3
+layer5 = nn.Sequential(model.bn1, model.relu)
 
-
-class MyLayer(nn.Module):
-    def __init__(self, bn1, relu):
-        super(MyLayer, self).__init__()
-        self.bn1 = bn1
-        self.relu = relu
-
-    def forward(self, x):
-        x = self.bn1(x)
-        x = self.relu(x)
-        return x
-
-
-layer5 = MyLayer(model.bn1, model.relu)
-
-
-class MyHead(nn.Module):
-    def __init__(self, nChannels, fc):
-        super(MyHead, self).__init__()
-        self.nChannels = nChannels
-        self.fc = fc
-
-    def forward(self, x):
-        out = F.avg_pool2d(x, 8)
-        out = out.view(-1, self.nChannels)
-        return self.fc(out)
-
-
-head = MyHead(model.nChannels, model.fc)
+head = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), model.fc)
 
 # %%
 # Stage 2: Create and fit model
@@ -94,6 +67,9 @@ print("Testing...")
 metrics = OODMetrics()
 for x, y in test_loader:
     metrics.update(detector(x.to(device)), y)
+
+
+print(metrics)
 
 # %%
 # This produces a table with the following output:
