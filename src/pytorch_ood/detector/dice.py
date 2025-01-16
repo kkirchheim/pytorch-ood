@@ -104,6 +104,10 @@ class DICE(Detector):
         :param loader: data loader to extract features from. OOD inputs will be ignored.
         :param device: device to use for feature extraction
         """
+        if isinstance(self.model, torch.nn.Module):
+            log.debug(f"Moving model to {device}")
+            self.model.to(device)
+
         z, y = extract_features(loader, self.model, device=device)
         self.fit_features(z, y)
         return self

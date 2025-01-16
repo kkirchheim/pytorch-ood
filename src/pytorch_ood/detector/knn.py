@@ -12,6 +12,7 @@
 import logging
 from typing import Callable, TypeVar
 
+import torch
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader
 
@@ -104,5 +105,9 @@ class KNN(Detector):
         :param loader: data loader
         :param device: device used for extracting logits
         """
+        if isinstance(self.model, torch.nn.Module):
+            log.debug(f"Moving model to {device}")
+            self.model.to(device)
+
         z, y = extract_features(model=self.model, data_loader=loader, device=device)
         return self.fit_features(z, y)

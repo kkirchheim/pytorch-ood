@@ -14,7 +14,7 @@ from torch import nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 import logging
-from pytorch_ood.utils import extract_features, is_known
+from pytorch_ood.utils import extract_features, is_known, TensorBuffer
 
 from ..api import Detector, ModelNotSetException
 
@@ -69,9 +69,12 @@ class SHE(Detector):
         Extracts features and calculates mean patterns.
 
         :param loader: data to fit
-        :param device: device to use for computations
+        :param device: device to use for computations. If the backbone is a nn.Module, it will be moved to this device.
         """
-        self.backbone.to(device)
+        if isinstance(self.backbone, nn.Module):
+            log.debug(f"Moving model to {device}")
+            self.backbone.to(device)
+
         x, y = extract_features(loader, self.backbone, device=device)
         return self.fit_features(x, y, device=device)
 
@@ -85,26 +88,21 @@ class SHE(Detector):
         :param device: device to use for computations
         :param batch_size: how many samples we process at a time
         """
-        z_correct = []
-        y_correct = []
+        buffer = TensorBuffer()
 
         for start_idx in range(0, z.size(0), batch_size):
             end_idx = start_idx + batch_size
 
-            z_batch = z[start_idx:end_idx]
-            y_batch = y[start_idx:end_idx]
+            z_batch = z[start_idx:end_idx].to(device)
+            y_batch = y[start_idx:end_idx].to(device)
 
-            y_hat_batch = self.head(z_batch.to(device)).argmax(dim=1)
+            y_hat_batch = self.head(z_batch).argmax(dim=1)
 
             mask = y_hat_batch == y_batch
+            buffer.append("z", z_batch[mask])
+            buffer.append("y", y_hat_batch[mask])
 
-            z_correct.append(z_batch[mask].cpu())
-            y_correct.append(y_batch[mask].cpu())
-
-        z_correct = torch.cat(z_correct, dim=0)
-        y_correct = torch.cat(y_correct, dim=0)
-
-        return z_correct, y_correct
+        return buffer["z"], buffer["y"]
 
     def fit_features(
         self: Self, z: Tensor, y: Tensor, device: str = "cpu", batch_size: int = 1024
@@ -118,6 +116,7 @@ class SHE(Detector):
         :param batch_size: how many samples we process at a time
         """
         if isinstance(self.backbone, nn.Module):
+            log.debug(f"Moving model to {device}")
             self.backbone.to(device)
 
         known = is_known(y)

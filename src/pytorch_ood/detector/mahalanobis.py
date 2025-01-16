@@ -73,6 +73,10 @@ class Mahalanobis(Detector):
             device = list(self.model.parameters())[0].device
             log.warning(f"No device given. Will use '{device}'.")
 
+        if isinstance(self.model, torch.nn.Module):
+            log.debug(f"Moving model to device {device}")
+            self.model.to(device)
+
         z, y = extract_features(data_loader, self.model, device)
         return self.fit_features(z, y, device)
 

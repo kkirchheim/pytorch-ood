@@ -65,6 +65,10 @@ class RMD(Mahalanobis):
         Fit parameters of the multi variate gaussian for the given loader.
         Ignores OOD Inputs.
         """
+        if isinstance(self.model, torch.nn.Module):
+            log.debug(f"Moving model to {device}")
+            self.model.to(device)
+
         z, y = extract_features(loader, self.model, device=device)
         return self.fit_features(z, y, device=device)
 
@@ -81,14 +85,16 @@ class RMD(Mahalanobis):
             device = z.device
             log.warning(f"No device given. Will use '{device}'.")
 
-        z, y = z.to(device), y.to(device)
+        y = y.to(device)
         known = is_known(y)
 
         super(RMD, self).fit_features(z, y, device)
 
+        z_known = z[known].to(device)
+
         log.debug("Fitting background gaussian.")
-        self.background_mu = z[known].mean(dim=0)
-        self.background_cov = (z[known] - self.background_mu).T.mm(z[known] - self.background_mu)
+        self.background_mu = z_known.mean(dim=0)
+        self.background_cov = (z_known - self.background_mu).T.mm(z_known - self.background_mu)
         self.background_cov += (
             torch.eye(self.background_cov.shape[0], device=self.background_cov.device) * 1e-6
         )
