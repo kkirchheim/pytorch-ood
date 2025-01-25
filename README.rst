@@ -79,7 +79,7 @@ OOD data must be marked with labels < 0.
 
     for x, y in data_loader:
         x = preprocess(x).cuda()
-        metrics.update(detector(x, y)
+        metrics.update(detector(x), y)
 
     print(metrics.compute())
 
