@@ -5,6 +5,7 @@ CIFAR10
 Open Set Simulation on CIFAR 10
 
 """
+
 import torch.nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
@@ -115,11 +116,7 @@ for epoch in range(num_epochs):
         loss.backward()
         opti.step()
 
-        loss_ema = (
-            loss_ema * 0.95 + loss.item() * 0.05
-            if loss_ema is not None
-            else loss.item()
-        )
+        loss_ema = loss_ema * 0.95 + loss.item() * 0.05 if loss_ema is not None else loss.item()
         bar.set_postfix_str(f"loss: {loss_ema:.2f}")
 
     test()

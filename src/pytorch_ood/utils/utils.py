@@ -1,6 +1,7 @@
 """
 
 """
+
 import logging
 import math
 import random
@@ -391,7 +392,9 @@ def evaluate_energy_logistic_loss(
 
         # compute in distribution logistic losses
         logistic_loss_energy_in = F.binary_cross_entropy_with_logits(
-            logistic_regression(Ec_in.unsqueeze(1)).squeeze(), binary_labels_1, reduction="none"
+            logistic_regression(Ec_in.unsqueeze(1)).squeeze(),
+            binary_labels_1,
+            reduction="none",
         )
 
         logistic_energy_losses.extend(list(to_np(logistic_loss_energy_in)))

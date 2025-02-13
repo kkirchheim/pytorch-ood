@@ -48,7 +48,11 @@ def metrics_and_plots(in_scores, out_scores, delta, name):
 
     # Plot histogram
     axes[0].hist(
-        in_scores.cpu().numpy(), bins=100, alpha=0.5, label="In-Distribution", color="tab:blue"
+        in_scores.cpu().numpy(),
+        bins=100,
+        alpha=0.5,
+        label="In-Distribution",
+        color="tab:blue",
     )
     axes[0].hist(
         (out_scores + delta).cpu().numpy(),

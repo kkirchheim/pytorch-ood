@@ -1,6 +1,7 @@
 """
 
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -91,7 +92,8 @@ class EnergyMarginLoss(nn.Module):
         else:
             raise ValueError(f"Unsupported input shape: {logits.shape}")
         return apply_reduction(
-            loss_ce + self.out_constraint_weight * energy_loss_out + loss_in, reduction=None
+            loss_ce + self.out_constraint_weight * energy_loss_out + loss_in,
+            reduction=None,
         )
 
     def _sigmoid_loss(

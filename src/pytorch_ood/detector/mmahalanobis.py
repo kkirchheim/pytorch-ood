@@ -8,6 +8,7 @@
 ..  autoclass:: pytorch_ood.detector.MultiMahalanobis
     :members:
 """
+
 import logging
 from typing import List, TypeVar
 

@@ -11,6 +11,7 @@ TinyImages database, which contains random images scraped from the internet.
 
 
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -161,7 +162,9 @@ for epoch in range(n_epochs):
         loss.backward()
         opti.step()
     criterion.update_hyperparameters(
-        model=model, train_loader_in=train_loader_in, logistic_regression=logistic_regression
+        model=model,
+        train_loader_in=train_loader_in,
+        logistic_regression=logistic_regression,
     )
     test()
     scheduler.step()

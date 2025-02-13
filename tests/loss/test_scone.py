@@ -8,6 +8,7 @@ torch.manual_seed(123)
 
 logistic_regression = torch.nn.Linear(1, 1)
 
+
 class TestEnergyMargin(unittest.TestCase):
     """
     Test code for margin-energy-based optimization
@@ -24,7 +25,7 @@ class TestEnergyMargin(unittest.TestCase):
 
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)
-        
+
     def test_backward(self):
         criterion = EnergyMarginLoss(full_train_loss=0)
         logits = torch.randn(size=(128, 10))
@@ -33,10 +34,10 @@ class TestEnergyMargin(unittest.TestCase):
 
         loss = criterion(logits, target, logistic_regression)
         loss.backward()
-        
+
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)
-        
+
     def test_inccreasing_eta(self):
         criterion = EnergyMarginLoss(full_train_loss=0, eta=1.0)
         logits = torch.randn(size=(128, 10))
@@ -54,8 +55,6 @@ class TestEnergyMargin(unittest.TestCase):
 
         self.assertIsNotNone(high_eta_loss)
         self.assertGreater(high_eta_loss, 0)
-        
+
         # introducing wider margin should minimize the loss further
         self.assertGreater(low_eta_loss, high_eta_loss)
-
-

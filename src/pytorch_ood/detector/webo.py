@@ -9,6 +9,7 @@
     :members:
     :exclude-members: fit, fit_features
 """
+
 from typing import TypeVar
 
 import torch

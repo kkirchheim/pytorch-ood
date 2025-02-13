@@ -40,8 +40,14 @@ class SegmentMeIfYouCan(ImageDatasetBase):
     }
 
     filename_list = {
-        "RoadAnomaly21": ("dataset_AnomalyTrack.zip", "231bf79ed58924bcd33d9cbe22e61076"),
-        "RoadObstacle21": ("dataset_ObstacleTrack.zip", "895fb36d18765482cc291f69e63d6da6"),
+        "RoadAnomaly21": (
+            "dataset_AnomalyTrack.zip",
+            "231bf79ed58924bcd33d9cbe22e61076",
+        ),
+        "RoadObstacle21": (
+            "dataset_ObstacleTrack.zip",
+            "895fb36d18765482cc291f69e63d6da6",
+        ),
     }
     VOID_LABEL = 1  #: void label, should be ignored during score calculation
 
@@ -103,7 +109,9 @@ class SegmentMeIfYouCan(ImageDatasetBase):
                 if path.endswith(".png") and "color" not in path:
                     all_images.append(
                         join(
-                            root, "images", path.split("_")[0] + "_" + path.split("_")[1] + ".webp"
+                            root,
+                            "images",
+                            path.split("_")[0] + "_" + path.split("_")[1] + ".webp",
                         )
                     )
                     all_masks.append(join(root, "labels_masks", path))

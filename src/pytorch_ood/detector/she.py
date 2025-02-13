@@ -7,9 +7,11 @@
 ..  autoclass:: pytorch_ood.detector.SHE
     :members:
 """
+
 from typing import TypeVar, Callable
 
 import torch
+from pytorch_ood.api import RequiresFittingException
 from torch import nn
 from torch import Tensor
 from torch.utils.data import DataLoader
@@ -51,7 +53,7 @@ class SHE(Detector):
         :param x:  model inputs
         """
         if self.backbone is None:
-            raise ModelNotSetException
+            raise ModelNotSetException()
 
         z = self.backbone(x)
         return self.predict_features(z)
@@ -60,7 +62,15 @@ class SHE(Detector):
         """
         :param z: features as given by the model
         """
+        if self.head is None:
+            raise ModelNotSetException(msg="When using predict_features(), head must not be None")
+
+        if self.patterns is None:
+            raise RequiresFittingException()
+
         y_hat = self.head(z).argmax(dim=1)
+        self.patterns = self.patterns.to(y_hat.device)
+
         scores = torch.sum(torch.mul(z, self.patterns[y_hat]), dim=1)
         return -scores
 

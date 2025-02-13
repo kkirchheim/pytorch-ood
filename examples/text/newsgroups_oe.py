@@ -30,6 +30,7 @@ The original results can not be reproduced, as the dictionaries (word-to-token-m
 
 
 """
+
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
@@ -37,7 +38,13 @@ from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from tqdm import tqdm
 
-from pytorch_ood.dataset.txt import Multi30k, NewsGroup20, Reuters52, WikiText2, WMT16Sentences
+from pytorch_ood.dataset.txt import (
+    Multi30k,
+    NewsGroup20,
+    Reuters52,
+    WikiText2,
+    WMT16Sentences,
+)
 from pytorch_ood.detector import (
     ODIN,
     EnergyBased,

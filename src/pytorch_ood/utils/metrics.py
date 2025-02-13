@@ -3,6 +3,7 @@
     :members:
 
 """
+
 from typing import Dict, TypeVar
 
 import numpy as np

@@ -10,12 +10,13 @@
     :exclude-members: fit, fit_features, predict_features
 
 """
+
 import logging
 from typing import Callable, TypeVar
 
 from torch import Tensor
 
-from ..api import Detector
+from ..api import Detector, ModelNotSetException
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -80,13 +81,18 @@ class ReAct(Detector):
         """
         :raises: NotImplementedError
         """
-        raise NotImplementedError
+        if self.head is None:
+            raise ModelNotSetException
+
+        x = x.clip(max=self.threshold)
+        x = self.head(x)
+        return self.detector(x)
 
     def fit_features(self: Self, *args, **kwargs) -> Self:
         """
         Not required
         """
-        raise self
+        return self
 
     def fit(self: Self, *args, **kwargs) -> Self:
         """

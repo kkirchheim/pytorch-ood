@@ -9,6 +9,7 @@ model from the Hendrycks baseline paper.
 .. warning :: This is currently incomplete, see :class:`CIFAR10-OpenOOD <pytorch_ood.benchmark.CIFAR10_OpenOOD>`.
 
 """
+
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 

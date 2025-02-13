@@ -8,6 +8,7 @@ We then use the :class:`WeightedEBO<pytorch_ood.detector.WeightedEBO>` OOD detec
 
 We can use a model pre-trained on the :math:`32 \\times 32` resized version of the ImageNet as a foundation.
 """
+
 import numpy as np
 import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR

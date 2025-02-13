@@ -15,6 +15,7 @@ We test the model against FashionMNIST.
 
 First, some imports etc.
 """
+
 import torch
 from torch import nn
 from torch.optim import Adam

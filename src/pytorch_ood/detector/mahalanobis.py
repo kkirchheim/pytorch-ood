@@ -8,6 +8,7 @@
 ..  autoclass:: pytorch_ood.detector.Mahalanobis
     :members:
 """
+
 import logging
 import warnings
 from typing import Callable, List, Optional, TypeVar
@@ -18,7 +19,13 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from ..api import Detector, ModelNotSetException, RequiresFittingException
-from ..utils import TensorBuffer, contains_unknown, extract_features, is_known, is_unknown
+from ..utils import (
+    TensorBuffer,
+    contains_unknown,
+    extract_features,
+    is_known,
+    is_unknown,
+)
 
 log = logging.getLogger(__name__)
 

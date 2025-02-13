@@ -10,6 +10,7 @@
     :exclude-members: predict_features, fit, fit_features
 
 """
+
 import logging
 from typing import Tuple, TypeVar
 

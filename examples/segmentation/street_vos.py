@@ -21,6 +21,7 @@ this loss function.
     This loss is more effektive with a scheduler and a lot of epochs.
 
 """
+
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch

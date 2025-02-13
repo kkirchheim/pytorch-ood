@@ -39,6 +39,7 @@ The evaluation is the same as for CIFAR 10.
 
 
 """
+
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 from torch.utils.data import DataLoader
@@ -124,7 +125,13 @@ detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
 detectors["DICE"] = DICE(model=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
 detectors["RMD"] = RMD(model.features)
 detectors["MultiMahalanobis"] = MultiMahalanobis(
-    [model.conv1, model.block1, model.block2, model.block3, nn.Sequential(model.bn1, model.relu)]
+    [
+        model.conv1,
+        model.block1,
+        model.block2,
+        model.block3,
+        nn.Sequential(model.bn1, model.relu),
+    ]
 )
 detectors["Gram"] = Gram(
     num_classes=100,

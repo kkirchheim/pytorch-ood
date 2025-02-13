@@ -197,6 +197,7 @@ SuMNIST
     :members:
 
 """
+
 from .chars74k import Chars74k
 from .cifar import CIFAR10C, CIFAR100C
 from .fishyscapes import FishyScapes, LostAndFound
@@ -208,7 +209,14 @@ from .mvtech import MVTechAD
 from .ninco import NINCO
 from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
-from .openood import OpenImagesO, Places365, iNaturalist, ImageNetV2, ImageNetES, SSBHard
+from .openood import (
+    OpenImagesO,
+    Places365,
+    iNaturalist,
+    ImageNetV2,
+    ImageNetES,
+    SSBHard,
+)
 from .roadanomaly import RoadAnomaly
 from .smiyc import SegmentMeIfYouCan
 from .streethazards import StreetHazards

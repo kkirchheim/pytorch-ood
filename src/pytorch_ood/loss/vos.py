@@ -3,6 +3,7 @@ Parts of this code are taken from
  code snippet from https://github.com/deeplearning-wisc/vos/blob/a449b03c7d6e120087007f506d949569c845b2ec/classification/CIFAR/train_virtual.py
 
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -197,7 +198,11 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         :param sample_from: number of samples that are used for sampling the probability distribution
         """
         super(VirtualOutlierSynthesizingRegLoss, self).__init__(
-            logistic_regression, weights_energy, device=device, alpha=alpha, reduction=reduction
+            logistic_regression,
+            weights_energy,
+            device=device,
+            alpha=alpha,
+            reduction=reduction,
         )
         self.num_classes = num_classes
         self.num_input_last_layer = num_input_last_layer

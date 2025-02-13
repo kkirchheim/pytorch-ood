@@ -9,6 +9,7 @@ Pretrained on downscaled imagenet:
 * https://github.com/hendrycks/pre-training/raw/master/downsampled_train/snapshots/40_2/imagenet_wrn_baseline_epoch_99.pt
 
 """
+
 import copy
 import math
 from typing import List

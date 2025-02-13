@@ -9,17 +9,19 @@
     :members:
 
 """
+
 import logging
 from typing import Callable, TypeVar
 
 import numpy as np
 import torch.nn
+from sklearn.exceptions import NotFittedError
 from torch import Tensor
 from torch.utils.data import DataLoader
 
 from pytorch_ood.utils import extract_features, is_known
 
-from ..api import Detector
+from ..api import Detector, RequiresFittingException, ModelNotSetException
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -64,6 +66,9 @@ class DICE(Detector):
         """
         :param x: input, will be passed through network
         """
+        if self.model is None:
+            raise ModelNotSetException()
+
         z = self.model(x)
         return self.predict_features(z)
 
@@ -71,6 +76,9 @@ class DICE(Detector):
         """
         :param x: features
         """
+        if self.masked_w is None:
+            raise RequiresFittingException()
+
         vote = x[:, None, :] * self.masked_w.to(x.device)
         output = vote.sum(2) + self.bias.to(x.device)
         score = self.detector(output)

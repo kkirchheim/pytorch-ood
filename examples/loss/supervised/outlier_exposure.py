@@ -11,6 +11,7 @@ TinyImages database, which contains random images scraped from the internet.
 
 
 """
+
 import torch
 import torchvision.transforms as tvt
 from torch.optim import Adam

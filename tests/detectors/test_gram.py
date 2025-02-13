@@ -40,7 +40,10 @@ class GramTest(unittest.TestCase):
 
         model = InitGram().model
         y = torch.cat(
-            [torch.zeros(size=(10,), dtype=torch.int), torch.ones(size=(10,), dtype=torch.int)]
+            [
+                torch.zeros(size=(10,), dtype=torch.int),
+                torch.ones(size=(10,), dtype=torch.int),
+            ]
         )
         x = torch.randn(size=(20, 3, 16, 16))
         dataset = TensorDataset(x, y)

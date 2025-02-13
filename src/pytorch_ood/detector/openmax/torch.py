@@ -1,6 +1,7 @@
 """
 Torch wrapper for a numpy implementation of openmax.
 """
+
 import logging
 from typing import Optional, TypeVar
 

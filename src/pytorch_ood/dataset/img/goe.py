@@ -1,6 +1,7 @@
 """
 
 """
+
 import logging
 from os.path import exists, join
 
@@ -40,7 +41,10 @@ class CIFAR100GAN(Dataset):
         50.0: "https://files.kondas.de/goe-data/samples-50.0.npz",
     }
 
-    md5 = {2.0: "f130876edbbc13ab2bdc6f7caaa1180d", 50.0: "95f1365e4c6e188595bb8476d43a82d9"}
+    md5 = {
+        2.0: "f130876edbbc13ab2bdc6f7caaa1180d",
+        50.0: "95f1365e4c6e188595bb8476d43a82d9",
+    }
 
     def __init__(self, root, transform=None, target_transform=None, download=False, sigma=50.0):
         """

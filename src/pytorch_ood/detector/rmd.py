@@ -9,6 +9,7 @@
     :members:
     :exclude-members: predict_features
 """
+
 import logging
 import warnings
 from typing import Callable, List, Optional, TypeVar
@@ -21,7 +22,13 @@ from torch.utils.data import DataLoader
 from pytorch_ood.detector.mahalanobis import Mahalanobis
 
 from ..api import Detector, ModelNotSetException, RequiresFittingException
-from ..utils import TensorBuffer, contains_unknown, extract_features, is_known, is_unknown
+from ..utils import (
+    TensorBuffer,
+    contains_unknown,
+    extract_features,
+    is_known,
+    is_unknown,
+)
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +92,7 @@ class RMD(Mahalanobis):
             device = z.device
             log.warning(f"No device given. Will use '{device}'.")
 
-        y = y.to(device)
+        # y = y.to(device)
         known = is_known(y)
 
         super(RMD, self).fit_features(z, y, device)

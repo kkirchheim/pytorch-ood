@@ -16,6 +16,7 @@ This model is evaluated using the :class:`EnergyBased<pytorch_ood.detector.Energ
     which no deterministic implementation exists at the time of writing.
 
 """
+
 import segmentation_models_pytorch as smp
 import torch
 from segmentation_models_pytorch.encoders import get_preprocessing_fn

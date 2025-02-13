@@ -2,6 +2,7 @@
 List of english stop words used by nltk, as used in
 https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/Reuters52.ipynb
 """
+
 stop_words = [
     "i",
     "me",

@@ -5,7 +5,13 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
-from ..utils import apply_reduction, contains_known, contains_unknown, is_known, is_unknown
+from ..utils import (
+    apply_reduction,
+    contains_known,
+    contains_unknown,
+    is_known,
+    is_unknown,
+)
 from .crossentropy import cross_entropy
 
 

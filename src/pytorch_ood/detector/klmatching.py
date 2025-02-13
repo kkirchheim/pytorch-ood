@@ -9,6 +9,7 @@
     :members:
 
 """
+
 import logging
 from typing import TypeVar
 
@@ -76,7 +77,6 @@ class KLMatching(Detector):
         :param labels: class labels
         :param device: device which should be used for calculations
         """
-        labels = labels.to(device)
         probabilities = logits.softmax(dim=1)
 
         for label in labels.unique():

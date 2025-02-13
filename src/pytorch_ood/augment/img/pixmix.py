@@ -4,7 +4,6 @@ which is licensed under MIT according to the gitlab repo, however, some of the f
 apache 2.0 license header. Both should be compatible with our license.
 """
 
-
 import logging
 import os
 from os.path import join

@@ -5,6 +5,7 @@ Multi-Layer Mahalanobis
 Running :class:`MultiMahalanobis <pytorch_ood.detector.MultiMahalanobis>` on CIFAR 10.
 
 """
+
 import logging
 
 from torch import nn

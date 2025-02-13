@@ -1,6 +1,7 @@
 """
 Text classifier used by Hendrycks et al.
 """
+
 import torch
 from torch import nn
 

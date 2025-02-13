@@ -9,6 +9,7 @@
     :members:
     :exclude-members: fit, fit_features, predict_features
 """
+
 import logging
 from typing import Callable, TypeVar
 

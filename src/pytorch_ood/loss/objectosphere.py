@@ -4,7 +4,13 @@ from typing import Optional
 import torch
 from torch import Tensor, nn
 
-from ..utils import apply_reduction, contains_known, contains_unknown, is_known, is_unknown
+from ..utils import (
+    apply_reduction,
+    contains_known,
+    contains_unknown,
+    is_known,
+    is_unknown,
+)
 from . import EntropicOpenSetLoss
 
 log = logging.getLogger(__name__)

@@ -78,7 +78,10 @@ class RoadAnomaly(ImageDatasetBase):
                 all_images.append(join(root, "frames", path))
                 all_masks.append(
                     join(
-                        root, "frames", f"{path.replace('.jpg','')}.labels", "labels_semantic.png"
+                        root,
+                        "frames",
+                        f"{path.replace('.jpg', '')}.labels",
+                        "labels_semantic.png",
                     )
                 )
 

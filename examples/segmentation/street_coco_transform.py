@@ -12,6 +12,7 @@ During training, we insert random COCO objects as anomalies into the image to re
     which no deterministic implementation exists at the time of writing.
 
 """
+
 import segmentation_models_pytorch as smp
 import torch
 from segmentation_models_pytorch.encoders import get_preprocessing_fn

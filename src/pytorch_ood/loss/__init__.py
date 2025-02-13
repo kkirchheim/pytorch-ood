@@ -188,7 +188,7 @@ Background Class Loss
 
 .. autoclass:: pytorch_ood.loss.BackgroundClassLoss
     :members:
-    
+
 
 Energy Margin  Loss
 ----------------------------------------------
@@ -202,6 +202,7 @@ Energy Margin  Loss
     :members:
 
 """
+
 from .background import BackgroundClassLoss
 from .cac import CACLoss
 from .center import CenterLoss

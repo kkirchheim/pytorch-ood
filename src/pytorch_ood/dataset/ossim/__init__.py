@@ -12,4 +12,5 @@ A formal description can be found in this `paper <https://arxiv.org/abs/2203.003
 
 
 """
+
 from .ossim import DynamicOSS, OpenSetSimulation

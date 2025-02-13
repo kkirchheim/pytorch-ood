@@ -19,6 +19,7 @@ We then use the :class:`EnergyBased<pytorch_ood.detector.EnergyBased>` OOD detec
     from the original repository.
 
 """
+
 import segmentation_models_pytorch as smp
 import torch
 from segmentation_models_pytorch.encoders import get_preprocessing_fn

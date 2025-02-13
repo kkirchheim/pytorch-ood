@@ -78,5 +78,12 @@ OpenOOD Benchmark
 
 
 """
+
 from .base import Benchmark
-from .img import CIFAR10_ODIN, CIFAR100_ODIN, CIFAR10_OpenOOD, CIFAR100_OpenOOD, ImageNet_OpenOOD
+from .img import (
+    CIFAR10_ODIN,
+    CIFAR100_ODIN,
+    CIFAR10_OpenOOD,
+    CIFAR100_OpenOOD,
+    ImageNet_OpenOOD,
+)

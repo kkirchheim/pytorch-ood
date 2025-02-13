@@ -5,6 +5,7 @@ Gram
 Running :class:`Gram <pytorch_ood.detector.Gram>` on CIFAR 10.
 
 """
+
 import logging
 
 from torch import nn
@@ -53,7 +54,10 @@ head = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), model.fc)
 # %%
 # Stage 2: Create and fit model
 detector = Gram(
-    head, [layer1, layer2, layer3, layer4, layer5], num_classes=10, num_poles_list=[1, 2, 3, 4, 5]
+    head,
+    [layer1, layer2, layer3, layer4, layer5],
+    num_classes=10,
+    num_poles_list=[1, 2, 3, 4, 5],
 )
 
 print("Fitting...")
