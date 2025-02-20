@@ -74,7 +74,6 @@ class Mahalanobis(Detector):
 
         :param data_loader: dataset to fit on.
         :param device: device to use
-        :return:
         """
         if device is None:
             device = list(self.model.parameters())[0].device
@@ -94,7 +93,6 @@ class Mahalanobis(Detector):
         :param z: features
         :param y: class labels
         :param device: device to use
-        :return:
         """
         if device is None:
             device = z.device

@@ -38,7 +38,8 @@ class Gram(Detector):
 
     .. math :: G^p_l = \\left(F_l^p F_l^{p \\top}\\right)^{\\frac{1}{p}}
 
-    These matrices capture pairwise correlations between feature maps, which can be seen as capturing the image style.
+    Where :math:`F_l` is the feature-map in layer :math:`l`.
+    The Gram matrices capture the pairwise correlations between feature maps, which can be seen as capturing the image style.
     For each layer, matrices for several values of :math:`p`, called *''poles''* are computed.
     During training, class-specific minimum and maximum bounds are calculated for each entry in the Gram matrices
     of the ID data in multiple layers of a neural network.
@@ -99,8 +100,10 @@ class Gram(Detector):
     def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
         """
         Calculate the minimum and maximum values for the Gram matrices of the training data.
+
         :param data_loader: data loader for training data
         :param device: device to run the model on
+
         :return: self
         """
         num_poles = len(self.num_poles_list)
