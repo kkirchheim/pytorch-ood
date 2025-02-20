@@ -8,3 +8,5 @@ numpy==1.26.4
 
 # readthedocs build currently fails with torch 1.13.0
 torch==1.11.0
+
+scikit-learn
