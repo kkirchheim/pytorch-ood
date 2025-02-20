@@ -14,9 +14,9 @@ class TestEnergy(unittest.TestCase):
     """
 
     def init_detektor(self, model, num_classes):
-        weights_energy = torch.nn.Linear(num_classes, 1).cpu()
+        weights_energy = torch.nn.Linear(num_classes, 1)
         torch.nn.init.uniform_(weights_energy.weight)
-        detector = WeightedEBO(model, weights_energy)
+        detector = WeightedEBO(model, weights_energy.weight)
         return detector
 
     def test_classification_input(self):

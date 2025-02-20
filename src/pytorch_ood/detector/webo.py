@@ -94,7 +94,7 @@ class WeightedEBO(Detector):
         return self.score(logits, self.weights)
 
     @staticmethod
-    def score(logits: torch.Tensor, weights: torch.tensor) -> torch.Tensor:
+    def score(logits: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
         """
         :param logits: logits of input
         :param weights: weights as torch.nn.module
