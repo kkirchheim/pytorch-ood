@@ -88,7 +88,7 @@ def calc_openness(n_train, n_test, n_target):
 #######################################
 def is_known(labels) -> Union[bool, Tensor]:
     """
-    :returns: True, if label :math:`>= 0`
+    :returns: True, if label :math:`\\geq 0`
     """
     return labels >= 0
 
@@ -102,21 +102,21 @@ def is_unknown(labels) -> Union[bool, Tensor]:
 
 def contains_known_and_unknown(labels) -> Union[bool, Tensor]:
     """
-    :return: true if the labels contain *IN* and *OOD* classes
+    :return: True if the labels contain *ID* and *OOD* classes
     """
     return contains_known(labels) and contains_unknown(labels)
 
 
 def contains_known(labels) -> Union[bool, Tensor]:
     """
-    :return: true if the labels contains any *IN* labels
+    :return: True if the labels contains any *ID* labels
     """
     return is_known(labels).any()
 
 
 def contains_unknown(labels) -> Union[bool, Tensor]:
     """
-    :return: true if the labels contains any *OOD* labels
+    :return: True if the labels contains any *OOD* labels
     """
     return is_unknown(labels).any()
 
@@ -157,7 +157,7 @@ def pairwise_distances(x: Tensor, y: Tensor = None) -> Tensor:
 
     :param x: is a :math:`N \\times D` matrix
     :param y:  :math:`M \\times D` matrix
-    :returns: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
+    :returns: a :math:`N \\times M` matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
 
     :see Implementation: https://discuss.pytorch.org/t/efficient-distance-matrix-computation/9065/3
 

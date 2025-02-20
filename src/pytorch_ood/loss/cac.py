@@ -20,7 +20,16 @@ from ..utils import is_known
 class CACLoss(nn.Module):
     """
     Class Anchor Clustering Loss from the paper
-    *Class Anchor Clustering: a Distance-based Loss for Training Open Set Classifiers*
+    *Class Anchor Clustering: a Distance-based Loss for Training Open Set Classifiers*.
+
+    They place a class conditional center (called anchor) in the output space of the model and pull representations of
+    points of a class :math:`y` towards the corresponding center :math:`\\mu_y` during training.
+    The centers are initialized as unit vectors scaled by a magnitude and not trainable.
+
+    They also propose an outlier score based on the distance which is implemented in the :meth:`CACLoss.score` method.
+
+    Example code is provided :doc:`here <auto_examples/loss/unsupervised/cac>`
+
 
     :see Paper: `WACV 2022 <https://arxiv.org/abs/2004.02434>`_
     :see Implementation: `GitHub <https://github.com/dimitymiller/cac-openset/>`_
@@ -51,13 +60,13 @@ class CACLoss(nn.Module):
         return self._centers
 
     def _init_centers(self) -> None:
-        """Init anchors with 1, scale by magnitude"""
+        """Init anchors as unit vectors, scale by magnitude"""
         nn.init.eye_(self.centers.params)
         self.centers.params.data *= self.magnitude
 
     def forward(self, distances: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
-        Calculates the CAC loss, based on the given distanc matrix and target labels.
+        Calculates the CAC loss, based on the given distance matrix and target labels.
         OOD inputs will be ignored.
 
         :param distances:  matrix of distances of each point to each center with shape :math:`B \\times C`.

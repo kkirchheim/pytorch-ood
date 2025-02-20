@@ -54,16 +54,14 @@ class ToRGB(object):
 
 class TargetMapping(object):
     """
-    Maps known classes to index in :math:`[0,n]`, unknown classes to values in :math:`[-\\infty, -1]`.
-    Required for open set simulations.
+    Maps ID (a.k.a. known) classes to labels :math:`\\in [0,n]`, and OOD (a.k.a. unknown) classes to labels in :math:`[-\\infty, -1]`.
+    This is required for open set simulations.
 
     **Example:**
-    If we split up a dataset so that the classes 2,3,4,9 are considered *known* or *IN*, these class
+    If we split up a dataset so that the classes 2,3,4,9 are considered *known* or *ID*, these class
     labels have to be remapped to 0,1,2,3 to be able to train
     using cross entropy with 1-of-K-vectors. All other classes have to be mapped to values :math:`<0`
     to be marked as OOD.
-
-    Target mappings have to be known at evaluation time.
     """
 
     def __init__(self, known: Set, unknown: Set):

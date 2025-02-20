@@ -1,6 +1,6 @@
 """
 Parts of this code are taken from
- code snippet from https://github.com/deeplearning-wisc/vos/blob/a449b03c7d6e120087007f506d949569c845b2ec/classification/CIFAR/train_virtual.py
+ https://github.com/deeplearning-wisc/vos/blob/a449b03c7d6e120087007f506d949569c845b2ec/classification/CIFAR/train_virtual.py
 
 """
 
@@ -14,21 +14,21 @@ from ..utils import apply_reduction, is_known, is_unknown
 
 class VOSRegLoss(nn.Module):
     """
-    Implements a loss function, that is inspired by the loss function from  *VOS: Learning what you don’t know by virtual outlier synthesis* without the synthesising of virtual outlier.
-
-    Adds a regularization term to the cross-entropy that aims to increase the (weighted) energy gap between
+    Implements the loss function from  *VOS: Learning what you don’t know by virtual outlier synthesis*
+    without the synthesising of virtual outliers.
+    The loss adds a regularization term to the cross-entropy that aims to increase the (weighted) energy gap between
     ID and OOD samples.
 
     The regularization term is defined as:
 
     .. math::
-        L_{\\text{uncertainly}} = \\mathbb{E}_{v \\sim V} \\left[ -\\text {log}\\frac{1}{1+\\text{exp}^{-\\phi(E(v))}}
+        \\mathcal{L} = \\mathbb{E}_{v \\sim V} \\left[ -\\text {log}\\frac{1}{1+\\text{exp}^{-\\phi(E(v))}}
         \\right] +  \\mathbb{E}_{x \\sim D} \\left[ -\\text {log} \\frac{\\text{exp}^{-\\phi(E(x))}}{1+
         \\text{exp}^{-\\phi(E(x))}}\\right]
 
 
-    where :math:`\\phi` is a possibly non-linear function and :math:`V` and :math:`D` are the distributions
-    of the (virtual) outliers and the dataset respectively.
+    where :math:`\\phi` is a possibly non-linear function, :math:`E` is the weighted energy
+    and :math:`V` and :math:`D` are the distributions of the (possibly virtual) outliers and the ID data respectively.
 
 
     :see Paper:
@@ -37,15 +37,17 @@ class VOSRegLoss(nn.Module):
     :see Implementation:
         `GitHub <https://github.com/deeplearning-wisc/vos/>`__
 
-    For initialisation of :math:`\\phi` and  the weights for weighted energy:
+    For initialisation of :math:`\\phi` and the weights for weighted energy:
 
     .. code :: python
 
         phi = torch.nn.Linear(1, 2)
-        weights = torch.nn.Linear(num_classes, 1))
-        torch.nn.init.uniform_(weights_energy.weight)
-        criterion = VOSRegLoss(phi, weights_energy)
+        weights = torch.nn.Linear(num_classes, 1)
+        torch.nn.init.uniform_(weights.weight)
+        criterion = VOSRegLoss(phi, weights)
 
+    .. note ::
+        This implementation does not generate synthetic outliers. For this feature, see  :class:`pytorch_ood.loss.vos.VirtualOutlierSynthesizingRegLoss`.
 
     """
 
@@ -59,8 +61,8 @@ class VOSRegLoss(nn.Module):
     ):
         """
         :param logistic_regression: :math:`\\phi` function. Can be for example a linear layer.
-        :param weights_energy: neural network layer, with weights for the energy
-        :param alpha: weighting parameter
+        :param weights_energy: neural network layer with weights for the energy
+        :param alpha: weighting parameter :math:`\\alpha`.
         :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
         :param device: For example ``cpu`` or ``cuda:0``
         """
@@ -146,27 +148,19 @@ class VOSRegLoss(nn.Module):
         )
 
 
-"""
-Parts of this code are taken from
-https://github.com/deeplearning-wisc/vos/blob/6dd9c2748de1f261c0ae898df130ec9558c60268/classification/CIFAR/train_virtual.py
-"""
-
-
 class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
     """
-    Implements the loss function of  *VOS: Learning what you don’t know by virtual outlier synthesis* with the synthesising of virtual outlier.
+    Implements the loss function of *VOS: Learning what you don’t know by virtual outlier synthesis* with additional
+    sampling of virtual outliers. These outliers are synthesized by fitting a gaussian to the latent features and
+    sampling from low-likelihood regions. This alleviates the need for real outliers during training.
 
-    Adds a regularization term to the cross-entropy that aims to increase the (weighted) energy gap between
-    ID and OOD samples (which are synthesised from the ID data).
-
-    For more information see :class:`VOS Energy-Based Loss<pytorch_ood.loss.vos.VOSRegLoss>` and the paper.
+    For more information see :class:`VOS Energy-Based Loss<pytorch_ood.loss.vos.VOSRegLoss>`.
 
     :see Paper:
         `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
 
     :see Implementation:
         `GitHub <https://github.com/deeplearning-wisc/vos/>`__
-
 
     """
 
@@ -219,7 +213,7 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         ).to(self.device)
         self.eye_matrix = torch.eye(self.num_input_last_layer, device=self.device)
 
-    def forward(self, logits, features, y):
+    def forward(self, logits: torch.Tensor, features: torch.Tensor, y: torch.Tensor):
         """
         :param logits: logits
         :param features: features

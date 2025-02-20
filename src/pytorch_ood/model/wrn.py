@@ -129,31 +129,44 @@ class WideResNet(nn.Module):
         Pretrained weights are taken from the corresponding publications.
 
         .. list-table:: Available Pre-Trained weights
-           :widths: 25 75
+           :widths: 25 25 50
            :header-rows: 1
 
            * - Key
+             - Paper
              - Description
            * - imagenet32
-             -  Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet.
+             - `Here <https://arxiv.org/abs/1901.09960>`__
+             - Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet.
            * - imagenet32-nocifar
-             - Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet, excluding cifar10 classes.
+             - `Here <https://arxiv.org/abs/1901.09960>`__
+             - Pre-Trained on a downscaled version (:math:`32 \\times 32`) of the ImageNet, excluding CIFAR-10 classes.
            * - oe-cifar100-tune
-             - Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-100
+             - `Here <https://arxiv.org/abs/1812.04606>`__
+             - Model trained with Outlier Exposure using the 80 million TinyImages database on the CIFAR-100.
            * - oe-cifar10-tune
-             - Model trained with Outlier Exposure using the 80 milion TinyImages database on the CIFAR-10
+             - `Here <https://arxiv.org/abs/1812.04606>`__
+             - Model trained with Outlier Exposure using the 80 million TinyImages database on the CIFAR-10.
            * - er-cifar10-tune
-             - Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-10
+             - `Here <https://arxiv.org/abs/2010.03759>`__
+             - Model trained with Energy Regularization using the 80 million TinyImages database on the CIFAR-10.
            * - er-cifar100-tune
-             - Model trained with Energy Regularization using the 80 milion TinyImages database on the CIFAR-100
+             - `Here <https://arxiv.org/abs/2010.03759>`__
+             - Model trained with Energy Regularization using the 80 million TinyImages database on the CIFAR-100.
            * - cifar100-pt
-             - Pre-Trained model for CIFAR-100
+             - `Here <https://arxiv.org/abs/1610.02136>`__
+             - Pre-Trained model for CIFAR-100.
            * - cifar10-pt
-             - Pre-Trained model for CIFAR-10
+             - `Here <https://arxiv.org/abs/1610.02136>`__
+             - Pre-Trained model for CIFAR-10.
            * - cifar10-pixmix
+             - `Here <https://arxiv.org/abs/2112.05135>`__
              - Model trained with PixMix on CIFAR-10. ``widen_factor=4``
            * - cifar100-pixmix
+             - `Here <https://arxiv.org/abs/2112.05135>`__
              - Model trained with PixMix on CIFAR-100. ``widen_factor=4``
+
+
         """
         super(WideResNet, self).__init__()
         nChannels = [16, 16 * widen_factor, 32 * widen_factor, 64 * widen_factor]
@@ -191,7 +204,8 @@ class WideResNet(nn.Module):
     @staticmethod
     def norm_std_for(pretrained: str) -> List[float]:
         """
-        Return normalization standard deviation values for pretrained model
+        Return normalization standard deviation values for pretrained model. This is sometimes required, for example for
+        :class:`pytorch_ood.detector.ODIN`.
         """
         if pretrained in ["cifar10-pt", "cifar100-pt"]:
             return [x / 255 for x in [63.0, 62.1, 66.7]]
@@ -201,7 +215,7 @@ class WideResNet(nn.Module):
     @staticmethod
     def transform_for(pretrained: str) -> tvt.Compose:
         """
-        Return evaluation transform for pretrained model
+        Return pre-processing used for the evaluation of a pretrained model
         """
         if pretrained in ["cifar10-pt", "cifar100-pt", "er-cifar10-tune"]:
             # Setup preprocessing

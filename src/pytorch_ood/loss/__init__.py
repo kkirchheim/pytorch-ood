@@ -1,13 +1,13 @@
 """
 
-All objective functions are implemented as ``torch.nn.Modules``. Integrating custom reduction for all of them is
-work in progress.
+All objective functions are implemented as ``torch.nn.Modules``.
+Some of them have a set of trainable parameters and must be moved to the appropriate device.
 
 
 Unsupervised
 =====================
-Unsupervised losses are only trained on in-distribution data (or similarly, only on
-points from known known classes.)
+Unsupervised losses only use in-distribution data (or similarly, only on
+examples from "known known" classes.)
 
 Therefore, all of these loss functions expect that the target labels are strictly :math:`\\geq 0`.
 
@@ -86,7 +86,6 @@ Confidence Loss
 
 ..  autoclass:: pytorch_ood.loss.ConfidenceLoss
     :members:
-
 
 
 Supervised
@@ -190,7 +189,7 @@ Background Class Loss
     :members:
 
 
-Energy Margin  Loss
+Energy Margin Loss (Scone)
 ----------------------------------------------
 
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square

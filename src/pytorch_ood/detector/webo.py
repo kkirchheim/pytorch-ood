@@ -25,8 +25,10 @@ class WeightedEBO(Detector):
     """
     Implements the Weighted Energy Based Score of  *VOS: Learning what you don’t know by virtual outlier synthesis*.
 
-    This methods calculates the energy for a vector of logits and the weights (you only get from the training with :class:`pytorch_ood.loss.VOSRegLoss`).
-    This value can be used as outlier score.
+    This method calculates the energy from the weighted logits. The negative energy can be used as outlier score.
+    The weights (which can be obtained, for example, by training with the :class:`pytorch_ood.loss.VOSRegLoss`).
+
+    Overall, the score is defined as:
 
     .. math::
         E(x) = - \\log{\\sum_i w_{i} e^{f_i(x)}}
@@ -62,10 +64,10 @@ class WeightedEBO(Detector):
         """
         return self
 
-    def __init__(self, model: torch.nn.Module, weights: torch.nn.Linear):
+    def __init__(self, model: torch.nn.Module, weights: torch.Tensor):
         """
-        :param model: neural network to use, is assumed to output features
-        :param weights: neural network layer, with num_classes inputs.
+        :param model: neural network :math:`f` to use, is assumed to output logits
+        :param weights: weight vector of with shape :math:`C \\times 1` where :math:`C` is the number of classes
         """
         super(WeightedEBO, self).__init__()
 
@@ -92,31 +94,32 @@ class WeightedEBO(Detector):
         return self.score(logits, self.weights)
 
     @staticmethod
-    def score(logits: torch.Tensor, weights: torch.nn.Module) -> torch.Tensor:
+    def score(logits: torch.Tensor, weights: torch.tensor) -> torch.Tensor:
         """
         :param logits: logits of input
         :param weights: weights as torch.nn.module
         """
+        weights = weights.to(logits.device).relu()
 
+        # Classification
         if len(logits.shape) == 2:
-            conf = torch.log(
-                torch.sum((F.relu(weights.weight) * torch.exp(logits)), dim=1, keepdim=False)
-            )
+            energy = torch.log(torch.sum((weights * torch.exp(logits)), dim=1, keepdim=False))
 
-            return -conf
+            return -energy
+        # Segmentation
         elif len(logits.shape) == 4:
             # Permutation depends on shape of logits
 
-            tmp_scores_ = logits.permute(0, 2, 3, 1)
+            logits = logits.permute(0, 2, 3, 1)
 
-            conf = torch.log(
+            energy = torch.log(
                 torch.sum(
-                    (F.relu(weights.weight) * torch.exp(tmp_scores_)),
+                    (weights * torch.exp(logits)),
                     dim=3,
                     keepdim=False,
                 )
             )
 
-            return -conf
+            return -energy
         else:
             raise ValueError(f"Unsupported input shape: {logits.shape}")

@@ -21,15 +21,12 @@ class OpenMax(Detector):
     """
     Implementation of the OpenMax Layer as proposed in the paper *Towards Open Set Deep Networks*.
 
-    The methods determines a center :math:`\\mu_y` for each class in the logits space of a model, and then
+    The method determines a center :math:`\\mu_y` for each class in the logits space of a model, and then
     creates a statistical model of the distances of correct classified inputs.
     It uses extreme value theory to detect outliers by fitting a weibull function to the tail of the distance
     distribution.
 
-    We use the activation of the *unknown* class as outlier score.
-
-    .. warning:: This methods requires ``libmr`` to be installed, which is broken at the moment. You can only use it
-       by installing ``cython`` and ``numpy``, and ``libmr`` manually afterward.
+    We use the pseudo-activation of the *unknown* class as outlier score.
 
     :see Paper: `ArXiv <https://arxiv.org/abs/1511.06233>`__
     :see Implementation: `GitHub <https://github.com/abhijitbendale/OSDN>`__

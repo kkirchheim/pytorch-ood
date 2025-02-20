@@ -1,7 +1,7 @@
 General Information
 **************************
 
-Scope
+Scope and Nomenclature
 -----------------------------------------
 
 Out-of-Distribution Detection, Anomaly Detection, Novelty Detection,
@@ -11,10 +11,13 @@ However, different researchers may use different terminologies, and there is,
 to our knowledge, currently no clear consensus on the nomenclature.
 Consequently, some of the terms may be used interchangeably.
 
-This library aims to provide methods for Out-of-Distribution Detection.
+The survey paper `Generalized Out-of-Distribution Detection: A Survey <https://arxiv.org/pdf/2110.11334>`__
+presents a possible nomenclature.
+
+
+PyTorch-OOD aims to provide well tested implementation of methods for Out-of-Distribution Detection.
 However, it may also cover approaches from closely related fields,
 such as Anomaly Detection or Novelty Detection.
-
 Our goal is to provide a flexible and adaptable solution that can be easily
 integrated into existing research workflows, enabling researchers
 to test and compare various methods in a standardized and reproducible manner.
@@ -32,22 +35,21 @@ These are as follows:
 OOD as Binary Classification
 ==============================
 
-PyTorch-OOD approaches Out-of-Distribution (OOD) detection as a binary
-classification task with the objective of distinguishing between
-in-distribution (IN) and out-of-distribution (OOD) data.
-This binary classification is performed in addition to other tasks,
-such as classification or segmentation.
-PyTorch-OOD assumes that each OOD detector produces outlier scores,
-which are numerical values that indicate the degree of outlierness of a
-given sample.
-While this assumption may not be applicable to some detectors,
+- PyTorch-OOD approaches Out-of-Distribution (OOD) detection as a binary classification
+  task with the objective of distinguishing between in-distribution (IN) and out-of-distribution (OOD) data.
+  This binary classification is performed in addition to other tasks, such as classification or segmentation.
+- PyTorch-OOD assumes that each OOD detector produces outlier scores,
+  which are numerical values that indicate the degree of outlierness of a given sample.
+
+
+While the latter assumption may not be applicable to some detectors,
 such as OpenMax, we believe that most methods can be modified
 to produce outlier scores.
 
 Workflow
 ===============
 
-We assume a workflow involving 3 Steps:
+We assume a workflow involving 3 steps:
 
 1. Training a Deep Neural Network
 2. Creating an OOD detector, which is optionally fitted on some training data.

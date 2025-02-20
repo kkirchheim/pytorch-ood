@@ -15,14 +15,15 @@ from numpy import floating
 
 class EnergyMarginLoss(nn.Module):
     """
-    Introducing Margin to further improve performance Energy-based OOD detection method,
+    Loss from the paper *Feed Two Birds with One Scone*.
+    Introducing a margin to further improve performance Energy-based OOD detection method,
     specifically for handling covariate shifted data.
 
     :see Paper:
-        `arxiv <https://arxiv.org/pdf/2306.09158>`__
+        `ArXiv <https://arxiv.org/pdf/2306.09158>`__
 
     :see Implementation: `GitHub <https://github.com/deeplearning-wisc/scone>`__
-    :see Derivation: `arxiv <https://arxiv.org/pdf/2202.03299>`__
+    :see Derivation: `ArXiv <https://arxiv.org/pdf/2202.03299>`__
     """
 
     def __init__(

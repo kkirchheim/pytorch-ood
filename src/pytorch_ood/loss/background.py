@@ -13,7 +13,7 @@ class BackgroundClassLoss(torch.nn.Module):
     The idea of the background-class is that OOD samples are mapped to an individual class during training.
     This implementation uses the normal cross-entropy, but handles remapping of the background class labels
     to positive target labels.
-    Thus, when the target labels are :math:`\\lbrace 0, 2, ..., N - 1 \\rbrace`
+    Thus, when the target labels are :math:`\\lbrace 0, 1, 2, ..., N - 1 \\rbrace`
     we will remap all entries with target label :math:`<0` to :math:`N`.
 
     The networks output layer has to include :math:`N+1` outputs, so logits are

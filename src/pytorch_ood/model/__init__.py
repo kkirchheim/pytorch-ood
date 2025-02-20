@@ -2,7 +2,11 @@
 Models
 ******************
 
-Frequently used Neural Network based Models
+Publications frequently use the same models, however, hyperparameters, pre-processing differ and
+are sometimes cumbersome to set up.
+
+The purpose of this module is to minimize the effort required to reproduce the experiments of others by
+providing models, pre-processing and weights, as used in the original publications.
 
 
 Vision
@@ -14,8 +18,11 @@ Wide ResNet
 ..  autoclass:: pytorch_ood.model.WideResNet
     :members:
 
+
 Language
 ==============================
+
+Models used in pre-LLM papers for OOD detection.
 
 GRU Classifier
 ---------------------
@@ -25,7 +32,7 @@ GRU Classifier
 
 Modules
 =================
-Neural Network modules frequently used in OOD Detection.
+Neural Network modules frequently used in OOD detection.
 
 
 Class Centers
