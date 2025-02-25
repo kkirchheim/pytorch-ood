@@ -29,7 +29,7 @@ class MaxLogit(Detector):
     where :math:`f_y(x)` indicates the :math:`y^{th}` logits value predicted by :math:`f`.
 
     :see Paper:
-       `ArXiv <https://.org/abs/1911.11132>`__
+       `ArXiv <https://arxiv.org/abs/1911.11132>`__
     """
 
     def __init__(self, model: Module):
