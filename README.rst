@@ -16,7 +16,7 @@ PyTorch Out-of-Distribution Detection
 .. |python-version| image:: https://img.shields.io/badge/-Python 3.8+-blue?logo=python&logoColor=white&style=for-the-badge
    :target: https://www.python.org/
    :alt: Python
-.. |downloads| image:: https://img.shields.io/pypi/dm/pytorch-ood?style=for-the-badge
+.. |downloads| image:: https://img.shields.io/pepy/dt/pytorch-ood?style=for-the-badge
    :target: https://pepy.tech/project/pytorch-ood
    :alt: Downloads
 
