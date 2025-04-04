@@ -1,7 +1,4 @@
 """
-Detectors
-******************
-
 This module provides a collection of different Out-of-Distribution Detectors.
 
 API
