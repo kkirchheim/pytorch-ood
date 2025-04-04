@@ -18,7 +18,7 @@ Deep SVDD Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 
 .. autoclass:: pytorch_ood.loss.DeepSVDDLoss
@@ -31,7 +31,7 @@ Class Anchor Clustering Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 
 ..  autoclass:: pytorch_ood.loss.CACLoss
@@ -44,7 +44,7 @@ II Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 
 ..  autoclass:: pytorch_ood.loss.IILoss
@@ -57,7 +57,7 @@ Center Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 
 .. autoclass:: pytorch_ood.loss.CenterLoss
@@ -70,7 +70,7 @@ Cross-Entropy Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 ..  autoclass:: pytorch_ood.loss.CrossEntropyLoss
     :members:
@@ -82,9 +82,21 @@ Confidence Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 ..  autoclass:: pytorch_ood.loss.ConfidenceLoss
+    :members:
+
+
+LogitNorm Loss
+----------------------------------------------
+
+.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
+   :alt: classification badge
+.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
+   :alt: segmentation badge
+
+..  autoclass:: pytorch_ood.loss.LogitNorm
     :members:
 
 
@@ -100,7 +112,7 @@ Outlier Exposure Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 .. autoclass:: pytorch_ood.loss.OutlierExposureLoss
     :members:
@@ -112,7 +124,7 @@ Entropic Open-Set Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 .. autoclass:: pytorch_ood.loss.EntropicOpenSetLoss
     :members:
@@ -124,7 +136,7 @@ Objectosphere Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 .. autoclass:: pytorch_ood.loss.ObjectosphereLoss
     :members:
@@ -136,7 +148,7 @@ Energy-Bounded Learning Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 .. autoclass:: pytorch_ood.loss.EnergyRegularizedLoss
     :members:
@@ -147,7 +159,7 @@ VOS Energy-Based Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 .. autoclass:: pytorch_ood.loss.VOSRegLoss
     :members:
@@ -159,7 +171,7 @@ Virtual Outlier Synthesizing  Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 .. autoclass:: pytorch_ood.loss.VirtualOutlierSynthesizingRegLoss
     :members:
@@ -170,7 +182,7 @@ MCHAD Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 ..  autoclass:: pytorch_ood.loss.MCHADLoss
     :members:
@@ -183,7 +195,7 @@ Background Class Loss
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 .. autoclass:: pytorch_ood.loss.BackgroundClassLoss
     :members:
@@ -195,7 +207,7 @@ Energy Margin Loss (Scone)
 .. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
+   :alt: segmentation badge
 
 .. autoclass:: pytorch_ood.loss.EnergyMarginLoss
     :members:
@@ -218,3 +230,4 @@ from .oe import OutlierExposureLoss
 # from .triplet import TripletLoss
 from .svdd import DeepSVDDLoss, SSDeepSVDDLoss
 from .vos import VirtualOutlierSynthesizingRegLoss, VOSRegLoss
+from .logitnorm import LogitNorm, logit_norm_loss

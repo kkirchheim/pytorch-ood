@@ -233,7 +233,8 @@ The package can be installed via PyPI:
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 | VOS Energy-Based Loss      | Implementation of the paper *VOS: Learning what you don’t know by virtual outlier synthesis*.    | 2022 | [#WEBO]_           |
 +----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
-
+| Logit Normalization        | Implementation of the paper *Mitigating Neural Network Overconfidence with Logit Normalization*. | 2022 | [#LOGNORM]_        |
++----------------------------+--------------------------------------------------------------------------------------------------+------+--------------------+
 
 **Image Datasets**:
 
@@ -448,3 +449,5 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#ReAct] Sun,  et al. (2023) ReAct: Out-of-distribution Detection With Rectified Activations, NeurIPS
 
 .. [#GramBased] Shama,  et al. (2019) Detecting Out-of-Distribution Examples with In-distribution Examples and Gram Matrices, NeurIPS
+
+.. [#LOGNORM] Wei,  et al. (2022) Mitigating Neural Network Overconfidence with Logit Normalization, ICML
