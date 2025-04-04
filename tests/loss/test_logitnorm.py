@@ -3,7 +3,6 @@ import unittest
 import torch
 
 from src.pytorch_ood.loss import LogitNorm
-from tests.helpers.model import SegmentationModel
 
 torch.manual_seed(123)
 

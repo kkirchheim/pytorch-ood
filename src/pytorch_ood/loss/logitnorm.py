@@ -1,5 +1,4 @@
 import torch
-from matplotlib.animation import adjusted_figsize
 from torch.nn import Module
 from torch import Tensor
 from torch import functional as F
