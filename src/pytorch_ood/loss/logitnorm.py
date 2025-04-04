@@ -1,4 +1,5 @@
 import torch
+from matplotlib.animation import adjusted_figsize
 from torch.nn import Module
 from torch import Tensor
 from torch import functional as F
@@ -15,6 +16,10 @@ def logit_norm_loss(
     :param t:
     :param reduction:
     """
+    known = is_known(logits)
+    logits = logits[known]
+    target = target[known]
+
     norm = F.norm(logits, p=2, dim=1)
     adjusted = logits / (t * norm.repeat(logits.shape[1], 1).T)
     return nll_loss(adjusted, target, reduction=reduction)
@@ -32,7 +37,7 @@ class LogitNorm(Module):
 
     where :math:`\\tau` is a temperature  value.
 
-    This improves OOD detection capabilities.
+    Will ignore  OOD inputs.
 
     :see Paper:
         `ICML <https://arxiv.org/abs/2205.09310>`__
