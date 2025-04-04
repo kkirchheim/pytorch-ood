@@ -15,7 +15,7 @@ def logit_norm_loss(
     :param t:
     :param reduction:
     """
-    known = is_known(logits)
+    known = is_known(target)
     logits = logits[known]
     target = target[known]
 
