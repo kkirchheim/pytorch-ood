@@ -15,7 +15,7 @@ nomenclature, and structured API documentation.
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Guide
+   :caption: Overview
 
    info
 

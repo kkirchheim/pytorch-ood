@@ -1,7 +1,8 @@
 General Information
 **************************
 
-Scope and Nomenclature
+
+Terminology & Scope
 -----------------------------------------
 
 Out-of-Distribution Detection, Anomaly Detection, Novelty Detection,
@@ -11,58 +12,73 @@ However, different researchers may use different terminologies, and there is,
 to our knowledge, currently no clear consensus on the nomenclature.
 Consequently, some of the terms may be used interchangeably.
 
-The survey paper `Generalized Out-of-Distribution Detection: A Survey <https://arxiv.org/pdf/2110.11334>`__
+The survey paper `Generalized Out-of-Distribution Detection: A Survey <https://arxiv.org/abs/2110.11334>`__
 presents a possible nomenclature.
-
 
 PyTorch-OOD aims to provide well tested implementation of methods for Out-of-Distribution Detection.
 However, it may also cover approaches from closely related fields,
 such as Anomaly Detection or Novelty Detection.
+
+Experimental Workflow
+=========================
+
+OOD Detection Experiments usually involve the following steps:
+
+
+1. Training a Deep Neural Network.
+2. Creating an OOD detector, which is optionally fitted on some training data.
+3. Evaluating the OOD detector on some benchmark dataset.
+
+
+Design Choices
+-----------------
+
 Our goal is to provide a flexible and adaptable solution that can be easily
-integrated into existing research workflows, enabling researchers
+integrated into the entire workflow, enabling users
 to test and compare various methods in a standardized and reproducible manner.
-We intend to continue to update and expand the library to keep up with
-the latest developments.
-
-
-Assumptions
--------------
 
 While PyTorch-OOD aims to be as general as possible, there are certain assumptions that we have to make.
 These are as follows:
 
 
-OOD as Binary Classification
-==============================
+1) OOD Detection is Binary Classification
+==========================================
 
-- PyTorch-OOD approaches Out-of-Distribution (OOD) detection as a binary classification
-  task with the objective of distinguishing between in-distribution (IN) and out-of-distribution (OOD) data.
-  This binary classification is performed in addition to other tasks, such as classification or segmentation.
-- PyTorch-OOD assumes that each OOD detector produces outlier scores,
-  which are numerical values that indicate the degree of outlierness of a given sample.
+PyTorch-OOD approaches Out-of-Distribution (OOD) detection as a binary
+classification task with the objective of distinguishing between
+in-distribution (ID) and out-of-distribution (OOD) data.
+This binary classification is performed in addition to other tasks,
+such as classification or segmentation.
 
+2) Detectors predict Outlier Scores
+===================================
+PyTorch-OOD assumes that each OOD detector produces outlier scores,
+which are numerical values that indicate the degree of outlierness of a
+given sample, i.e., higher scores means higher certainty that it is OOD.
 
-While the latter assumption may not be applicable to some detectors,
+While this assumption may not be applicable to some detectors,
 such as OpenMax, we believe that most methods can be modified
 to produce outlier scores.
 
-Workflow
-===============
 
-We assume a workflow involving 3 steps:
-
-1. Training a Deep Neural Network
-2. Creating an OOD detector, which is optionally fitted on some training data.
-3. Evaluating the OOD detector on some benchmark dataset
-
-Labeling
-===============
+3) OOD Points have Negative Labels
+===================================
 
 PyTorch-OOD follows a labeling convention in which in-distribution data
 samples are assigned target class labels greater
 than or equal to zero (:math:`>= 0`). Out-of-distribution
 data samples, whether known or unknown during training, are
 assigned target values less than zero (:math:`< 0`).
+
+
+Other design features
+========================
+We aim to make usage user friendly.
+Sometimes, this comes at the price of performance.
+
+In some cases, we might, for example, move tensors from one device to another so that computations
+do not throw exceptions because of a device mismatch. While letting users manage tensor device placement on their own could lead to
+better performance, it would place more burden on them.
 
 
 Getting Started
@@ -128,6 +144,5 @@ To build the documentation, run
 
 Quick Start
 -----------------------------------------
-
 
 You can find a lot of minimal examples :doc:`here <auto_examples/benchmarks/index>`.
