@@ -189,7 +189,7 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Maximum Softmax Probability | Implements the Softmax Baseline for OOD and Error detection.                                   | 2017 | [#Softmax]_        |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Temperature Scaling         | Implements the Temperature Scaling for Softmax.                                                 | 2017 | [#TempScaling]_    |
+| Temperature Scaling         | Implements the Temperature Scaling for Softmax.                                                | 2017 | [#TempScaling]_    |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ODIN                        | ODIN is a preprocessing method for inputs that aims to increase the discriminability of        | 2018 | [#ODIN]_           |
 |                             | the softmax outputs for In- and Out-of-Distribution data.                                      |      |                    |
