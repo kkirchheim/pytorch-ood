@@ -1,7 +1,7 @@
 PyTorch Out-of-Distribution Detection
 ****************************************
 
-|docs| |version| |license| |python-version| |downloads|
+|docs| |version| |license| |python-version| |downloads| |paper|
 
 
 .. |docs| image:: https://img.shields.io/badge/docs-online-blue?style=for-the-badge
@@ -19,6 +19,9 @@ PyTorch Out-of-Distribution Detection
 .. |downloads| image:: https://img.shields.io/pepy/dt/pytorch-ood?style=for-the-badge
    :target: https://pepy.tech/project/pytorch-ood
    :alt: Downloads
+.. |paper| image:: https://img.shields.io/badge/paper-cvpr-blue?style=for-the-badge
+   :target: https://openaccess.thecvf.com/content/CVPR2022W/HCIS/papers/Kirchheim_PyTorch-OOD_A_Library_for_Out-of-Distribution_Detection_Based_on_PyTorch_CVPRW_2022_paper.pdf
+   :alt: Paper
 
 .. image:: docs/_static/pytorch-ood-logo.jpg
    :align: center
