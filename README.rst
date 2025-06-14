@@ -158,6 +158,23 @@ The package can be installed via PyPI:
 * ``segmentation-models-pytorch`` to run the examples for anomaly segmentation
 
 
+📎 Citation 
+^^^^^^^^^^^^^
+
+If you use this project, please cite:
+
+::
+
+  @inproceedings{kirchheim2022pytorch,
+    title={Pytorch-ood: A library for out-of-distribution detection based on pytorch},
+    author={Kirchheim, Konstantin and Filax, Marco and Ortmeier, Frank},
+    booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+    pages={4351--4360},
+    year={2022}
+  }
+
+
+
 📦 Implemented
 ^^^^^^^^^^^^^^^
 
