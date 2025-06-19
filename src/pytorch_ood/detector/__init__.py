@@ -120,6 +120,16 @@ Gram Matrices Based (GM)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.gram
 
+
+
+Gradient-based
+--------------------------
+
+Gradient
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.gradient
+
+
 Activation Pruning
 ---------------------
 
@@ -159,3 +169,4 @@ from .softmax import MaxSoftmax
 from .tscaling import TemperatureScaling
 from .vim import ViM
 from .webo import WeightedEBO
+from .gradient import Gradient
