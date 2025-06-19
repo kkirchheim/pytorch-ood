@@ -20,7 +20,7 @@ from ..api import Detector, ModelNotSetException
 Self = TypeVar("Self")
 
 
-class Gradient(Detector):
+class GradNorm(Detector):
     """
     Detector from the paper *Gradients as a Measure of Uncertainty in Neural Networks*.
 

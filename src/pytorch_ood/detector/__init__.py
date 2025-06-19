@@ -125,9 +125,9 @@ Gram Matrices Based (GM)
 Gradient-based
 --------------------------
 
-Gradient
+GradNorm
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.gradient
+.. automodule:: pytorch_ood.detector.gradnorm
 
 
 Activation Pruning
