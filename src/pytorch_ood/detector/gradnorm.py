@@ -5,7 +5,7 @@
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
    :alt: segmentation badge
 
-..  autoclass:: pytorch_ood.detector.Gradient
+..  autoclass:: pytorch_ood.detector.GradNorm
     :members:
     :exclude-members: fit_features, predict_features, fit
 """

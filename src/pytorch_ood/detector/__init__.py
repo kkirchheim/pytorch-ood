@@ -38,6 +38,10 @@ without further adjustment.
 Probability-based
 -------------------------------
 
+Probability-based methods are based on the observation that OOD inputs tend to be assigned lower posteriors with higher
+entropy, i.e., the predicted distribution is often less concentrated on a single class.
+
+
 Maximum Softmax (MSP)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.softmax
@@ -63,6 +67,8 @@ Entropy
 Logit-based
 -------------------------------
 
+
+
 Maximum Logit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.maxlogit
@@ -80,9 +86,6 @@ Weighted Energy Based (WEBO)
 .. automodule:: pytorch_ood.detector.webo
 
 
-ODIN Preprocessing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.odin
 
 Feature-based
 -------------------------------
@@ -125,13 +128,26 @@ Gram Matrices Based (GM)
 Gradient-based
 --------------------------
 
+Gradient-based detectors are based on the observation that the gradients (w.r.t. the model parameters or
+the inputs) for ID and OOD data behave differently.
+
 GradNorm
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.gradnorm
 
 
+ODIN Preprocessing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.odin
+
+
+
 Activation Pruning
 ---------------------
+
+Activation pruning methods are based on the observation that OOD inputs cause unusual activations in the model,
+and that, by rectifying these unusual activations, we can often improve discriminability of ID and OOD samples.
+
 
 Activation Shaping (ASH)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -169,4 +185,4 @@ from .softmax import MaxSoftmax
 from .tscaling import TemperatureScaling
 from .vim import ViM
 from .webo import WeightedEBO
-from .gradient import Gradient
+from .gradnorm import GradNorm

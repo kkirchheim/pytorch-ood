@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.detector import Gradient
+from src.pytorch_ood.detector import GradNorm
 from src.pytorch_ood.model import WideResNet
 
 
@@ -14,7 +14,7 @@ class TestASH(unittest.TestCase):
     def test_input(self):
         """ """
         model = WideResNet(num_classes=10).eval()
-        detector = Gradient(model)
+        detector = GradNorm(model)
 
         x = torch.randn(size=(16, 3, 32, 32))
 
