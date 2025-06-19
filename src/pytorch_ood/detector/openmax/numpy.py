@@ -19,10 +19,6 @@ class OpenMax(object):
     creates a statistical model of the distances of correct classified inputs.
     It uses extreme value theory to detect outliers.
 
-
-    .. warning:: This methods requires `libmr` to be installed, which is broken at the moment. You can only use it
-        by installing `cython` and `numpy`, and `libmr` manually afterward.
-
     :param tailsize: length of the tail to fit the distribution to
     :param alpha: number of class activations to revise
     :param euclid_weight: weight for the Euclidean distance.

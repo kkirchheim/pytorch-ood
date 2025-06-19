@@ -1,9 +1,9 @@
 """
 Torch wrapper for a numpy implementation of openmax.
 """
-
 import logging
 from typing import Optional, TypeVar
+from .numpy import OpenMax as NumpyOpenMax
 
 import torch
 from torch import Tensor
@@ -47,9 +47,6 @@ class OpenMax(Detector):
         """
         self.model = model
 
-        # we import it here because of its dependency to the broken libmr
-        from .numpy import OpenMax as NumpyOpenMax
-
         self._openmax = NumpyOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
 
     def fit(self: Self, data_loader: DataLoader, device: Optional[str] = "cpu") -> Self:
@@ -79,7 +76,7 @@ class OpenMax(Detector):
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: input, will be passed through the model to obtain logits
+        :param x: input, will be passed through the model to get logits
         """
         if self.model is None:
             raise ModelNotSetException
