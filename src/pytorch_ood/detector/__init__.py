@@ -124,6 +124,10 @@ Gram Matrices Based (GM)
 .. automodule:: pytorch_ood.detector.gram
 
 
+Neural Collapse Inspired (NCI)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.nci
+
 
 Gradient-based
 --------------------------
@@ -186,3 +190,4 @@ from .tscaling import TemperatureScaling
 from .vim import ViM
 from .webo import WeightedEBO
 from .gradnorm import GradNorm
+from .nci import NCI

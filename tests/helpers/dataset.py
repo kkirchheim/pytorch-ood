@@ -12,6 +12,7 @@ def sample_dataset(
     n_dim=2,
     centers=None,
     std=1.0,
+    loc=0.0,
     seed=None,
 ) -> TensorDataset:
     """
@@ -21,16 +22,17 @@ def sample_dataset(
     :param n_dim: number of dimensions
     :param centers: location, or number of centers
     :param std: std of clusters, same for all
+    :param loc: mean of clusters, same for all
     :param seed: random seed for the generator
     """
     generator = np.random.default_rng(seed=seed)
 
     if centers is None:
         n_centers = 3
-        centers = generator.normal(loc=0, scale=5, size=(n_centers, n_dim))
+        centers = generator.normal(loc=loc, scale=5, size=(n_centers, n_dim))
     elif isinstance(centers, int):
         n_centers = centers
-        centers = generator.normal(loc=0, scale=5, size=(n_centers, n_dim))
+        centers = generator.normal(loc=loc, scale=5, size=(n_centers, n_dim))
     elif isinstance(centers, np.ndarray):
         n_centers = centers.shape[0]
         if centers.shape[1] != n_dim:

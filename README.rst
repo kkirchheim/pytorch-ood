@@ -220,6 +220,8 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | SHE                         | Implements Simplified Hopfield Networks                                                        | 2023 | [#She]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| NCI                         | Neural Collapse Inspired OOD Detection                                                         | 2025 | [#Nci]_            |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 
 **Objective Functions**:
 
@@ -449,10 +451,12 @@ The legal implications of using pre-trained models in commercial services are, t
 
 .. [#ASH] Djurisic,  et al. (2023) Extremely Simple Activation Shaping for Out-of-Distribution Detection, ICLR.
 
-.. [#She] Zhang,  et al. (2023) Out-of-Distribution Detection Based on In-Distribution Data Patterns Memorization with Modern Hopfield Energy, ICLR.
+.. [#She] Zhang,  et al. (2023) Out-of-Distribution Detection Based on In-Distribution Data Patterns Memorization with Modern Hopfield Energy. ICLR.
 
-.. [#ReAct] Sun,  et al. (2023) ReAct: Out-of-distribution Detection With Rectified Activations, NeurIPS
+.. [#ReAct] Sun,  et al. (2023) ReAct: Out-of-distribution Detection With Rectified Activations. NeurIPS.
 
-.. [#GramBased] Shama,  et al. (2019) Detecting Out-of-Distribution Examples with In-distribution Examples and Gram Matrices, NeurIPS
+.. [#GramBased] Shama,  et al. (2019) Detecting Out-of-Distribution Examples with In-distribution Examples and Gram Matrices. NeurIPS.
 
-.. [#LOGNORM] Wei,  et al. (2022) Mitigating Neural Network Overconfidence with Logit Normalization, ICML
+.. [#LOGNORM] Wei,  et al. (2022) Mitigating Neural Network Overconfidence with Logit Normalization. ICML.
+
+.. [#Nci] Liu,  et al. (2025) Detecting Out-of-distribution through the Lens of Neural Collapse. CVPR.
