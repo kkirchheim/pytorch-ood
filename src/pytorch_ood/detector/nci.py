@@ -28,7 +28,7 @@ class NCI(Detector):
     Implements the Neural-Collapse Inspired OOD detector from the paper
     *Detecting Out-of-distribution through the Lens of Neural Collapse*.
 
-    Computes a global mean  :math:`\\mu_g` of all features from the fitting set to center representations during inference.
+    Computes a global mean :math:`\\mu_g` of all features from the fitting set to center representations during inference.
     Let :math:`h` be the representation of some input and :math:`z = h - \\mu_g` be the centered representation. The score is calculated as
 
     .. math::
@@ -52,7 +52,7 @@ class NCI(Detector):
         """
         :param encoder: model mapping inputs to features
         :param head: the classification head of the model
-        :param alpha: hyperparameter
+        :param alpha: weight for feature norm penalty. Will be ignored if :math:`\\leq 0`
         """
         super(NCI, self).__init__()
         self.encoder = encoder
@@ -116,7 +116,9 @@ class NCI(Detector):
 
         p_score = self._cos(centered_features, class_weight_vectors)
 
-        # TODO: add different options for p-norm, here we use l1
-        penalty = self.alpha * features.abs().sum(dim=1).sqrt()
-
-        return -p_score - penalty
+        if self.alpha <= 0:
+            return -p_score
+        else:
+            # TODO: add different options for p-norm, here we use l1
+            feature_norm = features.abs().sum(dim=1)
+            return -p_score - self.alpha * feature_norm

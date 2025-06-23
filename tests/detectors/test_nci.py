@@ -33,8 +33,10 @@ class TestASH(unittest.TestCase):
 
     def test_full(self):
         """ """
-        dataset = sample_dataset(n_samples=100, n_dim=10, centers=3)
-        loader = DataLoader(dataset, batch_size=100)
+
+        torch.manual_seed(42)
+        dataset = sample_dataset(n_samples=1000, n_dim=10, centers=3, seed=42, loc=3)
+        loader = DataLoader(dataset, batch_size=1000)
 
         model = self._train_model(loader)
 
@@ -45,9 +47,8 @@ class TestASH(unittest.TestCase):
         x, y = next(iter(loader))
         outputs = detector.predict(x)
 
-        dataset = sample_dataset(n_samples=1000, n_dim=10, centers=3, std=100)
-        loader = DataLoader(dataset, batch_size=100)
-
+        dataset = sample_dataset(n_samples=100, n_dim=10, centers=3, std=5, seed=42, loc=-3)
+        loader = DataLoader(dataset, batch_size=1000)
         x, _ = next(iter(loader))
         outputs2 = detector.predict(x)
 
@@ -61,8 +62,8 @@ class TestASH(unittest.TestCase):
         self.assertGreater(results["AUROC"], 0.9)
 
     def _train_model(self, loader):
-        model = ClassificationModel(num_outputs=3).eval()
-        sgd = SGD(model.parameters(), lr=0.01)
+        model = ClassificationModel(num_outputs=3, n_hidden=128).eval()
+        sgd = SGD(model.parameters(), lr=0.01, weight_decay=0.0001, momentum=0.9, nesterov=True)
         for i in range(20):
             for x, y in loader:
                 sgd.zero_grad()
