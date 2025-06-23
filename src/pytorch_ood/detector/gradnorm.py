@@ -13,7 +13,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
-from typing import TypeVar
+from typing import TypeVar, Callable
 
 from ..api import Detector, ModelNotSetException
 
@@ -26,23 +26,34 @@ class GradNorm(Detector):
 
     For each input sample, computes the binary cross-entropy loss between logits and a "confounding label",
     which is a vector of all ones. Then, for each set of parameters in the model (as given
-    by ``model.parameters()``), computes up the squared :math:`\\ell_2`-norm of the
-    gradients of the loss w.r.t. that parameter. The outlier score is the sum of these squared norms,
-    which is the sum of all squared gradients.
+    by ``model.named_parameters()``), computes up the squared :math:`\\ell_2`-norm of the
+    gradients of the loss w.r.t. that parameter. The outlier score is the sum of these squared norms.
 
     The idea is that higher gradient norms indicates that the model would require large
-    parameter updates to accommodate the input, i.e., it is less familiar or
+    parameter updates to accommodate the input, i.e., for such data, it is less familiar or
     more uncertain, and hence more likely to be OOD.
+
+    .. note:: OpenOOD uses only the gradients of the final classification head, which
+     makes this computationally cheaper. You can achieve something similar by setting ``param_filter``. Still, this
+     method will compute gradients for all parameters unless you explicitly deactivate
+     gradient calculation for parameters.
 
     :see Paper: `ICIP <https://arxiv.org/abs/2008.08030v2>`__
     """
 
-    def __init__(self, model: torch.nn.Module):
+    def __init__(self, model: torch.nn.Module, param_filter: Callable[[str], bool] = None):
         """
         :param model: A pre-trained classification model
+        :param param_filter: Function which indicates whether a named parameter should be included in the scoring. If none
+            give, all parameters will be used.
         """
         if model is None:
             raise ModelNotSetException("Model must be provided.")
+
+        def default_filter(x):
+            return True
+
+        self.param_filter = param_filter or default_filter
 
         self.model = model
 
@@ -72,16 +83,17 @@ class GradNorm(Detector):
             with torch.enable_grad():
                 self.model.zero_grad()
                 logits = self.model(xi.unsqueeze(0))
-                y_conf = torch.ones_like(logits)
-                loss = F.binary_cross_entropy(logits.softmax(dim=1), y_conf, reduction="mean")
+                y_conf = torch.ones_like(logits, device=device)
+                loss = F.binary_cross_entropy(logits.softmax(dim=1), y_conf, reduction="sum")
                 loss.backward()
 
                 # Sum of squared L2 norms over all gradients
-                total_norm = 0.0
+                total_norm = torch.tensor(0.0)
                 for name, p in self.model.named_parameters():
 
-                    if p.grad is not None:
+                    if self.param_filter(name) and p.grad is not None:
                         total_norm += torch.sum(p.grad.detach() ** 2)
+
                 scores.append(total_norm)
 
         return torch.stack(scores)

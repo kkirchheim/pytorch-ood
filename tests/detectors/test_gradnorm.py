@@ -6,7 +6,7 @@ from src.pytorch_ood.detector import GradNorm
 from src.pytorch_ood.model import WideResNet
 
 
-class TestASH(unittest.TestCase):
+class TestGradNorm(unittest.TestCase):
     """
     Tests for activation shaping
     """
@@ -14,7 +14,7 @@ class TestASH(unittest.TestCase):
     def test_input(self):
         """ """
         model = WideResNet(num_classes=10).eval()
-        detector = GradNorm(model)
+        detector = GradNorm(model, param_filter=lambda x: x.startswith("fc."))
 
         x = torch.randn(size=(16, 3, 32, 32))
 
