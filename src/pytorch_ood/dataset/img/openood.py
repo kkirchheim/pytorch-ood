@@ -237,7 +237,7 @@ class ImageNetV2(OpenOOD):
 class ImageNetES(OpenOOD):
     """
     A new test set for ImageNet as event-stream (ES) version, introduced in *ES-ImageNet: A Million Event-Stream
-    Classification Dataset for Spiking Neural Networks*
+    Classification Dataset for Spiking Neural Networks*.
     While it contains no OOD data, it is utilized for evaluating OOD detection methods.
 
 
