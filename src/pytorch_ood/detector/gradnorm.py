@@ -36,7 +36,7 @@ class GradNorm(Detector):
     .. note:: OpenOOD uses only the gradients of the final classification head, which
      makes this computationally cheaper. You can achieve something similar by setting ``param_filter``. Still, this
      method will compute gradients for all parameters unless you explicitly deactivate
-     gradient calculation for parameters.
+     gradient calculation for parameters. For an example, see :doc:`here <auto_examples/detectors/gradnorm>`
 
     :see Paper: `ICIP <https://arxiv.org/abs/2008.08030v2>`__
     """
@@ -88,7 +88,7 @@ class GradNorm(Detector):
                 loss.backward()
 
                 # Sum of squared L2 norms over all gradients
-                total_norm = torch.tensor(0.0)
+                total_norm = torch.tensor(0.0, device=device)
                 for name, p in self.model.named_parameters():
 
                     if self.param_filter(name) and p.grad is not None:

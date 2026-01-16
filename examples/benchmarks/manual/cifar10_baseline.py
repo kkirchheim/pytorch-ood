@@ -8,6 +8,8 @@ Example benchmark code for CIFAR10
 +------------------+-------+-------+---------+----------+----------+
 | Detector         | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
 +==================+=======+=======+=========+==========+==========+
+| GradNorm         | 50.00 | 60.78 | 18.37   | 81.63    | 100.00   |
++------------------+-------+-------+---------+----------+----------+
 | Gram             | 69.37 | 46.01 | 58.02   | 77.49    | 75.03    |
 +------------------+-------+-------+---------+----------+----------+
 | KLMatching       | 88.48 | 39.83 | 72.29   | 91.33    | 57.84    |
@@ -26,13 +28,17 @@ Example benchmark code for CIFAR10
 +------------------+-------+-------+---------+----------+----------+
 | Mahalanobis+ODIN | 92.60 | 42.76 | 86.81   | 95.08    | 27.11    |
 +------------------+-------+-------+---------+----------+----------+
+| KNN              | 92.67 | 36.61 | 87.07   | 94.21    | 29.49    |
++------------------+-------+-------+---------+----------+----------+
 | DICE             | 92.80 | 35.83 | 86.68   | 94.20    | 32.35    |
++------------------+-------+-------+---------+----------+----------+
+| MultiMahalanobis | 92.89 | 45.35 | 85.51   | 96.09    | 24.95    |
 +------------------+-------+-------+---------+----------+----------+
 | MaxLogit         | 93.05 | 35.84 | 87.01   | 94.40    | 31.31    |
 +------------------+-------+-------+---------+----------+----------+
-| EnergyBased      | 93.11 | 35.45 | 87.09   | 94.46    | 31.14    |
+| ASH              | 93.06 | 35.70 | 77.62   | 94.43    | 31.31    |
 +------------------+-------+-------+---------+----------+----------+
-| MultiMahalanobis | 93.43 | 44.60 | 86.70   | 96.48    | 22.95    |
+| EnergyBased      | 93.11 | 35.45 | 87.09   | 94.46    | 31.14    |
 +------------------+-------+-------+---------+----------+----------+
 | RMD              | 93.46 | 32.09 | 87.73   | 95.08    | 26.99    |
 +------------------+-------+-------+---------+----------+----------+
@@ -46,6 +52,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10, CIFAR100, MNIST, FashionMNIST
+from copy import deepcopy
+from tqdm.auto import tqdm
 
 from pytorch_ood.dataset.img import (
     LSUNCrop,
@@ -69,6 +77,9 @@ from pytorch_ood.detector import (
     SHE,
     Gram,
     MultiMahalanobis,
+    GradNorm,
+    ASH,
+    KNN,
 )
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
@@ -104,7 +115,7 @@ for ood_dataset in ood_datasets:
     dataset_out_test = ood_dataset(
         root="data", transform=trans, target_transform=ToUnknown(), download=True
     )
-    test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=512, num_workers=12)
+    test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=256, num_workers=12)
     datasets[ood_dataset.__name__] = test_loader
 
 # %%
@@ -116,6 +127,17 @@ model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
 # **Stage 2**: Create OOD detector
 print("STAGE 2: Creating OOD Detectors")
 detectors = {}
+
+detectors["KNN"] = KNN(model.features)
+
+detectors["ASH"] = ASH(backbone=model.features_before_pool, head=model.forward_from_before_pool)
+
+# we make a copy of the model just so deactivating gradients does not influence other detectors
+model_gn = deepcopy(model)
+model_gn.requires_grad_(False)
+model_gn.fc.requires_grad_(True)
+detectors["GradNorm"] = GradNorm(model_gn, param_filter=lambda name: name.startswith("fc"))
+
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
 detectors["Mahalanobis+ODIN"] = Mahalanobis(model.features, norm_std=norm_std, eps=0.002)
@@ -172,7 +194,7 @@ with torch.no_grad():
         for dataset_name, loader in datasets.items():
             print(f"--> {dataset_name}")
             metrics = OODMetrics()
-            for x, y in loader:
+            for x, y in tqdm(loader, desc=dataset_name):
                 metrics.update(detector(x.to(device)), y.to(device))
 
             r = {"Detector": detector_name, "Dataset": dataset_name}
