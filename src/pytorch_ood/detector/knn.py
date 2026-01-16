@@ -79,7 +79,7 @@ class KNN(Detector):
             z.detach().cpu().numpy(), n_neighbors=1, return_distance=True
         )
 
-        return tensor(dist)
+        return tensor(dist).squeeze(1)
 
     def fit_features(self: Self, z: Tensor, labels: Tensor) -> Self:
         """

@@ -118,6 +118,7 @@ class TestDatasetAvailability(unittest.TestCase):
         status = urlopen(NewsGroup20.train_url).getcode()
         self.assertEqual(status, 200)
 
+    @unittest.skip("Unavailable")
     def test_download_mvtech(self):
         status = urlopen(MVTechAD.url).getcode()
         self.assertEqual(status, 200)
