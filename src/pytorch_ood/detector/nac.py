@@ -3,6 +3,8 @@
    :alt: classification badge
 .. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
    :alt: segmentation badge
+.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
+   :alt: slop-badge
 
 ..  autoclass:: pytorch_ood.detector.NACUE
     :members:
