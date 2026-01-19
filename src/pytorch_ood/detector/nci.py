@@ -54,9 +54,11 @@ class NCI(Detector):
         :param head: the classification head of the model
         :param alpha: weight for feature norm penalty. Will be ignored if :math:`\\leq 0`
         """
+        import copy
+
         super(NCI, self).__init__()
         self.encoder = encoder
-        self.head = head
+        self.head = copy.deepcopy(head)
         self.alpha = alpha
         self.global_mean = None
 
@@ -109,6 +111,10 @@ class NCI(Detector):
 
         if self.global_mean is None:
             raise RequiresFittingException()
+
+        features = features.cpu().float()
+        self.head = self.head.cpu()
+        self.global_mean = self.global_mean.cpu()
 
         centered_features = features - self.global_mean
         predicted_class = self.head(features).argmax(dim=1)

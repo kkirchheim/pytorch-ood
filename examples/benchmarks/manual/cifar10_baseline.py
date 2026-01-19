@@ -14,6 +14,8 @@ Example benchmark code for CIFAR10
 +------------------+-------+-------+---------+----------+----------+
 | KLMatching       | 88.48 | 39.83 | 72.29   | 91.33    | 57.84    |
 +------------------+-------+-------+---------+----------+----------+
+| NAC-UE           | 88.74 | 39.89 | 81.40   | 90.36    | 46.12    |
++------------------+-------+-------+---------+----------+----------+
 | SHE              | 90.08 | 39.69 | 69.17   | 92.92    | 38.48    |
 +------------------+-------+-------+---------+----------+----------+
 | MSP              | 91.41 | 37.07 | 86.36   | 92.42    | 29.93    |
@@ -48,12 +50,12 @@ Example benchmark code for CIFAR10
 """
 
 import pandas as pd  # additional dependency, used here for convenience
-import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10, CIFAR100, MNIST, FashionMNIST
 from copy import deepcopy
-from tqdm.auto import tqdm
+from tqdm.auto import tqdm  # additional dependency, used here for convenience
+import torch
 
 from pytorch_ood.dataset.img import (
     LSUNCrop,
@@ -77,6 +79,7 @@ from pytorch_ood.detector import (
     SHE,
     Gram,
     MultiMahalanobis,
+    NACUE,
     GradNorm,
     ASH,
     KNN,
@@ -173,11 +176,20 @@ detectors["Gram"] = Gram(
     ],
 )
 
+# hyperparameters determined on Textures dataset
+detectors["NAC-UE"] = NACUE(
+    model=model,
+    layers=[model.block2, model.block3, model.bn1],
+    m_bins=[200, 200, 200],
+    alpha=[150.0, 200.0, 250.0],
+    o_star=[25, 50, 100],
+    device=device,
+)
 
 # fit detectors to training data (some require this, some do not)
 print(f"> Fitting {len(detectors)} detectors")
 loader_in_train = DataLoader(
-    CIFAR10(root="data", train=True, transform=trans), batch_size=512, num_workers=12
+    CIFAR10(root="data", train=True, transform=trans), batch_size=128, num_workers=12
 )
 for name, detector in detectors.items():
     print(f"--> Fitting {name}")
@@ -188,6 +200,7 @@ for name, detector in detectors.items():
 print(f"STAGE 3: Evaluating {len(detectors)} detectors on {len(datasets)} datasets.")
 results = []
 
+
 with torch.no_grad():
     for detector_name, detector in detectors.items():
         print(f"> Evaluating {detector_name}")
@@ -197,9 +210,9 @@ with torch.no_grad():
             for x, y in tqdm(loader, desc=dataset_name):
                 metrics.update(detector(x.to(device)), y.to(device))
 
-            r = {"Detector": detector_name, "Dataset": dataset_name}
-            r.update(metrics.compute())
-            results.append(r)
+        r = {"Detector": detector_name, "Dataset": dataset_name}
+        r.update(metrics.compute())
+        results.append(r)
 
 # calculate mean scores over all datasets, use percent
 df = pd.DataFrame(results)
