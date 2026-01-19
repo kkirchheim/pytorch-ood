@@ -145,6 +145,11 @@ ODIN Preprocessing
 .. automodule:: pytorch_ood.detector.odin
 
 
+NAC-UE
+^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.nac
+
+
 
 Activation Pruning
 ---------------------
@@ -191,3 +196,4 @@ from .vim import ViM
 from .webo import WeightedEBO
 from .gradnorm import GradNorm
 from .nci import NCI
+from .nac import NACUE
