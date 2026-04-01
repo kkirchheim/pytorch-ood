@@ -173,9 +173,6 @@ class Gram(Detector):
             self.feature_max = torch.tensor(maxs)
             return self
 
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        raise NotImplementedError("This method is not implemented. Use fit instead.")
-
     def predict(self, x: Tensor) -> Tensor:
         """
         Calculate deviation for inputs

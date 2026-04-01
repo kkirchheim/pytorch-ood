@@ -148,17 +148,11 @@ class ASH(Detector):
         x = self.head(x)
         return self.detector(x)
 
-    def predict_features(self, x: Tensor) -> Tensor:
-        """
-        :raises: NotImplementedError
-        """
-        raise NotImplementedError
-
     def fit_features(self: Self, *args, **kwargs) -> Self:
         """
         Not required
         """
-        raise self
+        return self
 
     def fit(self: Self, *args, **kwargs) -> Self:
         """
