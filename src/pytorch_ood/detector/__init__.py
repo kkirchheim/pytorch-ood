@@ -62,6 +62,10 @@ Entropy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.entropy
 
+Generalized Entropy (GEN)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.gen
+
 
 
 Logit-based
@@ -182,6 +186,7 @@ from .ash import ASH
 from .dice import DICE
 from .energy import EnergyBased
 from .entropy import Entropy
+from .gen import GEN
 from .klmatching import KLMatching
 from .gram import Gram
 from .knn import KNN
