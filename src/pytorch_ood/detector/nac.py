@@ -224,11 +224,6 @@ class NACUE(Detector):
         self._remove_hooks()
         return self
 
-    def fit_features(self, x: Tensor, y: Tensor) -> "NACUE":
-        raise NotImplementedError(
-            "NACUE requires model forward + gradients, so fit_features is not supported."
-        )
-
     def predict(self, x: Tensor) -> Tensor:
         if self.model is None:
             raise ModelNotSetException("NACUE requires a model.")
@@ -272,11 +267,6 @@ class NACUE(Detector):
             outlier_score = -id_likeness  # pytorch-ood convention: larger => more outlier
         self._remove_hooks()
         return outlier_score.detach()
-
-    def predict_features(self, x: Tensor) -> Tensor:
-        raise NotImplementedError(
-            "NACUE requires model forward + gradients, so predict_features is not supported."
-        )
 
     # ----------------------------- internals -----------------------------
 

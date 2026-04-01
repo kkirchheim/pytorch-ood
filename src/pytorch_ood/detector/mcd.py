@@ -80,7 +80,7 @@ class MCD(Detector):
         """
         Not required
         """
-        raise self
+        return self
 
     def predict_features(self, x: Tensor) -> Tensor:
         """

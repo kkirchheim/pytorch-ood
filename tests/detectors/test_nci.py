@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.optim import SGD
 from torch.utils.data import DataLoader
-from torch.functional import F
+import torch.nn.functional as F
 from tests.helpers import ClassificationModel, sample_dataset
 
 from pytorch_ood.api import RequiresFittingException
@@ -12,9 +12,9 @@ from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics
 
 
-class TestASH(unittest.TestCase):
+class TestNCI(unittest.TestCase):
     """
-    Tests for activation shaping
+    Tests for NCI (Neural Collapse Inspired) detector
     """
 
     def test_nofitting(self):

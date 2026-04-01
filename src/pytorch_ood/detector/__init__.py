@@ -139,6 +139,10 @@ GradNorm
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.gradnorm
 
+GradNormKL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.gradnormkl
+
 
 ODIN Preprocessing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -195,5 +199,6 @@ from .tscaling import TemperatureScaling
 from .vim import ViM
 from .webo import WeightedEBO
 from .gradnorm import GradNorm
+from .gradnormkl import GradNormKL
 from .nci import NCI
 from .nac import NACUE

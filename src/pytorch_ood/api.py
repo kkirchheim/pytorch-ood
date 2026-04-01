@@ -47,7 +47,6 @@ class Detector(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def fit_features(self: Self, x: Tensor, y: Tensor) -> Self:
         """
         Fit the detector directly on features. Some methods require this.
@@ -70,7 +69,6 @@ class Detector(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def predict_features(self, x: Tensor) -> Tensor:
         """
         Calculates outlier scores based on features.

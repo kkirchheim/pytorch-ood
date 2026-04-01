@@ -11,12 +11,9 @@
 """
 
 import logging
-from typing import Callable, TypeVar
+from typing import Callable, Optional, TypeVar
 
-import numpy as np
 import torch
-from numpy.linalg import norm, pinv
-from scipy.special import logsumexp
 from torch import Tensor
 
 from ..api import Detector, ModelNotSetException, RequiresFittingException
@@ -35,6 +32,8 @@ class ViM(Detector):
     :see Implementation:
         `GitHub <https://github.com/haoqiwang/vim/>`__
 
+    .. note::
+        Requires PyTorch ≥ 1.9 (``torch.linalg``).
     """
 
     def __init__(
@@ -53,19 +52,19 @@ class ViM(Detector):
         super(ViM, self).__init__()
         self.model = model
         self.n_dim = d
-        self.w = w.detach().cpu().numpy()
-        self.b = b.detach().cpu().numpy()
-        self.u = -np.matmul(pinv(self.w), self.b)  # new origin
-        self.principal_subspace = None
-        self.alpha: float = None  #: the computed :math:`\alpha` value
+        w = w.detach().cpu().float()
+        b = b.detach().cpu().float()
+        self.w = w  # (C, D)
+        self.b = b  # (C,)
+        self.u = -(torch.linalg.pinv(w) @ b)  # (D,)  new origin
+        self.principal_subspace: Optional[Tensor] = None
+        self.alpha: Optional[float] = None  #: the computed :math:`\alpha` value
 
-    def _get_logits(self, features: np.ndarray):
+    def _get_logits(self, features: Tensor) -> Tensor:
         """
-        Calculates logits from features
-
-        TODO: this could be done in pytorch
+        Calculates logits from features.
         """
-        return np.matmul(features, self.w.T) + self.b
+        return features @ self.w.T + self.b
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -93,11 +92,6 @@ class ViM(Detector):
         :param device: device to use
         :return:
         """
-        try:
-            from sklearn.covariance import EmpiricalCovariance
-        except ImportError:
-            raise Exception("You need to install sklearn to use ViM.")
-
         if self.model is None:
             raise ModelNotSetException
 
@@ -112,16 +106,18 @@ class ViM(Detector):
         """
         :param x: features as given by the model
         """
-        x = x.detach().cpu().numpy()
-        logits = self._get_logits(x)
+        x = x.detach().cpu().float()
+        logits = self._get_logits(x)  # (N, C)
 
-        # calculate residual
-        x_p_t = norm(np.matmul(x - self.u, self.principal_subspace), axis=-1)
-        vlogit = x_p_t * self.alpha
-        # clip for numerical stability, float32 easily overflows in logsumexp
-        energy = logsumexp(np.clip(logits, -100, 100), axis=-1)
+        # Project centered features onto the null subspace and take L2 norm
+        x_p_t = (x - self.u) @ self.principal_subspace  # (N, D-n_dim)
+        vlogit = x_p_t.norm(dim=-1) * self.alpha  # (N,)
+
+        # Clip for numerical stability: float32 easily overflows in logsumexp
+        energy = torch.logsumexp(logits.clamp(-100, 100), dim=-1)  # (N,)
+
         score = -vlogit + energy
-        return -Tensor(score)
+        return -score
 
     def fit_features(self: Self, features: Tensor, labels: Tensor) -> Self:
         """
@@ -131,12 +127,7 @@ class ViM(Detector):
         :param labels: class labels
         :return:
         """
-        try:
-            from sklearn.covariance import EmpiricalCovariance
-        except ImportError:
-            raise Exception("You need to install sklearn to use ViM.")
-
-        features = features.cpu().numpy()
+        features = features.cpu().float()
 
         if features.shape[1] < self.n_dim:
             n = features.shape[1] // 2
@@ -145,22 +136,28 @@ class ViM(Detector):
             )
             self.n_dim = n
 
-        logits = self._get_logits(features)
+        logits = self._get_logits(features)  # (N, C)
 
         log.info("Computing principal space ...")
-        # calculate eigenvectors of the covariance matrix
-        ec = EmpiricalCovariance(assume_centered=True)
-        ec.fit(features - self.u)
-        eig_vals, eigen_vectors = np.linalg.eig(ec.covariance_)
+        X = features - self.u  # (N, D)  centered features
 
-        # select largest eigenvectors to get the principal subspace
-        largest_eigvals_idx = np.argsort(eig_vals * -1)[self.n_dim :]
-        self.principal_subspace = np.ascontiguousarray((eigen_vectors.T[largest_eigvals_idx]).T)
+        # Empirical covariance (assume_centered=True → MLE: divide by n)
+        cov = (X.T @ X) / X.shape[0]  # (D, D)
+
+        # Eigendecomposition of the symmetric covariance matrix.
+        # torch.linalg.eigh returns eigenvalues in ascending order with
+        # corresponding eigenvectors as columns.
+        eig_vals, eig_vecs = torch.linalg.eigh(cov)  # vals: (D,), vecs: (D, D)
+
+        # Select the null subspace: the (D - n_dim) eigenvectors that correspond
+        # to the *smallest* eigenvalues (i.e. directions least explained by the
+        # training data).  With ascending eigh output these are the first columns.
+        k = eig_vecs.shape[1] - self.n_dim
+        self.principal_subspace = eig_vecs[:, :k].contiguous()  # (D, D-n_dim)
 
         log.info("Computing alpha ...")
-        # calculate residual
-        x_p_t = np.matmul(features - self.u, self.principal_subspace)
-        vlogits = norm(x_p_t, axis=-1)
-        self.alpha = logits.max(axis=-1).mean() / vlogits.mean()
+        x_p_t = X @ self.principal_subspace  # (N, D-n_dim)
+        vlogits = x_p_t.norm(dim=-1)  # (N,)
+        self.alpha = (logits.max(dim=-1).values.mean() / vlogits.mean()).item()
         log.info(f"{self.alpha=:.4f}")
         return self
