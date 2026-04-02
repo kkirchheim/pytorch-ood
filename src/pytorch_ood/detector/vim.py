@@ -15,6 +15,7 @@ from typing import Callable, Optional, TypeVar
 
 import torch
 from torch import Tensor
+from torch.utils.data import DataLoader
 
 from ..api import Detector, ModelNotSetException, RequiresFittingException
 from ..utils import extract_features
@@ -84,16 +85,22 @@ class ViM(Detector):
     def __repr__(self):
         return f"ViM(d={self.n_dim})"
 
-    def fit(self: Self, data_loader, device="cpu") -> Self:
+    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
         """
         Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
 
         :param data_loader: dataset to fit on
-        :param device: device to use
-        :return:
+        :param device: device to use. If ``None``, inferred from model.
         """
         if self.model is None:
             raise ModelNotSetException
+
+        if device is None:
+            if isinstance(self.model, torch.nn.Module):
+                device = next(self.model.parameters()).device
+            else:
+                device = "cpu"
+            log.warning(f"No device given. Will use '{device}'.")
 
         if isinstance(self.model, torch.nn.Module):
             log.debug(f"Moving model to {device}")

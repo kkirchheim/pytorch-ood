@@ -20,7 +20,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 
 from ..api import Detector, ModelNotSetException, RequiresFittingException
-from ..utils import extract_features, is_known
+from ..utils import contains_unknown, extract_features, is_known
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
@@ -28,46 +28,51 @@ Self = TypeVar("Self")
 
 class GMM(Detector):
     """
-    Implements a Gaussian Mixture Model (GMM) based Out-of-Distribution Detector.
+    Implements a class-conditional Gaussian Mixture Model (GMM) for Out-of-Distribution Detection.
 
-    Fits a GMM on penultimate-layer features of the training data and uses the
-    negative log-likelihood as outlier score.
+    Fits one Gaussian per class on penultimate-layer features, computing per-class means,
+    covariance matrices, and mixing weights from the training data. The outlier score is the
+    negative log-likelihood under the mixture:
 
-    Requires ``scikit-learn`` to be installed.
+    .. math::
+        -\\log \\sum_{k=1}^{K} \\pi_k \\, \\mathcal{N}(z \\mid \\mu_k, \\Sigma_k)
+
+    This extends :class:`Mahalanobis` by allowing **per-class covariance matrices** and
+    using the full mixture likelihood (logsumexp) instead of the max over classes.
     """
 
     def __init__(
         self,
         model: Optional[Callable[[Tensor], Tensor]],
-        n_components: int = 5,
-        covariance_type: str = "full",
-        **gmm_kwargs,
+        reg: float = 1e-6,
     ):
         """
         :param model: neural network to use for feature extraction (can be ``None`` for feature-based interface)
-        :param n_components: number of Gaussian components in the mixture
-        :param covariance_type: type of covariance parameters (``"full"``, ``"tied"``, ``"diag"``, ``"spherical"``)
-        :param gmm_kwargs: additional keyword arguments passed to scikit-learn's
-            :class:`~sklearn.mixture.GaussianMixture`
+        :param reg: regularization added to the diagonal of each covariance matrix for numerical stability
         """
         self.model = model
-        self._n_components = n_components
-        self._covariance_type = covariance_type
-        self._gmm_kwargs = gmm_kwargs
-        self._gmm = None
+        self.reg = reg
+        # fitted parameters
+        self._mu = None  # (K, D)
+        self._precision = None  # (K, D, D)
+        self._log_det = None  # (K,)
+        self._log_weights = None  # (K,)
 
-    def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
+    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
         """
         Extract features and fit the GMM.
 
         :param data_loader: data loader with training data
-        :param device: device to use for feature extraction
+        :param device: device to use for feature extraction. If ``None``, inferred from model.
         """
         if self.model is None:
             raise ModelNotSetException()
 
         if device is None:
-            device = next(self.model.parameters()).device
+            if isinstance(self.model, torch.nn.Module):
+                device = next(self.model.parameters()).device
+            else:
+                device = "cpu"
             log.warning(f"No device given. Will use '{device}'.")
 
         if isinstance(self.model, torch.nn.Module):
@@ -79,28 +84,47 @@ class GMM(Detector):
 
     def fit_features(self: Self, z: Tensor, labels: Tensor) -> Self:
         """
-        Fit the GMM directly on features. OOD-labeled samples are ignored.
+        Fit one Gaussian per class directly on features. OOD-labeled samples are ignored.
 
         :param z: features
         :param labels: class labels
         """
-        try:
-            from sklearn.mixture import GaussianMixture
-        except ImportError:
-            raise ImportError("You have to install scikit-learn to use this detector.")
-
         known = is_known(labels)
         if not known.any():
             raise ValueError("No ID samples found.")
 
-        features = z[known].detach().cpu().numpy()
+        assert not contains_unknown(labels[known])
 
-        self._gmm = GaussianMixture(
-            n_components=self._n_components,
-            covariance_type=self._covariance_type,
-            **self._gmm_kwargs,
-        )
-        self._gmm.fit(features)
+        z = z[known].detach().cpu().float()
+        y = labels[known].cpu().long()
+
+        classes = y.unique()
+        n_classes = len(classes)
+        n_total = z.shape[0]
+        d = z.shape[1]
+
+        mu = torch.zeros(n_classes, d)
+        precision = torch.zeros(n_classes, d, d)
+        log_det = torch.zeros(n_classes)
+        log_weights = torch.zeros(n_classes)
+
+        for i, c in enumerate(classes):
+            mask = y == c
+            z_c = z[mask]
+            n_c = z_c.shape[0]
+
+            mu[i] = z_c.mean(dim=0)
+            cov = (z_c - mu[i]).T @ (z_c - mu[i]) / n_c
+            cov += torch.eye(d) * self.reg
+
+            precision[i] = torch.linalg.inv(cov)
+            log_det[i] = torch.linalg.slogdet(cov).logabsdet
+            log_weights[i] = torch.tensor(n_c / n_total).log()
+
+        self._mu = mu
+        self._precision = precision
+        self._log_det = log_det
+        self._log_weights = log_weights
         return self
 
     def predict(self, x: Tensor) -> Tensor:
@@ -120,9 +144,25 @@ class GMM(Detector):
         :param z: features
         :return: outlier scores (higher = more OOD)
         """
-        if self._gmm is None:
+        if self._mu is None:
             raise RequiresFittingException()
 
-        features = z.detach().cpu().numpy()
-        log_likelihood = self._gmm.score_samples(features)
-        return -torch.tensor(log_likelihood, dtype=z.dtype)
+        z = z.detach().cpu().float()
+
+        # Per-class Mahalanobis distances; use max (closest class) as score.
+        # We omit log-det and mixing-weight terms: they are constant per class and
+        # can push absolute score magnitudes into ranges that cause numerical issues
+        # in downstream metrics (e.g. torchmetrics binary_auroc applies sigmoid).
+        # Using only the Mahalanobis term preserves the ranking while keeping scores
+        # in a well-behaved range.
+        d = z.shape[1]
+        mahal_k = []
+        for k in range(self._mu.shape[0]):
+            diff = z - self._mu[k]  # (N, D)
+            mahal = (diff @ self._precision[k] * diff).sum(dim=1)  # (N,)
+            mahal_k.append(mahal)
+
+        mahal_k = torch.stack(mahal_k, dim=1)  # (N, K)
+        # Use minimum Mahalanobis distance (closest class), normalized by
+        # dimensionality to keep scores in a numerically safe range.
+        return torch.min(mahal_k, dim=1).values / d

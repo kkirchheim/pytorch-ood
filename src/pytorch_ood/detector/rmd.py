@@ -67,16 +67,23 @@ class RMD(Mahalanobis):
         self.background_cov = None
         self.background_precision = None
 
-    def fit(self, loader: DataLoader, device: str = "cpu") -> Self:
+    def fit(self, data_loader: DataLoader, device=None) -> Self:
         """
         Fit parameters of the multi variate gaussian for the given loader.
         Ignores OOD Inputs.
+
+        :param data_loader: data loader with training data
+        :param device: device to use. If ``None``, inferred from model.
         """
+        if device is None:
+            device = list(self.model.parameters())[0].device
+            log.warning(f"No device given. Will use '{device}'.")
+
         if isinstance(self.model, torch.nn.Module):
             log.debug(f"Moving model to {device}")
             self.model.to(device)
 
-        z, y = extract_features(loader, self.model, device=device)
+        z, y = extract_features(data_loader, self.model, device=device)
         return self.fit_features(z, y, device=device)
 
     def fit_features(self: Self, z: Tensor, y: Tensor, device: str = None) -> Self:
