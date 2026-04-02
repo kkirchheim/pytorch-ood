@@ -132,6 +132,10 @@ Neural Collapse Inspired (NCI)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.nci
 
+Gaussian Mixture Model (GMM)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.gmm
+
 
 Gradient-based
 --------------------------
@@ -191,6 +195,7 @@ from .dice import DICE
 from .energy import EnergyBased
 from .entropy import Entropy
 from .gen import GEN
+from .gmm import GMM
 from .klmatching import KLMatching
 from .gram import Gram
 from .knn import KNN
