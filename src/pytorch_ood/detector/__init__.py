@@ -136,6 +136,10 @@ Fast Decision Boundary Distance (fDBD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.fdbd
 
+Gaussian Mixture Model (GMM)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.gmm
+
 
 Gradient-based
 --------------------------
@@ -196,6 +200,7 @@ from .energy import EnergyBased
 from .fdbd import fDBD
 from .entropy import Entropy
 from .gen import GEN
+from .gmm import GMM
 from .klmatching import KLMatching
 from .gram import Gram
 from .knn import KNN
