@@ -178,6 +178,10 @@ DICE
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.dice
 
+RankFeat
+^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.rankfeat
+
 
 
 """
@@ -196,6 +200,7 @@ from .mcd import MCD
 from .mmahalanobis import MultiMahalanobis
 from .odin import ODIN, odin_preprocessing
 from .openmax import OpenMax
+from .rankfeat import RankFeat
 from .react import ReAct
 from .rmd import RMD
 from .she import SHE
