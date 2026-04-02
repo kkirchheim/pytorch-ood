@@ -132,6 +132,10 @@ Neural Collapse Inspired (NCI)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.nci
 
+Fast Decision Boundary Distance (fDBD)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.fdbd
+
 Gaussian Mixture Model (GMM)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.gmm
@@ -193,6 +197,7 @@ RankFeat
 from .ash import ASH
 from .dice import DICE
 from .energy import EnergyBased
+from .fdbd import fDBD
 from .entropy import Entropy
 from .gen import GEN
 from .gmm import GMM
