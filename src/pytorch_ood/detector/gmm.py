@@ -34,8 +34,6 @@ class GMM(Detector):
     negative log-likelihood as outlier score.
 
     Requires ``scikit-learn`` to be installed.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2303.09435>`__
     """
 
     def __init__(
