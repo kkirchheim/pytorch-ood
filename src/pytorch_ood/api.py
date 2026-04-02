@@ -37,11 +37,13 @@ class Detector(ABC):
         return self.predict(*args, **kwargs)
 
     @abstractmethod
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
         """
         Fit the detector to a dataset. Some methods require this.
 
         :param data_loader: dataset to fit on. This is usually the training dataset.
+        :param device: device to use for computations. If ``None``, the device will be
+            inferred from the model parameters.
 
         :raise ModelNotSetException: if model was not set
         """

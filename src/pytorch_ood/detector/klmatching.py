@@ -50,16 +50,23 @@ class KLMatching(Detector):
         self.model = model
         self.dists: ParameterDict = ParameterDict()  #: Typical posteriors per class
 
-    def fit(self: Self, data_loader: DataLoader, device="cpu") -> Self:
+    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
         """
         Estimates typical distributions for each class.
         Ignores OOD samples.
 
         :param data_loader: validation data loader
-        :param device: device which should be used for calculations
+        :param device: device which should be used for calculations. If ``None``, inferred from model.
         """
         if self.model is None:
             raise ModelNotSetException
+
+        if device is None:
+            if isinstance(self.model, torch.nn.Module):
+                device = next(self.model.parameters()).device
+            else:
+                device = "cpu"
+            log.warning(f"No device given. Will use '{device}'.")
 
         if isinstance(self.model, torch.nn.Module):
             log.debug(f"Moving model to {device}")
@@ -68,15 +75,18 @@ class KLMatching(Detector):
         logits, labels = extract_features(data_loader, self.model, device)
         return self.fit_features(logits, labels, device)
 
-    def fit_features(self: Self, logits: Tensor, labels: Tensor, device="cpu") -> Self:
+    def fit_features(self: Self, logits: Tensor, labels: Tensor, device=None) -> Self:
         """
         Estimates typical distributions for each class.
         Ignores OOD samples.
 
         :param logits: logits
         :param labels: class labels
-        :param device: device which should be used for calculations
+        :param device: device which should be used for calculations. If ``None``, inferred from input tensor.
         """
+        if device is None:
+            device = logits.device
+
         probabilities = logits.softmax(dim=1)
 
         for label in labels.unique():

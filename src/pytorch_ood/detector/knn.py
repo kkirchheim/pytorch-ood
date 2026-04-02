@@ -99,16 +99,23 @@ class KNN(Detector):
 
         return self
 
-    def fit(self: Self, loader: DataLoader, device: str = "cpu") -> Self:
+    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
         """
         Extracts features and fits the kNN-Model
 
-        :param loader: data loader
-        :param device: device used for extracting logits
+        :param data_loader: data loader
+        :param device: device used for extracting logits. If ``None``, inferred from model.
         """
+        if device is None:
+            if isinstance(self.model, torch.nn.Module):
+                device = next(self.model.parameters()).device
+            else:
+                device = "cpu"
+            log.warning(f"No device given. Will use '{device}'.")
+
         if isinstance(self.model, torch.nn.Module):
             log.debug(f"Moving model to {device}")
             self.model.to(device)
 
-        z, y = extract_features(model=self.model, data_loader=loader, device=device)
+        z, y = extract_features(model=self.model, data_loader=data_loader, device=device)
         return self.fit_features(z, y)

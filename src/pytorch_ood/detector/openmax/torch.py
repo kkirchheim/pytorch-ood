@@ -2,7 +2,7 @@
 Torch wrapper for a numpy implementation of openmax.
 """
 import logging
-from typing import Optional, TypeVar
+from typing import TypeVar
 from .numpy import OpenMax as NumpyOpenMax
 
 import torch
@@ -49,15 +49,21 @@ class OpenMax(Detector):
 
         self._openmax = NumpyOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
 
-    def fit(self: Self, data_loader: DataLoader, device: Optional[str] = "cpu") -> Self:
+    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
         """
         Determines parameters of the weibull functions for each class.
 
         :param data_loader: Data to use for fitting
-        :param device: Device used for calculations
+        :param device: Device used for calculations. If ``None``, inferred from model.
         """
         if self.model is None:
             raise ModelNotSetException
+
+        if device is None:
+            if isinstance(self.model, torch.nn.Module):
+                device = next(self.model.parameters()).device
+            else:
+                device = "cpu"
 
         z, y = extract_features(data_loader, self.model, device)
         return self.fit_features(z, y)

@@ -105,7 +105,7 @@ class RankFeat(Detector):
         x = self.backbone(x)
         x = _remove_rank1(x)
         x = self.head(x)
-        return self.detector(x)
+        return -self.detector(x)
 
     def fit(self: Self, *args, **kwargs) -> Self:
         """

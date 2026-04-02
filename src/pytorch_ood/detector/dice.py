@@ -107,15 +107,22 @@ class DICE(Detector):
         self._is_fitted = True
         return self
 
-    def fit(self: Self, loader: DataLoader, device: str = "cpu") -> Self:
+    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
         """
-        :param loader: data loader to extract features from. OOD inputs will be ignored.
-        :param device: device to use for feature extraction
+        :param data_loader: data loader to extract features from. OOD inputs will be ignored.
+        :param device: device to use for feature extraction. If ``None``, inferred from model.
         """
+        if device is None:
+            if isinstance(self.model, torch.nn.Module):
+                device = next(self.model.parameters()).device
+            else:
+                device = "cpu"
+            log.warning(f"No device given. Will use '{device}'.")
+
         if isinstance(self.model, torch.nn.Module):
             log.debug(f"Moving model to {device}")
             self.model.to(device)
 
-        z, y = extract_features(loader, self.model, device=device)
+        z, y = extract_features(data_loader, self.model, device=device)
         self.fit_features(z, y)
         return self

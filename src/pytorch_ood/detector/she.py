@@ -74,23 +74,30 @@ class SHE(Detector):
         scores = torch.sum(torch.mul(z, self.patterns[y_hat]), dim=1)
         return -scores
 
-    def fit(self: Self, loader: DataLoader, device: str = "cpu") -> Self:
+    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
         """
         Extracts features and calculates mean patterns.
 
-        :param loader: data to fit
-        :param device: device to use for computations. If the backbone is a nn.Module, it will be moved to this device.
+        :param data_loader: data to fit
+        :param device: device to use for computations. If ``None``, inferred from backbone.
         """
+        if device is None:
+            if isinstance(self.backbone, nn.Module):
+                device = next(self.backbone.parameters()).device
+            else:
+                device = "cpu"
+            log.warning(f"No device given. Will use '{device}'.")
+
         if isinstance(self.backbone, nn.Module):
             log.debug(f"Moving model to {device}")
             self.backbone.to(device)
 
-        x, y = extract_features(loader, self.backbone, device=device)
+        x, y = extract_features(data_loader, self.backbone, device=device)
         return self.fit_features(x, y, device=device)
 
     @torch.no_grad()
     def _filter_correct_predictions(
-        self, z: Tensor, y: Tensor, device: str = "cpu", batch_size: int = 1024
+        self, z: Tensor, y: Tensor, device=None, batch_size: int = 1024
     ):
         """
         :param z: a tensor of shape (N, D) or similar
@@ -115,16 +122,20 @@ class SHE(Detector):
         return buffer["z"], buffer["y"]
 
     def fit_features(
-        self: Self, z: Tensor, y: Tensor, device: str = "cpu", batch_size: int = 1024
+        self: Self, z: Tensor, y: Tensor, device=None, batch_size: int = 1024
     ) -> Self:
         """
         Calculates mean patterns per class.
 
         :param z: features to fit
         :param y: labels
-        :param device: device to use for computations
+        :param device: device to use for computations. If ``None``, inferred from input tensor.
         :param batch_size: how many samples we process at a time
         """
+        if device is None:
+            device = z.device
+            log.warning(f"No device given. Will use '{device}'.")
+
         if isinstance(self.backbone, nn.Module):
             log.debug(f"Moving model to {device}")
             self.backbone.to(device)

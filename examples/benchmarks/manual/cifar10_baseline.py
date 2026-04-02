@@ -69,6 +69,7 @@ from pytorch_ood.detector import (
     ODIN,
     EnergyBased,
     Entropy,
+    GEN,
     KLMatching,
     Mahalanobis,
     MaxLogit,
@@ -78,12 +79,15 @@ from pytorch_ood.detector import (
     DICE,
     SHE,
     Gram,
+    GMM,
     MultiMahalanobis,
     NACUE,
     GradNorm,
     GradNormKL,
     ASH,
     KNN,
+    RankFeat,
+    fDBD,
 )
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
@@ -119,7 +123,7 @@ for ood_dataset in ood_datasets:
     dataset_out_test = ood_dataset(
         root="data", transform=trans, target_transform=ToUnknown(), download=True
     )
-    test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=256, num_workers=12)
+    test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=128, num_workers=12)
     datasets[ood_dataset.__name__] = test_loader
 
 # %%
@@ -133,8 +137,13 @@ print("STAGE 2: Creating OOD Detectors")
 detectors = {}
 
 detectors["KNN"] = KNN(model.features)
+detectors["GMM"] = GMM(model.features)
+detectors["fDBD"] = fDBD(encoder=model.features, head=model.fc)
 
 detectors["ASH"] = ASH(backbone=model.features_before_pool, head=model.forward_from_before_pool)
+detectors["RankFeat"] = RankFeat(
+    backbone=model.features_before_pool, head=model.forward_from_before_pool
+)
 
 # we make a copy of the model just so deactivating gradients does not influence other detectors
 model_gn = deepcopy(model)
@@ -156,6 +165,7 @@ detectors["KLMatching"] = KLMatching(model)
 detectors["SHE"] = SHE(model.features, model.fc)
 detectors["MSP"] = MaxSoftmax(model)
 detectors["EnergyBased"] = EnergyBased(model)
+detectors["GEN"] = GEN(model)
 detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
 detectors["DICE"] = DICE(model=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
