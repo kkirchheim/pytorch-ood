@@ -132,6 +132,10 @@ Neural Collapse Inspired (NCI)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.nci
 
+Fast Decision Boundary Distance (fDBD)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.fdbd
+
 
 Gradient-based
 --------------------------
@@ -189,6 +193,7 @@ RankFeat
 from .ash import ASH
 from .dice import DICE
 from .energy import EnergyBased
+from .fdbd import fDBD
 from .entropy import Entropy
 from .gen import GEN
 from .klmatching import KLMatching
