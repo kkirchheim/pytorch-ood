@@ -35,6 +35,177 @@ without further adjustment.
     :members:
 
 
+Quick Reference
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following table summarizes the input requirements of each detector.
+The **Input** column indicates what ``predict_features`` expects:
+
+- **Logits**: output of the final classification layer (shape: ``[batch, classes]``)
+- **Features**: penultimate-layer or backbone features (shape: ``[batch, dim]``)
+- **Feature Maps**: spatial feature maps before the classification head (shape: ``[batch, channels, h, w]``)
+- **Special**: non-standard input; see the detector's documentation
+
+The **Fit** column indicates whether ``fit()`` (or ``fit_features()``) must be
+called before ``predict()``. The **Seg.** column indicates whether the detector
+supports grid-like input for anomaly segmentation.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 10 10 40
+
+   * - Detector
+     - Input
+     - Fit
+     - Seg.
+     - Notes
+   * - MaxSoftmax (MSP)
+     - Logits
+     - No
+     - Yes
+     -
+   * - MCD
+     - Special
+     - No
+     - Yes
+     - Only ``predict()``; uses dropout sampling
+   * - TemperatureScaling
+     - Logits
+     - Yes
+     - No
+     - Learns temperature on validation set
+   * - KLMatching
+     - Logits
+     - Yes
+     - No
+     - Stores typical posteriors per class
+   * - Entropy
+     - Logits
+     - No
+     - Yes
+     -
+   * - GEN
+     - Logits
+     - No
+     - Yes
+     -
+   * - MaxLogit
+     - Logits
+     - No
+     - Yes
+     -
+   * - OpenMax
+     - Logits
+     - Yes
+     - No
+     - Fits Weibull distributions per class
+   * - EnergyBased (EBO)
+     - Logits
+     - No
+     - Yes
+     -
+   * - WeightedEBO (WEBO)
+     - Logits
+     - No
+     - Yes
+     -
+   * - Mahalanobis
+     - Features
+     - Yes
+     - No
+     - Stores class means and shared covariance
+   * - MultiMahalanobis
+     - Special
+     - Yes
+     - No
+     - Expects ``List[Tensor]``, one per layer
+   * - RMD
+     - Features
+     - Yes
+     - No
+     - Mahalanobis + background Gaussian
+   * - ViM
+     - Features
+     - Yes
+     - No
+     - Requires ``w``, ``b`` from last layer at init
+   * - KNN
+     - Features
+     - Yes
+     - No
+     - Stores ID feature bank
+   * - SHE
+     - Features
+     - Yes
+     - No
+     - Stores per-class mean features
+   * - Gram
+     - Special
+     - Yes
+     - No
+     - Expects logits + ``List[Tensor]`` of feature maps
+   * - NCI
+     - Features
+     - Yes
+     - No
+     - Stores global mean
+   * - fDBD
+     - Features
+     - Yes
+     - No
+     - Stores training mean and projection
+   * - GMM
+     - Features
+     - Yes
+     - No
+     - Fits per-class Gaussians
+   * - GradNorm
+     - Special
+     - No
+     - No
+     - Only ``predict()``; computes gradient norms
+   * - GradNormKL
+     - Special
+     - No
+     - No
+     - Only ``predict()``; computes gradient norms
+   * - ODIN
+     - Special
+     - No
+     - No
+     - Only ``predict()``; gradient-based input preprocessing
+   * - NAC-UE
+     - Special
+     - Yes
+     - No
+     - Uses forward hooks internally
+   * - ASH
+     - Feature Maps
+     - No
+     - Yes
+     - Prunes activations, scores via energy
+   * - ReAct
+     - Feature Maps
+     - No
+     - Yes
+     - Clips activations, scores via energy
+   * - DICE
+     - Features
+     - Yes
+     - No
+     - Masks weights by sparsity, scores via energy
+   * - RankFeat
+     - Feature Maps
+     - No
+     - No
+     - Removes rank-1 component via SVD
+   * - VRA
+     - Features
+     - Yes
+     - Yes
+     - Learns per-dimension percentile thresholds
+
+
 Probability-based
 -------------------------------
 

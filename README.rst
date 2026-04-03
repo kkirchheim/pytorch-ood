@@ -224,6 +224,26 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NNGuide                     | Nearest Neighbor Guidance for OOD Detection                                                    | 2023 | [#NNGuide]_        |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| GradNorm                    | Gradient norms as a measure of uncertainty in neural networks.                                 | 2020 | [#GradNorm]_       |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| GradNormKL                  | KL-divergence gradient norms for detecting distributional shifts.                              | 2021 | [#GradNormKL]_     |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Multi-Layer Mahalanobis     | Mahalanobis distance computed across multiple network layers.                                  | 2018 | [#Mahalanobis]_    |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Relative Mahalanobis (RMD)  | Relative Mahalanobis distance with a background Gaussian.                                      | 2021 | [#RMD]_            |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| RankFeat                    | Rank-1 feature removal from feature maps for OOD detection.                                    | 2022 | [#RankFeat]_       |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| GEN                         | Generalized entropy score pushing the limits of softmax-based detection.                       | 2023 | [#GEN]_            |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| fDBD                        | Fast decision boundary distance for OOD detection.                                             | 2023 | [#fDBD]_           |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| VRA                         | Variance-based ReAct adjustment with learned percentile thresholds.                            | 2023 | [#VRA]_            |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| NAC-UE                      | Neuron Activation Coverage for OOD detection.                                                  | 2023 | [#NACUE]_          |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 
 **Objective Functions**:
 
@@ -464,3 +484,20 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#Nci] Liu,  et al. (2025) Detecting Out-of-distribution through the Lens of Neural Collapse. CVPR.
 
 .. [#NNGuide] Park, J., et al. (2023) Nearest Neighbor Guidance for Out-of-Distribution Detection. ICCV.
+
+.. [#GradNorm] Lee, J., & AlRegib, G. (2020) Gradients as a Measure of Uncertainty in Neural Networks. ICIP.
+
+.. [#GradNormKL] Huang, R., et al. (2021) On the Importance of Gradients for Detecting Distributional Shifts in the Wild. NeurIPS.
+
+.. [#RMD] Ren, J., et al. (2021) A Simple Fix to Mahalanobis Distance for Improving Near-OOD Detection. `ArXiv <https://arxiv.org/pdf/2106.09022.pdf>`__.
+
+.. [#RankFeat] Song, Y., et al. (2022) Rankfeat: Rank-1 Feature Removal for Out-of-Distribution Detection. NeurIPS.
+
+.. [#GEN] Liu, X., et al. (2023) GEN: Pushing the Limits of Softmax-Based Out-of-Distribution Detection. CVPR.
+
+.. [#fDBD] Liu, L., & Qin, Y. (2023) Fast Decision Boundary based Out-of-Distribution Detector. `ArXiv <https://arxiv.org/abs/2312.11536>`__.
+
+.. [#VRA] Xu, M., et al. (2023) VRA: Variational Rectified Activation for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2302.11716>`__.
+
+.. [#NACUE] Liu, Y., et al. (2023) Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization. ICLR.
+
