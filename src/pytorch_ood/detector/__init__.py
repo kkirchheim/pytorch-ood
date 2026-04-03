@@ -190,6 +190,10 @@ RankFeat
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.rankfeat
 
+VRA
+^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.vra
+
 
 
 """
@@ -212,6 +216,7 @@ from .odin import ODIN, odin_preprocessing
 from .openmax import OpenMax
 from .rankfeat import RankFeat
 from .react import ReAct
+from .vra import VRA
 from .rmd import RMD
 from .she import SHE
 from .softmax import MaxSoftmax
