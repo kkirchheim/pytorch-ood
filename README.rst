@@ -222,6 +222,8 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NCI                         | Neural Collapse Inspired OOD Detection                                                         | 2025 | [#Nci]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| NNGuide                     | Nearest Neighbor Guidance for OOD Detection                                                    | 2023 | [#NNGuide]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GradNorm                    | Gradient norms as a measure of uncertainty in neural networks.                                 | 2020 | [#GradNorm]_       |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GradNormKL                  | KL-divergence gradient norms for detecting distributional shifts.                              | 2021 | [#GradNormKL]_     |
@@ -481,6 +483,8 @@ The legal implications of using pre-trained models in commercial services are, t
 
 .. [#Nci] Liu,  et al. (2025) Detecting Out-of-distribution through the Lens of Neural Collapse. CVPR.
 
+.. [#NNGuide] Park, J., et al. (2023) Nearest Neighbor Guidance for Out-of-Distribution Detection. ICCV.
+
 .. [#GradNorm] Lee, J., & AlRegib, G. (2020) Gradients as a Measure of Uncertainty in Neural Networks. ICIP.
 
 .. [#GradNormKL] Huang, R., et al. (2021) On the Importance of Gradients for Detecting Distributional Shifts in the Wild. NeurIPS.
@@ -496,3 +500,4 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#VRA] Xu, M., et al. (2023) VRA: Variational Rectified Activation for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2302.11716>`__.
 
 .. [#NACUE] Liu, Y., et al. (2023) Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization. ICLR.
+

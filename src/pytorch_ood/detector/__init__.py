@@ -289,6 +289,10 @@ Nearest Neighbor (kNN)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.knn
 
+Nearest Neighbor Guidance (NNGuide)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.nnguide
+
 
 Simplified Hopfield Energy (SHE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -379,6 +383,7 @@ from .gmm import GMM
 from .klmatching import KLMatching
 from .gram import Gram
 from .knn import KNN
+from .nnguide import NNGuide
 from .mahalanobis import Mahalanobis
 from .maxlogit import MaxLogit
 from .mcd import MCD
