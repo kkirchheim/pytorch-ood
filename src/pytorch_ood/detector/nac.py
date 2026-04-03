@@ -91,7 +91,7 @@ class _LayerStats:
 
 class NACUE(Detector):
     """
-    Neuron-Activated Coverage from the paper from the paper *Neuron Activation Coverage: Rethinking out-of-Distribution detection and generalization*
+    Neuron Activation Coverage from the paper *Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization*
 
     :see Paper:
         `ICLR <https://arxiv.org/pdf/2306.02879>`__
