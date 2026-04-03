@@ -32,7 +32,7 @@ Self = TypeVar("Self")
 class VRA(Detector):
     """
     Implements VRA from the paper
-    *Variance-based ReAct Adjustment for Out-of-Distribution Detection*.
+    *Variational Rectified Activation for Out-of-Distribution Detection*.
 
     VRA is a two-sided version of ReAct that clips activations both above and below
     using percentile thresholds learned from In-Distribution data, then scores the result
