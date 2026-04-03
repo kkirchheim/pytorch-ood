@@ -222,6 +222,8 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NCI                         | Neural Collapse Inspired OOD Detection                                                         | 2025 | [#Nci]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| NNGuide                     | Nearest Neighbor Guidance for OOD Detection                                                    | 2023 | [#NNGuide]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 
 **Objective Functions**:
 
@@ -460,3 +462,5 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#LOGNORM] Wei,  et al. (2022) Mitigating Neural Network Overconfidence with Logit Normalization. ICML.
 
 .. [#Nci] Liu,  et al. (2025) Detecting Out-of-distribution through the Lens of Neural Collapse. CVPR.
+
+.. [#NNGuide] Park, J., et al. (2023) Nearest Neighbor Guidance for Out-of-Distribution Detection. ICCV.
