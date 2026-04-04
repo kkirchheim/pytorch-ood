@@ -119,20 +119,23 @@ def evaluate_detector(detector, data_loader: DataLoader, eval_cache: dict, devic
     input preprocessing. Otherwise fall back to ``predict(x)``.
     """
     metrics = OODMetrics()
+    detector.to(device)
 
     if isinstance(detector, LogitsDetector):
-        detector.to(device)
         scores = detector.predict_logits(eval_cache["logits"])
         metrics.update(scores, eval_cache["labels"].to(scores.device))
         return metrics.compute()
 
-    if isinstance(detector, FeaturesDetector) and getattr(detector, "eps", 0.0) == 0.0:
-        detector.to(device)
-        scores = detector.predict_features(eval_cache["features"])
-        metrics.update(scores, eval_cache["labels"].to(scores.device))
+    if isinstance(detector, FeaturesDetector):
+        if isinstance(detector, Mahalanobis) and detector.eps > 0:
+            for x, y in tqdm(data_loader, leave=False):
+                metrics.update(detector(x.to(device)), y.to(device))
+        else:
+            scores = detector.predict_features(eval_cache["features"])
+            metrics.update(scores, eval_cache["labels"].to(scores.device))
+
         return metrics.compute()
 
-    detector.to(device)
     for x, y in tqdm(data_loader, leave=False):
         metrics.update(detector(x.to(device)), y.to(device))
 

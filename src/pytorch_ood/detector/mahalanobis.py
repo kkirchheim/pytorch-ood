@@ -45,7 +45,7 @@ class Mahalanobis(FeaturesDetector):
 
     .. math :: - \\max_k \\lbrace (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k) \\rbrace
 
-    Also uses ODIN preprocessing.
+    Also uses ODIN preprocessing if the given :math:`\\epsilon > 0`
 
     :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
     :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
