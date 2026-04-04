@@ -16,10 +16,10 @@ PyTorch Out-of-Distribution Detection
 .. |python-version| image:: https://img.shields.io/badge/-Python 3.8+-blue?logo=python&logoColor=white&style=for-the-badge
    :target: https://www.python.org/
    :alt: Python
-.. |build-status| image:: https://github.com/kkirchheim/pytorch-ood/actions/workflows/python-package.yml/badge.svg?branch=dev
+.. |build-status| image:: https://img.shields.io/github/actions/workflow/status/kkirchheim/pytorch-ood/python-package.yml?branch=dev&style=for-the-badge&label=build
    :target: https://github.com/kkirchheim/pytorch-ood/actions/workflows/python-package.yml
    :alt: Build Status
-.. |coverage-status| image:: https://codecov.io/gh/kkirchheim/pytorch-ood/branch/dev/graph/badge.svg
+.. |coverage-status| image:: https://img.shields.io/codecov/c/github/kkirchheim/pytorch-ood/dev?style=for-the-badge&label=coverage
    :target: https://codecov.io/gh/kkirchheim/pytorch-ood
    :alt: Coverage Status
 .. |downloads| image:: https://img.shields.io/pepy/dt/pytorch-ood?style=for-the-badge
