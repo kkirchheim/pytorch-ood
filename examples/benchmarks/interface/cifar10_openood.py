@@ -1,12 +1,10 @@
 """
 
-OpenOOD - CIFAR10
-==================
+OpenOOD v1.5 - CIFAR10
+========================
 
-Reproduces the OpenOOD benchmark for OOD detection, using the WideResNet
+Reproduces the OpenOOD v1.5 benchmark for OOD detection on CIFAR-10, using the WideResNet
 model from the Hendrycks baseline paper.
-
-.. warning :: This is currently incomplete, see :class:`CIFAR10-OpenOOD <pytorch_ood.benchmark.CIFAR10_OpenOOD>`.
 
 """
 
@@ -50,20 +48,15 @@ df = pd.DataFrame(results)
 print((df.set_index(["Dataset", "Detector"]) * 100).to_csv(float_format="%.2f"))
 
 # %%
-# This should produce the following table:
+# This should produce a table with results for the following OOD datasets:
 #
-# +--------------+----------+-------+-------+---------+----------+----------+
-# | Dataset      | Detector | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
-# +==============+==========+=======+=======+=========+==========+==========+
-# | CIFAR100     | MSP      | 87.82 | 40.69 | 88.42   | 85.20    | 43.09    |
-# +--------------+----------+-------+-------+---------+----------+----------+
-# | TinyImageNet | MSP      | 86.99 | 40.65 | 86.48   | 85.07    | 51.52    |
-# +--------------+----------+-------+-------+---------+----------+----------+
-# | MNIST        | MSP      | 92.66 | 37.23 | 94.33   | 90.30    | 22.46    |
-# +--------------+----------+-------+-------+---------+----------+----------+
-# | FashionMNIST | MSP      | 94.95 | 33.53 | 96.18   | 93.36    | 15.58    |
-# +--------------+----------+-------+-------+---------+----------+----------+
-# | Textures     | MSP      | 88.51 | 39.68 | 92.99   | 78.50    | 40.89    |
-# +--------------+----------+-------+-------+---------+----------+----------+
-# | Places365    | MSP      | 88.24 | 39.93 | 71.17   | 95.61    | 44.63    |
-# +--------------+----------+-------+-------+---------+----------+----------+
+# Near-OOD:
+# * CIFAR100
+# * TinyImageNet
+#
+# Far-OOD:
+# * MNIST
+# * SVHN
+# * Textures
+# * Places365
+#

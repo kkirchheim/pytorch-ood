@@ -1,10 +1,8 @@
 """
-OpenOOD - ImageNet
-===================
+OpenOOD v1.5 - ImageNet
+========================
 
-Reproduces the OpenOOD benchmark for OOD detection, using a pre-trained ResNet 50.
-
-.. warning :: This is currently incomplete, see :class:`ImageNet-OpenOOD <pytorch_ood.benchmark.ImageNet_OpenOOD>`.
+Reproduces the OpenOOD v1.5 benchmark for OOD detection on ImageNet, using a pre-trained ResNet 50.
 
 """
 
@@ -53,19 +51,11 @@ df = pd.DataFrame(results)
 print((df.set_index(["Dataset", "Detector"]) * 100).to_csv(float_format="%.2f"))
 
 # %%
-# This should produce a table with the following output:
+# This should produce a table with results for the following OOD datasets:
 #
-# +-------------+----------+-------+---------+----------+----------+
-# | Dataset     | Detector | AUROC | AUPR-IN | AUPR-OUT | FPR95TPR |
-# +=============+==========+=======+=========+==========+==========+
-# | ImageNetO   | MSP      | 28.64 | 2.52    | 94.85    | 91.20    |
-# +-------------+----------+-------+---------+----------+----------+
-# | OpenImagesO | MSP      | 84.98 | 62.61   | 94.67    | 49.95    |
-# +-------------+----------+-------+---------+----------+----------+
-# | Textures    | MSP      | 80.46 | 37.50   | 96.80    | 67.75    |
-# +-------------+----------+-------+---------+----------+----------+
-# | SVHN        | MSP      | 97.62 | 95.56   | 98.77    | 11.58    |
-# +-------------+----------+-------+---------+----------+----------+
-# | MNIST       | MSP      | 90.04 | 90.45   | 89.88    | 39.03    |
-# +-------------+----------+-------+---------+----------+----------+
+# * SSBHard (near-OOD)
+# * NINCO (near-OOD)
+# * iNaturalist (far-OOD)
+# * Textures (far-OOD)
+# * OpenImagesO (far-OOD)
 #

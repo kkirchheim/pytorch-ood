@@ -1,33 +1,33 @@
 from typing import Dict, List
 
 from torch.utils.data import DataLoader, Dataset
-from torchvision.datasets import MNIST, SVHN, ImageNet
+from torchvision.datasets import ImageNet
 from torchvision.transforms import Compose
 
 from pytorch_ood.api import Detector
 from pytorch_ood.benchmark import Benchmark
-from pytorch_ood.dataset.img import ImageNetO, OpenImagesO, Textures
+from pytorch_ood.dataset.img import NINCO, OpenImagesO, SSBHard, Textures, iNaturalist
 from pytorch_ood.utils import OODMetrics, ToRGB, ToUnknown
 
 
 class ImageNet_OpenOOD(Benchmark):
     """
-    Aims to replicate the ImageNet benchmark proposed in
-    *OpenOOD: Benchmarking Generalized Out-of-Distribution Detection*.
+    Replicates the ImageNet benchmark proposed in
+    *OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection*.
 
-    :see Paper: `OpenOOD <https://openreview.net/pdf?id=gT6j4_tskUt>`__
+    :see Paper: `OpenOOD v1.5 <https://arxiv.org/abs/2306.09301>`__
 
-    Outlier datasets are
+    Near-OOD datasets:
 
-     * ImageNet-O
-     * OpenImage-O
+     * SSB-Hard
+     * NINCO
+
+    Far-OOD datasets:
+
+     * iNaturalist
      * Textures
-     * MNIST
-     * SVHN
-     * Texture
+     * OpenImage-O
 
-    .. warning :: This currently does not reproduce the benchmark accurately, as it does not exclude images with
-        overlap with ImageNet and is missing the Species dataset.
     """
 
     def __init__(self, root, image_net_root, transform):
@@ -42,13 +42,19 @@ class ImageNet_OpenOOD(Benchmark):
         self.test_in = ImageNet(image_net_root, transform=self.transform, split="val")
 
         self.test_oods = [
-            ImageNetO(
+            SSBHard(
                 root,
                 download=True,
                 transform=self.transform,
                 target_transform=ToUnknown(),
             ),
-            OpenImagesO(
+            NINCO(
+                root,
+                download=True,
+                transform=self.transform,
+                target_transform=ToUnknown(),
+            ),
+            iNaturalist(
                 root,
                 download=True,
                 transform=self.transform,
@@ -60,15 +66,7 @@ class ImageNet_OpenOOD(Benchmark):
                 transform=self.transform,
                 target_transform=ToUnknown(),
             ),
-            SVHN(
-                root,
-                split="test",
-                download=True,
-                transform=self.transform,
-                target_transform=ToUnknown(),
-            ),
-            MNIST(
-                root,
+            OpenImagesO(
                 root,
                 download=True,
                 transform=self.transform,
