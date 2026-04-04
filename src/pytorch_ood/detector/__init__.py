@@ -4,7 +4,7 @@ This module provides a collection of different Out-of-Distribution Detectors.
 API
 ------
 Each detector implements a common API which contains a ``predict`` and a ``fit`` method, where ``fit`` is optional.
-The objects ``__call__`` methods is delegated to the the ``predict`` function, so you can use
+The objects ``__call__`` methods is delegated to the ``predict`` function, so you can use
 
 .. code:: python
 
@@ -17,11 +17,15 @@ The objects ``__call__`` methods is delegated to the the ``predict`` function, s
     :members:
 
 
+Some of the detectors support grid-like input, so that they can be used for anomaly segmentation
+without further adjustment.
+
+
 Representation Interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Alternatively, detectors can be used on intermediate representations without passing inputs
-through the full model again. The explicit method family depends on the detector class:
+through the full model again. The available methods will depend on the base class of the detector:
 
 - logits detectors: ``predict_logits(...)`` and optionally ``fit_logits(...)``
 - feature detectors: ``predict_features(...)`` and optionally ``fit_features(...)``
@@ -35,10 +39,6 @@ through the full model again. The explicit method family depends on the detector
     detector = LogitsDetector(model=None)
     detector.fit_logits(train_logits, train_labels)
     scores = detector.predict_logits(test_logits)
-
-Some of the detectors support grid-like input, so that they can be used for anomaly segmentation
-without further adjustment.
-
 
 
 ..  autoclass:: pytorch_ood.api.LogitsDetector
@@ -94,7 +94,7 @@ Generalized Entropy (GEN)
 Logit-based
 -------------------------------
 
-
+Logit-based methods are based on the observation that OOD inputs tend to yield different logits compared to ID data.
 
 Maximum Logit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

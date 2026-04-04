@@ -28,7 +28,7 @@ class WeightedEBO(LogitsDetector):
     Implements the Weighted Energy Based Score of  *VOS: Learning what you don’t know by virtual outlier synthesis*.
 
     This method calculates the energy from the weighted logits. The negative energy can be used as outlier score.
-    The weights (which can be obtained, for example, by training with the :class:`pytorch_ood.loss.VOSRegLoss`).
+    The weights can be obtained, for example, by training with the :class:`pytorch_ood.loss.VOSRegLoss`.
 
     Overall, the score is defined as:
 
