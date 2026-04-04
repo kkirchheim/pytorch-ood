@@ -5,7 +5,7 @@
 from typing import Dict, List
 
 from torch.utils.data import DataLoader, Dataset
-from torchvision.datasets import CIFAR10, CIFAR100, MNIST, FashionMNIST
+from torchvision.datasets import CIFAR10, CIFAR100, MNIST, SVHN
 from torchvision.transforms import Compose
 
 from pytorch_ood.api import Detector
@@ -136,21 +136,22 @@ class CIFAR10_ODIN(Benchmark):
 
 class CIFAR10_OpenOOD(Benchmark):
     """
-    Aims to replicate the benchmark proposed in *OpenOOD: Benchmarking Generalized Out-of-Distribution Detection*.
+    Replicates the CIFAR-10 benchmark proposed in
+    *OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection*.
 
-    :see Paper: `OpenOOD <https://openreview.net/pdf?id=gT6j4_tskUt>`__
+    :see Paper: `OpenOOD v1.5 <https://arxiv.org/abs/2306.09301>`__
 
-    Outlier datasets are
+    Near-OOD datasets:
 
-     * CIFAR100
+     * CIFAR-100
      * TinyImageNet
+
+    Far-OOD datasets:
+
      * MNIST
-     * FashionMNIST
+     * SVHN
      * Textures
      * Places365
-
-    .. warning :: This currently does not reproduce the benchmark accurately, as it does not exclude images with
-        overlap with CIFAR10.
 
     """
 
@@ -185,12 +186,12 @@ class CIFAR10_OpenOOD(Benchmark):
                 target_transform=ToUnknown(),
                 train=False,
             ),
-            FashionMNIST(
+            SVHN(
                 root,
                 download=True,
                 transform=self.transform,
                 target_transform=ToUnknown(),
-                train=False,
+                split="test",
             ),
             Textures(
                 root,
