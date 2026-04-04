@@ -1,7 +1,7 @@
 PyTorch Out-of-Distribution Detection
 ****************************************
 
-|docs| |version| |license| |python-version| |downloads| |paper|
+|docs| |version| |license| |python-version| |build-status| |coverage-status| |downloads| |paper|
 
 
 .. |docs| image:: https://img.shields.io/badge/docs-online-blue?style=for-the-badge
@@ -16,6 +16,12 @@ PyTorch Out-of-Distribution Detection
 .. |python-version| image:: https://img.shields.io/badge/-Python 3.8+-blue?logo=python&logoColor=white&style=for-the-badge
    :target: https://www.python.org/
    :alt: Python
+.. |build-status| image:: https://img.shields.io/github/actions/workflow/status/kkirchheim/pytorch-ood/python-package.yml?branch=dev&style=for-the-badge&label=build
+   :target: https://github.com/kkirchheim/pytorch-ood/actions/workflows/python-package.yml
+   :alt: Build Status
+.. |coverage-status| image:: https://img.shields.io/codecov/c/github/kkirchheim/pytorch-ood/dev?style=for-the-badge&label=coverage
+   :target: https://codecov.io/gh/kkirchheim/pytorch-ood
+   :alt: Coverage Status
 .. |downloads| image:: https://img.shields.io/pepy/dt/pytorch-ood?style=for-the-badge
    :target: https://pepy.tech/project/pytorch-ood
    :alt: Downloads
@@ -500,4 +506,3 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#VRA] Xu, M., et al. (2023) VRA: Variational Rectified Activation for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2302.11716>`__.
 
 .. [#NACUE] Liu, Y., et al. (2023) Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization. ICLR.
-
