@@ -7,24 +7,26 @@
 
 ..  autoclass:: pytorch_ood.detector.KNN
     :members:
+    :inherited-members:
+    :show-inheritance:
 
 """
 
 import logging
-from typing import Callable, TypeVar
+from typing import Callable, Optional, TypeVar
 
 import torch
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader
 
-from pytorch_ood.api import Detector, ModelNotSetException, RequiresFittingException
+from pytorch_ood.api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from pytorch_ood.utils import extract_features, is_known
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class KNN(Detector):
+class KNN(FeaturesDetector):
     """
     Implements the detector from the paper
     *Out-of-Distribution Detection with Deep Nearest Neighbors*.
@@ -41,9 +43,12 @@ class KNN(Detector):
     :see PMLR: `arXiv <https://proceedings.mlr.press/v162/sun22d.html>`__
     """
 
-    def __init__(self, model: Callable[[Tensor], Tensor], **knn_kwargs):
+    requires_fit = True
+
+    def __init__(self, model: Optional[Callable[[Tensor], Tensor]], **knn_kwargs):
         """
-        :param model: neural network to use
+        :param model: neural network to use. Can be ``None`` when using
+            ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param knn_kwargs: dict with keyword arguments that will be passed to the scikit learns k-NN
         """
         self.model = model
@@ -99,23 +104,17 @@ class KNN(Detector):
 
         return self
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Extracts features and fits the kNN-Model
 
         :param data_loader: data loader
-        :param device: device used for extracting logits. If ``None``, inferred from model.
         """
+        device = self.device
         if device is None:
-            if isinstance(self.model, torch.nn.Module):
-                device = next(self.model.parameters()).device
-            else:
-                device = "cpu"
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.model, torch.nn.Module):
-            log.debug(f"Moving model to {device}")
-            self.model.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         z, y = extract_features(model=self.model, data_loader=data_loader, device=device)
         return self.fit_features(z, y)

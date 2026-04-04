@@ -7,7 +7,9 @@
 
 ..  autoclass:: pytorch_ood.detector.MaxSoftmax
     :members:
-    :exclude-members: fit, fit_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit, fit_logits
 """
 
 import logging
@@ -22,13 +24,13 @@ from torch.utils.data import DataLoader
 
 from pytorch_ood.utils import extract_features, is_known
 
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import LogitsDetector, RequiresFittingException
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class MaxSoftmax(Detector):
+class MaxSoftmax(LogitsDetector):
     """
     Implements the Maximum Softmax Probability (MSP) Thresholding baseline for OOD detection.
 
@@ -47,37 +49,17 @@ class MaxSoftmax(Detector):
 
     """
 
-    def __init__(self, model: Module, t: Optional[float] = 1.0):
+    def __init__(self, model: Optional[Module], t: Optional[float] = 1.0):
         """
-        :param model: neural network to use
+        :param model: neural network to use. Can be ``None`` when using
+            ``predict_logits(...)`` directly.
         :param t: temperature value :math:`T`. Default is 1.
         """
         super(MaxSoftmax, self).__init__()
         self.t = tensor(t)
         self.model = model
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input, will be passed through model
-        """
-        if self.model is None:
-            raise ModelNotSetException
-
-        return self.predict_features(self.model(x))
-
-    def fit(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self
-
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self
-
-    def predict_features(self, logits: Tensor) -> Tensor:
+    def predict_logits(self, logits: Tensor) -> Tensor:
         """
         :param logits: logits given by the model
         """

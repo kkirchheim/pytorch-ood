@@ -7,7 +7,9 @@
 
 ..  autoclass:: pytorch_ood.detector.Entropy
     :members:
-    :exclude-members: fit, fit_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit, fit_logits
 """
 
 from typing import Optional, TypeVar
@@ -15,12 +17,12 @@ from typing import Optional, TypeVar
 from torch import Tensor
 from torch.nn import Module
 
-from ..api import Detector, ModelNotSetException
+from ..api import LogitsDetector
 
 Self = TypeVar("Self")
 
 
-class Entropy(Detector):
+class Entropy(LogitsDetector):
     """
     Implements Entropy-based OOD detection.
 
@@ -35,39 +37,15 @@ class Entropy(Detector):
 
     """
 
-    def fit(self: Self, *args, **kwargs) -> Self:
+    def __init__(self, model: Optional[Module]):
         """
-        Not required.
-        """
-        return self
-
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required.
-        """
-        return self
-
-    def __init__(self, model: Module):
-        """
-        :param model: the model :math:`f`
+        :param model: the model :math:`f`. Can be ``None`` when using
+            ``predict_logits(...)`` directly.
         """
         super(Entropy, self).__init__()
         self.model = model
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        Calculate entropy for inputs
-
-        :param x: input tensor, will be passed through model
-
-        :return: Entropy score
-        """
-        if self.model is None:
-            raise ModelNotSetException
-
-        return self.score(self.model(x))
-
-    def predict_features(self, logits: Tensor) -> Tensor:
+    def predict_logits(self, logits: Tensor) -> Tensor:
         """
         :param logits: logits given by your model
         """

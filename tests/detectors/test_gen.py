@@ -57,8 +57,8 @@ class TestGEN(unittest.TestCase):
             scores = detector(x)
         self.assertEqual(scores.shape, (4, 8, 8))
 
-    def test_predict_features(self):
-        """predict_features works on raw logits and respects score ordering."""
+    def test_predict_logits(self):
+        """predict_logits works on raw logits and respects score ordering."""
         # Uniform logits → maximum score (most uncertain)
         uniform_logits = torch.zeros(1, 5)
         # Peaked logits → minimum score (most confident)
@@ -69,10 +69,10 @@ class TestGEN(unittest.TestCase):
 
         self.assertGreater(s_uniform, s_peaked)
 
-    def test_predict_features_batch(self):
+    def test_predict_logits_batch(self):
         """Batch of logits produces correct shape."""
         logits = torch.randn(32, 10)
-        scores = GEN.score(logits)
+        scores = GEN(None).predict_logits(logits)
         self.assertEqual(scores.shape, (32,))
         self.assertTrue(torch.isfinite(scores).all())
 

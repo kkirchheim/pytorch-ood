@@ -9,6 +9,8 @@
 
 ..  autoclass:: pytorch_ood.detector.fDBD
     :members:
+    :inherited-members:
+    :show-inheritance:
 
 """
 
@@ -20,14 +22,14 @@ from torch import Tensor
 from torch.nn import Linear, Module
 from torch.utils.data import DataLoader
 
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import extract_features
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class fDBD(Detector):
+class fDBD(FeaturesDetector):
     """
     Implements the Fast Decision Boundary Distance detector from the paper
     *Fast Decision Boundary based Out-of-Distribution Detector*.
@@ -49,6 +51,8 @@ class fDBD(Detector):
     :see Paper: `ArXiv <https://arxiv.org/abs/2312.11536>`__
     :see Implementation: `GitHub <https://github.com/litianliu/fDBD-OOD>`__
     """
+
+    requires_fit = True
 
     def __init__(self, encoder: Module, head: Linear) -> None:
         """
@@ -75,22 +79,20 @@ class fDBD(Detector):
         denom[torch.arange(n_classes), torch.arange(n_classes)] = 1.0
         self._denom_matrix = denom
 
-    def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Compute the training feature mean :math:`\\mu`.
 
         :param data_loader: data loader with training data
-        :param device: device to use for feature extraction
         """
         if self.encoder is None:
             raise ModelNotSetException()
 
+        device = self.device
         if device is None:
-            device = next(iter(self.encoder.parameters())).device
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.encoder, Module):
-            self.encoder.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         z, y = extract_features(data_loader, self.encoder, device)
         return self.fit_features(z)

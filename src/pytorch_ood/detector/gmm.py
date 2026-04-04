@@ -9,6 +9,8 @@
 
 ..  autoclass:: pytorch_ood.detector.GMM
     :members:
+    :inherited-members:
+    :show-inheritance:
 
 """
 
@@ -19,14 +21,14 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import contains_unknown, extract_features, is_known
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class GMM(Detector):
+class GMM(FeaturesDetector):
     """
     Implements a class-conditional Gaussian Mixture Model (GMM) for Out-of-Distribution Detection.
 
@@ -40,6 +42,8 @@ class GMM(Detector):
     This extends :class:`Mahalanobis` by allowing **per-class covariance matrices** and
     using the full mixture likelihood (logsumexp) instead of the max over classes.
     """
+
+    requires_fit = True
 
     def __init__(
         self,
@@ -58,26 +62,20 @@ class GMM(Detector):
         self._log_det = None  # (K,)
         self._log_weights = None  # (K,)
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Extract features and fit the GMM.
 
         :param data_loader: data loader with training data
-        :param device: device to use for feature extraction. If ``None``, inferred from model.
         """
         if self.model is None:
             raise ModelNotSetException()
 
+        device = self.device
         if device is None:
-            if isinstance(self.model, torch.nn.Module):
-                device = next(self.model.parameters()).device
-            else:
-                device = "cpu"
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.model, torch.nn.Module):
-            log.debug(f"Moving model to {device}")
-            self.model.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         z, y = extract_features(data_loader, self.model, device)
         return self.fit_features(z, y)
@@ -147,7 +145,8 @@ class GMM(Detector):
         if self._mu is None:
             raise RequiresFittingException()
 
-        z = z.detach().cpu().float()
+        device = self._mu.device
+        z = z.detach().to(device).float()
 
         # Per-class Mahalanobis distances; use max (closest class) as score.
         # We omit log-det and mixing-weight terms: they are constant per class and

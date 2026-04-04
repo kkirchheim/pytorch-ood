@@ -7,6 +7,8 @@
 
 ..  autoclass:: pytorch_ood.detector.MultiMahalanobis
     :members:
+    :inherited-members:
+    :show-inheritance:
 """
 
 import logging
@@ -17,7 +19,7 @@ from torch import Tensor
 from torch.nn import Module, Sequential
 from torch.utils.data import DataLoader
 
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import StructuredDetector, ModelNotSetException, RequiresFittingException
 from ..utils import contains_unknown, extract_feature_avg
 
 log = logging.getLogger(__name__)
@@ -25,7 +27,7 @@ log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class MultiMahalanobis(Detector):
+class MultiMahalanobis(StructuredDetector):
     """
     Implements the Mahalanobis Method from the paper *A Simple Unified Framework for Detecting
     Out-of-Distribution Samples and Adversarial Attacks* which supports several layers.
@@ -46,6 +48,8 @@ class MultiMahalanobis(Detector):
     :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
     :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
     """
+
+    requires_fit = True
 
     def __init__(self, model: List[Module], alpha: List[float] = None):
         """
@@ -70,22 +74,18 @@ class MultiMahalanobis(Detector):
 
         self.alpha = alpha  #: Per-layer weighting factors
 
-    def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Fit one gaussian to the features of each layer. Will average over feature maps.
 
         :param data_loader: dataset to fit on.
-        :param device: device to use
         :return:
         """
+        device = self.device
         if device is None:
-            # use device of first layer
-            device = list(self.model[0].parameters())[0].device
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.model, torch.nn.Module):
-            log.debug(f"Moving model to {device}")
-            self.model.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         zs = []
 
@@ -98,20 +98,17 @@ class MultiMahalanobis(Detector):
 
             zs.append(z)
 
-        return self.fit_features(zs, y, device)
+        return self.fit_structured(zs, y)
 
-    def fit_features(self: Self, zs: List[Tensor], y: Tensor, device: str = None) -> Self:
+    def fit_structured(self: Self, zs: List[Tensor], y: Tensor) -> Self:
         """
         Fit parameters of the multi variate gaussians.
 
         :param zs: list of features for each layer
         :param y: class labels
-        :param device: device to use
         :return:
         """
-        if device is None:
-            device = zs[0].device
-            log.warning(f"No device given. Will use '{device}'.")
+        device = self.device or zs[0].device
 
         y = y.to(device)
 
@@ -167,7 +164,7 @@ class MultiMahalanobis(Detector):
 
         return torch.cat(md_k, 1)
 
-    def predict_features(self, zs: List[Tensor], device=None) -> Tensor:
+    def predict_structured(self, zs: List[Tensor], device=None) -> Tensor:
         """
         Calculates mahalanobis distance directly on features.
         ODIN preprocessing will not be applied.
@@ -218,7 +215,7 @@ class MultiMahalanobis(Detector):
             z = z.mean(dim=(2, 3)).view(z.shape[0], -1)
             zs.append(z)
 
-        return self.predict_features(zs, device=device)
+        return self.predict_structured(zs, device=device)
 
     @property
     def n_classes(self):

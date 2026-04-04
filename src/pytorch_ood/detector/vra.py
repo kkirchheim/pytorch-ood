@@ -9,6 +9,8 @@
 
 ..  autoclass:: pytorch_ood.detector.VRA
     :members:
+    :inherited-members:
+    :show-inheritance:
 
 """
 
@@ -22,14 +24,14 @@ from torch.utils.data import DataLoader
 
 from pytorch_ood.utils import extract_features, is_known
 
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import FeatureMapsDetector, ModelNotSetException, RequiresFittingException
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class VRA(Detector):
+class VRA(FeatureMapsDetector):
     """
     Implements VRA from the paper
     *Variational Rectified Activation for Out-of-Distribution Detection*.
@@ -56,6 +58,8 @@ class VRA(Detector):
 
     :see Paper: `ArXiv <https://arxiv.org/abs/2302.11716>`__
     """
+
+    requires_fit = True
 
     def __init__(
         self,
@@ -91,11 +95,9 @@ class VRA(Detector):
             raise RequiresFittingException()
 
         z = self.backbone(x)
-        z = self._clip(z)
-        z = self.head(z)
-        return self.detector(z)
+        return self.predict_feature_maps(z)
 
-    def predict_features(self, x: Tensor) -> Tensor:
+    def predict_feature_maps(self, x: Tensor) -> Tensor:
         """
         :param x: features from the backbone
         """
@@ -108,7 +110,7 @@ class VRA(Detector):
         x = self.head(x)
         return self.detector(x)
 
-    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+    def fit_feature_maps(self: Self, z: Tensor, y: Tensor) -> Self:
         """
         Calculate per-dimension clipping thresholds from In-Distribution features.
         OOD inputs will be ignored.
@@ -138,28 +140,23 @@ class VRA(Detector):
         )
         return self
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Extract features and calculate clipping thresholds. OOD inputs will be ignored.
 
         :param data_loader: data loader to extract features from
-        :param device: device to use for feature extraction. If ``None``, inferred from model.
         """
         if self.backbone is None:
             raise ModelNotSetException()
 
+        device = self.device
         if device is None:
-            if isinstance(self.backbone, torch.nn.Module):
-                device = next(self.backbone.parameters()).device
-            else:
-                device = "cpu"
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.backbone, torch.nn.Module):
-            self.backbone.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         z, y = extract_features(data_loader, self.backbone, device=device)
-        self.fit_features(z, y)
+        self.fit_feature_maps(z, y)
         return self
 
     def _clip(self, z: Tensor) -> Tensor:

@@ -60,7 +60,8 @@ detector = Gram(
 )
 
 print("Fitting...")
-detector.fit(train_loader, device=device)
+detector.to(device)
+detector.fit(train_loader)
 
 
 # %%

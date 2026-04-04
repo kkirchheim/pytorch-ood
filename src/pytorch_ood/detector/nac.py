@@ -8,6 +8,8 @@
 
 ..  autoclass:: pytorch_ood.detector.NACUE
     :members:
+    :inherited-members:
+    :show-inheritance:
     :exclude-members:
 """
 
@@ -19,8 +21,7 @@ from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
 
-from pytorch_ood.api import Detector
-from pytorch_ood.api import ModelNotSetException, RequiresFittingException
+from pytorch_ood.api import Detector, ModelNotSetException, RequiresFittingException
 
 
 def _default_feature_reduce(z: Tensor) -> Tensor:
@@ -97,6 +98,8 @@ class NACUE(Detector):
         `ICLR <https://arxiv.org/pdf/2306.02879>`__
     """
 
+    requires_fit = True
+
     def __init__(
         self,
         model: Optional[Module],
@@ -125,7 +128,7 @@ class NACUE(Detector):
         self.model = model
         self.layers = list(layers)
         self.feature_reduce = feature_reduce or _default_feature_reduce
-        self.device = torch.device(device) if device is not None else None
+        self._device = torch.device(device) if device is not None else None
 
         def _expand(v, cast):
             if isinstance(v, (list, tuple)):
@@ -147,17 +150,13 @@ class NACUE(Detector):
 
     # ----------------------------- pytorch-ood API -----------------------------
 
-    def fit(self, data_loader: DataLoader, device=None) -> "NACUE":
+    def fit(self, data_loader: DataLoader) -> "NACUE":
         if self.model is None:
             raise ModelNotSetException("NACUE requires a model.")
         self.model.eval()
 
-        # allow pytorch-ood's fit(..., device=...) convention
-        if device is not None:
-            self.device = device
-
         if self.device is not None:
-            self.model.to(self.device)
+            self.to(self.device)
 
         self._init_hooks()
 

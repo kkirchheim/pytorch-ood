@@ -7,7 +7,9 @@
 
 ..  autoclass:: pytorch_ood.detector.ODIN
     :members:
-    :exclude-members: fit, fit_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit
 
 .. autofunction:: pytorch_ood.detector.odin_preprocessing
 
@@ -160,23 +162,3 @@ class ODIN(Detector):
         )
         # returning negative values so higher values indicate greater outlierness
         return -self.model(x_hat).softmax(dim=1).max(dim=1).values
-
-    def fit(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self
-
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self
-
-    def predict_features(self, x: Tensor) -> Tensor:
-        """
-        Since ODIN requires backpropagating through the model, this method can not be used.
-
-        :raise Exception:
-        """
-        raise Exception("You must use a model for ODIN")

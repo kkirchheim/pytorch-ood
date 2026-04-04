@@ -13,197 +13,49 @@ The objects ``__call__`` methods is delegated to the the ``predict`` function, s
     scores = detector(x)
 
 
-Feature-based Interface
+..  autoclass:: pytorch_ood.api.Detector
+    :members:
+
+
+Representation Interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Alternatively, you can also use the ``fit_features`` and ``predict_features`` methods.
-In that case, inputs will not be passed through the model. This can help to avoid passing
-data through the model multiple times when fitting several detectors. Detectors who do not
-support this will raise an exception.
+Alternatively, detectors can be used on intermediate representations without passing inputs
+through the full model again. The explicit method family depends on the detector class:
+
+- logits detectors: ``predict_logits(...)`` and optionally ``fit_logits(...)``
+- feature detectors: ``predict_features(...)`` and optionally ``fit_features(...)``
+- feature-map detectors: ``predict_feature_maps(...)`` and optionally
+  ``fit_feature_maps(...)``
+- structured detectors: ``predict_structured(...)`` and optionally
+  ``fit_structured(...)``
 
 .. code:: python
 
-    detector = Detector(model=None)
-    detector.fit_features(train_features, train_labels)
-    scores = detector.predict_features(test_features)
+    detector = LogitsDetector(model=None)
+    detector.fit_logits(train_logits, train_labels)
+    scores = detector.predict_logits(test_logits)
 
 Some of the detectors support grid-like input, so that they can be used for anomaly segmentation
 without further adjustment.
 
 
-..  autoclass:: pytorch_ood.api.Detector
+
+..  autoclass:: pytorch_ood.api.LogitsDetector
     :members:
+    :show-inheritance:
 
+..  autoclass:: pytorch_ood.api.FeaturesDetector
+    :members:
+    :show-inheritance:
 
-Quick Reference
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..  autoclass:: pytorch_ood.api.FeatureMapsDetector
+    :members:
+    :show-inheritance:
 
-The following table summarizes the input requirements of each detector.
-The **Input** column indicates what ``predict_features`` expects:
-
-- **Logits**: output of the final classification layer (shape: ``[batch, classes]``)
-- **Features**: penultimate-layer or backbone features (shape: ``[batch, dim]``)
-- **Feature Maps**: spatial feature maps before the classification head (shape: ``[batch, channels, h, w]``)
-- **Special**: non-standard input; see the detector's documentation
-
-The **Fit** column indicates whether ``fit()`` (or ``fit_features()``) must be
-called before ``predict()``. The **Seg.** column indicates whether the detector
-supports grid-like input for anomaly segmentation.
-
-.. list-table::
-   :header-rows: 1
-   :widths: 25 15 10 10 40
-
-   * - Detector
-     - Input
-     - Fit
-     - Seg.
-     - Notes
-   * - MaxSoftmax (MSP)
-     - Logits
-     - No
-     - Yes
-     -
-   * - MCD
-     - Special
-     - No
-     - Yes
-     - Only ``predict()``; uses dropout sampling
-   * - TemperatureScaling
-     - Logits
-     - Yes
-     - No
-     - Learns temperature on validation set
-   * - KLMatching
-     - Logits
-     - Yes
-     - No
-     - Stores typical posteriors per class
-   * - Entropy
-     - Logits
-     - No
-     - Yes
-     -
-   * - GEN
-     - Logits
-     - No
-     - Yes
-     -
-   * - MaxLogit
-     - Logits
-     - No
-     - Yes
-     -
-   * - OpenMax
-     - Logits
-     - Yes
-     - No
-     - Fits Weibull distributions per class
-   * - EnergyBased (EBO)
-     - Logits
-     - No
-     - Yes
-     -
-   * - WeightedEBO (WEBO)
-     - Logits
-     - No
-     - Yes
-     -
-   * - Mahalanobis
-     - Features
-     - Yes
-     - No
-     - Stores class means and shared covariance
-   * - MultiMahalanobis
-     - Special
-     - Yes
-     - No
-     - Expects ``List[Tensor]``, one per layer
-   * - RMD
-     - Features
-     - Yes
-     - No
-     - Mahalanobis + background Gaussian
-   * - ViM
-     - Features
-     - Yes
-     - No
-     - Requires ``w``, ``b`` from last layer at init
-   * - KNN
-     - Features
-     - Yes
-     - No
-     - Stores ID feature bank
-   * - SHE
-     - Features
-     - Yes
-     - No
-     - Stores per-class mean features
-   * - Gram
-     - Special
-     - Yes
-     - No
-     - Expects logits + ``List[Tensor]`` of feature maps
-   * - NCI
-     - Features
-     - Yes
-     - No
-     - Stores global mean
-   * - fDBD
-     - Features
-     - Yes
-     - No
-     - Stores training mean and projection
-   * - GMM
-     - Features
-     - Yes
-     - No
-     - Fits per-class Gaussians
-   * - GradNorm
-     - Special
-     - No
-     - No
-     - Only ``predict()``; computes gradient norms
-   * - GradNormKL
-     - Special
-     - No
-     - No
-     - Only ``predict()``; computes gradient norms
-   * - ODIN
-     - Special
-     - No
-     - No
-     - Only ``predict()``; gradient-based input preprocessing
-   * - NAC-UE
-     - Special
-     - Yes
-     - No
-     - Uses forward hooks internally
-   * - ASH
-     - Feature Maps
-     - No
-     - Yes
-     - Prunes activations, scores via energy
-   * - ReAct
-     - Feature Maps
-     - No
-     - Yes
-     - Clips activations, scores via energy
-   * - DICE
-     - Features
-     - Yes
-     - No
-     - Masks weights by sparsity, scores via energy
-   * - RankFeat
-     - Feature Maps
-     - No
-     - No
-     - Removes rank-1 component via SVD
-   * - VRA
-     - Features
-     - Yes
-     - Yes
-     - Learns per-dimension percentile thresholds
+..  autoclass:: pytorch_ood.api.StructuredDetector
+    :members:
+    :show-inheritance:
 
 
 Probability-based

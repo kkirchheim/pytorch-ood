@@ -28,7 +28,7 @@ class TestVRA(unittest.TestCase):
         scores = detector(x)
         self.assertEqual(scores.shape, (8,))
 
-    def test_fit_features_and_predict_features(self):
+    def test_fit_feature_maps_and_predict_feature_maps(self):
         detector = VRA(
             backbone=self.model.features,
             head=self.model.classifier,
@@ -38,8 +38,8 @@ class TestVRA(unittest.TestCase):
         with torch.no_grad():
             z = self.model.features(x)
 
-        detector.fit_features(z, y)
-        scores = detector.predict_features(z[:8])
+        detector.fit_feature_maps(z, y)
+        scores = detector.predict_feature_maps(z[:8])
         self.assertEqual(scores.shape, (8,))
 
     def test_requires_fitting(self):

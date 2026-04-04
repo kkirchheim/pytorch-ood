@@ -163,7 +163,8 @@ loader_in_train = DataLoader(
 )
 for name, detector in detectors.items():
     print(f"--> Fitting {name}")
-    detector.fit(loader_in_train, device=device)
+    detector.to(device)
+    detector.fit(loader_in_train)
 
 # %%
 # **Stage 3**: Evaluate Detectors

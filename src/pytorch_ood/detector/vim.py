@@ -7,6 +7,8 @@
 
 ..  autoclass:: pytorch_ood.detector.ViM
     :members:
+    :inherited-members:
+    :show-inheritance:
 
 """
 
@@ -17,14 +19,14 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import extract_features
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class ViM(Detector):
+class ViM(FeaturesDetector):
     """
     Implements Virtual Logit Matching (ViM) from the paper *ViM: Out-Of-Distribution with Virtual-logit Matching*.
 
@@ -37,15 +39,18 @@ class ViM(Detector):
         Requires PyTorch ≥ 1.9 (``torch.linalg``).
     """
 
+    requires_fit = True
+
     def __init__(
         self,
-        model: Callable[[torch.Tensor], torch.Tensor],
+        model: Optional[Callable[[torch.Tensor], torch.Tensor]],
         d: int,
         w: torch.Tensor,
         b: torch.Tensor,
     ):
         """
-        :param model: neural network to use, is assumed to output features
+        :param model: neural network to use, is assumed to output features. Can be
+            ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param d: dimensionality of the principal subspace
         :param w: weights :math:`W` of the last layer of the network
         :param b: biases :math:`b` of the last layer of the network
@@ -85,26 +90,20 @@ class ViM(Detector):
     def __repr__(self):
         return f"ViM(d={self.n_dim})"
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
 
         :param data_loader: dataset to fit on
-        :param device: device to use. If ``None``, inferred from model.
         """
         if self.model is None:
             raise ModelNotSetException
 
+        device = self.device
         if device is None:
-            if isinstance(self.model, torch.nn.Module):
-                device = next(self.model.parameters()).device
-            else:
-                device = "cpu"
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.model, torch.nn.Module):
-            log.debug(f"Moving model to {device}")
-            self.model.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         features, labels = extract_features(data_loader, self.model, device)
         return self.fit_features(features, labels)
@@ -113,7 +112,8 @@ class ViM(Detector):
         """
         :param x: features as given by the model
         """
-        x = x.detach().cpu().float()
+        device = self.w.device
+        x = x.detach().to(device).float()
         logits = self._get_logits(x)  # (N, C)
 
         # Project centered features onto the null subspace and take L2 norm

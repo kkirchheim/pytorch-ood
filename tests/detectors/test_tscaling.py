@@ -29,12 +29,12 @@ class TestTScaling(unittest.TestCase):
 
         x = torch.randn(size=(128, 10))
         y = torch.randint(0, 2, size=(x.shape[0],))
-        detector.fit_features(x, y)
+        detector.fit_logits(x, y)
 
         print(detector.t)
         self.assertIsNotNone(detector.t)
 
-        scores = detector.predict_features(x)
+        scores = detector.predict_logits(x)
         self.assertIsNotNone(scores)
 
     def test_input2(self):

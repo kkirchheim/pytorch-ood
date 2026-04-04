@@ -6,6 +6,8 @@
 
 ..  autoclass:: pytorch_ood.detector.SHE
     :members:
+    :inherited-members:
+    :show-inheritance:
 """
 
 from typing import TypeVar, Callable
@@ -18,14 +20,14 @@ from torch.utils.data import DataLoader
 import logging
 from pytorch_ood.utils import extract_features, is_known, TensorBuffer
 
-from ..api import Detector, ModelNotSetException
+from ..api import FeaturesDetector, ModelNotSetException
 
 Self = TypeVar("Self")
 
 log = logging.getLogger(__name__)
 
 
-class SHE(Detector):
+class SHE(FeaturesDetector):
     """
     Implements Simplified Hopfield Energy from the paper
     *Out-of-Distribution Detection based on In-Distribution Data Patterns Memorization with modern Hopfield Energy*
@@ -36,6 +38,8 @@ class SHE(Detector):
 
     :see Paper: `OpenReview <https://openreview.net/pdf?id=KkazG4lgKL>`__
     """
+
+    requires_fit = True
 
     def __init__(self, backbone: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor]):
         """
@@ -74,37 +78,29 @@ class SHE(Detector):
         scores = torch.sum(torch.mul(z, self.patterns[y_hat]), dim=1)
         return -scores
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Extracts features and calculates mean patterns.
 
         :param data_loader: data to fit
-        :param device: device to use for computations. If ``None``, inferred from backbone.
         """
+        device = self.device
         if device is None:
-            if isinstance(self.backbone, nn.Module):
-                device = next(self.backbone.parameters()).device
-            else:
-                device = "cpu"
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.backbone, nn.Module):
-            log.debug(f"Moving model to {device}")
-            self.backbone.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         x, y = extract_features(data_loader, self.backbone, device=device)
-        return self.fit_features(x, y, device=device)
+        return self.fit_features(x, y)
 
     @torch.no_grad()
-    def _filter_correct_predictions(
-        self, z: Tensor, y: Tensor, device=None, batch_size: int = 1024
-    ):
+    def _filter_correct_predictions(self, z: Tensor, y: Tensor, batch_size: int = 1024):
         """
         :param z: a tensor of shape (N, D) or similar
         :param y: labels of shape (N,)
-        :param device: device to use for computations
         :param batch_size: how many samples we process at a time
         """
+        device = self.device or z.device
         buffer = TensorBuffer()
 
         for start_idx in range(0, z.size(0), batch_size):
@@ -121,24 +117,15 @@ class SHE(Detector):
 
         return buffer["z"], buffer["y"]
 
-    def fit_features(
-        self: Self, z: Tensor, y: Tensor, device=None, batch_size: int = 1024
-    ) -> Self:
+    def fit_features(self: Self, z: Tensor, y: Tensor, batch_size: int = 1024) -> Self:
         """
         Calculates mean patterns per class.
 
         :param z: features to fit
         :param y: labels
-        :param device: device to use for computations. If ``None``, inferred from input tensor.
         :param batch_size: how many samples we process at a time
         """
-        if device is None:
-            device = z.device
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.backbone, nn.Module):
-            log.debug(f"Moving model to {device}")
-            self.backbone.to(device)
+        device = self.device or z.device
 
         known = is_known(y)
 
@@ -152,7 +139,7 @@ class SHE(Detector):
         # make sure all classes are present
         assert len(classes) == classes.max().item() + 1
 
-        z, y = self._filter_correct_predictions(z, y, device=device, batch_size=batch_size)
+        z, y = self._filter_correct_predictions(z, y, batch_size=batch_size)
 
         m = []
         for clazz in classes:

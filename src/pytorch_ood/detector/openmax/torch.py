@@ -2,22 +2,20 @@
 Torch wrapper for a numpy implementation of openmax.
 """
 import logging
-from typing import TypeVar
+from typing import Optional, TypeVar
 from .numpy import OpenMax as NumpyOpenMax
 
 import torch
 from torch import Tensor
 from torch.nn import Module
-from torch.utils.data import DataLoader
 
-from ...api import Detector, ModelNotSetException
-from ...utils import extract_features
+from ...api import LogitsDetector, ModelNotSetException
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class OpenMax(Detector):
+class OpenMax(LogitsDetector):
     """
     Implementation of the OpenMax Layer as proposed in the paper *Towards Open Set Deep Networks*.
 
@@ -32,15 +30,18 @@ class OpenMax(Detector):
     :see Implementation: `GitHub <https://github.com/abhijitbendale/OSDN>`__
     """
 
+    requires_fit = True
+
     def __init__(
         self,
-        model: Module,
+        model: Optional[Module],
         tailsize: int = 25,
         alpha: int = 10,
         euclid_weight: float = 1.0,
     ):
         """
-        :param model: neural network, assumed to output logits
+        :param model: neural network, assumed to output logits. Can be ``None`` when using
+            ``fit_logits(...)`` and ``predict_logits(...)`` directly.
         :param tailsize: length of the tail to fit the distribution to
         :param alpha: number of class activations to revise
         :param euclid_weight: weight for the Euclidean distance.
@@ -49,26 +50,7 @@ class OpenMax(Detector):
 
         self._openmax = NumpyOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
-        """
-        Determines parameters of the weibull functions for each class.
-
-        :param data_loader: Data to use for fitting
-        :param device: Device used for calculations. If ``None``, inferred from model.
-        """
-        if self.model is None:
-            raise ModelNotSetException
-
-        if device is None:
-            if isinstance(self.model, torch.nn.Module):
-                device = next(self.model.parameters()).device
-            else:
-                device = "cpu"
-
-        z, y = extract_features(data_loader, self.model, device)
-        return self.fit_features(z, y)
-
-    def fit_features(self: Self, logits: Tensor, y: Tensor) -> Self:
+    def fit_logits(self: Self, logits: Tensor, y: Tensor) -> Self:
         """
         Determines parameters of the weibull functions for each class.
 
@@ -90,9 +72,9 @@ class OpenMax(Detector):
         with torch.no_grad():
             logits = self.model(x)
 
-        return self.predict_features(logits)
+        return self.predict_logits(logits)
 
-    def predict_features(self, logits: Tensor) -> Tensor:
+    def predict_logits(self, logits: Tensor) -> Tensor:
         """
         :param logits: logits given by model
         """

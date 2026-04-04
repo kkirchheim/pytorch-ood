@@ -6,20 +6,22 @@
 
 ..  autoclass:: pytorch_ood.detector.MaxLogit
     :members:
-    :exclude-members: fit, fit_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit, fit_logits
 """
 
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 from torch import Tensor
 from torch.nn import Module
 
-from ..api import Detector, ModelNotSetException
+from ..api import LogitsDetector
 
 Self = TypeVar("Self")
 
 
-class MaxLogit(Detector):
+class MaxLogit(LogitsDetector):
     """
     Implements the Max Logit Method for OOD Detection as proposed in
     *Scaling Out-of-Distribution Detection for Real-World Settings*.
@@ -32,39 +34,19 @@ class MaxLogit(Detector):
        `ArXiv <https://arxiv.org/abs/1911.11132>`__
     """
 
-    def __init__(self, model: Module):
+    def __init__(self, model: Optional[Module]):
         """
-        :param t: temperature value T. Default is 1.
+        :param model: neural network to use. Can be ``None`` when using
+            ``predict_logits(...)`` directly.
         """
         super(MaxLogit, self).__init__()
         self.model = model
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x:  model inputs
-        """
-        if self.model is None:
-            raise ModelNotSetException
-
-        return self.score(self.model(x))
-
-    def predict_features(self, logits: Tensor) -> Tensor:
+    def predict_logits(self, logits: Tensor) -> Tensor:
         """
         :param logits: logits as given by the model
         """
         return MaxLogit.score(logits)
-
-    def fit(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self
-
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self
 
     @staticmethod
     def score(logits: Tensor) -> Tensor:
