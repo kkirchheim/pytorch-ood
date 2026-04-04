@@ -7,6 +7,8 @@
 
 ..  autoclass:: pytorch_ood.detector.RMD
     :members:
+    :inherited-members:
+    :show-inheritance:
     :exclude-members: predict_features
 """
 
@@ -56,10 +58,11 @@ class RMD(Mahalanobis):
 
     def __init__(
         self,
-        model: Callable[[Tensor], Tensor],
+        model: Optional[Callable[[Tensor], Tensor]],
     ):
         """
-        :param model: the Neural Network, should output features
+        :param model: the Neural Network, should output features. Can be ``None`` when
+            using ``fit_features(...)`` and ``predict_features(...)`` directly.
         """
         super(RMD, self).__init__(model=model)
 
@@ -67,42 +70,36 @@ class RMD(Mahalanobis):
         self.background_cov = None
         self.background_precision = None
 
-    def fit(self, data_loader: DataLoader, device=None) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Fit parameters of the multi variate gaussian for the given loader.
         Ignores OOD Inputs.
 
         :param data_loader: data loader with training data
-        :param device: device to use. If ``None``, inferred from model.
         """
+        device = self.device
         if device is None:
-            device = list(self.model.parameters())[0].device
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.model, torch.nn.Module):
-            log.debug(f"Moving model to {device}")
-            self.model.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         z, y = extract_features(data_loader, self.model, device=device)
-        return self.fit_features(z, y, device=device)
+        return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, y: Tensor, device: str = None) -> Self:
+    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
         """
         Fit parameters of the multi variate gaussian. Ignores OOD inputs.
 
         :param z: features
         :param y: class labels
-        :param device: device to use
         :return:
         """
-        if device is None:
-            device = z.device
-            log.warning(f"No device given. Will use '{device}'.")
+        device = self.device or z.device
 
         # y = y.to(device)
         known = is_known(y)
 
-        super(RMD, self).fit_features(z, y, device)
+        super(RMD, self).fit_features(z, y)
 
         z_known = z[known].to(device)
 

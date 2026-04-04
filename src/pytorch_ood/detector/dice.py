@@ -7,11 +7,13 @@
 
 ..  autoclass:: pytorch_ood.detector.DICE
     :members:
+    :inherited-members:
+    :show-inheritance:
 
 """
 
 import logging
-from typing import Callable, TypeVar
+from typing import Callable, Optional, TypeVar
 
 import numpy as np
 import torch.nn
@@ -21,14 +23,14 @@ from torch.utils.data import DataLoader
 
 from pytorch_ood.utils import extract_features, is_known
 
-from ..api import Detector, RequiresFittingException, ModelNotSetException
+from ..api import FeaturesDetector, RequiresFittingException, ModelNotSetException
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class DICE(Detector):
+class DICE(FeaturesDetector):
     """
     Implements DICE from the paper
     *DICE: Leveraging Sparsification for Out-of-Distribution Detection*.
@@ -36,16 +38,19 @@ class DICE(Detector):
     :see Paper: `ArXiv <https://arxiv.org/abs/2111.09805>`__
     """
 
+    requires_fit = True
+
     def __init__(
         self,
-        model: Callable[[Tensor], Tensor],
+        model: Optional[Callable[[Tensor], Tensor]],
         w: torch.Tensor,
         b: torch.Tensor,
         p: float,
         detector: Callable[[Tensor], Tensor] = None,
     ):
         """
-        :param model: feature extractor
+        :param model: feature extractor. Can be ``None`` when using
+            ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param w: weights of last layer
         :param b: bias of last layer
         :param p: percentile of weights to drop
@@ -107,21 +112,15 @@ class DICE(Detector):
         self._is_fitted = True
         return self
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         :param data_loader: data loader to extract features from. OOD inputs will be ignored.
-        :param device: device to use for feature extraction. If ``None``, inferred from model.
         """
+        device = self.device
         if device is None:
-            if isinstance(self.model, torch.nn.Module):
-                device = next(self.model.parameters()).device
-            else:
-                device = "cpu"
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.model, torch.nn.Module):
-            log.debug(f"Moving model to {device}")
-            self.model.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         z, y = extract_features(data_loader, self.model, device=device)
         self.fit_features(z, y)

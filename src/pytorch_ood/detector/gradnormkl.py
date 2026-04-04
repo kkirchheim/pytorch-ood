@@ -9,7 +9,9 @@
 
 ..  autoclass:: pytorch_ood.detector.GradNormKL
     :members:
-    :exclude-members: fit_features, predict_features, fit
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit
 """
 import torch
 import torch.nn.functional as F
@@ -74,9 +76,6 @@ class GradNormKL(Detector):
         self.model = model
 
     def fit(self, data_loader: DataLoader, **kwargs) -> Self:
-        return self
-
-    def fit_features(self, x: Tensor, y: Tensor) -> Self:
         return self
 
     def predict(self, x: Tensor) -> Tensor:

@@ -8,7 +8,8 @@
 
 ..  autoclass:: pytorch_ood.detector.Gram
     :members:
-    :exclude-members: fit_features
+    :inherited-members:
+    :show-inheritance:
 """
 import logging
 from typing import Optional, TypeVar, List, Tuple
@@ -19,7 +20,7 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 
 import numpy as np
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import StructuredDetector, ModelNotSetException, RequiresFittingException
 
 import torch.nn.functional as F
 
@@ -28,7 +29,7 @@ log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class Gram(Detector):
+class Gram(StructuredDetector):
     """
     Implements the on Gram matrices based Method from the paper *Detecting Out-of-Distribution Examples with
     In-distribution Examples and Gram Matrices*.
@@ -52,6 +53,8 @@ class Gram(Detector):
     :see Implementation: `GitHub <https://github.com/VectorInstitute/gram-ood-detection>`__
     :see Paper: `ArXiv <https://arxiv.org/abs/1912.12510>`__
     """
+
+    requires_fit = True
 
     def __init__(
         self,
@@ -97,15 +100,19 @@ class Gram(Detector):
 
         return logits, feature_list
 
-    def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Calculate the minimum and maximum values for the Gram matrices of the training data.
 
         :param data_loader: data loader for training data
-        :param device: device to run the model on
-
         :return: self
         """
+        device = self.device
+        if device is None:
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
+
         num_poles = len(self.num_poles_list)
         feature_class = [
             [[None for x in range(num_poles)] for y in range(self.num_layer)]
@@ -191,7 +198,7 @@ class Gram(Detector):
 
         return self._score(logits, feature_list)
 
-    def predict_features(self, logits: Tensor, feature_list: List[Tensor]) -> Tensor:
+    def predict_structured(self, logits: Tensor, feature_list: List[Tensor]) -> Tensor:
         """
         :param logits: logits given by your model
         :param feature_list: list of features extracted from the model

@@ -208,7 +208,8 @@ print(f"> Fitting {len(detectors)} detectors")
 
 for name, detector in detectors.items():
     print(f"--> Fitting {name}")
-    detector.fit(loader_train, device=device)
+    detector.to(device)
+    detector.fit(loader_train)
 
 # %% Evaluate
 print(f"STAGE 3: Evaluating {len(detectors)} detectors on {len(datasets)} datasets.")

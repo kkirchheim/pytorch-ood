@@ -7,6 +7,8 @@
 
 ..  autoclass:: pytorch_ood.detector.Mahalanobis
     :members:
+    :inherited-members:
+    :show-inheritance:
 """
 
 import logging
@@ -18,7 +20,7 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import (
     TensorBuffer,
     contains_unknown,
@@ -32,7 +34,7 @@ log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class Mahalanobis(Detector):
+class Mahalanobis(FeaturesDetector):
     """
     Implements the Mahalanobis Method from the paper *A Simple Unified Framework for Detecting
     Out-of-Distribution Samples and Adversarial Attacks*.
@@ -43,20 +45,23 @@ class Mahalanobis(Detector):
 
     .. math :: - \\max_k \\lbrace (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k) \\rbrace
 
-    Also uses ODIN preprocessing.
+    Also uses ODIN preprocessing if the given :math:`\\epsilon > 0`
 
     :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
     :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
     """
 
+    requires_fit = True
+
     def __init__(
         self,
-        model: Callable[[Tensor], Tensor],
+        model: Optional[Callable[[Tensor], Tensor]],
         eps: float = 0.002,
         norm_std: Optional[List] = None,
     ):
         """
-        :param model: the Neural Network, should output features
+        :param model: the Neural Network, should output features. Can be ``None`` when
+            using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param eps: magnitude for gradient based input preprocessing
         :param norm_std: Standard deviations for input normalization
         """
@@ -68,35 +73,29 @@ class Mahalanobis(Detector):
         self.eps: float = eps  #: epsilon
         self.norm_std = norm_std
 
-    def fit(self: Self, data_loader: DataLoader, device: str = None) -> Self:
+    def fit(self: Self, data_loader: DataLoader) -> Self:
         """
         Fit parameters of the multi variate gaussian.
 
         :param data_loader: dataset to fit on.
-        :param device: device to use
         """
+        device = self.device
         if device is None:
-            device = list(self.model.parameters())[0].device
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.model, torch.nn.Module):
-            log.debug(f"Moving model to device {device}")
-            self.model.to(device)
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         z, y = extract_features(data_loader, self.model, device)
-        return self.fit_features(z, y, device)
+        return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, y: Tensor, device: str = None) -> Self:
+    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
         """
         Fit parameters of the multi variate gaussian.
 
         :param z: features
         :param y: class labels
-        :param device: device to use
         """
-        if device is None:
-            device = z.device
-            log.warning(f"No device given. Will use '{device}'.")
+        device = self.device or z.device
 
         y = y.to(device)
 

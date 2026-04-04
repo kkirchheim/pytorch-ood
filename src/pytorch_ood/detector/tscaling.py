@@ -7,6 +7,8 @@
 
 ..  autoclass:: pytorch_ood.detector.TemperatureScaling
     :members:
+    :inherited-members:
+    :show-inheritance:
 
 """
 
@@ -18,18 +20,17 @@ from torch import Tensor, tensor
 from torch.nn import Module
 from torch.nn.functional import log_softmax, nll_loss
 from torch.optim import LBFGS
-from torch.utils.data import DataLoader
 
 from pytorch_ood.detector.softmax import MaxSoftmax
-from pytorch_ood.utils import extract_features, is_known
+from pytorch_ood.utils import is_known
 
 from ..api import RequiresFittingException
 
-log = logging.getLogger(__name__)
 Self = TypeVar("Self")
+log = logging.getLogger(__name__)
 
 
-class TemperatureScaling(MaxSoftmax, torch.nn.Module):
+class TemperatureScaling(MaxSoftmax):
     """
     Implements temperature scaling from the paper
     *On Calibration of Modern Neural Networks*.
@@ -47,9 +48,12 @@ class TemperatureScaling(MaxSoftmax, torch.nn.Module):
     :see Paper: `ArXiv <https://arxiv.org/pdf/1706.04599.pdf>`__
     """
 
-    def __init__(self, model: Module):
+    requires_fit = True
+
+    def __init__(self, model: Optional[Module]):
         """
-        :param model: neural network to use
+        :param model: neural network to use. Can be ``None`` when using
+            ``fit_logits(...)`` and ``predict_logits(...)`` directly.
         """
         super(TemperatureScaling, self).__init__(model=model)
         self.t = torch.nn.Parameter(tensor(1.0))
@@ -58,13 +62,13 @@ class TemperatureScaling(MaxSoftmax, torch.nn.Module):
     def predict(self, x: Tensor) -> Tensor:
         return super().predict(x)
 
-    def predict_features(self, logits: Tensor) -> Tensor:
+    def predict_logits(self, logits: Tensor) -> Tensor:
         if not self._is_fitted:
             raise RequiresFittingException()
 
-        return super().predict_features(logits)
+        return super().predict_logits(logits)
 
-    def fit_features(self: Self, logits: Tensor, labels: Tensor) -> Self:
+    def fit_logits(self: Self, logits: Tensor, labels: Tensor) -> Self:
         """
         Optimize temperature using L-BFGS. Ignores OOD inputs.
 
@@ -84,20 +88,20 @@ class TemperatureScaling(MaxSoftmax, torch.nn.Module):
         labels = labels[known].to(device)
 
         with torch.no_grad():
-            loss = nll_loss(log_softmax(logits / self.t), labels).item()
+            loss = nll_loss(log_softmax(logits / self.t, dim=1), labels).item()
 
         log.info(f"Initial T/NLL: {self.t.item():.3f}/{loss:.3f}")
 
         def closure():
             optimizer.zero_grad()
-            loss = nll_loss(log_softmax(logits / self.t), labels)
+            loss = nll_loss(log_softmax(logits / self.t, dim=1), labels)
             loss.backward()
             return loss
 
         optimizer.step(closure)
 
         with torch.no_grad():
-            loss = nll_loss(log_softmax(logits / self.t), labels).item()
+            loss = nll_loss(log_softmax(logits / self.t, dim=1), labels).item()
 
         log.info(f"Optimal temperature: {self.t.item()}")
         log.info(f"NLL after scaling: {loss:.2f}'")
@@ -105,17 +109,3 @@ class TemperatureScaling(MaxSoftmax, torch.nn.Module):
         self._is_fitted = True
 
         return self
-
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
-        """
-        Extracts features and optimizes the temperature.
-
-        :param data_loader: data loader
-        :param device: device used for extracting logits. If ``None``, inferred from model.
-        """
-        if device is None:
-            device = next(self.model.parameters()).device
-            log.warning(f"No device given. Will use '{device}'.")
-
-        z, y = extract_features(model=self.model, data_loader=data_loader, device=device)
-        return self.fit_features(z, y)

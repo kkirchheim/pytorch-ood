@@ -57,8 +57,8 @@ class TestEntropy(unittest.TestCase):
             scores = detector(x)
         self.assertEqual(scores.shape, (4, 8, 8))
 
-    def test_predict_features(self):
-        """predict_features works on raw logits and respects entropy ordering."""
+    def test_predict_logits(self):
+        """predict_logits works on raw logits and respects entropy ordering."""
         # Uniform logits → maximum entropy
         uniform_logits = torch.zeros(1, 5)
         # Peaked logits → minimum entropy
@@ -71,7 +71,7 @@ class TestEntropy(unittest.TestCase):
 
         # Batch of logits produces correct shape
         logits = torch.randn(32, 10)
-        scores = Entropy.score(logits)
+        scores = Entropy(None).predict_logits(logits)
         self.assertEqual(scores.shape, (32,))
 
     def test_scores_are_non_negative(self):

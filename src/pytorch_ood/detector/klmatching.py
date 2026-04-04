@@ -7,26 +7,25 @@
 
 ..  autoclass:: pytorch_ood.detector.KLMatching
     :members:
+    :inherited-members:
+    :show-inheritance:
 
 """
 
 import logging
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 import torch
 from torch import Tensor
 from torch.nn import Module, Parameter, ParameterDict
-from torch.utils.data import DataLoader
-
-from ..api import Detector, ModelNotSetException, RequiresFittingException
-from ..utils import extract_features
+from ..api import LogitsDetector, ModelNotSetException, RequiresFittingException
 
 log = logging.getLogger()
 
 Self = TypeVar("Self")
 
 
-class KLMatching(Detector):
+class KLMatching(LogitsDetector):
     """
     Implements KL-Matching from the paper *Scaling Out-of-Distribution Detection for Real-World Settings*.
 
@@ -42,50 +41,26 @@ class KLMatching(Detector):
     :see Paper: `ArXiv <https://arxiv.org/abs/1911.11132>`__
     """
 
-    def __init__(self, model: Module):
+    requires_fit = True
+
+    def __init__(self, model: Optional[Module]):
         """
-        :param model: neural network, is assumed to output logits.
+        :param model: neural network, is assumed to output logits. Can be ``None`` when
+            using ``fit_logits(...)`` and ``predict_logits(...)`` directly.
         """
         super(KLMatching, self).__init__()
         self.model = model
         self.dists: ParameterDict = ParameterDict()  #: Typical posteriors per class
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
-        """
-        Estimates typical distributions for each class.
-        Ignores OOD samples.
-
-        :param data_loader: validation data loader
-        :param device: device which should be used for calculations. If ``None``, inferred from model.
-        """
-        if self.model is None:
-            raise ModelNotSetException
-
-        if device is None:
-            if isinstance(self.model, torch.nn.Module):
-                device = next(self.model.parameters()).device
-            else:
-                device = "cpu"
-            log.warning(f"No device given. Will use '{device}'.")
-
-        if isinstance(self.model, torch.nn.Module):
-            log.debug(f"Moving model to {device}")
-            self.model.to(device)
-
-        logits, labels = extract_features(data_loader, self.model, device)
-        return self.fit_features(logits, labels, device)
-
-    def fit_features(self: Self, logits: Tensor, labels: Tensor, device=None) -> Self:
+    def fit_logits(self: Self, logits: Tensor, labels: Tensor) -> Self:
         """
         Estimates typical distributions for each class.
         Ignores OOD samples.
 
         :param logits: logits
         :param labels: class labels
-        :param device: device which should be used for calculations. If ``None``, inferred from input tensor.
         """
-        if device is None:
-            device = logits.device
+        device = self.device or logits.device
 
         probabilities = logits.softmax(dim=1)
 
@@ -96,8 +71,17 @@ class KLMatching(Detector):
 
         return self
 
-    def predict_features(self, p: Tensor) -> Tensor:
+    def predict_logits(self, logits: Tensor) -> Tensor:
         """
+        :param logits: logits predicted by the model
+        """
+        p = logits.softmax(dim=1)
+        return self._score_probabilities(p)
+
+    def _score_probabilities(self, p: Tensor) -> Tensor:
+        """
+        Score already-computed posterior probabilities.
+
         :param p: probabilities predicted by the model
         """
         device = p.device
@@ -134,5 +118,5 @@ class KLMatching(Detector):
         device = x.device
         self.dists.to(device)
 
-        p = self.model(x).softmax(dim=1)
-        return self.predict_features(p)
+        logits = self.model(x)
+        return self.predict_logits(logits)

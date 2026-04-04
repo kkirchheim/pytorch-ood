@@ -7,7 +7,9 @@
 
 ..  autoclass:: pytorch_ood.detector.EnergyBased
     :members:
-    :exclude-members: fit, fit_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit, fit_logits
 """
 
 from typing import Optional, TypeVar
@@ -15,12 +17,12 @@ from typing import Optional, TypeVar
 from torch import Tensor, logsumexp
 from torch.nn import Module
 
-from ..api import Detector, ModelNotSetException
+from ..api import LogitsDetector
 
 Self = TypeVar("Self")
 
 
-class EnergyBased(Detector):
+class EnergyBased(LogitsDetector):
     """
     Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.
 
@@ -40,40 +42,17 @@ class EnergyBased(Detector):
 
     """
 
-    def fit(self: Self, *args, **kwargs) -> Self:
+    def __init__(self, model: Optional[Module], t: Optional[float] = 1.0):
         """
-        Not required.
-        """
-        return self
-
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required.
-        """
-        return self
-
-    def __init__(self, model: Module, t: Optional[float] = 1.0):
-        """
+        :param model: neural network to use. Can be ``None`` when using
+            ``predict_logits(...)`` directly.
         :param t: Temperature value :math:`T`. Default is 1.
         """
         super(EnergyBased, self).__init__()
         self.t: float = t  #: Temperature
         self.model = model
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        Calculate negative energy for inputs
-
-        :param x: input tensor, will be passed through model
-
-        :return: Energy score
-        """
-        if self.model is None:
-            raise ModelNotSetException
-
-        return self.score(self.model(x), t=self.t)
-
-    def predict_features(self, logits: Tensor) -> Tensor:
+    def predict_logits(self, logits: Tensor) -> Tensor:
         """
         :param logits: logits given by the model
         """

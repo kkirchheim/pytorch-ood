@@ -7,26 +7,28 @@
 
 ..  autoclass:: pytorch_ood.detector.WeightedEBO
     :members:
-    :exclude-members: fit, fit_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit, fit_logits
 """
 
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from ..api import Detector, ModelNotSetException
+from ..api import LogitsDetector
 
 Self = TypeVar("Self")
 
 
-class WeightedEBO(Detector):
+class WeightedEBO(LogitsDetector):
     """
     Implements the Weighted Energy Based Score of  *VOS: Learning what you don’t know by virtual outlier synthesis*.
 
     This method calculates the energy from the weighted logits. The negative energy can be used as outlier score.
-    The weights (which can be obtained, for example, by training with the :class:`pytorch_ood.loss.VOSRegLoss`).
+    The weights can be obtained, for example, by training with the :class:`pytorch_ood.loss.VOSRegLoss`.
 
     Overall, the score is defined as:
 
@@ -52,21 +54,10 @@ class WeightedEBO(Detector):
 
     """
 
-    def fit(self: Self, *args, **kwargs) -> Self:
+    def __init__(self, model: Optional[torch.nn.Module], weights: torch.Tensor):
         """
-        Not required.
-        """
-        return self
-
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required.
-        """
-        return self
-
-    def __init__(self, model: torch.nn.Module, weights: torch.Tensor):
-        """
-        :param model: neural network :math:`f` to use, is assumed to output logits
+        :param model: neural network :math:`f` to use, is assumed to output logits. Can be
+            ``None`` when using ``predict_logits(...)`` directly.
         :param weights: weight vector of with shape :math:`C \\times 1` where :math:`C` is the number of classes
         """
         super(WeightedEBO, self).__init__()
@@ -74,20 +65,7 @@ class WeightedEBO(Detector):
         self.model = model
         self.weights = weights
 
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Calculate weighted energy for inputs
-
-        :param x: input tensor, will be passed through model
-
-        :return: Weighted Energy score
-        """
-        if self.model is None:
-            raise ModelNotSetException
-
-        return self.score(self.model(x), self.weights)
-
-    def predict_features(self, logits: Tensor) -> Tensor:
+    def predict_logits(self, logits: Tensor) -> Tensor:
         """
         :param logits: logits given by your model
         """

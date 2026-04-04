@@ -113,7 +113,7 @@ class TestRankFeat(unittest.TestCase):
     def test_fit_is_noop(self):
         model = SimpleCNN().eval()
         detector = RankFeat(backbone=model.backbone, head=model.head)
-        result = detector.fit()
+        result = detector.fit(None)
         self.assertIs(result, detector)
 
     def test_scores_differ_from_plain_energy(self):

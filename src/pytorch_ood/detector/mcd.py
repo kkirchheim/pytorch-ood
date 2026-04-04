@@ -7,7 +7,9 @@
 
 ..  autoclass:: pytorch_ood.detector.MCD
     :members:
-    :exclude-members: predict_features, fit, fit_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit
 
 """
 
@@ -75,18 +77,6 @@ class MCD(Detector):
         Not required
         """
         return self
-
-    def fit_features(self: Self, x: Tensor, y: Tensor, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self
-
-    def predict_features(self, x: Tensor) -> Tensor:
-        """
-        :raise Exception: This method can not be used, as the input has to be passed several times through the model.
-        """
-        raise Exception("You must use a model for MCD")
 
     @staticmethod
     def _switch_mode(model: Module, batch_norm: bool = True) -> bool:

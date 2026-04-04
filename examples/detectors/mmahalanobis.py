@@ -53,7 +53,8 @@ layer5 = nn.Sequential(model.bn1, model.relu)
 detector = MultiMahalanobis([layer1, layer2, layer3, layer4, layer5])
 
 print("Fitting...")
-detector.fit(train_loader, device=device)
+detector.to(device)
+detector.fit(train_loader)
 
 # %%
 # Stage 3: Evaluate Detectors

@@ -7,6 +7,8 @@
 
 ..  autoclass:: pytorch_ood.detector.NCI
     :members:
+    :inherited-members:
+    :show-inheritance:
     :exclude-members:
 """
 
@@ -16,14 +18,14 @@ import torch
 from torch import Tensor
 from torch.nn import Module, Linear
 
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import extract_features
 
 
 Self = TypeVar("Self")
 
 
-class NCI(Detector):
+class NCI(FeaturesDetector):
     """
     Implements the Neural-Collapse Inspired OOD detector from the paper
     *Detecting Out-of-distribution through the Lens of Neural Collapse*.
@@ -47,6 +49,8 @@ class NCI(Detector):
         `GitHub <https://github.com/litianliu/NCI-OOD>`__
 
     """
+
+    requires_fit = True
 
     def __init__(self, encoder: Module, head: Linear, alpha: float = 0.0) -> None:
         """

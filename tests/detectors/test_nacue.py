@@ -106,7 +106,8 @@ class NACUETest(unittest.TestCase):
         )
 
         loader = _make_loader(n=32, batch_size=8, seed=1)
-        det.fit(loader, device="cpu")
+        det.to("cpu")
+        det.fit(loader)
 
         x = torch.randn(16, 3, 16, 16)
         with torch.enable_grad():  # NAC-UE needs grads
@@ -121,7 +122,8 @@ class NACUETest(unittest.TestCase):
 
         loader = _make_loader(n=16, batch_size=4, seed=2)
         # Should not error
-        det.fit(loader, device="cpu")
+        det.to("cpu")
+        det.fit(loader)
 
         x = torch.randn(8, 3, 16, 16)
         with torch.enable_grad():
@@ -141,7 +143,8 @@ class NACUETest(unittest.TestCase):
             device="cpu",
         )
         loader1 = _make_loader(n=32, batch_size=8, seed=7)
-        det1.fit(loader1, device="cpu")
+        det1.to("cpu")
+        det1.fit(loader1)
 
         x = torch.randn(16, 3, 16, 16)
         with torch.enable_grad():
@@ -158,7 +161,8 @@ class NACUETest(unittest.TestCase):
             device="cpu",
         )
         loader2 = _make_loader(n=32, batch_size=8, seed=7)
-        det2.fit(loader2, device="cpu")
+        det2.to("cpu")
+        det2.fit(loader2)
         with torch.enable_grad():
             s2 = det2(x).detach().cpu()
 
@@ -175,7 +179,8 @@ class NACUETest(unittest.TestCase):
             device="cpu",
         )
         loader = _make_loader(n=64, batch_size=8, seed=11)
-        det.fit(loader, device="cpu")
+        det.to("cpu")
+        det.fit(loader)
 
         # Two batches with different statistics
         g = torch.Generator().manual_seed(99)
@@ -204,7 +209,8 @@ class NACUETest(unittest.TestCase):
             )
         loader = _make_loader(n=16, batch_size=4, seed=5)
         with self.assertRaises(Exception):
-            det.fit(loader, device="cpu")
+            det.to("cpu")
+            det.fit(loader)
 
     def test_mock_performance(self):
         """
@@ -260,7 +266,8 @@ class NACUETest(unittest.TestCase):
             device="cpu",
         )
         fit_loader = DataLoader(TensorDataset(x_train, y_train), batch_size=32)
-        detector.fit(fit_loader, device="cpu")
+        detector.to("cpu")
+        detector.fit(fit_loader)
 
         # Score ID and OOD
         metrics = OODMetrics()

@@ -84,8 +84,8 @@ class TestKLMatching(unittest.TestCase):
 
         self.assertGreater(metrics.compute()["AUROC"], 0.99)
 
-    def test_predict_features(self):
-        """predict_features works directly on softmax probabilities."""
+    def test_predict_logits(self):
+        """predict_logits works directly on logits."""
         torch.manual_seed(0)
         n_classes = 3
         model = ClassificationModel(num_outputs=n_classes)
@@ -96,9 +96,8 @@ class TestKLMatching(unittest.TestCase):
         y_fit = torch.repeat_interleave(torch.arange(n_classes), 30)
         detector.fit(DataLoader(TensorDataset(x_fit, y_fit), batch_size=30))
 
-        # predict_features takes probabilities, not logits
-        probs = torch.randn(16, n_classes).softmax(dim=1)
-        scores = detector.predict_features(probs)
+        logits = torch.randn(16, n_classes)
+        scores = detector.predict_logits(logits)
         self.assertEqual(scores.shape, (16,))
         self.assertTrue(torch.isfinite(scores).all())
 
@@ -167,7 +166,8 @@ class TestKLMatching(unittest.TestCase):
         dataset = TensorDataset(x, y)
         loader = DataLoader(dataset)
 
-        detector.fit(loader, device=device)
+        detector.to(device)
+        detector.fit(loader)
         with torch.no_grad():
             y = detector(x.to(device))
 

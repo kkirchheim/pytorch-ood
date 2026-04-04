@@ -45,7 +45,8 @@ model = WideResNet(num_classes=10, pretrained="cifar10-pt").to(device).eval()
 # %%
 # Stage 2: Create and Fit OpenMax
 detector = OpenMax(model, tailsize=25, alpha=5, euclid_weight=0.5)
-detector.fit(train_loader, device=device)
+detector.to(device)
+detector.fit(train_loader)
 
 # %%
 # Stage 3: Evaluate Detectors

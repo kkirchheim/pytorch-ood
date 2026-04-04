@@ -7,7 +7,9 @@
 
 ..  autoclass:: pytorch_ood.detector.ReAct
     :members:
-    :exclude-members: fit, fit_features, predict_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit
 
 """
 
@@ -16,14 +18,14 @@ from typing import Callable, TypeVar
 
 from torch import Tensor
 
-from ..api import Detector, ModelNotSetException
+from ..api import FeatureMapsDetector, ModelNotSetException
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
 
 
-class ReAct(Detector):
+class ReAct(FeatureMapsDetector):
     """
     Implements ReAct from the paper
     *ReAct: Out-of-distribution Detection With Rectified Activations*.
@@ -73,11 +75,9 @@ class ReAct(Detector):
         :param x: input, will be passed through network
         """
         x = self.backbone(x)
-        x = x.clip(max=self.threshold)
-        x = self.head(x)
-        return self.detector(x)
+        return self.predict_feature_maps(x)
 
-    def predict_features(self, x: Tensor) -> Tensor:
+    def predict_feature_maps(self, x: Tensor) -> Tensor:
         """
         :raises: NotImplementedError
         """
@@ -87,15 +87,3 @@ class ReAct(Detector):
         x = x.clip(max=self.threshold)
         x = self.head(x)
         return self.detector(x)
-
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self
-
-    def fit(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self

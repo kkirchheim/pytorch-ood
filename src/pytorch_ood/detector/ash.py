@@ -7,7 +7,9 @@
 
 ..  autoclass:: pytorch_ood.detector.ASH
     :members:
-    :exclude-members: fit, fit_features, predict_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit
 """
 
 import logging
@@ -17,7 +19,7 @@ import numpy as np
 import torch.nn
 from torch import Tensor
 
-from ..api import Detector
+from ..api import FeatureMapsDetector
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -77,7 +79,7 @@ def ash_s(x: Tensor, percentile: float = 0.65) -> Tensor:
     return x
 
 
-class ASH(Detector):
+class ASH(FeatureMapsDetector):
     """
     Implements ASH from the paper
     *Extremely Simple Activation Shaping for Out-of-Distribution Detection*.
@@ -144,18 +146,9 @@ class ASH(Detector):
         :param x: input, will be passed through network
         """
         x = self.backbone(x)
+        return self.predict_feature_maps(x)
+
+    def predict_feature_maps(self, x: Tensor) -> Tensor:
         x = self.ash(x, self.percentile)
         x = self.head(x)
         return self.detector(x)
-
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self
-
-    def fit(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required
-        """
-        return self

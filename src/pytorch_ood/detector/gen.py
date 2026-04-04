@@ -10,7 +10,9 @@
 
 ..  autoclass:: pytorch_ood.detector.GEN
     :members:
-    :exclude-members: fit, fit_features
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: fit, fit_logits
 """
 
 from typing import Optional, TypeVar
@@ -18,12 +20,12 @@ from typing import Optional, TypeVar
 from torch import Tensor
 from torch.nn import Module
 
-from ..api import Detector, ModelNotSetException
+from ..api import LogitsDetector
 
 Self = TypeVar("Self")
 
 
-class GEN(Detector):
+class GEN(LogitsDetector):
     """
     Implements *GEN: Pushing the Limits of Softmax-Based Out-of-Distribution Detection*.
 
@@ -48,40 +50,17 @@ class GEN(Detector):
         `GitHub <https://github.com/XixiLiu95/GEN>`__
     """
 
-    def __init__(self, model: Module, gamma: Optional[float] = 0.1):
+    def __init__(self, model: Optional[Module], gamma: Optional[float] = 0.1):
         """
-        :param model: the neural network :math:`f`
+        :param model: the neural network :math:`f`. Can be ``None`` when using
+            ``predict_logits(...)`` directly.
         :param gamma: exponent :math:`\\gamma`. Default is 0.1 as recommended by the paper.
         """
         super(GEN, self).__init__()
         self.model = model
         self.gamma: float = gamma  #: Power-transform exponent
 
-    def fit(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required.
-        """
-        return self
-
-    def fit_features(self: Self, *args, **kwargs) -> Self:
-        """
-        Not required.
-        """
-        return self
-
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        Calculate the GEN outlier score for inputs.
-
-        :param x: input tensor, will be passed through model
-        :return: GEN outlier score per sample
-        """
-        if self.model is None:
-            raise ModelNotSetException
-
-        return self.score(self.model(x), gamma=self.gamma)
-
-    def predict_features(self, logits: Tensor) -> Tensor:
+    def predict_logits(self, logits: Tensor) -> Tensor:
         """
         :param logits: logits given by the model
         """
