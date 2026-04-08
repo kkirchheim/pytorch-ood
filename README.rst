@@ -101,46 +101,9 @@ You can find more examples in the `documentation <https://pytorch-ood.readthedoc
 Benchmarks (Beta)
 ---------------------------
 
-Evaluate detectors against common benchmarks, for example the OpenOOD ImageNet benchmark
-(including ImageNet-O, OpenImages-O, Textures, SVHN, MNIST).  All datasets (except for ImageNet itself) will be downloaded automatically.
-
-.. code-block:: python
-
-   import pandas as pd
-   from pytorch_ood.benchmark import ImageNet_OpenOOD
-   from pytorch_ood.detector import MaxSoftmax
-   from torchvision.models import resnet50
-   from torchvision.models.resnet import ResNet50_Weights
-
-   model = resnet50(ResNet50_Weights.IMAGENET1K_V1).eval().to("cuda:0")
-   trans = ResNet50_Weights.IMAGENET1K_V1.transforms()
-
-   benchmark = ImageNet_OpenOOD(root="data", image_net_root="data/imagenet-2012/", transform=trans)
-
-   detector = MaxSoftmax(model)
-   results = benchmark.evaluate(detector, loader_kwargs={"batch_size": 64}, device="cuda:0")
-   df = pd.DataFrame(results)
-   print(df)
-
-
-This produces the following table:
-
-+-------------+-------+---------+----------+----------+
-| Dataset     | AUROC | AUPR-IN | AUPR-OUT | FPR95TPR |
-+=============+=======+=========+==========+==========+
-| ImageNetO   | 28.64 | 2.52    | 94.85    | 91.20    |
-+-------------+-------+---------+----------+----------+
-| OpenImagesO | 84.98 | 62.61   | 94.67    | 49.95    |
-+-------------+-------+---------+----------+----------+
-| Textures    | 80.46 | 37.50   | 96.80    | 67.75    |
-+-------------+-------+---------+----------+----------+
-| SVHN        | 97.62 | 95.56   | 98.77    | 11.58    |
-+-------------+-------+---------+----------+----------+
-| MNIST       | 90.04 | 90.45   | 89.88    | 39.03    |
-+-------------+-------+---------+----------+----------+
-
-
-When evaluating several compatible detectors on the same benchmark, cached logits
+Evaluate detectors against common benchmarks, for example the OpenOOD v1.5 CIFAR benchmark
+All datasets will be downloaded automatically.
+When evaluating several detectors on the same benchmark, cached logits
 and pooled features can be reused across calls:
 
 .. code-block:: python
@@ -174,11 +137,6 @@ and pooled features can be reused across calls:
        results += res
 
    print(pd.DataFrame(results))
-
-.. note::
-
-   Disk-backed cache reuse is controlled by the user-provided ``cache_key``.
-   Change it whenever the model, weights, transforms, or benchmark setup change.
 
 
 🛠 ️️Installation

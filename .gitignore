@@ -261,5 +261,6 @@ cython_debug/
 # sphinx galery execution times
 docs/sg_execution_times.rst
 
-# Claude Code
+# AI coding tools
 CLAUDE.md
+.codex
