@@ -101,43 +101,42 @@ You can find more examples in the `documentation <https://pytorch-ood.readthedoc
 Benchmarks (Beta)
 ---------------------------
 
-Evaluate detectors against common benchmarks, for example the OpenOOD ImageNet benchmark
-(including ImageNet-O, OpenImages-O, Textures, SVHN, MNIST).  All datasets (except for ImageNet itself) will be downloaded automatically.
+Evaluate detectors against common benchmarks, for example the OpenOOD v1.5 CIFAR benchmark
+All datasets will be downloaded automatically.
+When evaluating several detectors on the same benchmark, cached logits
+and pooled features can be reused across calls:
 
 .. code-block:: python
 
    import pandas as pd
-   from pytorch_ood.benchmark import ImageNet_OpenOOD
-   from pytorch_ood.detector import MaxSoftmax
-   from torchvision.models import resnet50
-   from torchvision.models.resnet import ResNet50_Weights
+   from pytorch_ood.benchmark import CIFAR10_OpenOOD
+   from pytorch_ood.detector import EnergyBased, MaxSoftmax
+   from pytorch_ood.model import WideResNet
 
-   model = resnet50(ResNet50_Weights.IMAGENET1K_V1).eval().to("cuda:0")
-   trans = ResNet50_Weights.IMAGENET1K_V1.transforms()
+   model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to("cuda:0")
+   trans = WideResNet.transform_for("cifar10-pt")
 
-   benchmark = ImageNet_OpenOOD(root="data", image_net_root="data/imagenet-2012/", transform=trans)
+   benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
+   detectors = {
+       "MSP": MaxSoftmax(model),
+       "Energy": EnergyBased(model),
+   }
 
-   detector = MaxSoftmax(model)
-   results = benchmark.evaluate(detector, loader_kwargs={"batch_size": 64}, device="cuda:0")
-   df = pd.DataFrame(results)
-   print(df)
+   results = []
+   for name, detector in detectors.items():
+       res = benchmark.evaluate(
+           detector,
+           loader_kwargs={"batch_size": 128, "num_workers": 12},
+           device="cuda:0",
+           cache=True,
+           cache_dir="data/benchmark-cache",
+           cache_key="cifar10-openood-wrn-cifar10-pt",
+       )
+       for row in res:
+           row.update({"Detector": name})
+       results += res
 
-
-This produces the following table:
-
-+-------------+-------+---------+----------+----------+
-| Dataset     | AUROC | AUPR-IN | AUPR-OUT | FPR95TPR |
-+=============+=======+=========+==========+==========+
-| ImageNetO   | 28.64 | 2.52    | 94.85    | 91.20    |
-+-------------+-------+---------+----------+----------+
-| OpenImagesO | 84.98 | 62.61   | 94.67    | 49.95    |
-+-------------+-------+---------+----------+----------+
-| Textures    | 80.46 | 37.50   | 96.80    | 67.75    |
-+-------------+-------+---------+----------+----------+
-| SVHN        | 97.62 | 95.56   | 98.77    | 11.58    |
-+-------------+-------+---------+----------+----------+
-| MNIST       | 90.04 | 90.45   | 89.88    | 39.03    |
-+-------------+-------+---------+----------+----------+
+   print(pd.DataFrame(results))
 
 
 When evaluating several compatible detectors on the same benchmark, cached logits
