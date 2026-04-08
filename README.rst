@@ -101,7 +101,7 @@ You can find more examples in the `documentation <https://pytorch-ood.readthedoc
 Benchmarks (Beta)
 ---------------------------
 
-Evaluate detectors against common benchmarks, for example the OpenOOD v1.5 CIFAR benchmark
+Evaluate detectors against common benchmarks, for example the OpenOOD v1.5 CIFAR benchmark.
 All datasets will be downloaded automatically.
 When evaluating several detectors on the same benchmark, cached logits
 and pooled features can be reused across calls:
@@ -139,45 +139,6 @@ and pooled features can be reused across calls:
    print(pd.DataFrame(results))
 
 
-When evaluating several compatible detectors on the same benchmark, cached logits
-and pooled features can be reused across calls:
-
-.. code-block:: python
-
-   import pandas as pd
-   from pytorch_ood.benchmark import CIFAR10_OpenOOD
-   from pytorch_ood.detector import EnergyBased, MaxSoftmax
-   from pytorch_ood.model import WideResNet
-
-   model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to("cuda:0")
-   trans = WideResNet.transform_for("cifar10-pt")
-
-   benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
-   detectors = {
-       "MSP": MaxSoftmax(model),
-       "Energy": EnergyBased(model),
-   }
-
-   results = []
-   for name, detector in detectors.items():
-       res = benchmark.evaluate(
-           detector,
-           loader_kwargs={"batch_size": 128, "num_workers": 12},
-           device="cuda:0",
-           cache=True,
-           cache_dir="data/benchmark-cache",
-           cache_key="cifar10-openood-wrn-cifar10-pt",
-       )
-       for row in res:
-           row.update({"Detector": name})
-       results += res
-
-   print(pd.DataFrame(results))
-
-.. note::
-
-   Disk-backed cache reuse is controlled by the user-provided ``cache_key``.
-   Change it whenever the model, weights, transforms, or benchmark setup change.
 
 
 🛠 ️️Installation
