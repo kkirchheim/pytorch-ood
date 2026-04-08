@@ -2,13 +2,12 @@
 
 """
 
-from typing import Dict, List
+from typing import List
 
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 from torchvision.datasets import CIFAR10, CIFAR100, MNIST, SVHN
 from torchvision.transforms import Compose
 
-from pytorch_ood.api import Detector
 from pytorch_ood.benchmark import Benchmark
 from pytorch_ood.dataset.img import (
     GaussianNoise,
@@ -21,7 +20,7 @@ from pytorch_ood.dataset.img import (
     TinyImageNetResize,
     UniformNoise,
 )
-from pytorch_ood.utils import OODMetrics, ToRGB, ToUnknown
+from pytorch_ood.utils import ToRGB, ToUnknown
 
 
 class CIFAR10_ODIN(Benchmark):
@@ -102,36 +101,6 @@ class CIFAR10_ODIN(Benchmark):
             return self.test_oods
 
         raise ValueError()
-
-    def evaluate(
-        self, detector: Detector, loader_kwargs: Dict = None, device: str = "cpu"
-    ) -> List[Dict]:
-        """
-        Evaluates the given detector on all datasets and returns a list with the results
-
-        :param detector: the detector to evaluate
-        :param loader_kwargs: keyword arguments to give to the data loader
-        :param device: the device to move batches to
-        """
-        if loader_kwargs is None:
-            loader_kwargs = {}
-
-        metrics = []
-
-        for name, dataset in zip(self.ood_names, self.test_sets()):
-            loader = DataLoader(dataset=dataset, **loader_kwargs)
-
-            m = OODMetrics()
-
-            for x, y in loader:
-                m.update(detector(x.to(device)), y)
-
-            r = m.compute()
-            r.update({"Dataset": name})
-
-            metrics.append(r)
-
-        return metrics
 
 
 class CIFAR10_OpenOOD(Benchmark):
@@ -235,33 +204,3 @@ class CIFAR10_OpenOOD(Benchmark):
             return self.test_oods
 
         raise ValueError()
-
-    def evaluate(
-        self, detector: Detector, loader_kwargs: Dict = None, device: str = "cpu"
-    ) -> List[Dict]:
-        """
-        Evaluates the given detector on all datasets and returns a list with the results
-
-        :param detector: the detector to evaluate
-        :param loader_kwargs: keyword arguments to give to the data loader
-        :param device: the device to move batches to
-        """
-        if loader_kwargs is None:
-            loader_kwargs = {}
-
-        metrics = []
-
-        for name, dataset in zip(self.ood_names, self.test_sets()):
-            loader = DataLoader(dataset=dataset, **loader_kwargs)
-
-            m = OODMetrics()
-
-            for x, y in loader:
-                m.update(detector(x.to(device)), y)
-
-            r = m.compute()
-            r.update({"Dataset": name})
-
-            metrics.append(r)
-
-        return metrics
