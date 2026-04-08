@@ -139,6 +139,9 @@ Virtual Logit Matching (ViM)
 
 Nearest Neighbor (kNN)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+.. note::
+   ``pytorch_ood.detector.KNN`` requires ``scikit-learn`` to be installed.
+
 .. automodule:: pytorch_ood.detector.knn
 
 Nearest Neighbor Guidance (NNGuide)
@@ -255,3 +258,37 @@ from .gradnorm import GradNorm
 from .gradnormkl import GradNormKL
 from .nci import NCI
 from .nac import NACUE
+
+__all__ = [
+    "ASH",
+    "DICE",
+    "EnergyBased",
+    "Entropy",
+    "fDBD",
+    "GEN",
+    "GMM",
+    "GradNorm",
+    "GradNormKL",
+    "Gram",
+    "KLMatching",
+    "KNN",
+    "Mahalanobis",
+    "MaxLogit",
+    "MaxSoftmax",
+    "MCD",
+    "MultiMahalanobis",
+    "NACUE",
+    "NCI",
+    "NNGuide",
+    "ODIN",
+    "odin_preprocessing",
+    "OpenMax",
+    "RMD",
+    "RankFeat",
+    "ReAct",
+    "SHE",
+    "TemperatureScaling",
+    "ViM",
+    "VRA",
+    "WeightedEBO",
+]
