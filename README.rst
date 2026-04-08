@@ -1,7 +1,7 @@
 PyTorch Out-of-Distribution Detection
 ****************************************
 
-|docs| |version| |license| |python-version| |build-status| |coverage-status| |downloads| |paper|
+|docs| |version| |license| |python-version| |build-status| |coverage-status| |binder-demo| |downloads| |paper|
 
 
 .. |docs| image:: https://img.shields.io/badge/docs-online-blue?style=for-the-badge
@@ -22,6 +22,9 @@ PyTorch Out-of-Distribution Detection
 .. |coverage-status| image:: https://img.shields.io/codecov/c/github/kkirchheim/pytorch-ood/dev?style=for-the-badge&label=coverage
    :target: https://codecov.io/gh/kkirchheim/pytorch-ood
    :alt: Coverage Status
+.. |binder-demo| image:: https://img.shields.io/badge/demo-binder-blue?style=for-the-badge&logo=jupyter
+   :target: https://mybinder.org/v2/gh/kkirchheim/pytorch-ood/dev?labpath=notebooks%2Fmnist_binder_demo.ipynb
+   :alt: Binder Demo
 .. |downloads| image:: https://img.shields.io/pepy/dt/pytorch-ood?style=for-the-badge
    :target: https://pepy.tech/project/pytorch-ood
    :alt: Downloads
