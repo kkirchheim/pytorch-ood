@@ -1,5 +1,5 @@
 ---
-title: "pytorch-ood: A unified PyTorch library for out-of-distribution detection"
+title: "pytorch-ood: A Unified PyTorch Library for Out-of-Distribution Detection"
 tags:
   - Python
   - PyTorch
@@ -60,11 +60,17 @@ This combination is useful because it supports both low-level custom evaluation 
 The core architectural principle of `pytorch-ood` is interface unification.
 All methods implement a shared `Detector` abstraction with a `predict()` method for mapping inputs to outlier scores and, where needed, an optional `fit()` method for calibration or training.
 
-Beyond this common interface, the library provides specialized detector types such as `LogitDetector` and `FeatureDetector`, which differ by the representation they consume rather than by their external API.
-For instance, logit-based detectors operate directly on model outputs, while feature-based detectors use intermediate representations.
+Beyond this common interface, the library provides specialized detector types such as `LogitDetector` and `FeatureDetector`, which offer additional variants of fitting and predictions, differing by the kind of representation they consume.
+For instance, logit-based detectors have the avility to operate directly on model outputs, while feature-based detectors can consume intermediate representations.
 This separation makes detectors easy to interchange in experiments and enables computational reuse, since extracted logits or features can be shared across multiple methods.
 
 ![architecture](arch.png)
+
+
+## Benchmarking
+
+Additionally, we define a benchmark interface that takes exposes an `evaluate()` method, which takes a detector.
+This interface allows to easily reproduce benchmarks from different papers.
 
 
 # Comparison to existing tools
@@ -97,3 +103,7 @@ metrics = benchmark.evaluate(detector, loader_kwargs={"batch_size": 64}, device=
 
 print(metrics)
 ```
+
+
+# AI Usage Statement
+We used LLMs during implementation and writing of this manuscript.
