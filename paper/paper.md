@@ -105,12 +105,13 @@ preprocess = WideResNet.transform_for("cifar10-pt")
 ebo = EnergyBased(model)
 msp = MaxSoftmax(model)
 
-benchmark = CIFAR10_OpenOOD(root="data", transform=preprocess, cache=True)
+benchmark = CIFAR10_OpenOOD(root="data", transform=preprocess)
 
 metrics = benchmark.evaluate(
   [ebo, msp],
   loader_kwargs={"batch_size": 64},
-  device=device
+  device=device,
+  cache=True
 )
 
 print(metrics)
