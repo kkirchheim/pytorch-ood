@@ -15,7 +15,6 @@
 import logging
 from typing import Callable, Optional, TypeVar
 
-import torch
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader
 
@@ -30,6 +29,10 @@ class KNN(FeaturesDetector):
     """
     Implements the detector from the paper
     *Out-of-Distribution Detection with Deep Nearest Neighbors*.
+
+    .. note::
+        This detector requires ``scikit-learn``. Install it manually if you want to use
+        ``pytorch_ood.detector.KNN``.
 
     Fits a nearest neighbor model to the ID samples an uses the distance
     from the nearest neighbor as outlier score:
@@ -57,7 +60,7 @@ class KNN(FeaturesDetector):
         try:
             from sklearn.neighbors import NearestNeighbors
         except ImportError:
-            raise Exception("You have to install scikit-learn to use this detector")
+            raise ImportError("You have to install scikit-learn to use this detector")
 
         self.knn: NearestNeighbors = NearestNeighbors(n_neighbors=1, n_jobs=-1, **knn_kwargs)
 

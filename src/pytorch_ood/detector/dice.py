@@ -17,7 +17,6 @@ from typing import Callable, Optional, TypeVar
 
 import numpy as np
 import torch.nn
-from sklearn.exceptions import NotFittedError
 from torch import Tensor
 from torch.utils.data import DataLoader
 

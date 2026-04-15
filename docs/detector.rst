@@ -2,4 +2,4 @@ Detectors
 *************************
 
 .. automodule:: pytorch_ood.detector
-   :members:
+   :no-members:
