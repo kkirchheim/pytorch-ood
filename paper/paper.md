@@ -3,9 +3,9 @@ title: "pytorch-ood: A Unified PyTorch Library for Out-of-Distribution Detection
 tags:
   - Python
   - PyTorch
-  - out-of-distribution detection
-  - anomaly detection
-  - machine learning safety
+  - Out-of-Distribution Detection
+  - Anomaly Detection
+  - Machine Learning Safety
 authors:
   - name: Konstantin Kirchheim
     orcid: 0000-0001-5819-7692
@@ -26,10 +26,10 @@ bibliography: paper.bib
 
 # Summary
 
-Out-of-distribution (OOD) detection is a central problem in modern machine learning, especially in safety-critical settings where predictive systems must recognize when an input when an input no longer follows the training data distribution @yang2021generalized. Although the field has developed rapidly, practical experimentation remains fragmented.
+Out-of-Distribution (OOD) detection is a central problem in modern machine learning, especially in safety-critical settings where predictive systems must recognize when an input when an input no longer follows the training data distribution @yang2021generalized. Although the field has developed rapidly, practical experimentation remains fragmented.
 Implementations are often tied to individual papers, method interfaces vary considerably, and evaluation protocols can be difficult to reproduce.
 `pytorch-ood` aims to address this problem by providing a unified, research-oriented software library for OOD detection in the PyTorch ecosystem @paszke2019pytorch.
-The package combines a broad collection of detectors, training objectives, datasets, pretrained models, and evaluation utilities behind a consistent interface, thereby reducing engineering overhead and making controlled comparisons easier to conduct.
+The package combines a broad collection of detectors, training objectives, datasets, pre-trained models, and evaluation utilities behind a consistent interface, thereby reducing engineering overhead and making controlled comparisons easier to conduct.
 
 The library is designed for researchers who need both breadth and modularity. Rather than focusing on a single benchmark or a narrow family of methods, `pytorch-ood` aims to provide a reusable framework for OOD detection research.
 The library is accompanied by extensive documentation and unit tests, supporting reliable reuse and facilitating reproducible experimentation.
@@ -89,10 +89,10 @@ These conventions are applied uniformly across detectors, datasets, and benchmar
 
 ### Benchmarks
 
-Additionally, we define a benchmark interface that exposes an `evaluate()` method, which takes a detector.
+Additionally, we define a benchmark interface that exposes an `evaluate()` method, which takes one or more detectors as argument.
 This interface enables straightforward reproduction of benchmark protocols from prior work while still allowing custom evaluation pipelines when needed.
 
-For example, a minimal evaluation workflow to replicate the OpenOOD v1.5 CIFAR10  benchmark for the pre-trained model from one of the first OOD Detection benchmark papers by Hendrycks *et al.* @hendrycks2016baseline can be written directly as:
+For example, a minimal evaluation workflow to replicate the OpenOOD v1.5 CIFAR-10 benchmark for the pre-trained model from one of the first OOD Detection benchmark papers by Hendrycks *et al.* @hendrycks2016baseline can be written directly as:
 
 ```python
 from pytorch_ood.detector import EnergyBased, MaxSoftmax
