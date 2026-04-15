@@ -20,19 +20,18 @@ authors:
 affiliations:
   - name: Otto-von-Guericke University Magdeburg, Germany
     index: 1
-date: 14 April 2026
+date: 15 April 2026
 bibliography: paper.bib
 ---
 
 # Summary
 
-Out-of-Distribution (OOD) detection is a central problem in modern machine learning, especially in safety-critical settings where predictive systems must recognize when an input when an input no longer follows the training data distribution @yang2021generalized. Although the field has developed rapidly, practical experimentation remains fragmented.
-Implementations are often tied to individual papers, method interfaces vary considerably, and evaluation protocols can be difficult to reproduce.
-`pytorch-ood` aims to address this problem by providing a unified, research-oriented software library for OOD detection in the PyTorch ecosystem @paszke2019pytorch.
-The package combines a broad collection of detectors, training objectives, datasets, pre-trained models, and evaluation utilities behind a consistent interface, thereby reducing engineering overhead and making controlled comparisons easier to conduct.
 
-The library is designed for researchers who need both breadth and modularity. Rather than focusing on a single benchmark or a narrow family of methods, `pytorch-ood` aims to provide a reusable framework for OOD detection research.
-The library is accompanied by extensive documentation and unit tests, supporting reliable reuse and facilitating reproducible experimentation.
+Machine learning models can produce unreliable predictions when they encounter data that differs from what they were trained on. Detecting such cases - commonly referred to as out-of-distribution (OOD) detection - is particularly important in safety-critical applications [@yang2021generalized].
+Despite rapid progress in the field, practical experimentation remains fragmented. Implementations are often tied to individual papers, interfaces differ across methods, and evaluation setups can be difficult to reproduce.
+
+`pytorch-ood` is a Python library that provides a unified framework for OOD detection in the PyTorch ecosystem [@paszke2019pytorch]. It brings together a broad range of detection methods, training objectives, datasets, pre-trained models, and evaluation tools under a consistent interface. This allows users to apply different methods, compare them under shared conditions, and integrate them into existing workflows with minimal additional code.
+The library is designed to support flexible experimentation rather than a single fixed benchmark. It is accompanied by extensive documentation and unit tests, enabling reliable reuse and facilitating reproducible research.
 
 # Statement of need
 
@@ -42,9 +41,9 @@ Research on OOD detection faces a recurring methodological problem: many publish
 The resulting workflow is lighter than bespoke per-paper implementations and more flexible than fixed benchmark pipelines, establishing `pytorch-ood` as a middle layer between individual research code and benchmark frameworks.
 
 
-### Comparison to existing tools
+# State of the field
 
-Several tools for OOD detection exist (many released after `pytorch-ood`). Some, such as OpenOOD @zhang2023openood, emphasize standardized benchmark pipelines, while others like FrOODo @stieber2022froodo focus on specific domains such as medical applications.
+Several tools for OOD detection exist (many released after `pytorch-ood`). Some, such as OpenOOD [@zhang2023openood], emphasize standardized benchmark pipelines, while others like FrOODo [@stieber2022froodo] focus on specific domains such as medical applications.
 
 `pytorch-ood` occupies a different point in the design space.
 Rather than prescribing a fixed evaluation regime or domain, it provides a flexible, PyTorch-native layer for composing detectors, models, datasets, and benchmarks under a unified interface.
@@ -70,7 +69,7 @@ scores2 = detector2.predict_logits(logits)
 
 This separation makes detectors easy to interchange in experiments and enables computational reuse, since extracted logits or features can be shared across multiple methods.
 
-![architecture](arch.png)
+![Overview of Relevant Abstractions](arch.png)
 
 
 ### Metrics and Evaluation Conventions
@@ -92,7 +91,7 @@ These conventions are applied uniformly across detectors, datasets, and benchmar
 Additionally, we define a benchmark interface that exposes an `evaluate()` method, which takes one or more detectors as argument.
 This interface enables straightforward reproduction of benchmark protocols from prior work while still allowing custom evaluation pipelines when needed.
 
-For example, a minimal evaluation workflow to replicate the OpenOOD v1.5 CIFAR-10 benchmark for the pre-trained model from one of the first OOD Detection benchmark papers by Hendrycks *et al.* @hendrycks2016baseline can be written directly as:
+For example, a minimal evaluation workflow to replicate the OpenOOD v1.5 CIFAR-10 benchmark  [@zhang2023openood] with the pre-trained model and baseline detector from one of the first OOD Detection benchmark papers [@hendrycks2016baseline] and an additional, more recent detector [@liu2020energy] can be written directly as:
 
 ```python
 from pytorch_ood.detector import EnergyBased, MaxSoftmax
@@ -117,7 +116,7 @@ metrics = benchmark.evaluate(
 print(metrics)
 ```
 
-Since both detectors used in this example implement the LogitsDetector interface, these logits will be extracted from the model only once.
+Since both detectors used in this example implement the `LogitsDetector` interface, these logits will be extracted from the model only once.
 
 
 # Research Impact Statement
@@ -128,7 +127,9 @@ Overall, `pytorch-ood` serves both as reusable research infrastructure and as a 
 
 
 # AI Usage Disclosure
-Development of `pytorch-ood` began prior to the widespread availability of modern generative AI systems.
-More recent contributions, including parts of the codebase and documentation, were developed with the assistance of generative AI tools.
-All such contributions were reviewed, tested, and validated by the authors.
-Generative AI was also used for editorial support in the preparation of this paper.
+
+
+Generative AI tools were used during the development of `pytorch-ood` and the preparation of this manuscript.
+In particular, we used systems from OpenAI (including ChatGPT and Codex) and Anthropic (Claude), in various versions available at the time, for parts of the codebase, documentation, and manuscript text.
+These tools provided assistance with code generation and refactoring, drafting and improving documentation, generating testing scaffolding, and editorial support.
+All AI-assisted contributions were carefully checked and integrated by the authors. All architectural and design decisions were made by the authors, who take full responsibility for the software and this manuscript.
