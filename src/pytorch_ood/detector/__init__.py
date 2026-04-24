@@ -170,6 +170,10 @@ Gaussian Mixture Model (GMM)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.gmm
 
+Predictive Normalized Maximum Likelihood (pNML)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.pnml
+
 
 Gradient-based
 --------------------------
@@ -258,6 +262,7 @@ from .gradnorm import GradNorm
 from .gradnormkl import GradNormKL
 from .nci import NCI
 from .nac import NACUE
+from .pnml import PNML
 
 __all__ = [
     "ASH",
@@ -283,6 +288,7 @@ __all__ = [
     "ODIN",
     "odin_preprocessing",
     "OpenMax",
+    "PNML",
     "RMD",
     "RankFeat",
     "ReAct",
