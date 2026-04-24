@@ -248,6 +248,8 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | fDBD                        | Fast decision boundary distance for OOD detection.                                             | 2023 | [#fDBD]_           |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| PNML                        | Predictive normalized maximum likelihood regret on normalized penultimate-layer features.      | 2021 | [#PNML]_           |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | VRA                         | Variance-based ReAct adjustment with learned percentile thresholds.                            | 2023 | [#VRA]_            |
@@ -506,6 +508,8 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#GEN] Liu, X., et al. (2023) GEN: Pushing the Limits of Softmax-Based Out-of-Distribution Detection. CVPR.
 
 .. [#fDBD] Liu, L., & Qin, Y. (2023) Fast Decision Boundary based Out-of-Distribution Detector. `ArXiv <https://arxiv.org/abs/2312.11536>`__.
+
+.. [#PNML] Bibas, K., Feder, M., & Hassner, T. (2021) Single Layer Predictive Normalized Maximum Likelihood for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2110.09246>`__.
 
 .. [#VRA] Xu, M., et al. (2023) VRA: Variational Rectified Activation for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2302.11716>`__.
 
