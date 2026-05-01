@@ -47,6 +47,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.inheritance_diagram",
+    "sphinx.ext.graphviz",
     "sphinx_gallery.gen_gallery",
 ]
 
