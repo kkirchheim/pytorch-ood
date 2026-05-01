@@ -47,6 +47,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.inheritance_diagram",
+    "sphinx.ext.graphviz",
     "sphinx_gallery.gen_gallery",
 ]
 
@@ -106,3 +107,6 @@ html_static_path = ["_static"]
 # include init arguments
 autoclass_content = "both"
 autodoc_typehints_format = "short"
+
+# Graphviz configuration for inheritance diagrams
+graphviz_output_format = "svg"
