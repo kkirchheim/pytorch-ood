@@ -32,7 +32,7 @@ class GMMTest(unittest.TestCase):
         self.assertIsNotNone(scores)
 
     def test_fit_predict_features(self):
-        detector = GMM(model=None)
+        detector = GMM(encoder=None)
 
         z = torch.randn(size=(20, 10))
         y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
@@ -51,7 +51,7 @@ class GMMTest(unittest.TestCase):
             detector(x)
 
     def test_no_model(self):
-        detector = GMM(model=None)
+        detector = GMM(encoder=None)
 
         z = torch.randn(size=(20, 10))
         y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])

@@ -13,23 +13,18 @@
 """
 
 import logging
-import warnings
-from typing import Callable, List, Optional, TypeVar
+from typing import Callable, Optional, TypeVar
 
 import torch
 from torch import Tensor
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from pytorch_ood.detector.mahalanobis import Mahalanobis
 
-from ..api import Detector, ModelNotSetException, RequiresFittingException
+from ..api import ModelNotSetException, RequiresFittingException
 from ..utils import (
-    TensorBuffer,
-    contains_unknown,
     extract_features,
     is_known,
-    is_unknown,
 )
 
 log = logging.getLogger(__name__)
@@ -64,7 +59,7 @@ class RMD(Mahalanobis):
         :param model: the Neural Network, should output features. Can be ``None`` when
             using ``fit_features(...)`` and ``predict_features(...)`` directly.
         """
-        super(RMD, self).__init__(model=model)
+        super(RMD, self).__init__(encoder=model)
 
         self.background_mu = None
         self.background_cov = None
@@ -83,7 +78,7 @@ class RMD(Mahalanobis):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        z, y = extract_features(data_loader, self.model, device=device)
+        z, y = extract_features(data_loader, self.encoder, device=device)
         return self.fit_features(z, y)
 
     def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
@@ -136,6 +131,7 @@ class RMD(Mahalanobis):
 
         return torch.cat(md_k, 1)
 
+    @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:
         """
         Calculates mahalanobis distance directly on features.
@@ -156,11 +152,11 @@ class RMD(Mahalanobis):
         """
         :param x: input tensor
         """
-        if self.model is None:
+        if self.encoder is None:
             raise ModelNotSetException
 
         if self.eps > 0:
             x = self._odin_preprocess(x, x.device)
 
-        features = self.model(x)
+        features = self.encoder(x)
         return self.predict_features(features)

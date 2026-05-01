@@ -16,6 +16,7 @@
 import logging
 from typing import Callable, TypeVar
 
+import torch
 from torch import Tensor
 
 from ..api import FeatureMapsDetector, ModelNotSetException
@@ -43,8 +44,8 @@ class ReAct(FeatureMapsDetector):
 
         model = WideResNet()
         detector = ReAct(
-            backbone = model.features,
-            head = model.fc,
+            backbone = model.feature_maps,
+            head = model.forward_feature_maps,
             detector = EnergyBased.score
         )
         scores = detector(images)
@@ -74,9 +75,13 @@ class ReAct(FeatureMapsDetector):
         """
         :param x: input, will be passed through network
         """
+        device = self.device
+        if device is not None:
+            x = x.to(device)
         x = self.backbone(x)
         return self.predict_feature_maps(x)
 
+    @torch.no_grad()
     def predict_feature_maps(self, x: Tensor) -> Tensor:
         """
         :raises: NotImplementedError

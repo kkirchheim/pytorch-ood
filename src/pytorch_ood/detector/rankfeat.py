@@ -74,8 +74,8 @@ class RankFeat(FeatureMapsDetector):
 
         model = WideResNet()
         detector = RankFeat(
-            backbone=model.features_before_pool,
-            head=model.forward_from_before_pool,
+            backbone=model.feature_maps,
+            head=model.forward_feature_maps,
         )
         scores = detector(images)
 
@@ -104,9 +104,13 @@ class RankFeat(FeatureMapsDetector):
         :param x: input, will be passed through network
         :return: outlier scores
         """
+        device = self.device
+        if device is not None:
+            x = x.to(device)
         x = self.backbone(x)
         return self.predict_feature_maps(x)
 
+    @torch.no_grad()
     def predict_feature_maps(self, x: Tensor) -> Tensor:
         x = _remove_rank1(x)
         x = self.head(x)

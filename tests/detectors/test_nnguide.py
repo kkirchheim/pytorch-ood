@@ -16,13 +16,11 @@ class TestNNGuide(unittest.TestCase):
     def _make_detector(self):
         model = ClassificationModel(num_inputs=10, n_hidden=10, num_outputs=3)
         model.eval()
-        w = model.classifier.weight.detach()
-        b = model.classifier.bias.detach()
-        backbone = model.features
-        return NNGuide(backbone, w=w, b=b, k=5)
+        return NNGuide(model.features, model.classifier, k=5)
 
     def test_requires_fitting(self):
         detector = self._make_detector()
+        self.assertTrue(detector.requires_fit)
         z = torch.randn(16, 10)
         with self.assertRaises(RequiresFittingException):
             detector.predict_features(z)

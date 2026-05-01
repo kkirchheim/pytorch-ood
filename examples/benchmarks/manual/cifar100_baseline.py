@@ -127,12 +127,10 @@ detectors["EnergyBased"] = EnergyBased(model)
 detectors["GEN"] = GEN(model)
 detectors["GMM"] = GMM(model.features)
 detectors["fDBD"] = fDBD(encoder=model.features, head=model.fc)
-detectors["RankFeat"] = RankFeat(
-    backbone=model.features_before_pool, head=model.forward_from_before_pool
-)
+detectors["RankFeat"] = RankFeat(backbone=model.feature_maps, head=model.forward_feature_maps)
 detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
-detectors["DICE"] = DICE(model=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
+detectors["DICE"] = DICE(encoder=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
 detectors["RMD"] = RMD(model.features)
 detectors["MultiMahalanobis"] = MultiMahalanobis(
     [

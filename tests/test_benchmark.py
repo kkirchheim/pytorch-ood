@@ -82,19 +82,56 @@ class CountingFeatures(nn.Module):
         self.calls += 1
         return x.float()
 
+    def feature_maps(self, x):
+        self.calls += 1
+        return (2 * x).float()
+
 
 class SummedFeaturesDetector(FeaturesDetector):
     def __init__(self, model):
-        self.model = model
+        self.encoder = model
 
     def predict(self, x):
-        return self.predict_features(self.model(x))
+        return self.predict_features(self.encoder(x))
 
     def predict_features(self, x):
         return -x.sum(dim=1)
 
 
 class BenchmarkCachingTest(unittest.TestCase):
+    def test_producer_token_distinguishes_bound_methods(self):
+        model = CountingFeatures()
+
+        forward_token = Benchmark._producer_token(model.forward)
+        pre_pool_token = Benchmark._producer_token(model.feature_maps)
+
+        self.assertNotEqual(forward_token, pre_pool_token)
+        self.assertIn("forward", forward_token)
+        self.assertIn("feature_maps", pre_pool_token)
+
+    def test_cache_file_path_distinguishes_bound_method_producers(self):
+        benchmark = ToyBenchmark()
+        model = CountingFeatures()
+
+        forward_path = benchmark._cache_file_path(
+            cache_dir="/tmp",
+            split="eval",
+            dataset_name="ToyOOD",
+            representation="features",
+            producer=model.forward,
+            cache_key="toy-model-v1",
+        )
+        pre_pool_path = benchmark._cache_file_path(
+            cache_dir="/tmp",
+            split="eval",
+            dataset_name="ToyOOD",
+            representation="features",
+            producer=model.feature_maps,
+            cache_key="toy-model-v1",
+        )
+
+        self.assertNotEqual(forward_path, pre_pool_path)
+
     def test_benchmark_evaluate_single_detector_keeps_output_shape(self):
         benchmark = ToyBenchmark()
         detector = MaxSoftmax(CountingLinear())
@@ -196,7 +233,7 @@ class BenchmarkCachingTest(unittest.TestCase):
     def test_benchmark_falls_back_for_mahalanobis_with_input_preprocessing(self):
         benchmark = ToyBenchmark()
         model = CountingFeatures()
-        detector = Mahalanobis(model=model, eps=0.1)
+        detector = Mahalanobis(encoder=model, eps=0.1)
         detector.fit(DataLoader(benchmark.train_set(), batch_size=2))
 
         calls_after_fit = model.calls

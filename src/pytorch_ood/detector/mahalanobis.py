@@ -22,11 +22,8 @@ from torch.utils.data import DataLoader
 
 from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import (
-    TensorBuffer,
     contains_unknown,
     extract_features,
-    is_known,
-    is_unknown,
 )
 
 log = logging.getLogger(__name__)
@@ -55,18 +52,18 @@ class Mahalanobis(FeaturesDetector):
 
     def __init__(
         self,
-        model: Optional[Callable[[Tensor], Tensor]],
+        encoder: Optional[Callable[[Tensor], Tensor]],
         eps: float = 0.002,
         norm_std: Optional[List] = None,
     ):
         """
-        :param model: the Neural Network, should output features. Can be ``None`` when
+        :param encoder: feature encoder. Can be ``None`` when
             using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param eps: magnitude for gradient based input preprocessing
         :param norm_std: Standard deviations for input normalization
         """
         super(Mahalanobis, self).__init__()
-        self.model = model
+        self.encoder = encoder
         self.mu: Tensor = None  #: Centers
         self.cov: Tensor = None  #: Covariance Matrix
         self.precision: Tensor = None  #: Precision Matrix
@@ -85,7 +82,7 @@ class Mahalanobis(FeaturesDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        z, y = extract_features(data_loader, self.model, device)
+        z, y = extract_features(data_loader, self.encoder, device)
         return self.fit_features(z, y)
 
     def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
@@ -96,7 +93,7 @@ class Mahalanobis(FeaturesDetector):
         :param y: class labels
         """
         device = self.device or z.device
-
+        z = z.detach().to(device).float()
         y = y.to(device)
 
         log.debug("Calculating mahalanobis parameters.")
@@ -111,10 +108,9 @@ class Mahalanobis(FeaturesDetector):
         self.cov = torch.zeros(size=(z.shape[-1], z.shape[-1]), device=device)
 
         for clazz in range(n_classes):
-            idxs = y.eq(clazz).to(z.device)
+            idxs = y.eq(clazz)
             assert idxs.sum() != 0
-            # we only move them to device after indexing to reduce ram usage.
-            zs = z[idxs].to(device)
+            zs = z[idxs]
             self.mu[clazz] = zs.mean(dim=0)
             self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
 
@@ -136,6 +132,7 @@ class Mahalanobis(FeaturesDetector):
 
         return torch.cat(md_k, 1)
 
+    @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:
         """
         Calculates mahalanobis distance directly on features.
@@ -154,13 +151,13 @@ class Mahalanobis(FeaturesDetector):
         """
         :param x: input tensor
         """
-        if self.model is None:
+        if self.encoder is None:
             raise ModelNotSetException
 
         if self.eps > 0:
             x = self._odin_preprocess(x, x.device)
 
-        features = self.model(x)
+        features = self.encoder(x)
         return self.predict_features(features)
 
     def _odin_preprocess(self, x: Tensor, dev: str):
@@ -177,7 +174,7 @@ class Mahalanobis(FeaturesDetector):
 
             with torch.enable_grad():
                 x = Variable(x, requires_grad=True)
-                features = self.model(x)
+                features = self.encoder(x)
                 features = features.view(features.shape[0], -1)  # flatten
                 score = None
 

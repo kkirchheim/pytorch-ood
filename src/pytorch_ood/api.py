@@ -4,7 +4,7 @@ from typing import TypeVar
 
 import torch
 from torch import Tensor
-from torch.nn import Module
+from torch.nn import Module, Parameter
 from torch.utils.data import DataLoader
 
 Self = TypeVar("Self")
@@ -49,6 +49,9 @@ class Detector(ABC):
         if isinstance(value, Module):
             value.to(device)
             return value
+
+        if isinstance(value, Parameter):
+            return Parameter(value.detach().to(device), requires_grad=value.requires_grad)
 
         if isinstance(value, Tensor):
             return value.to(device)
@@ -241,6 +244,9 @@ class LogitsDetector(Detector):
 
         :param data_loader: loader to extract logits from
         """
+        if not self.requires_fit:
+            return self
+
         if not hasattr(self, "model") or self.model is None:
             raise ModelNotSetException
 
@@ -262,7 +268,11 @@ class LogitsDetector(Detector):
         :param logits: training logits to use for fitting.
         :param y: corresponding class labels.
         """
-        raise NotImplementedError
+        if not self.requires_fit:
+            return self
+        raise NotImplementedError(
+            f"{type(self).__name__} requires fitting but fit_logits() is not implemented"
+        )
 
     def predict_logits(self, logits: Tensor) -> Tensor:
         """
@@ -280,6 +290,10 @@ class FeaturesDetector(Detector):
 
     Subclasses implement ``predict_features(...)`` and, when fitting is required,
     ``fit_features(...)``.
+
+    **Parameter naming convention**: Subclasses that accept a feature extractor should use
+    the parameter name ``encoder`` to receive a callable that produces pooled feature vectors
+    of shape :math:`(B, D)`, where :math:`B` is batch size and :math:`D` is feature dimension.
     """
 
     def __init_subclass__(cls, **kwargs):
@@ -309,7 +323,11 @@ class FeaturesDetector(Detector):
         :param x: training features to use for fitting
         :param y: corresponding class labels
         """
-        raise NotImplementedError
+        if not self.requires_fit:
+            return self
+        raise NotImplementedError(
+            f"{type(self).__name__} requires fitting but fit_features() is not implemented"
+        )
 
     def predict_features(self, x: Tensor) -> Tensor:
         """
@@ -327,6 +345,11 @@ class FeatureMapsDetector(Detector):
 
     Subclasses implement ``predict_feature_maps(...)`` and, when fitting is
     required, ``fit_feature_maps(...)``.
+
+    **Parameter naming convention**: Subclasses that accept a feature extractor should use
+    the parameter name ``backbone`` to receive a callable that produces spatial feature maps
+    of shape :math:`(B, C, H, W)`, where :math:`B` is batch size, :math:`C` is number of
+    channels, and :math:`H, W` are spatial dimensions.
     """
 
     def __init_subclass__(cls, **kwargs):
@@ -356,7 +379,11 @@ class FeatureMapsDetector(Detector):
         :param feature_maps: training feature maps to use for fitting.
         :param y: corresponding class labels.
         """
-        raise NotImplementedError
+        if not self.requires_fit:
+            return self
+        raise NotImplementedError(
+            f"{type(self).__name__} requires fitting but fit_feature_maps() is not implemented"
+        )
 
     def predict_feature_maps(self, feature_maps: Tensor) -> Tensor:
         """
@@ -381,7 +408,11 @@ class StructuredDetector(Detector):
         """
         Fit the detector directly on structured intermediate representations.
         """
-        raise NotImplementedError
+        if not self.requires_fit:
+            return self
+        raise NotImplementedError(
+            f"{type(self).__name__} requires fitting but fit_structured() is not implemented"
+        )
 
     def predict_structured(self, *args, **kwargs) -> Tensor:
         """

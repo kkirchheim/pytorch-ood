@@ -50,8 +50,8 @@ class VRA(FeatureMapsDetector):
 
         model = WideResNet()
         detector = VRA(
-            backbone=model.features,
-            head=model.fc,
+            backbone=model.feature_maps,
+            head=model.forward_feature_maps,
         )
         detector.fit(train_loader)
         scores = detector(images)
@@ -94,9 +94,13 @@ class VRA(FeatureMapsDetector):
         if self._lower_threshold is None:
             raise RequiresFittingException()
 
+        device = self.device
+        if device is not None:
+            x = x.to(device)
         z = self.backbone(x)
         return self.predict_feature_maps(z)
 
+    @torch.no_grad()
     def predict_feature_maps(self, x: Tensor) -> Tensor:
         """
         :param x: features from the backbone

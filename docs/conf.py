@@ -43,7 +43,12 @@ author = "Konstantin Kirchheim"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinx_gallery.gen_gallery"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.inheritance_diagram",
+    "sphinx_gallery.gen_gallery",
+]
 
 sphinx_gallery_conf = {
     # path to your example scripts
@@ -90,7 +95,7 @@ html_logo = "_static/pytorch-ood-logo-white.svg"
 
 html_theme_options = {
     "logo_only": True,
-    "display_version": True,
+    # "display_version": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

@@ -47,14 +47,14 @@ class GMM(FeaturesDetector):
 
     def __init__(
         self,
-        model: Optional[Callable[[Tensor], Tensor]],
+        encoder: Optional[Callable[[Tensor], Tensor]],
         reg: float = 1e-6,
     ):
         """
-        :param model: neural network to use for feature extraction (can be ``None`` for feature-based interface)
+        :param encoder: feature encoder (can be ``None`` for feature-based interface)
         :param reg: regularization added to the diagonal of each covariance matrix for numerical stability
         """
-        self.model = model
+        self.encoder = encoder
         self.reg = reg
         # fitted parameters
         self._mu = None  # (K, D)
@@ -68,7 +68,7 @@ class GMM(FeaturesDetector):
 
         :param data_loader: data loader with training data
         """
-        if self.model is None:
+        if self.encoder is None:
             raise ModelNotSetException()
 
         device = self.device
@@ -77,7 +77,7 @@ class GMM(FeaturesDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        z, y = extract_features(data_loader, self.model, device)
+        z, y = extract_features(data_loader, self.encoder, device)
         return self.fit_features(z, y)
 
     def fit_features(self: Self, z: Tensor, labels: Tensor) -> Self:
@@ -93,18 +93,19 @@ class GMM(FeaturesDetector):
 
         assert not contains_unknown(labels[known])
 
-        z = z[known].detach().cpu().float()
-        y = labels[known].cpu().long()
+        device = self.device or z.device
+        z = z[known].detach().to(device).float()
+        y = labels[known].to(device).long()
 
         classes = y.unique()
         n_classes = len(classes)
         n_total = z.shape[0]
         d = z.shape[1]
 
-        mu = torch.zeros(n_classes, d)
-        precision = torch.zeros(n_classes, d, d)
-        log_det = torch.zeros(n_classes)
-        log_weights = torch.zeros(n_classes)
+        mu = torch.zeros(n_classes, d, device=device)
+        precision = torch.zeros(n_classes, d, d, device=device)
+        log_det = torch.zeros(n_classes, device=device)
+        log_weights = torch.zeros(n_classes, device=device)
 
         for i, c in enumerate(classes):
             mask = y == c
@@ -113,7 +114,7 @@ class GMM(FeaturesDetector):
 
             mu[i] = z_c.mean(dim=0)
             cov = (z_c - mu[i]).T @ (z_c - mu[i]) / n_c
-            cov += torch.eye(d) * self.reg
+            cov += torch.eye(d, device=device) * self.reg
 
             precision[i] = torch.linalg.inv(cov)
             log_det[i] = torch.linalg.slogdet(cov).logabsdet
@@ -127,12 +128,12 @@ class GMM(FeaturesDetector):
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: input tensor, will be passed through the model
+        :param x: input tensor, will be passed through the encoder
         """
-        if self.model is None:
+        if self.encoder is None:
             raise ModelNotSetException()
 
-        z = self.model(x)
+        z = self.encoder(x)
         return self.predict_features(z)
 
     def predict_features(self, z: Tensor) -> Tensor:

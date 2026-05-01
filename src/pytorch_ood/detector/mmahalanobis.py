@@ -164,6 +164,7 @@ class MultiMahalanobis(StructuredDetector):
 
         return torch.cat(md_k, 1)
 
+    @torch.no_grad()
     def predict_structured(self, zs: List[Tensor], device=None) -> Tensor:
         """
         Calculates mahalanobis distance directly on features.
@@ -175,8 +176,8 @@ class MultiMahalanobis(StructuredDetector):
         if not self.mu:
             raise RequiresFittingException
 
-        if not device:
-            device = zs[0].shape
+        if device is None:
+            device = self.device or zs[0].device
 
         batch_size = zs[0].shape[0]
 
@@ -203,9 +204,9 @@ class MultiMahalanobis(StructuredDetector):
         if not self.mu:
             raise RequiresFittingException
 
+        device = self.device or x.device
+        x = x.to(device)
         zs = []
-
-        device = x.device
 
         for layer_idx in range(len(self.model)):
             # NOTE: This could be done more efficiently
