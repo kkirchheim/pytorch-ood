@@ -12,7 +12,7 @@
     :show-inheritance:
 """
 import logging
-from typing import Optional, TypeVar, List, Tuple
+from typing import TypeVar, List, Tuple
 
 import torch
 from torch import Tensor
@@ -194,6 +194,8 @@ class Gram(StructuredDetector):
         if self.feature_min is None:
             raise RequiresFittingException
 
+        device = self.device or x.device
+        x = x.to(device)
         logits, feature_list = self._create_feature_list(x)
 
         return self._score(logits, feature_list)
@@ -204,6 +206,9 @@ class Gram(StructuredDetector):
         :param feature_list: list of features extracted from the model
         :return: Gram based Deviations
         """
+        device = self.device or logits.device
+        logits = logits.to(device)
+        feature_list = [f.to(device) for f in feature_list]
         return self._score(logits, feature_list)
 
     @torch.no_grad()

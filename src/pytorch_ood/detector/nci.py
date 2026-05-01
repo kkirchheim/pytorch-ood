@@ -12,6 +12,7 @@
     :exclude-members:
 """
 
+import logging
 from typing import TypeVar
 
 import torch
@@ -23,6 +24,7 @@ from ..utils import extract_features
 
 
 Self = TypeVar("Self")
+log = logging.getLogger(__name__)
 
 
 class NCI(FeaturesDetector):
@@ -70,8 +72,14 @@ class NCI(FeaturesDetector):
         """
         :param data_loader: data loader used to compute :math:`\\mu_g`
         """
-        # fit global mean of features
-        device = next(iter(self.encoder.parameters())).device
+        if self.encoder is None:
+            raise ModelNotSetException
+
+        device = self.device
+        if device is None:
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
 
         z, y = extract_features(data_loader, self.encoder, device=device)
 
@@ -81,6 +89,8 @@ class NCI(FeaturesDetector):
         """
         :param z: input features used to compute :math:`\\mu_g`
         """
+        device = self.device or z.device
+        z = z.detach().to(device).float()
         self.global_mean = z.mean(dim=0)
         return self
 
@@ -116,9 +126,10 @@ class NCI(FeaturesDetector):
         if self.global_mean is None:
             raise RequiresFittingException()
 
-        features = features.cpu().float()
-        self.head = self.head.cpu()
-        self.global_mean = self.global_mean.cpu()
+        device = self.device or features.device
+        features = features.detach().to(device).float()
+        self.head = self.head.to(device)
+        self.global_mean = self.global_mean.to(device)
 
         centered_features = features - self.global_mean
         predicted_class = self.head(features).argmax(dim=1)

@@ -102,8 +102,8 @@ class ASH(FeatureMapsDetector):
 
         model = WideResNet()
         detector = ASH(
-            backbone = model.features_before_pool,
-            head = model.forward_from_before_pool,
+            backbone = model.feature_maps,
+            head = model.forward_feature_maps,
             detector=EnergyBased.score
         )
         scores = detector(images)
@@ -145,9 +145,13 @@ class ASH(FeatureMapsDetector):
         """
         :param x: input, will be passed through network
         """
+        device = self.device
+        if device is not None:
+            x = x.to(device)
         x = self.backbone(x)
         return self.predict_feature_maps(x)
 
+    @torch.no_grad()
     def predict_feature_maps(self, x: Tensor) -> Tensor:
         x = self.ash(x, self.percentile)
         x = self.head(x)

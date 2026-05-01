@@ -152,6 +152,10 @@ class ODIN(Detector):
         :param x: input tensor
         :return: outlier scores for each sample
         """
+        device = self.device
+        if device is not None:
+            x = x.to(device)
+
         x_hat = odin_preprocessing(
             model=self.model,
             x=x,

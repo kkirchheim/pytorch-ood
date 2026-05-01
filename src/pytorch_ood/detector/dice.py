@@ -15,7 +15,6 @@
 import logging
 from typing import Callable, Optional, TypeVar
 
-import numpy as np
 import torch.nn
 from torch import Tensor
 from torch.utils.data import DataLoader
@@ -41,20 +40,20 @@ class DICE(FeaturesDetector):
 
     def __init__(
         self,
-        model: Optional[Callable[[Tensor], Tensor]],
+        encoder: Optional[Callable[[Tensor], Tensor]],
         w: torch.Tensor,
         b: torch.Tensor,
         p: float,
         detector: Callable[[Tensor], Tensor] = None,
     ):
         """
-        :param model: feature extractor. Can be ``None`` when using
+        :param encoder: feature encoder. Can be ``None`` when using
             ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param w: weights of last layer
         :param b: bias of last layer
         :param p: percentile of weights to drop
         """
-        self.model = model
+        self.encoder = encoder
         self.weight = w.detach().cpu()
         self.bias = b.detach().cpu()
         self.percentile = p
@@ -70,12 +69,13 @@ class DICE(FeaturesDetector):
         """
         :param x: input, will be passed through network
         """
-        if self.model is None:
+        if self.encoder is None:
             raise ModelNotSetException()
 
-        z = self.model(x)
+        z = self.encoder(x)
         return self.predict_features(z)
 
+    @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:
         """
         :param x: features
@@ -100,14 +100,18 @@ class DICE(FeaturesDetector):
         if not known.any():
             raise ValueError("No ID data")
 
-        z = z[known]
+        device = self.device or z.device
+        z = z[known].detach().to(device).float()
+        weight = self.weight.detach().to(device).float()
 
         self.mean_activation = z.mean(dim=0)
 
-        contrib = self.mean_activation[None, :] * self.weight
-        self.threshold = np.percentile(contrib, self.percentile)
+        contrib = self.mean_activation[None, :] * weight
+        self.threshold = torch.quantile(
+            contrib.flatten(), torch.tensor(self.percentile / 100.0, device=device)
+        ).item()
         log.info(f"Threshold is {self.threshold:.2f}")
-        self.masked_w = torch.where(contrib > self.threshold, self.weight, 0).to(z.device)
+        self.masked_w = torch.where(contrib > self.threshold, weight, 0)
         self._is_fitted = True
         return self
 
@@ -121,6 +125,6 @@ class DICE(FeaturesDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        z, y = extract_features(data_loader, self.model, device=device)
+        z, y = extract_features(data_loader, self.encoder, device=device)
         self.fit_features(z, y)
         return self

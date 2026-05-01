@@ -48,13 +48,13 @@ class KNN(FeaturesDetector):
 
     requires_fit = True
 
-    def __init__(self, model: Optional[Callable[[Tensor], Tensor]], **knn_kwargs):
+    def __init__(self, encoder: Optional[Callable[[Tensor], Tensor]], **knn_kwargs):
         """
-        :param model: neural network to use. Can be ``None`` when using
+        :param encoder: feature encoder. Can be ``None`` when using
             ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param knn_kwargs: dict with keyword arguments that will be passed to the scikit learns k-NN
         """
-        self.model = model
+        self.encoder = encoder
         self._is_fitted = False
 
         try:
@@ -68,10 +68,14 @@ class KNN(FeaturesDetector):
         """
         :param x: inputs, will be passed through model
         """
-        if not self.model:
+        if not self.encoder:
             raise ModelNotSetException()
 
-        z = self.model(x)
+        device = self.device
+        if device is not None:
+            x = x.to(device)
+
+        z = self.encoder(x)
         return self.predict_features(z)
 
     def predict_features(self, z: Tensor) -> Tensor:
@@ -87,7 +91,8 @@ class KNN(FeaturesDetector):
             z.detach().cpu().numpy(), n_neighbors=1, return_distance=True
         )
 
-        return tensor(dist).squeeze(1)
+        device = self.device or z.device
+        return tensor(dist, device=device).squeeze(1)
 
     def fit_features(self: Self, z: Tensor, labels: Tensor) -> Self:
         """
@@ -119,5 +124,5 @@ class KNN(FeaturesDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        z, y = extract_features(model=self.model, data_loader=data_loader, device=device)
+        z, y = extract_features(model=self.encoder, data_loader=data_loader, device=device)
         return self.fit_features(z, y)

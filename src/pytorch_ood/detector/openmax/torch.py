@@ -69,6 +69,10 @@ class OpenMax(LogitsDetector):
         if self.model is None:
             raise ModelNotSetException
 
+        device = self.device
+        if device is not None:
+            x = x.to(device)
+
         with torch.no_grad():
             logits = self.model(x)
 
@@ -78,5 +82,6 @@ class OpenMax(LogitsDetector):
         """
         :param logits: logits given by model
         """
-        logits = logits.cpu().numpy()
-        return torch.tensor(self._openmax.predict(logits)[:, 0])
+        device = self.device or logits.device
+        logits = logits.detach().cpu().numpy()
+        return torch.tensor(self._openmax.predict(logits)[:, 0], device=device)

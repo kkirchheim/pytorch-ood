@@ -78,18 +78,32 @@ class Benchmark(ABC):
 
     @staticmethod
     def _get_features_producer(detector: FeaturesDetector):
-        for attr in ("model", "encoder", "backbone"):
-            if hasattr(detector, attr):
-                producer = getattr(detector, attr)
-                if producer is not None:
-                    return producer
-        return None
+        return getattr(detector, "encoder", None)
 
     @staticmethod
     def _producer_token(producer) -> str:
         if producer is None:
             return "none"
-        return f"{producer.__class__.__module__}.{producer.__class__.__qualname__}"
+
+        owner = getattr(producer, "__self__", None)
+        func = getattr(producer, "__func__", None)
+        if owner is not None and func is not None:
+            owner_cls = owner.__class__
+            return (
+                f"bound_method:"
+                f"{owner_cls.__module__}.{owner_cls.__qualname__}."
+                f"{func.__qualname__}"
+            )
+
+        if isinstance(producer, torch.nn.Module):
+            return f"module:{producer.__class__.__module__}.{producer.__class__.__qualname__}"
+
+        producer_module = getattr(producer, "__module__", None)
+        producer_qualname = getattr(producer, "__qualname__", None)
+        if producer_module is not None and producer_qualname is not None:
+            return f"callable:{producer_module}.{producer_qualname}"
+
+        return f"callable_class:{producer.__class__.__module__}.{producer.__class__.__qualname__}"
 
     def _memory_cache_key(
         self,

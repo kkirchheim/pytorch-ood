@@ -10,14 +10,14 @@
     :show-inheritance:
 """
 
+import logging
 from typing import TypeVar, Callable
 
 import torch
-from pytorch_ood.api import RequiresFittingException
-from torch import nn
 from torch import Tensor
 from torch.utils.data import DataLoader
-import logging
+
+from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.utils import extract_features, is_known, TensorBuffer
 
 from ..api import FeaturesDetector, ModelNotSetException
@@ -41,13 +41,13 @@ class SHE(FeaturesDetector):
 
     requires_fit = True
 
-    def __init__(self, backbone: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor]):
+    def __init__(self, encoder: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor]):
         """
-        :param backbone: feature extractor
+        :param encoder: feature encoder
         :param head: maps feature vectors to logits
         """
         super(SHE, self).__init__()
-        self.backbone = backbone
+        self.encoder = encoder
         self.head = head
         self.patterns = None
         self.is_fitted = False
@@ -56,10 +56,10 @@ class SHE(FeaturesDetector):
         """
         :param x:  model inputs
         """
-        if self.backbone is None:
+        if self.encoder is None:
             raise ModelNotSetException()
 
-        z = self.backbone(x)
+        z = self.encoder(x)
         return self.predict_features(z)
 
     def predict_features(self, z: Tensor) -> Tensor:
@@ -90,7 +90,7 @@ class SHE(FeaturesDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        x, y = extract_features(data_loader, self.backbone, device=device)
+        x, y = extract_features(data_loader, self.encoder, device=device)
         return self.fit_features(x, y)
 
     @torch.no_grad()
@@ -132,14 +132,16 @@ class SHE(FeaturesDetector):
         if not known.any():
             raise ValueError("No ID samples")
 
-        y = y[known]
-        z = z[known]
+        y = y[known].to(device)
+        z = z[known].to(device)
         classes = y.unique()
 
         # make sure all classes are present
         assert len(classes) == classes.max().item() + 1
 
         z, y = self._filter_correct_predictions(z, y, batch_size=batch_size)
+        z = z.to(device)
+        y = y.to(device)
 
         m = []
         for clazz in classes:

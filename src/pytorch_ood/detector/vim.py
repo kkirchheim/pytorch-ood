@@ -43,20 +43,20 @@ class ViM(FeaturesDetector):
 
     def __init__(
         self,
-        model: Optional[Callable[[torch.Tensor], torch.Tensor]],
+        encoder: Optional[Callable[[torch.Tensor], torch.Tensor]],
         d: int,
         w: torch.Tensor,
         b: torch.Tensor,
     ):
         """
-        :param model: neural network to use, is assumed to output features. Can be
+        :param encoder: feature encoder. Can be
             ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param d: dimensionality of the principal subspace
         :param w: weights :math:`W` of the last layer of the network
         :param b: biases :math:`b` of the last layer of the network
         """
         super(ViM, self).__init__()
-        self.model = model
+        self.encoder = encoder
         self.n_dim = d
         w = w.detach().cpu().float()
         b = b.detach().cpu().float()
@@ -76,14 +76,14 @@ class ViM(FeaturesDetector):
         """
         :param x: model input, will be passed through neural network
         """
-        if self.model is None:
+        if self.encoder is None:
             raise ModelNotSetException
 
         if self.principal_subspace is None or self.alpha is None:
             raise RequiresFittingException()
 
         with torch.no_grad():
-            features = self.model(x)
+            features = self.encoder(x)
 
         return self.predict_features(features)
 
@@ -96,7 +96,7 @@ class ViM(FeaturesDetector):
 
         :param data_loader: dataset to fit on
         """
-        if self.model is None:
+        if self.encoder is None:
             raise ModelNotSetException
 
         device = self.device
@@ -105,9 +105,10 @@ class ViM(FeaturesDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        features, labels = extract_features(data_loader, self.model, device)
+        features, labels = extract_features(data_loader, self.encoder, device)
         return self.fit_features(features, labels)
 
+    @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:
         """
         :param x: features as given by the model
@@ -134,7 +135,8 @@ class ViM(FeaturesDetector):
         :param labels: class labels
         :return:
         """
-        features = features.cpu().float()
+        device = self.device or self.w.device
+        features = features.detach().to(device).float()
 
         if features.shape[1] < self.n_dim:
             n = features.shape[1] // 2

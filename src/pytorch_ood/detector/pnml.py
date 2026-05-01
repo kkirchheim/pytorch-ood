@@ -60,16 +60,16 @@ class PNML(FeaturesDetector):
 
     def __init__(
         self,
-        backbone: Optional[Callable[[Tensor], Tensor]],
+        encoder: Optional[Callable[[Tensor], Tensor]],
         head: Optional[Callable[[Tensor], Tensor]],
         eps: float = 1e-12,
     ):
         """
-        :param backbone: neural network mapping inputs to penultimate-layer features
+        :param encoder: feature encoder mapping inputs to penultimate-layer features
         :param head: classification head mapping normalized features to logits
         :param eps: numerical stability constant for probability clamping
         """
-        self.backbone = backbone
+        self.encoder = encoder
         self.head = head
         self.eps = eps
         self._feature_projector = None
@@ -81,7 +81,7 @@ class PNML(FeaturesDetector):
 
         :param data_loader: data loader with training data
         """
-        if self.backbone is None:
+        if self.encoder is None:
             raise ModelNotSetException()
 
         device = self.device
@@ -90,7 +90,7 @@ class PNML(FeaturesDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        z, y = extract_features(data_loader, self.backbone, device)
+        z, y = extract_features(data_loader, self.encoder, device)
         return self.fit_features(z, y)
 
     def fit_features(self: Self, z: Tensor, labels: Tensor) -> Self:
@@ -108,11 +108,11 @@ class PNML(FeaturesDetector):
 
         target_device = self.device or z.device
 
-        z = z[known].detach().cpu().float()
+        z = z[known].detach().to(target_device).float()
         z = torch.nn.functional.normalize(z, p=2, dim=1)
 
         x_pinv = torch.linalg.pinv(z)
-        self._feature_projector = (x_pinv @ x_pinv.T).to(target_device)
+        self._feature_projector = x_pinv @ x_pinv.T
         self._log_num_classes = None
         return self
 
@@ -120,12 +120,13 @@ class PNML(FeaturesDetector):
         """
         :param x: input tensor, will be passed through the backbone
         """
-        if self.backbone is None:
+        if self.encoder is None:
             raise ModelNotSetException()
 
-        z = self.backbone(x)
+        z = self.encoder(x)
         return self.predict_features(z)
 
+    @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:
         """
         Calculate outlier scores using the normalized pNML regret.

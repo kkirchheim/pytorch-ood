@@ -33,7 +33,7 @@ class PNMLTest(unittest.TestCase):
 
     def test_fit_predict_features(self):
         head = torch.nn.Linear(10, 3)
-        detector = PNML(backbone=None, head=head)
+        detector = PNML(encoder=None, head=head)
 
         z = torch.randn(size=(20, 10))
         y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
@@ -52,7 +52,7 @@ class PNMLTest(unittest.TestCase):
             detector(x)
 
     def test_no_backbone(self):
-        detector = PNML(backbone=None, head=torch.nn.Linear(10, 3))
+        detector = PNML(encoder=None, head=torch.nn.Linear(10, 3))
 
         z = torch.randn(size=(20, 10))
         y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
@@ -62,7 +62,7 @@ class PNMLTest(unittest.TestCase):
             detector(torch.randn(size=(5, 10)))
 
     def test_no_head(self):
-        detector = PNML(backbone=None, head=None)
+        detector = PNML(encoder=None, head=None)
 
         z = torch.randn(size=(20, 10))
         y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
@@ -76,7 +76,7 @@ class PNMLTest(unittest.TestCase):
         with torch.no_grad():
             head.weight.copy_(torch.tensor([[3.0, 0.0], [0.0, 3.0]]))
 
-        detector = PNML(backbone=None, head=head)
+        detector = PNML(encoder=None, head=head)
 
         z_train = torch.tensor([[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 1.0]])
         y_train = torch.tensor([0, 1, 0, 1])

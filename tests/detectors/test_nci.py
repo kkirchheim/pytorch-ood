@@ -23,8 +23,8 @@ class TestNCI(unittest.TestCase):
 
         with self.assertRaises(RequiresFittingException):
             detector = NCI(
-                encoder=model.features_before_pool,
-                head=model.forward_from_before_pool,
+                encoder=model.feature_maps,
+                head=model.forward_feature_maps,
             )
 
             x = torch.randn(size=(16, 3, 32, 32))
