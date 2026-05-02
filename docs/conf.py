@@ -110,3 +110,8 @@ autodoc_typehints_format = "short"
 
 # Graphviz configuration for inheritance diagrams
 graphviz_output_format = "svg"
+inheritance_graph_attrs = {
+    "rankdir": "LR",
+    "size": '"10.0, 12.0"',
+    "ratio": "compress",
+}
