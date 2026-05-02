@@ -104,17 +104,9 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
-# Custom CSS to fix SVG inheritance diagram clipping on ReadTheDocs
-html_css_files = ["custom.css"]
-
 # include init arguments
 autoclass_content = "both"
 autodoc_typehints_format = "short"
 
 # Graphviz configuration for inheritance diagrams
-graphviz_output_format = "svg"
-inheritance_graph_attrs = {
-    "rankdir": "LR",
-    "size": '"10.0, 12.0"',
-    "ratio": "compress",
-}
+graphviz_output_format = "png"
