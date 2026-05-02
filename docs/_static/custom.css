@@ -1,0 +1,12 @@
+/* Fix inheritance diagram SVG clipping on ReadTheDocs */
+.graphviz {
+    overflow: auto;
+    display: inline-block;
+}
+
+.graphviz object,
+.graphviz svg {
+    max-width: none !important;
+    width: auto !important;
+    height: auto !important;
+}
