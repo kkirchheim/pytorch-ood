@@ -25,7 +25,7 @@ from torch.autograd import Variable
 from torch.nn import Module
 from torch.nn import functional as F
 
-from ..api import Detector, ModelNotSetException
+from ..api import GradientDetector, ModelNotSetException
 
 log = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ def odin_preprocessing(
     return x_hat
 
 
-class ODIN(Detector):
+class ODIN(GradientDetector):
     """
     Implements ODIN from the paper *Enhancing The Reliability of Out-of-distribution Image Detection in Neural
     Networks*.

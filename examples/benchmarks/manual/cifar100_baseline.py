@@ -61,6 +61,7 @@ from pytorch_ood.detector import (
     GEN,
     KLMatching,
     Mahalanobis,
+    MahalanobisODIN,
     MaxLogit,
     MaxSoftmax,
     ViM,
@@ -118,7 +119,7 @@ print("STAGE 2: Creating OOD Detectors")
 detectors = {}
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
-detectors["Mahalanobis+ODIN"] = Mahalanobis(model.features, norm_std=norm_std, eps=0.002)
+detectors["Mahalanobis+ODIN"] = MahalanobisODIN(model.features, norm_std=norm_std, eps=0.002)
 detectors["Mahalanobis"] = Mahalanobis(model.features)
 detectors["KLMatching"] = KLMatching(model)
 detectors["SHE"] = SHE(model.features, model.fc)

@@ -21,7 +21,11 @@ from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
 
-from pytorch_ood.api import Detector, ModelNotSetException, RequiresFittingException
+from pytorch_ood.api import (
+    GradientDetector,
+    ModelNotSetException,
+    RequiresFittingException,
+)
 
 
 def _default_feature_reduce(z: Tensor) -> Tensor:
@@ -90,7 +94,7 @@ class _LayerStats:
     counts: Tensor  # (N, M) int64
 
 
-class NACUE(Detector):
+class NACUE(GradientDetector):
     """
     Neuron Activation Coverage from the paper *Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization*
 

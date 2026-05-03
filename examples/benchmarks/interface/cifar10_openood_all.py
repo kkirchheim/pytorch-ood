@@ -33,9 +33,10 @@ from pytorch_ood.detector import (
     KLMatching,
     KNN,
     Mahalanobis,
+    MahalanobisODIN,
     MaxLogit,
     MaxSoftmax,
-    MCD,
+    # MCD,
     MultiMahalanobis,
     NACUE,
     NCI,
@@ -74,7 +75,7 @@ def build_detectors(model, norm_std, react_threshold):
     detectors["GEN"] = GEN(model)
     detectors["KLMatching"] = KLMatching(model)
     detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
-    detectors["MCD"] = MCD(model, samples=30, mode="var")
+    # detectors["MCD"] = MCD(model, samples=30, mode="var")
 
     detectors["KNN"] = KNN(model.features)
     detectors["GMM"] = GMM(model.features)
@@ -82,7 +83,7 @@ def build_detectors(model, norm_std, react_threshold):
     detectors["NNGuide"] = NNGuide(model.features, model.fc)
     detectors["fDBD"] = fDBD(encoder=model.features, head=model.fc)
     detectors["Mahalanobis"] = Mahalanobis(model.features)
-    detectors["Mahalanobis+ODIN"] = Mahalanobis(model.features, norm_std=norm_std, eps=0.002)
+    detectors["Mahalanobis+ODIN"] = MahalanobisODIN(model.features, norm_std=norm_std, eps=0.002)
     detectors["RMD"] = RMD(model.features)
     detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
     detectors["NCI"] = NCI(encoder=model.features, head=model.fc, alpha=0.0)
@@ -178,7 +179,9 @@ calibration_loader = DataLoader(
 print("STAGE 2: Creating and fitting detectors")
 detectors = build_detectors(model=model, norm_std=norm_std, react_threshold=react_threshold)
 fit_detectors(
-    detectors=detectors, train_loader=train_loader, calibration_loader=calibration_loader
+    detectors=detectors,
+    train_loader=train_loader,
+    calibration_loader=calibration_loader,
 )
 
 # %%

@@ -419,3 +419,16 @@ class StructuredDetector(Detector):
         Calculates outlier scores directly from structured intermediate representations.
         """
         raise NotImplementedError
+
+
+class GradientDetector(Detector):
+    """
+    Base class for detectors that require gradient computation during prediction.
+
+    Unlike feature- or logit-based detectors that operate under ``torch.no_grad()``,
+    these detectors compute gradients (input-space, parameter-space, or
+    activation-space) as part of the scoring process. Callers must ensure that
+    the model and inputs are in a state that allows gradient computation.
+    """
+
+    pass

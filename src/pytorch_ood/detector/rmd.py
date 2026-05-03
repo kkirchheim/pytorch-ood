@@ -110,11 +110,11 @@ class RMD(Mahalanobis):
 
     def _background_score(self, z: Tensor) -> Tensor:
         centered_z = z - self.background_mu
-        return torch.mm(torch.mm(centered_z, self.background_precision), centered_z.t()).diag()
+        return ((centered_z @ self.background_precision) * centered_z).sum(dim=1)
 
     def _class_score(self, z, k):
         centered_z = z - self.mu[k]
-        return torch.mm(torch.mm(centered_z, self.precision), centered_z.t()).diag()
+        return ((centered_z @ self.precision) * centered_z).sum(dim=1)
 
     def _calc_gaussian_scores(self, z: Tensor) -> Tensor:
         """
@@ -148,15 +148,13 @@ class RMD(Mahalanobis):
         score = torch.min(md_k - md_0.view(-1, 1), dim=1).values
         return score
 
+    @torch.no_grad()
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input tensor
         """
         if self.encoder is None:
             raise ModelNotSetException
-
-        if self.eps > 0:
-            x = self._odin_preprocess(x, x.device)
 
         features = self.encoder(x)
         return self.predict_features(features)

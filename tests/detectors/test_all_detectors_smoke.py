@@ -100,7 +100,10 @@ class TestAllDetectorsSmoke(unittest.TestCase):
 
     @staticmethod
     def _classification_loader_matching_model(
-        model: torch.nn.Module, n_samples: int = 24, batch_size: int = 6, in_dim: int = 10
+        model: torch.nn.Module,
+        n_samples: int = 24,
+        batch_size: int = 6,
+        in_dim: int = 10,
     ) -> DataLoader:
         x = torch.randn(n_samples, in_dim)
         with torch.no_grad():
@@ -185,7 +188,7 @@ class TestAllDetectorsSmoke(unittest.TestCase):
             ),
             (
                 "Mahalanobis",
-                lambda: (lambda model: Mahalanobis(model.features, eps=0.0))(eval_model()),
+                lambda: (lambda model: Mahalanobis(model.features))(eval_model()),
             ),
             (
                 "RMD",

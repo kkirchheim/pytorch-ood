@@ -7,8 +7,7 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union, overload
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from pytorch_ood.api import Detector, FeaturesDetector, LogitsDetector
-from pytorch_ood.detector.mahalanobis import Mahalanobis
+from pytorch_ood.api import Detector, FeaturesDetector, GradientDetector, LogitsDetector
 from pytorch_ood.utils import OODMetrics, TensorBuffer
 
 _CACHE_VERSION = 1
@@ -305,7 +304,7 @@ class Benchmark(ABC):
         if not isinstance(detector, FeaturesDetector):
             return False
 
-        if isinstance(detector, Mahalanobis) and detector.eps > 0:
+        if isinstance(detector, GradientDetector):
             return False
 
         return True

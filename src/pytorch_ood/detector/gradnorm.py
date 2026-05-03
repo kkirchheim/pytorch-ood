@@ -11,16 +11,21 @@
     :show-inheritance:
     :exclude-members: fit
 """
+
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
 from typing import TypeVar, Callable
 
-from ..api import Detector, ModelNotSetException
+from ..api import GradientDetector, ModelNotSetException
 
 try:
-    from torch.func import grad as _func_grad, vmap as _vmap, functional_call as _functional_call
+    from torch.func import (
+        grad as _func_grad,
+        vmap as _vmap,
+        functional_call as _functional_call,
+    )
 
     _TORCH_FUNC_AVAILABLE = True
 except ImportError:
@@ -29,7 +34,7 @@ except ImportError:
 Self = TypeVar("Self")
 
 
-class GradNorm(Detector):
+class GradNorm(GradientDetector):
     """
     Detector from the paper *Gradients as a Measure of Uncertainty in Neural Networks*.
 
