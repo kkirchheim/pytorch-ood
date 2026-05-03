@@ -20,7 +20,12 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    FeaturesDetector,
+    GradientDetector,
+    ModelNotSetException,
+    RequiresFittingException,
+)
 from ..utils import (
     contains_unknown,
     extract_features,
@@ -42,8 +47,6 @@ class Mahalanobis(FeaturesDetector):
 
     .. math :: - \\max_k \\lbrace (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k) \\rbrace
 
-    Also uses ODIN preprocessing if the given :math:`\\epsilon > 0`
-
     :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
     :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
     """
@@ -53,22 +56,16 @@ class Mahalanobis(FeaturesDetector):
     def __init__(
         self,
         encoder: Optional[Callable[[Tensor], Tensor]],
-        eps: float = 0.002,
-        norm_std: Optional[List] = None,
     ):
         """
         :param encoder: feature encoder. Can be ``None`` when
             using ``fit_features(...)`` and ``predict_features(...)`` directly.
-        :param eps: magnitude for gradient based input preprocessing
-        :param norm_std: Standard deviations for input normalization
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder
         self.mu: Tensor = None  #: Centers
         self.cov: Tensor = None  #: Covariance Matrix
         self.precision: Tensor = None  #: Precision Matrix
-        self.eps: float = eps  #: epsilon
-        self.norm_std = norm_std
 
     def fit(self: Self, data_loader: DataLoader) -> Self:
         """
@@ -93,7 +90,7 @@ class Mahalanobis(FeaturesDetector):
         :param y: class labels
         """
         device = self.device or z.device
-        z = z.detach().to(device).float()
+        z = z.detach().to(device)
         y = y.to(device)
 
         log.debug("Calculating mahalanobis parameters.")
@@ -127,7 +124,7 @@ class Mahalanobis(FeaturesDetector):
         # calculate per class scores
         for clazz in range(self.n_classes):
             centered_z = features.data - self.mu[clazz]
-            term_gau = -0.5 * torch.mm(torch.mm(centered_z, self.precision), centered_z.t()).diag()
+            term_gau = -0.5 * ((centered_z @ self.precision) * centered_z).sum(dim=1)
             md_k.append(term_gau.view(-1, 1))
 
         return torch.cat(md_k, 1)
@@ -147,6 +144,7 @@ class Mahalanobis(FeaturesDetector):
         score = -torch.max(md_k, dim=1).values
         return score
 
+    @torch.no_grad()
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input tensor
@@ -154,17 +152,86 @@ class Mahalanobis(FeaturesDetector):
         if self.encoder is None:
             raise ModelNotSetException
 
-        if self.eps > 0:
-            x = self._odin_preprocess(x, x.device)
-
         features = self.encoder(x)
         return self.predict_features(features)
 
+    @property
+    def n_classes(self):
+        """
+        Number of classes the model is fitted for
+        """
+        if self.mu is None:
+            raise RequiresFittingException
+
+        return self.mu.shape[0]
+
+
+class MahalanobisODIN(GradientDetector):
+    """
+    Mahalanobis distance detector with ODIN input preprocessing.
+
+    Combines the Mahalanobis distance from *A Simple Unified Framework for Detecting
+    Out-of-Distribution Samples and Adversarial Attacks* with ODIN input perturbation
+    from *Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks*.
+
+    Adds gradient-guided input perturbation (FGSM-style) before computing the
+    Mahalanobis distance. Requires gradient computation during prediction.
+
+    :see Paper (Mahalanobis): `ArXiv <https://arxiv.org/abs/1807.03888>`__
+    :see Paper (ODIN): `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    """
+
+    requires_fit = True
+
+    def __init__(
+        self,
+        encoder: Optional[Callable[[Tensor], Tensor]],
+        eps: float = 0.002,
+        norm_std: Optional[List] = None,
+    ):
+        """
+        :param encoder: feature encoder. Can be ``None`` when
+            using ``fit_features(...)`` and ``predict_features(...)`` directly.
+        :param eps: magnitude for gradient based input preprocessing
+        :param norm_std: Standard deviations for input normalization
+        """
+        super(MahalanobisODIN, self).__init__()
+        self._base = Mahalanobis(encoder)
+        self.eps = eps
+        self.norm_std = norm_std
+
+    def fit(self: Self, data_loader: DataLoader) -> Self:
+        """
+        Fit the underlying Mahalanobis detector.
+
+        :param data_loader: dataset to fit on.
+        """
+        self._base.fit(data_loader)
+        return self
+
+    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+        """
+        Fit the underlying Mahalanobis detector on features.
+
+        :param z: features
+        :param y: class labels
+        """
+        self._base.fit_features(z, y)
+        return self
+
+    def predict(self, x: Tensor) -> Tensor:
+        """
+        Apply ODIN input perturbation and compute Mahalanobis distance.
+
+        :param x: input tensor
+        """
+        x = self._odin_preprocess(x, x.device)
+        return self._base.predict(x)
+
     def _odin_preprocess(self, x: Tensor, dev: str):
         """
-        NOTE: the original implementation uses mean over feature maps. here, we just flatten
+        ODIN input preprocessing guided by Mahalanobis distance.
         """
-        # does not work in inference mode, this sometimes collides with pytorch-lightning
         if torch.is_inference_mode_enabled():
             warnings.warn("ODIN not compatible with inference mode. Will be deactivated.")
 
@@ -174,16 +241,16 @@ class Mahalanobis(FeaturesDetector):
 
             with torch.enable_grad():
                 x = Variable(x, requires_grad=True)
-                features = self.encoder(x)
-                features = features.view(features.shape[0], -1)  # flatten
+                features = self._base.encoder(x)
+                features = features.view(features.shape[0], -1)
                 score = None
 
-                for clazz in range(self.n_classes):
-                    centered_features = features.data - self.mu[clazz]
+                for clazz in range(self._base.n_classes):
+                    centered_features = features.data - self._base.mu[clazz]
                     term_gau = (
                         -0.5
                         * torch.mm(
-                            torch.mm(centered_features, self.precision),
+                            torch.mm(centered_features, self._base.precision),
                             centered_features.t(),
                         ).diag()
                     )
@@ -193,15 +260,13 @@ class Mahalanobis(FeaturesDetector):
                     else:
                         score = torch.cat((score, term_gau.view(-1, 1)), dim=1)
 
-                # calculate gradient of inputs with respect to score of predicted class,
-                # according to mahalanobis distance
                 sample_pred = score.max(dim=1).indices
-                batch_sample_mean = self.mu.index_select(0, sample_pred)
+                batch_sample_mean = self._base.mu.index_select(0, sample_pred)
                 centered_features = features - Variable(batch_sample_mean)
                 pure_gau = (
                     -0.5
                     * torch.mm(
-                        torch.mm(centered_features, Variable(self.precision)),
+                        torch.mm(centered_features, Variable(self._base.precision)),
                         centered_features.t(),
                     ).diag()
                 )
@@ -220,13 +285,3 @@ class Mahalanobis(FeaturesDetector):
         perturbed_x = x.data - self.eps * gradient
 
         return perturbed_x
-
-    @property
-    def n_classes(self):
-        """
-        Number of classes the model is fitted for
-        """
-        if self.mu is None:
-            raise RequiresFittingException
-
-        return self.mu.shape[0]

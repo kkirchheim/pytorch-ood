@@ -132,9 +132,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
             ),
             (
                 "Mahalanobis",
-                lambda: (lambda model: Mahalanobis(model.features, eps=0.0))(
-                    ClassificationModel()
-                ),
+                lambda: (lambda model: Mahalanobis(model.features))(ClassificationModel()),
             ),
             (
                 "RMD",
@@ -329,7 +327,10 @@ class TestDetectorDeviceHandling(unittest.TestCase):
     def test_logits_fit_and_predict_logits_accept_cpu_tensors_for_cuda_detector(self):
         cached_logits = torch.randn(8, 3)
 
-        for detector_name, builder in self._classification_fit_and_predict_logits_registry():
+        for (
+            detector_name,
+            builder,
+        ) in self._classification_fit_and_predict_logits_registry():
             with self.subTest(detector=detector_name):
                 detector = builder().to(self.device)
 
@@ -339,10 +340,15 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                 scores = detector.predict_logits(cached_logits)
                 self._assert_scores(scores, self.device, batch_size=8)
 
-    def test_feature_fit_and_predict_features_accept_cpu_tensors_for_cuda_detector(self):
+    def test_feature_fit_and_predict_features_accept_cpu_tensors_for_cuda_detector(
+        self,
+    ):
         cached_features = torch.randn(8, 10)
 
-        for detector_name, builder in self._classification_fit_and_predict_features_registry():
+        for (
+            detector_name,
+            builder,
+        ) in self._classification_fit_and_predict_features_registry():
             with self.subTest(detector=detector_name):
                 detector = builder().to(self.device)
                 detector.fit(self.classification_loader)
@@ -354,7 +360,12 @@ class TestDetectorDeviceHandling(unittest.TestCase):
         cached_feature_maps = torch.randn(8, 8, 8, 8)
         cached_features = torch.randn(8, 10)
 
-        for detector_name, builder, requires_fit, input_kind in self._feature_map_registry():
+        for (
+            detector_name,
+            builder,
+            requires_fit,
+            input_kind,
+        ) in self._feature_map_registry():
             with self.subTest(detector=detector_name):
                 detector = builder().to(self.device)
 

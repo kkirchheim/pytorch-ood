@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.api import FeaturesDetector
 from pytorch_ood.benchmark import Benchmark
-from pytorch_ood.detector import EnergyBased, Mahalanobis, MaxSoftmax
+from pytorch_ood.detector import EnergyBased, MahalanobisODIN, MaxSoftmax
 
 
 class ToyBenchmark(Benchmark):
@@ -233,7 +233,7 @@ class BenchmarkCachingTest(unittest.TestCase):
     def test_benchmark_falls_back_for_mahalanobis_with_input_preprocessing(self):
         benchmark = ToyBenchmark()
         model = CountingFeatures()
-        detector = Mahalanobis(encoder=model, eps=0.1)
+        detector = MahalanobisODIN(encoder=model, eps=0.1)
         detector.fit(DataLoader(benchmark.train_set(), batch_size=2))
 
         calls_after_fit = model.calls
