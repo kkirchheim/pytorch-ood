@@ -16,7 +16,7 @@ from torchmetrics.functional.classification import (
 )
 from torchmetrics.utilities.compute import auc
 
-from .utils import TensorBuffer, is_unknown, contains_known_and_unknown
+from .utils import TensorBuffer, is_unknown
 
 Self = TypeVar("Self")
 

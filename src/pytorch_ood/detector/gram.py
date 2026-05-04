@@ -11,18 +11,18 @@
     :inherited-members:
     :show-inheritance:
 """
-import logging
-from typing import TypeVar, List, Tuple
 
+import logging
+from typing import List, Tuple, TypeVar
+
+import numpy as np
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
 
-import numpy as np
-from ..api import StructuredDetector, ModelNotSetException, RequiresFittingException
-
-import torch.nn.functional as F
+from ..api import ModelNotSetException, RequiresFittingException, StructuredDetector
 
 log = logging.getLogger(__name__)
 
@@ -94,9 +94,9 @@ class Gram(StructuredDetector):
 
         logits = self.head(data)
 
-        assert (
-            logits.shape[1] == self.num_classes
-        ), f"You set num_classes={self.num_classes} but got {logits.shape[1]}"
+        assert logits.shape[1] == self.num_classes, (
+            f"You set num_classes={self.num_classes} but got {logits.shape[1]}"
+        )
 
         return logits, feature_list
 
@@ -136,13 +136,12 @@ class Gram(StructuredDetector):
                 _, feature_list = self._create_feature_list(data)
                 label_list = label.tolist()
                 for layer_idx in range(self.num_layer):
-
                     for pole_idx, p in enumerate(self.num_poles_list):
                         temp = feature_list[layer_idx].detach()
 
                         temp = temp**p
                         temp = temp.reshape(temp.shape[0], temp.shape[1], -1)
-                        temp = ((torch.matmul(temp, temp.transpose(dim0=2, dim1=1)))).sum(dim=2)
+                        temp = (torch.matmul(temp, temp.transpose(dim0=2, dim1=1))).sum(dim=2)
                         temp = (temp.sign() * torch.abs(temp) ** (1 / p)).reshape(
                             temp.shape[0], -1
                         )

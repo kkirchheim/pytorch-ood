@@ -220,14 +220,14 @@ from .center import CenterLoss
 from .conf import ConfidenceLoss
 from .crossentropy import CrossEntropyLoss
 from .energy import EnergyRegularizedLoss
-from .scone import EnergyMarginLoss
 from .entropy import EntropicOpenSetLoss
 from .ii import IILoss
+from .logitnorm import LogitNorm, logit_norm_loss
 from .mchad import MCHADLoss
 from .objectosphere import ObjectosphereLoss
 from .oe import OutlierExposureLoss
+from .scone import EnergyMarginLoss
 
 # from .triplet import TripletLoss
 from .svdd import DeepSVDDLoss, SSDeepSVDDLoss
 from .vos import VirtualOutlierSynthesizingRegLoss, VOSRegLoss
-from .logitnorm import LogitNorm, logit_norm_loss

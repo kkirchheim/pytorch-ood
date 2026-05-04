@@ -17,11 +17,10 @@ from typing import TypeVar
 
 import torch
 from torch import Tensor
-from torch.nn import Module, Linear
+from torch.nn import Linear, Module
 
 from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import extract_features
-
 
 Self = TypeVar("Self")
 log = logging.getLogger(__name__)

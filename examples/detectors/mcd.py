@@ -4,6 +4,7 @@ Monte Carlo Dropout
 
 Uses MCD based on a pre-trained model from the Hendrycks baseline paper.
 """
+
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 

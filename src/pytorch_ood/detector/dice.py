@@ -21,7 +21,7 @@ from torch.utils.data import DataLoader
 
 from pytorch_ood.utils import extract_features, is_known
 
-from ..api import FeaturesDetector, RequiresFittingException, ModelNotSetException
+from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)

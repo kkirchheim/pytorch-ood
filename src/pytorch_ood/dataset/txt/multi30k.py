@@ -7,7 +7,6 @@ import logging
 import os
 from typing import Tuple
 
-import numpy as np
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 

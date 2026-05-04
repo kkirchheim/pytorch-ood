@@ -12,19 +12,18 @@ TinyImages database, which contains random images scraped from the internet.
 
 """
 
+from typing import Callable
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as tvt
+from numpy import floating
 from torch import Tensor
 from torch.optim import SGD
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
-
-from typing import Callable
-
-import numpy as np
-from numpy import floating
 
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.detector import EnergyBased

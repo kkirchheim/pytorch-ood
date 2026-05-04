@@ -89,9 +89,7 @@ class Benchmark(ABC):
         if owner is not None and func is not None:
             owner_cls = owner.__class__
             return (
-                f"bound_method:"
-                f"{owner_cls.__module__}.{owner_cls.__qualname__}."
-                f"{func.__qualname__}"
+                f"bound_method:{owner_cls.__module__}.{owner_cls.__qualname__}.{func.__qualname__}"
             )
 
         if isinstance(producer, torch.nn.Module):
@@ -395,8 +393,7 @@ class Benchmark(ABC):
         cache: bool = False,
         cache_dir: Optional[str] = None,
         cache_key: Optional[str] = None,
-    ) -> List[Dict]:
-        ...
+    ) -> List[Dict]: ...
 
     @overload
     def evaluate(
@@ -407,8 +404,7 @@ class Benchmark(ABC):
         cache: bool = False,
         cache_dir: Optional[str] = None,
         cache_key: Optional[str] = None,
-    ) -> List[Dict]:
-        ...
+    ) -> List[Dict]: ...
 
     def evaluate(
         self,

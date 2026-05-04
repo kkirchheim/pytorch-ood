@@ -7,16 +7,16 @@ Open Set Simulation on CIFAR 10
 """
 
 import torch.nn
-from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10
 from torch.nn import CrossEntropyLoss
-from tqdm import tqdm
+from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
+from torchvision.datasets import CIFAR10
+from tqdm import tqdm
 
 from pytorch_ood.dataset.ossim import DynamicOSS
-from pytorch_ood.model import WideResNet
 from pytorch_ood.detector import MaxSoftmax
-from pytorch_ood.utils import fix_random_seed, TargetMapping, OODMetrics, is_known
+from pytorch_ood.model import WideResNet
+from pytorch_ood.utils import OODMetrics, TargetMapping, fix_random_seed, is_known
 
 device = "cuda:0"
 num_epochs = 10

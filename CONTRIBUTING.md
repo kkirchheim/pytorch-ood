@@ -2,7 +2,7 @@
 
 All kinds of contributions are welcome, including but not limited to the following.
 
-- Adding additional detectors 
+- Adding additional detectors
 - Fixing typos or bugs
 - Improving documentation
 
@@ -19,8 +19,8 @@ If you plan to add some new features that involve large changes, it is encourage
 
 ### Code style
 
-We use [pre-commit hook](https://pre-commit.com/) that checks and formats the code for automatically on every commit.
-The config for a pre-commit hook is stored in [.pre-commit-config](./.pre-commit-config.yaml).
+We use [pre-commit](https://pre-commit.com/) hooks that automatically check and format code on every commit via [ruff](https://docs.astral.sh/ruff/).
+The ruff configuration is defined in [pyproject.toml](./pyproject.toml) and the pre-commit hooks are configured in [.pre-commit-config](./.pre-commit-config.yaml).
 
 After you clone the repository, you will need to install pre-commit and initialize the pre-commit hook.
 

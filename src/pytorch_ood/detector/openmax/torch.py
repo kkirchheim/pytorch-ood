@@ -1,15 +1,16 @@
 """
 Torch wrapper for a numpy implementation of openmax.
 """
+
 import logging
 from typing import Optional, TypeVar
-from .numpy import OpenMax as NumpyOpenMax
 
 import torch
 from torch import Tensor
 from torch.nn import Module
 
 from ...api import LogitsDetector, ModelNotSetException
+from .numpy import OpenMax as NumpyOpenMax
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")
