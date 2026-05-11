@@ -139,6 +139,13 @@ and pooled features can be reused across calls:
    print(pd.DataFrame(results))
 
 
+For medical imaging, the library also includes the three benchmarks from
+*OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection* [#OpenMIBOOD]_:
+``MIDOG_OpenMIBOOD`` (microscopy / mitosis), ``PhaKIR_OpenMIBOOD`` (surgical video),
+and ``OASIS3_OpenMIBOOD`` (brain MRI). Each uses a 4-way split (ID, covariate-shifted ID,
+near-OOD, far-OOD); data must be prepared first following the
+`OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`_.
+
 
 
 🛠 ️️Installation
@@ -514,3 +521,5 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#VRA] Xu, M., et al. (2023) VRA: Variational Rectified Activation for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2302.11716>`__.
 
 .. [#NACUE] Liu, Y., et al. (2023) Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization. ICLR.
+
+.. [#OpenMIBOOD] Gutbrod, M., Rauber, D., Nunes, D. W., & Palm, C. (2025) OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection. CVPR. `ArXiv <https://arxiv.org/abs/2503.16247>`__.
