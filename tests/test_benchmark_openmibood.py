@@ -19,7 +19,6 @@ from pytorch_ood.benchmark import (
     OASIS3_OpenMIBOOD,
     PhaKIR_OpenMIBOOD,
 )
-from pytorch_ood.benchmark.img import openmibood as openmibood_module
 from pytorch_ood.dataset.img import ImageListDataset
 
 
@@ -54,25 +53,19 @@ class _FixtureBase:
         cls._tmp = tempfile.TemporaryDirectory()
         cls.tmp_root = cls._tmp.name
         cls.data_root = join(cls.tmp_root, "data")
-        cls.resources_root = join(cls.tmp_root, "resources")
         os.makedirs(cls.data_root, exist_ok=True)
-
-        # Patch the module-level _RESOURCES so the benchmark looks at our temp dir
-        cls._orig_resources = openmibood_module._RESOURCES
-        openmibood_module._RESOURCES = cls.resources_root
 
         # Build train + test ID + every OOD split
         cls._build_fixtures()
 
     @classmethod
     def tearDownClass(cls):
-        openmibood_module._RESOURCES = cls._orig_resources
         cls._tmp.cleanup()
 
     @classmethod
     def _build_fixtures(cls):
         bench = cls.benchmark_cls
-        bench_resource_dir = join(cls.resources_root, cls.subdir)
+        bench_resource_dir = join(cls.data_root, "imglists", cls.subdir)
 
         # Train set: enough samples to cover all classes
         train_entries = [
