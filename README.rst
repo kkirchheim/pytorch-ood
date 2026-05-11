@@ -384,25 +384,18 @@ If you use this project, please cite:
 
 **Benchmarks**:
 
-+------------------------+--------------------------------------------------------------------------------------------+------+---------------------+
-| Benchmark              | Description                                                                                | Year | Ref                 |
-+========================+============================================================================================+======+=====================+
-| CIFAR-10 ODIN          | ODIN benchmark for CIFAR-10 OOD detection evaluation.                                     | 2018 | [#ODIN]_            |
-+------------------------+--------------------------------------------------------------------------------------------+------+---------------------+
-| CIFAR-10 OpenOOD       | CIFAR-10 benchmark with OpenOOD protocol for standardized OOD evaluation.                  | 2023 | [#OpenOOD]_         |
-+------------------------+--------------------------------------------------------------------------------------------+------+---------------------+
-| CIFAR-100 ODIN         | ODIN benchmark for CIFAR-100 OOD detection evaluation.                                    | 2018 | [#ODIN]_            |
-+------------------------+--------------------------------------------------------------------------------------------+------+---------------------+
-| CIFAR-100 OpenOOD      | CIFAR-100 benchmark with OpenOOD protocol for standardized OOD evaluation.                 | 2023 | [#OpenOOD]_         |
-+------------------------+--------------------------------------------------------------------------------------------+------+---------------------+
-| ImageNet OpenOOD       | ImageNet-1K OOD detection benchmark with OpenOOD protocol and evaluation suite.            | 2023 | [#OpenOOD]_         |
-+------------------------+--------------------------------------------------------------------------------------------+------+---------------------+
-| MIDOG OpenMIBOOD       | Microscopy / mitosis detection with 4-way split (ID, covariate-shifted ID, near/far OOD). | 2025 | [#OpenMIBOOD]_      |
-+------------------------+--------------------------------------------------------------------------------------------+------+---------------------+
-| PhaKIR OpenMIBOOD      | Surgical video frames with 4-way split (ID, covariate-shifted ID, near/far OOD).          | 2025 | [#OpenMIBOOD]_      |
-+------------------------+--------------------------------------------------------------------------------------------+------+---------------------+
-| OASIS-3 OpenMIBOOD     | Brain MRI volumes with 4-way split (ID, covariate-shifted ID, near/far OOD).              | 2025 | [#OpenMIBOOD]_      |
-+------------------------+--------------------------------------------------------------------------------------------+------+---------------------+
+======================  ============================================================================================  ====  ====================
+Benchmark               Description                                                                                 Year  Ref
+======================  ============================================================================================  ====  ====================
+CIFAR-10 ODIN           ODIN benchmark for CIFAR-10 OOD detection evaluation.                                      2018  [#ODIN]_
+CIFAR-10 OpenOOD        CIFAR-10 benchmark with OpenOOD protocol for standardized OOD evaluation.                  2023  [#OpenOOD]_
+CIFAR-100 ODIN          ODIN benchmark for CIFAR-100 OOD detection evaluation.                                     2018  [#ODIN]_
+CIFAR-100 OpenOOD       CIFAR-100 benchmark with OpenOOD protocol for standardized OOD evaluation.                 2023  [#OpenOOD]_
+ImageNet OpenOOD        ImageNet-1K OOD detection benchmark with OpenOOD protocol and evaluation suite.             2023  [#OpenOOD]_
+MIDOG OpenMIBOOD        Microscopy / mitosis detection with 4-way split (ID, covariate-shifted ID, near/far OOD). 2025  [#OpenMIBOOD]_
+PhaKIR OpenMIBOOD       Surgical video frames with 4-way split (ID, covariate-shifted ID, near/far OOD).           2025  [#OpenMIBOOD]_
+OASIS-3 OpenMIBOOD      Brain MRI volumes with 4-way split (ID, covariate-shifted ID, near/far OOD).               2025  [#OpenMIBOOD]_
+======================  ============================================================================================  ====  ====================
 
 
 🤝  Contributing
