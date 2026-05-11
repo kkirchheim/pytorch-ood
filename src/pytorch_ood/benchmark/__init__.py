@@ -23,7 +23,8 @@ Each benchmark implements a common interface.
     results1 = benchmark.evaluate(detector1)
     results2 = benchmark.evaluate(detector2)
 
-Several detectors can also be evaluated together:
+Several detectors can also be evaluated together. Benchmark caching can reuse
+intermediate logits or pooled features when evaluating multiple compatible detectors:
 
 .. code:: python
 
@@ -100,6 +101,50 @@ OpenOOD Benchmark
     :members:
 
 
+Medical Imaging
+==================
+
+OpenMIBOOD Benchmarks
+^^^^^^^^^^^^^^^^^^^^^^
+
+The benchmarks proposed in
+*OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection*
+(`arXiv:2503.16247 <https://arxiv.org/abs/2503.16247>`_, CVPR 2025).
+Each benchmark uses a 4-way split (ID, covariate-shifted ID, near-OOD, far-OOD).
+Data must be prepared first following the
+`OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`_.
+
+.. image:: https://raw.githubusercontent.com/remic-othr/OpenMIBOOD/main/Datasets_Summary.jpg
+   :alt: OpenMIBOOD datasets overview
+
+MIDOG (microscopy / mitosis)
+-----------------------------
+
+.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
+   :alt: slop-badge
+
+.. autoclass:: pytorch_ood.benchmark.MIDOG_OpenMIBOOD
+    :members:
+
+PhaKIR (surgical video)
+-----------------------------
+
+.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
+   :alt: slop-badge
+
+.. autoclass:: pytorch_ood.benchmark.PhaKIR_OpenMIBOOD
+    :members:
+
+OASIS-3 (brain MRI)
+-----------------------------
+
+.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
+   :alt: slop-badge
+
+.. autoclass:: pytorch_ood.benchmark.OASIS3_OpenMIBOOD
+    :members:
+
+
 """
 
 from .base import Benchmark
@@ -109,6 +154,9 @@ from .img import (
     CIFAR10_OpenOOD,
     CIFAR100_OpenOOD,
     ImageNet_OpenOOD,
+    MIDOG_OpenMIBOOD,
+    OASIS3_OpenMIBOOD,
+    PhaKIR_OpenMIBOOD,
 )
 
 __all__ = [
@@ -118,4 +166,7 @@ __all__ = [
     "CIFAR10_OpenOOD",
     "CIFAR100_OpenOOD",
     "ImageNet_OpenOOD",
+    "MIDOG_OpenMIBOOD",
+    "PhaKIR_OpenMIBOOD",
+    "OASIS3_OpenMIBOOD",
 ]
