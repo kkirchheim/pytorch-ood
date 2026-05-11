@@ -397,7 +397,7 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ImageNet OpenOOD            | ImageNet-1K OOD detection benchmark with OpenOOD protocol and evaluation suite.                | 2023 | [#OpenOOD]_        |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| MIDOG OpenMIBOOD            | Microscopy / mitosis detection with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).  | 2025 | [#OpenMIBOOD]_     |
+| MIDOG OpenMIBOOD            | Microscopy / mitosis detection with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).    | 2025 | [#OpenMIBOOD]_     |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | PhaKIR OpenMIBOOD           | Surgical video frames with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).             | 2025 | [#OpenMIBOOD]_     |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
