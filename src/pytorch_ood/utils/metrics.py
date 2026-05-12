@@ -9,6 +9,14 @@ from typing import Dict, TypeVar
 import numpy as np
 import torch
 from torch import Tensor
+
+__all__ = [
+    "OODMetrics",
+    "calibration_error",
+    "aurra",
+    "fpr_at_tpr",
+    "oscr_score",
+]
 from torchmetrics.functional.classification import (
     binary_auroc,
     binary_precision_recall_curve,
@@ -16,7 +24,7 @@ from torchmetrics.functional.classification import (
 )
 from torchmetrics.utilities.compute import auc
 
-from .utils import TensorBuffer, is_unknown, contains_known_and_unknown
+from .utils import TensorBuffer, is_unknown
 
 Self = TypeVar("Self")
 
@@ -284,3 +292,61 @@ class OODMetrics(object):
         """
         self.buffer.clear()
         return self
+
+
+@torch.no_grad()
+def oscr_score(outlier_scores: Tensor, predictions: Tensor, labels: Tensor) -> float:
+    """
+    Open-Set Classification Rate (OSCR).
+
+    Measures joint closed-set classification accuracy and open-set detection by
+    plotting the Correct Classification Rate (CCR) against the False Positive Rate
+    (FPR) of accepting unknown samples as in-distribution, then returning the AUC.
+
+    A perfect detector that also classifies all known samples correctly returns 1.0.
+    A random detector returns roughly equal to the closed-set accuracy.
+
+    .. code :: python
+
+        scores = detector(x)                    # higher = more OOD
+        preds  = model(x).argmax(dim=1)
+        result = oscr_score(scores, preds, labels)
+
+    :param outlier_scores: 1-D tensor of outlier scores (higher = more likely OOD)
+    :param predictions: 1-D tensor of predicted class indices
+    :param labels: 1-D tensor of true labels; ``>= 0`` for known, ``< 0`` for unknown
+    :returns: OSCR score in ``[0, 1]``
+
+    :see Paper: `Dissect-OOD-OSR <https://arxiv.org/abs/2408.16757>`__
+    """
+    known_mask = labels >= 0
+
+    s_id = outlier_scores[known_mask].cpu()
+    s_ood = outlier_scores[~known_mask].cpu()
+    correct = (predictions[known_mask] == labels[known_mask]).cpu()
+
+    n_id = s_id.shape[0]
+    n_ood = s_ood.shape[0]
+
+    if n_id == 0 or n_ood == 0:
+        raise ValueError("oscr_score requires both known and unknown samples.")
+
+    # Sort ID samples by ascending score; use their score values as thresholds.
+    # At threshold τ = s_id_sorted[i]:
+    #   CCR(τ) = fraction of ID samples with score ≤ τ that are also correct
+    #   FPR(τ) = fraction of OOD samples with score ≤ τ
+    sort_idx = torch.argsort(s_id)
+    s_id_sorted = s_id[sort_idx]
+    correct_sorted = correct[sort_idx]
+
+    ccr = torch.cumsum(correct_sorted.float(), dim=0) / n_id
+
+    s_ood_sorted, _ = torch.sort(s_ood)
+    fpr_counts = torch.searchsorted(s_ood_sorted, s_id_sorted, right=True)
+    fpr = fpr_counts.float() / n_ood
+
+    # Full curve: (0, 0) → evaluated points → (1, ccr_max)
+    fpr = torch.cat([torch.zeros(1), fpr, torch.ones(1)])
+    ccr = torch.cat([torch.zeros(1), ccr, ccr[-1:]])
+
+    return float(torch.trapezoid(ccr, fpr).item())

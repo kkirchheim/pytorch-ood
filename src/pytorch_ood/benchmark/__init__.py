@@ -157,6 +157,9 @@ from .img import (
     MIDOG_OpenMIBOOD,
     OASIS3_OpenMIBOOD,
     PhaKIR_OpenMIBOOD,
+    CUB_SSB,
+    StanfordCars_SSB,
+    Aircraft_SSB,
 )
 
 __all__ = [
@@ -169,4 +172,7 @@ __all__ = [
     "MIDOG_OpenMIBOOD",
     "PhaKIR_OpenMIBOOD",
     "OASIS3_OpenMIBOOD",
+    "CUB_SSB",
+    "StanfordCars_SSB",
+    "Aircraft_SSB",
 ]
