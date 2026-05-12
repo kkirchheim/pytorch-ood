@@ -2,7 +2,12 @@
 Semantic Split Benchmark (SSB) from *Dissecting Out-of-Distribution Detection and Open-Set
 Recognition: A Critical Analysis of Methods and Benchmarks* (IJCV 2024).
 
-:see Paper: `Dissect-OOD-OSR <https://arxiv.org/abs/2408.16757>`__
+SSB provides fine-grained evaluation of OOD detection on fine-grained visual datasets.
+Each dataset is partitioned into ID and OOD classes, with OOD classes further split by semantic
+similarity: far-OOD (Easy, maximally dissimilar) and near-OOD (Hard/Medium, visually similar to ID).
+This enables nuanced evaluation of OOD detection methods under varying difficulty levels.
+
+:see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
 :see Repository: `Visual-AI/Dissect-OOD-OSR <https://github.com/Visual-AI/Dissect-OOD-OSR>`__
 """
 
@@ -345,11 +350,6 @@ class _SSBBase(Benchmark):
 
 class CUB_SSB(_SSBBase):
     """
-    SSB benchmark on CUB-200-2011.
-
-    .. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-       :alt: slop-badge
-
     The benchmark partitions CUB-200-2011 into 100 ID classes and 100 OOD classes.
     OOD classes are split by semantic similarity to the ID classes:
 
@@ -359,7 +359,8 @@ class CUB_SSB(_SSBBase):
     ``test_sets()`` returns two combined datasets:
     ``[ID_test + Easy_OOD, ID_test + Hard_OOD]`` with ``ood_names = ["Easy", "Hard"]``.
 
-    :see Paper: `Dissect-OOD-OSR <https://arxiv.org/abs/2408.16757>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
+    :see Repository: `Visual-AI/Dissect-OOD-OSR <https://github.com/Visual-AI/Dissect-OOD-OSR>`__
     """
 
     def __init__(self, root: str, transform: Callable, download: bool = False) -> None:
@@ -397,11 +398,6 @@ class CUB_SSB(_SSBBase):
 
 class StanfordCars_SSB(_SSBBase):
     """
-    SSB benchmark on Stanford Cars.
-
-    .. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-       :alt: slop-badge
-
     The benchmark partitions Stanford Cars into 98 ID classes and 98 OOD classes.
     OOD classes are split by semantic similarity to the ID classes:
 
@@ -416,7 +412,8 @@ class StanfordCars_SSB(_SSBBase):
         Stanford Cars cannot be downloaded automatically. See :class:`_StanfordCars`
         for manual download instructions.
 
-    :see Paper: `Dissect-OOD-OSR <https://arxiv.org/abs/2408.16757>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
+    :see Repository: `Visual-AI/Dissect-OOD-OSR <https://github.com/Visual-AI/Dissect-OOD-OSR>`__
     """
 
     def __init__(self, root: str, transform: Callable) -> None:
@@ -450,11 +447,6 @@ class StanfordCars_SSB(_SSBBase):
 
 class Aircraft_SSB(_SSBBase):
     """
-    SSB benchmark on FGVC-Aircraft.
-
-    .. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-       :alt: slop-badge
-
     The benchmark partitions FGVC-Aircraft (variant level, 100 classes) into
     50 ID classes and 50 OOD classes.
     OOD classes are split by semantic similarity to the ID classes:
@@ -465,7 +457,8 @@ class Aircraft_SSB(_SSBBase):
     ``test_sets()`` returns two combined datasets:
     ``[ID_test + Easy_OOD, ID_test + Hard_OOD]`` with ``ood_names = ["Easy", "Hard"]``.
 
-    :see Paper: `Dissect-OOD-OSR <https://arxiv.org/abs/2408.16757>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
+    :see Repository: `Visual-AI/Dissect-OOD-OSR <https://github.com/Visual-AI/Dissect-OOD-OSR>`__
     """
 
     def __init__(self, root: str, transform: Callable, download: bool = False) -> None:

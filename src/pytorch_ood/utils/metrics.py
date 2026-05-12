@@ -317,7 +317,7 @@ def oscr_score(outlier_scores: Tensor, predictions: Tensor, labels: Tensor) -> f
     :param labels: 1-D tensor of true labels; ``>= 0`` for known, ``< 0`` for unknown
     :returns: OSCR score in ``[0, 1]``
 
-    :see Paper: `Dissect-OOD-OSR <https://arxiv.org/abs/2408.16757>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
     """
     known_mask = labels >= 0
 

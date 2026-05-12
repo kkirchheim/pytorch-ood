@@ -58,54 +58,73 @@ Image
 Examples can be found :doc:`here <auto_examples/benchmarks/index>`
 
 
-CIFAR 10
-^^^^^^^^
+ODIN
+^^^^^^
 
-ODIN Benchmark
------------------
+CIFAR-10
+---------
 
 .. autoclass:: pytorch_ood.benchmark.CIFAR10_ODIN
     :members:
 
 
-OpenOOD Benchmark
------------------
+CIFAR-100
+---------
+
+.. autoclass:: pytorch_ood.benchmark.CIFAR100_ODIN
+    :members:
+
+
+OpenOOD
+^^^^^^^
+
+CIFAR-10
+---------
 
 .. autoclass:: pytorch_ood.benchmark.CIFAR10_OpenOOD
     :members:
 
 
-CIFAR 100
-^^^^^^^^^^^
-
-ODIN Benchmark
------------------
-
-.. autoclass:: pytorch_ood.benchmark.CIFAR100_ODIN
-    :members:
-
-OpenOOD Benchmark
------------------
+CIFAR-100
+---------
 
 .. autoclass:: pytorch_ood.benchmark.CIFAR100_OpenOOD
     :members:
 
 
 ImageNet
-^^^^^^^^^^^
-
-OpenOOD Benchmark
------------------
+---------
 
 .. autoclass:: pytorch_ood.benchmark.ImageNet_OpenOOD
     :members:
 
 
-Medical Imaging
-==================
+SSB (Semantic Split Benchmark)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-OpenMIBOOD Benchmarks
-^^^^^^^^^^^^^^^^^^^^^^
+CUB-200
+---------
+
+.. autoclass:: pytorch_ood.benchmark.CUB_SSB
+    :members:
+
+
+Stanford Cars
+---------
+
+.. autoclass:: pytorch_ood.benchmark.StanfordCars_SSB
+    :members:
+
+
+FGVC Aircraft
+---------
+
+.. autoclass:: pytorch_ood.benchmark.Aircraft_SSB
+    :members:
+
+
+OpenMIBOOD
+^^^^^^^^^^
 
 The benchmarks proposed in
 *OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection*
@@ -120,26 +139,17 @@ Data must be prepared first following the
 MIDOG (microscopy / mitosis)
 -----------------------------
 
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 .. autoclass:: pytorch_ood.benchmark.MIDOG_OpenMIBOOD
     :members:
 
 PhaKIR (surgical video)
 -----------------------------
 
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 .. autoclass:: pytorch_ood.benchmark.PhaKIR_OpenMIBOOD
     :members:
 
 OASIS-3 (brain MRI)
 -----------------------------
-
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
 
 .. autoclass:: pytorch_ood.benchmark.OASIS3_OpenMIBOOD
     :members:
