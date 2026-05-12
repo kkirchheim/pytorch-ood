@@ -250,6 +250,8 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| MCM                         | Maximum Concept Matching for zero-shot OOD detection with vision-language models.               | 2022 | [#MCM]_            |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | VRA                         | Variance-based ReAct adjustment with learned percentile thresholds.                            | 2023 | [#VRA]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NAC-UE                      | Neuron Activation Coverage for OOD detection.                                                  | 2023 | [#NACUE]_          |
@@ -535,6 +537,8 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#VRA] Xu, M., et al. (2023) VRA: Variational Rectified Activation for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2302.11716>`__.
 
 .. [#NACUE] Liu, Y., et al. (2023) Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization. ICLR.
+
+.. [#MCM] Ming, Y., Cai, Z., Gu, J., Sun, Y., Li, W., & Li, Y. (2022) Delving into Out-of-Distribution Detection with Vision-Language Representations. NeurIPS. `ArXiv <https://arxiv.org/abs/2211.13445>`__.
 
 .. [#OpenOOD] Zhang, J., Yang, J., et al. (2023) OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection. DMLR. `ArXiv <https://arxiv.org/abs/2306.09301>`__.
 
