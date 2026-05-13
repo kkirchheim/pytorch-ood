@@ -199,10 +199,6 @@ Maximum Concept Matching (MCM)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.mcm
 
-Logit Scaling (LTS)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.lts
-
 
 Gradient-based
 --------------------------
@@ -274,7 +270,6 @@ from .gradnormkl import GradNormKL
 from .gram import Gram
 from .klmatching import KLMatching
 from .knn import KNN
-from .lts import LTS
 from .mahalanobis import Mahalanobis, MahalanobisODIN
 from .maxlogit import MaxLogit
 from .mcd import MCD
@@ -309,7 +304,6 @@ __all__ = [
     "Gram",
     "KLMatching",
     "KNN",
-    "LTS",
     "Mahalanobis",
     "MahalanobisODIN",
     "MaxLogit",

@@ -11,7 +11,6 @@ from src.pytorch_ood.detector import (
     GEN,
     GMM,
     KNN,
-    LTS,
     MCD,
     MCM,
     NACUE,
