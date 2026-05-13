@@ -26,6 +26,7 @@ from pytorch_ood.detector import (
     GEN,
     GMM,
     KNN,
+    LTS,
     NACUE,
     NCI,
     ODIN,
@@ -89,6 +90,7 @@ def build_detectors(model, norm_std, react_threshold):
     detectors["NCI"] = NCI(encoder=model.features, head=model.fc, alpha=0.0)
     detectors["SHE"] = SHE(model.features, model.fc)
     detectors["DICE"] = DICE(encoder=model.features, w=model.fc.weight, b=model.fc.bias, p=65.0)
+    detectors["LTS"] = LTS(encoder=model.features, head=model.fc)
     detectors["ReAct"] = ReAct(model.features, model.fc, threshold=react_threshold)
     detectors["VRA"] = VRA(model.features, model.fc)
 

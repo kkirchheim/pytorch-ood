@@ -11,6 +11,7 @@ from src.pytorch_ood.detector import (
     GEN,
     GMM,
     KNN,
+    LTS,
     MCD,
     MCM,
     NACUE,
@@ -241,6 +242,15 @@ class TestAllDetectorsSmoke(unittest.TestCase):
                         w=model.classifier.weight,
                         b=model.classifier.bias,
                         p=65.0,
+                    )
+                )(eval_model()),
+            ),
+            (
+                "LTS",
+                lambda: (
+                    lambda model: LTS(
+                        encoder=model.features,
+                        head=model.classifier,
                     )
                 )(eval_model()),
             ),
