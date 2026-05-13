@@ -15,7 +15,7 @@ import logging
 import os
 import pickle
 from os.path import join
-from typing import Callable, List, Optional, Tuple, Any
+from typing import Any, Callable, List, Optional, Tuple
 
 import scipy.io
 from PIL import Image

@@ -6,8 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.detector import NACUE
 from pytorch_ood.utils import OODMetrics
+from src.pytorch_ood.detector import NACUE
 
 
 class TinyConvClassifier(nn.Module):

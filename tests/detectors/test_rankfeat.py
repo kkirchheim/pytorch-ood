@@ -3,11 +3,9 @@ import unittest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, TensorDataset
 
 from src.pytorch_ood.detector import RankFeat
 from src.pytorch_ood.detector.rankfeat import _remove_rank1
-from pytorch_ood.utils import OODMetrics
 
 
 class SimpleCNN(nn.Module):

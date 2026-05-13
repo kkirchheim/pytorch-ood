@@ -161,15 +161,15 @@ from .base import Benchmark
 from .img import (
     CIFAR10_ODIN,
     CIFAR100_ODIN,
+    CUB_SSB,
+    Aircraft_SSB,
     CIFAR10_OpenOOD,
     CIFAR100_OpenOOD,
     ImageNet_OpenOOD,
     MIDOG_OpenMIBOOD,
     OASIS3_OpenMIBOOD,
     PhaKIR_OpenMIBOOD,
-    CUB_SSB,
     StanfordCars_SSB,
-    Aircraft_SSB,
 )
 
 __all__ = [

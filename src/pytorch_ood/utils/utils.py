@@ -1,6 +1,4 @@
-"""
-
-"""
+""" """
 
 import logging
 import math
@@ -9,9 +7,9 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, KeysView, Optional, Tuple, TypeVar, Union
 
 import numpy as np
-from numpy import floating
 import torch
 import torch.nn.functional as F
+from numpy import floating
 from torch import Tensor
 from torch.utils.data import DataLoader
 

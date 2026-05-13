@@ -6,10 +6,10 @@ Some of the datasets used in OpenOOD 1.5 benchmark.
 import json
 import logging
 import os
-from os.path import dirname, exists, join
+from os.path import exists, join
 from typing import Callable, Optional
-from PIL import Image
 
+from PIL import Image
 from torchvision.datasets.utils import extract_archive
 
 from pytorch_ood.dataset.img.base import ImageDatasetBase, _get_resource_file
@@ -202,7 +202,6 @@ class ImageNetV2(OpenOOD):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
-
         super(ImageNetV2, self).__init__(
             root=root,
             transform=transform,
@@ -262,7 +261,6 @@ class ImageNetES(OpenOOD):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
-
         super(ImageNetES, self).__init__(
             root=root,
             transform=transform,
@@ -274,7 +272,6 @@ class ImageNetES(OpenOOD):
         self.files, self.labels = self.load_and_check_images()
 
     def load_and_check_images(self):
-
         p = _get_resource_file(self.data_file)
         # read json file
         with open(p, "r") as file:

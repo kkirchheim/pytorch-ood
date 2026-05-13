@@ -6,12 +6,12 @@ Historgram and Metrics for random scores with different delta.
 
 """
 
-import torch
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
 
-from pytorch_ood.utils.metrics import binary_clf_curve
 from pytorch_ood.utils import OODMetrics
+from pytorch_ood.utils.metrics import binary_clf_curve
 
 # %%
 # Parameters

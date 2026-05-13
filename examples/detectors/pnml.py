@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader, Subset
 from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
-from pytorch_ood.detector import EnergyBased, MaxSoftmax, PNML
+from pytorch_ood.detector import PNML, EnergyBased, MaxSoftmax
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 

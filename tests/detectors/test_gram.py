@@ -37,7 +37,6 @@ class GramTest(unittest.TestCase):
         torch.manual_seed(123)
 
     def test_something(self):
-
         model = InitGram().model
         y = torch.cat(
             [

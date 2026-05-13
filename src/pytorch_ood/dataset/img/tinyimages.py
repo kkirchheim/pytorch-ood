@@ -11,8 +11,6 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import (
-    check_integrity,
-    download_file_from_google_drive,
     download_url,
 )
 

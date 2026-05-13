@@ -25,14 +25,15 @@ You can run this example with:
 
 """
 
+import math
+
 import torch
-from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim import Adam
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, random_split
 from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10
 from tqdm import tqdm
-import math
 
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.loss import MCHADLoss

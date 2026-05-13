@@ -18,6 +18,7 @@ from typing import Optional, TypeVar
 import torch
 from torch import Tensor
 from torch.nn import Module, Parameter, ParameterDict
+
 from ..api import LogitsDetector, ModelNotSetException, RequiresFittingException
 
 log = logging.getLogger()
