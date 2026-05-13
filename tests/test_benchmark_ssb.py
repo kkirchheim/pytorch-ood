@@ -13,7 +13,6 @@ from pytorch_ood.benchmark.img.ssb import (
 )
 from pytorch_ood.utils import oscr_score
 
-
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 
@@ -218,8 +217,8 @@ class _MockSSBBenchmark:
         _make_cub_root(tmp, n_classes=10, n_per_class=4)
 
         # Mimic split structure: 6 known, 2 easy OOD, 2 hard OOD classes
+        from pytorch_ood.benchmark.img.ssb import _CUB200, _SSBBase
         from pytorch_ood.utils import ToUnknown
-        from pytorch_ood.benchmark.img.ssb import _SSBBase, _CUB200
 
         class FakeCUB_SSB(_SSBBase):
             def __init__(self):

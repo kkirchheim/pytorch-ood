@@ -9,7 +9,7 @@ evaluating OOD detectors on fine-grained open-set recognition.
 """
 
 import torch
-from torchvision.transforms import Compose, Normalize, ToTensor, Resize
+from torchvision.transforms import Compose, Normalize, Resize, ToTensor
 
 from pytorch_ood.benchmark import CUB_SSB
 from pytorch_ood.utils import oscr_score
