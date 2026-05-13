@@ -1,6 +1,7 @@
 import unittest
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -10,7 +11,9 @@ from src.pytorch_ood.detector import (
     GEN,
     GMM,
     KNN,
+    LTS,
     MCD,
+    MCM,
     NACUE,
     NCI,
     ODIN,
@@ -167,6 +170,16 @@ class TestAllDetectorsSmoke(unittest.TestCase):
             (
                 "GMM",
                 lambda: (lambda model: GMM(model.features))(eval_model()),
+            ),
+            (
+                "MCM",
+                lambda: (
+                    lambda model: MCM(
+                        encoder=model.features,
+                        text_embeddings=F.normalize(torch.randn(3, 10), dim=-1),
+                        temperature=1.0,
+                    )
+                )(eval_model()),
             ),
             (
                 "PNML",

@@ -139,8 +139,6 @@ and pooled features can be reused across calls:
    print(pd.DataFrame(results))
 
 
-
-
 🛠 ️️Installation
 ^^^^^^^^^^^^^^^^^
 The package can be installed via PyPI:
@@ -251,6 +249,8 @@ If you use this project, please cite:
 | PNML                        | Predictive normalized maximum likelihood regret on normalized penultimate-layer features.      | 2021 | [#PNML]_           |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| MCM                         | Maximum Concept Matching for zero-shot OOD detection with vision-language models.               | 2022 | [#MCM]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | VRA                         | Variance-based ReAct adjustment with learned percentile thresholds.                            | 2023 | [#VRA]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
@@ -384,6 +384,29 @@ If you use this project, please cite:
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+----------------+
 
 
+**Benchmarks**:
+
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Benchmark                   | Description                                                                                    | Year | Ref                |
++=============================+================================================================================================+======+====================+
+| CIFAR-10 ODIN               | ODIN benchmark for CIFAR-10 OOD detection evaluation.                                          | 2018 | [#ODIN]_           |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| CIFAR-10 OpenOOD            | CIFAR-10 benchmark with OpenOOD protocol for standardized OOD evaluation.                      | 2023 | [#OpenOOD]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| CIFAR-100 ODIN              | ODIN benchmark for CIFAR-100 OOD detection evaluation.                                         | 2018 | [#ODIN]_           |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| CIFAR-100 OpenOOD           | CIFAR-100 benchmark with OpenOOD protocol for standardized OOD evaluation.                     | 2023 | [#OpenOOD]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| ImageNet OpenOOD            | ImageNet-1K OOD detection benchmark with OpenOOD protocol and evaluation suite.                | 2023 | [#OpenOOD]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| MIDOG OpenMIBOOD            | Microscopy / mitosis detection with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).    | 2025 | [#OpenMIBOOD]_     |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| PhaKIR OpenMIBOOD           | Surgical video frames with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).             | 2025 | [#OpenMIBOOD]_     |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| OASIS-3 OpenMIBOOD          | Brain MRI volumes with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).                 | 2025 | [#OpenMIBOOD]_     |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+
+
 🤝  Contributing
 ^^^^^^^^^^^^^^^^^
 We encourage everyone to contribute to this project by adding implementations of OOD Detection methods, datasets etc,
@@ -514,3 +537,9 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#VRA] Xu, M., et al. (2023) VRA: Variational Rectified Activation for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2302.11716>`__.
 
 .. [#NACUE] Liu, Y., et al. (2023) Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization. ICLR.
+
+.. [#MCM] Ming, Y., Cai, Z., Gu, J., Sun, Y., Li, W., & Li, Y. (2022) Delving into Out-of-Distribution Detection with Vision-Language Representations. NeurIPS. `ArXiv <https://arxiv.org/abs/2211.13445>`__.
+
+.. [#OpenOOD] Zhang, J., Yang, J., et al. (2023) OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection. DMLR. `ArXiv <https://arxiv.org/abs/2306.09301>`__.
+
+.. [#OpenMIBOOD] Gutbrod, M., Rauber, D., Nunes, D. W., & Palm, C. (2025) OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection. CVPR. `ArXiv <https://arxiv.org/abs/2503.16247>`__.
