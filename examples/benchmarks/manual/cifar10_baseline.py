@@ -59,45 +59,46 @@ Example benchmark code for CIFAR10
 
 """
 
+from copy import deepcopy
+
 import pandas as pd  # additional dependency, used here for convenience
+import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10, CIFAR100, MNIST, FashionMNIST
-from copy import deepcopy
 from tqdm.auto import tqdm  # additional dependency, used here for convenience
-import torch
 
 from pytorch_ood.dataset.img import (
     LSUNCrop,
     LSUNResize,
+    Places365,
     Textures,
     TinyImageNetCrop,
     TinyImageNetResize,
-    Places365,
 )
 from pytorch_ood.detector import (
+    ASH,
+    DICE,
+    GEN,
+    GMM,
+    KNN,
+    NACUE,
     ODIN,
+    RMD,
+    SHE,
     EnergyBased,
     Entropy,
-    GEN,
+    GradNorm,
+    GradNormKL,
+    Gram,
     KLMatching,
     Mahalanobis,
     MahalanobisODIN,
     MaxLogit,
     MaxSoftmax,
-    ViM,
-    RMD,
-    DICE,
-    SHE,
-    Gram,
-    GMM,
     MultiMahalanobis,
-    NACUE,
-    GradNorm,
-    GradNormKL,
-    ASH,
-    KNN,
     RankFeat,
+    ViM,
     fDBD,
 )
 from pytorch_ood.model import WideResNet

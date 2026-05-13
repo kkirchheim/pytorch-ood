@@ -264,3 +264,4 @@ docs/sg_execution_times.rst
 # AI coding tools
 CLAUDE.md
 .codex
+.claude/

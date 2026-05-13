@@ -1,13 +1,11 @@
+import logging
 import os
 from os.path import join
-from typing import Optional, Callable, Tuple, Any
+from typing import Any, Callable, Optional, Tuple
 
 from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, extract_archive
-
-import logging
-
 
 log = logging.getLogger(__name__)
 

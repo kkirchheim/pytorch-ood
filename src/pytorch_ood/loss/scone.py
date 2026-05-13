@@ -1,16 +1,14 @@
-"""
+""" """
 
-"""
+from typing import Callable, Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from numpy import floating
 from torch.utils.data import DataLoader
 
-from ..utils import apply_reduction, is_known, is_unknown, evaluate_energy_logistic_loss
-
-from typing import Callable, Tuple
-from numpy import floating
+from ..utils import apply_reduction, evaluate_energy_logistic_loss, is_known, is_unknown
 
 
 class EnergyMarginLoss(nn.Module):

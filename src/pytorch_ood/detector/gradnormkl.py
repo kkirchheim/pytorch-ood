@@ -14,19 +14,24 @@
     :exclude-members: fit
 """
 
+from typing import Callable, TypeVar
+
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
-from typing import TypeVar, Callable
 
 from ..api import GradientDetector, ModelNotSetException
 
 try:
     from torch.func import (
-        grad as _func_grad,
-        vmap as _vmap,
         functional_call as _functional_call,
+    )
+    from torch.func import (
+        grad as _func_grad,
+    )
+    from torch.func import (
+        vmap as _vmap,
     )
 
     _TORCH_FUNC_AVAILABLE = True

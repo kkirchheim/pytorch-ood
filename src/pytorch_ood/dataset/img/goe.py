@@ -1,6 +1,4 @@
-"""
-
-"""
+""" """
 
 import logging
 from os.path import exists, join

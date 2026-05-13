@@ -5,17 +5,11 @@ apache 2.0 license header. Both should be compatible with our license.
 """
 
 import logging
-import os
-from os.path import join
-from typing import Any, Callable, Optional, Tuple
 
 import numpy as np
 import torch
 import torchvision.transforms
 import torchvision.transforms.functional as F
-from PIL import Image
-from torchvision.datasets import VisionDataset
-from torchvision.datasets.utils import check_integrity, extract_archive
 from torchvision.transforms.functional import to_tensor
 
 log = logging.getLogger(__name__)

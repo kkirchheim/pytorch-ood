@@ -15,16 +15,10 @@
 import logging
 from typing import Optional, TypeVar
 
-import torch.nn
 from torch import Tensor, tensor
 from torch.nn import Module
-from torch.nn.functional import nll_loss
-from torch.optim import LBFGS
-from torch.utils.data import DataLoader
 
-from pytorch_ood.utils import extract_features, is_known
-
-from ..api import LogitsDetector, RequiresFittingException
+from ..api import LogitsDetector
 
 log = logging.getLogger(__name__)
 Self = TypeVar("Self")

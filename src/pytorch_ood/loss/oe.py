@@ -69,7 +69,6 @@ class OutlierExposureLoss(nn.Module):
 
         # for segmentation
         elif len(logits.shape) == 4:
-
             loss_ce = cross_entropy(logits, target, reduction=None)
             # move class axis to the back
             logits = logits.permute(0, 2, 3, 1)

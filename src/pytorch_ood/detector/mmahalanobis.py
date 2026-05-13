@@ -19,7 +19,7 @@ from torch import Tensor
 from torch.nn import Module, Sequential
 from torch.utils.data import DataLoader
 
-from ..api import StructuredDetector, ModelNotSetException, RequiresFittingException
+from ..api import ModelNotSetException, RequiresFittingException, StructuredDetector
 from ..utils import contains_unknown, extract_feature_avg
 
 log = logging.getLogger(__name__)
