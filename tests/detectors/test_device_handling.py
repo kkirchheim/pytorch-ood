@@ -269,10 +269,9 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                     lambda model: ReAct(
                         backbone=model.features,
                         head=model.classifier,
-                        threshold=1.0,
                     )
                 )(ClassificationModel()),
-                False,
+                True,
                 "features",
             ),
             (
