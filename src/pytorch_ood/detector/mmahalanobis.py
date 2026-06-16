@@ -112,6 +112,12 @@ class MultiMahalanobis(StructuredDetector):
 
         y = y.to(device)
 
+        # reset any previously fitted parameters so re-fitting replaces them
+        # instead of appending (e.g. when re-fitting during hyperparameter search)
+        self.mu = []
+        self.cov = []
+        self.precision = []
+
         classes = y.unique()
 
         # we assume here that all class 0 >= labels <= classes.max() exist
