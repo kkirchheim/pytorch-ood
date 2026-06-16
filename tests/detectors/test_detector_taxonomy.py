@@ -120,7 +120,7 @@ class TestDetectorTaxonomy(unittest.TestCase):
                 self.assertFalse(hasattr(detector_cls, "predict_structured"))
 
     def test_feature_map_detectors_inherit_feature_maps_base(self):
-        stateless = (ASH, ReAct, RankFeat)
+        stateless = (ASH, RankFeat)
         for detector_cls in stateless:
             with self.subTest(detector=detector_cls.__name__):
                 self.assertTrue(issubclass(detector_cls, FeatureMapsDetector))
@@ -131,8 +131,11 @@ class TestDetectorTaxonomy(unittest.TestCase):
                 self.assertFalse(hasattr(detector_cls, "predict_features"))
                 self.assertFalse(hasattr(detector_cls, "predict_structured"))
 
-        self.assertTrue(issubclass(VRA, FeatureMapsDetector))
-        self.assertTrue(VRA.requires_fit)
+        # ReAct and VRA are feature-map detectors that estimate state during fit.
+        for detector_cls in (ReAct, VRA):
+            with self.subTest(detector=detector_cls.__name__):
+                self.assertTrue(issubclass(detector_cls, FeatureMapsDetector))
+                self.assertTrue(detector_cls.requires_fit)
 
     def test_model_only_detectors_inherit_detector_base_only(self):
         detectors = (ODIN, MCD, GradNorm, GradNormKL, NACUE)
