@@ -34,12 +34,13 @@ class KNN(FeaturesDetector):
         This detector requires ``scikit-learn``. Install it manually if you want to use
         ``pytorch_ood.detector.KNN``.
 
-    Fits a nearest neighbor model to the ID samples an uses the distance
-    from the nearest neighbor as outlier score:
+    Fits a nearest neighbor model to the ID samples and uses the distance
+    to the :math:`k`-th nearest neighbor as outlier score:
 
-    .. math:: \\min_{z \\in \\mathcal{D}} \\lVert f(x) - f(z) \\rVert_2
+    .. math:: \\lVert f(x) - f(z_{(k)}) \\rVert_2
 
-    where :math:`\\mathcal{D}` is the dataset used to train the nearest neighbor model.
+    where :math:`z_{(k)}` is the :math:`k`-th nearest neighbor of :math:`x` in the
+    dataset used to train the nearest neighbor model.
 
     The original paper found that using contrastive pre-training could increase the performance.
 
@@ -48,13 +49,20 @@ class KNN(FeaturesDetector):
 
     requires_fit = True
 
-    def __init__(self, encoder: Optional[Callable[[Tensor], Tensor]], **knn_kwargs):
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
+    #: ``K`` sweep used by OpenOOD.
+    hyperparameter_space = {"k": [50, 100, 200, 500, 1000]}
+
+    def __init__(self, encoder: Optional[Callable[[Tensor], Tensor]], k: int = 1, **knn_kwargs):
         """
         :param encoder: feature encoder. Can be ``None`` when using
             ``fit_features(...)`` and ``predict_features(...)`` directly.
+        :param k: number of neighbors; the score is the distance to the ``k``-th
+            nearest neighbor. The paper recommends larger values (e.g. ``50``).
         :param knn_kwargs: dict with keyword arguments that will be passed to the scikit learns k-NN
         """
         self.encoder = encoder
+        self.k = k
         self._is_fitted = False
 
         try:
@@ -62,7 +70,7 @@ class KNN(FeaturesDetector):
         except ImportError:
             raise ImportError("You have to install scikit-learn to use this detector")
 
-        self.knn: NearestNeighbors = NearestNeighbors(n_neighbors=1, n_jobs=-1, **knn_kwargs)
+        self.knn: NearestNeighbors = NearestNeighbors(n_jobs=-1, **knn_kwargs)
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -81,18 +89,18 @@ class KNN(FeaturesDetector):
     def predict_features(self, z: Tensor) -> Tensor:
         """
         :param z: features
-        :param k: number of neighbors
         """
 
         if not self._is_fitted:
             raise RequiresFittingException()
 
         dist, idx = self.knn.kneighbors(
-            z.detach().cpu().numpy(), n_neighbors=1, return_distance=True
+            z.detach().cpu().numpy(), n_neighbors=self.k, return_distance=True
         )
 
+        # distance to the k-th nearest neighbor (largest of the k returned distances)
         device = self.device or z.device
-        return tensor(dist, device=device).squeeze(1)
+        return tensor(dist[:, -1], device=device)
 
     def fit_features(self: Self, z: Tensor, labels: Tensor) -> Self:
         """
