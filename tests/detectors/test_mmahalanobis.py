@@ -41,3 +41,29 @@ class MultiMahalanobisTest(unittest.TestCase):
 
         with self.assertRaises(RequiresFittingException):
             model(x)
+
+    def test_refit_does_not_accumulate(self):
+        """Re-fitting replaces parameters instead of appending (e.g. during HPO)."""
+        nn = ConvClassifier(in_channels=3, out_channels=16)
+        layers = [nn.layer1, nn.pool]
+        model = MultiMahalanobis(layers)
+
+        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
+        x = torch.randn(size=(20, 3, 16, 16))
+        loader = DataLoader(TensorDataset(x, y))
+
+        model.fit(loader)
+        first_mu = [m.clone() for m in model.mu]
+
+        model.fit(loader)
+
+        # one set of parameters per layer, not accumulated across fits
+        self.assertEqual(len(model.mu), len(layers))
+        self.assertEqual(len(model.cov), len(layers))
+        self.assertEqual(len(model.precision), len(layers))
+        # same data => same fitted centers
+        for a, b in zip(first_mu, model.mu):
+            self.assertTrue(torch.allclose(a, b))
+
+        scores = model(x)
+        self.assertEqual(scores.shape[0], 20)
