@@ -62,6 +62,11 @@ class ReAct(FeatureMapsDetector):
 
     requires_fit = True
 
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
+    #: percentile sweep used by OpenOOD (expressed here as fractions in ``[0, 1]``).
+    #: Tuning re-fits the detector so the threshold is re-estimated for each percentile.
+    hyperparameter_space = {"percentile": [0.85, 0.90, 0.95, 0.99]}
+
     def __init__(
         self,
         backbone: Callable[[Tensor], Tensor],

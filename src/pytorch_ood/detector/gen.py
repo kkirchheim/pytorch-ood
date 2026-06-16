@@ -53,6 +53,13 @@ class GEN(LogitsDetector):
         `GitHub <https://github.com/XixiLiu95/GEN>`__
     """
 
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
+    #: ``gamma`` and ``M`` sweep used by OpenOOD.
+    hyperparameter_space = {
+        "gamma": [0.01, 0.1, 0.5, 1, 2, 5, 10],
+        "M": [10, 50, 100, 200, 500, 1000],
+    }
+
     def __init__(
         self, model: Optional[Module], gamma: Optional[float] = 0.1, M: Optional[int] = None
     ):

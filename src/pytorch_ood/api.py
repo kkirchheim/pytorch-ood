@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import TypeVar
+from typing import Dict, List, TypeVar
 
 import torch
 from torch import Tensor
@@ -40,6 +40,13 @@ class Detector(ABC):
     """
 
     requires_fit = False  #: Whether ``fit(...)`` must be called before scoring.
+
+    hyperparameter_space: Dict[str, List] = {}
+    """
+    Search space for hyperparameter optimization, mapping each tunable hyperparameter
+    name to the list of candidate values to try. Empty for detectors without tunable
+    hyperparameters. Used by :class:`pytorch_ood.utils.GridSearch`.
+    """
 
     @staticmethod
     def _move_value_to_device(value, device: torch.device):
@@ -155,6 +162,42 @@ class Detector(ABC):
             if attr == "_device":
                 continue
             setattr(self, attr, self._move_value_to_device(value, device))
+
+        return self
+
+    def get_hyperparameters(self) -> Dict:
+        """
+        Return the detector's current tunable hyperparameter values.
+
+        The default implementation reads, for each key in
+        :attr:`hyperparameter_space`, the attribute of the same name. Detectors
+        whose hyperparameters are not stored as plain attributes of that name
+        should override this together with :meth:`set_hyperparameters`.
+
+        :return: mapping from hyperparameter name to current value
+        """
+        return {name: getattr(self, name) for name in self.hyperparameter_space}
+
+    def set_hyperparameters(self: Self, **kwargs) -> Self:
+        """
+        Set tunable hyperparameters by name.
+
+        The default implementation assigns each value to the attribute of the
+        same name. Detectors whose hyperparameters require derived state (for
+        example a percentile that must be turned into an activation threshold)
+        should override this.
+
+        :param kwargs: hyperparameter values to set; keys must be in
+            :attr:`hyperparameter_space`
+        :raise ValueError: if a key is not a known hyperparameter
+        """
+        for name, value in kwargs.items():
+            if name not in self.hyperparameter_space:
+                raise ValueError(
+                    f"Unknown hyperparameter '{name}' for {type(self).__name__}. "
+                    f"Known hyperparameters: {list(self.hyperparameter_space)}"
+                )
+            setattr(self, name, value)
 
         return self
 

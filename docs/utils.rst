@@ -26,3 +26,9 @@ Metrics
 
 .. automodule:: pytorch_ood.utils.metrics
     :members: calibration_error, aurra
+
+
+Hyperparameter Optimization
+============================
+
+.. automodule:: pytorch_ood.utils.hpo
