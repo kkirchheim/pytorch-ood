@@ -25,6 +25,7 @@ def fpr_tpr_curve(labels, scores, pos_label=1):
     thresholds = torch.cat([torch.tensor([1.0], device=thresholds.device), thresholds])
     return fpr, tpr, thresholds
 
+
 # %%
 # Parameters
 
