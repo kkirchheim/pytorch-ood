@@ -15,6 +15,7 @@ __all__ = [
     "calibration_error",
     "aurra",
     "fpr_at_tpr",
+    "autc_score",
     "oscr_score",
 ]
 from torchmetrics.functional.classification import (
@@ -109,32 +110,39 @@ def fpr_at_tpr(pred, target, k=0.95):
     return fpr[idx]
 
 
-def binary_clf_curve(y_true, y_score, pos_label=1):
+def autc_score(labels: Tensor, scores: Tensor, pos_label: int = 1) -> Tensor:
     """
-    Calculate the False Positive Rate at a certain True Positive Rate.
-    Args:
-        :param y_true: ground truth labels
-        :param y_score: predicted scores for each sample
-        :param pos_label: positive labels 1 or 0
-    :return: Tuple containing:
-        - fpr: False Positive Rate values
-        - tpr: True Positive Rate values
-        - thresholds: Thresholds used to calculate FPR and TPR.
+    Calculate the Area Under the Threshold Curve (AUTC).
+
+    The AUTC is the mean of the areas under the False Positive Rate and False Negative Rate
+    curves, integrated over thresholds :math:`\\tau \\in [0, 1]` after min-max normalizing the
+    scores. Lower is better. Using the fact that, for scores normalized to :math:`[0, 1]`,
+
+    .. math::
+
+        \\int_0^1 \\mathrm{FPR}(\\tau)\\,d\\tau = \\frac{1}{N_-}\\sum_{i:\\,y_i=0} s_i,
+        \\qquad
+        \\int_0^1 \\mathrm{FNR}(\\tau)\\,d\\tau = \\frac{1}{N_+}\\sum_{i:\\,y_i=1} (1 - s_i),
+
+    the score is computed in closed form in :math:`O(N)`, which is exact and avoids
+    materializing a threshold curve.
+
+    :param labels: ground truth labels, where ``pos_label`` denotes the positive (OOD) class
+    :param scores: predicted outlier scores for each sample (higher = more likely positive)
+    :param pos_label: value in ``labels`` that denotes the positive class
+    :return: AUTC score
+
+    :see Paper: `ArXiv <https://arxiv.org/pdf/2306.14658>`__
     """
-    y_true = (y_true == pos_label).long()
+    labels = labels == pos_label
 
     # all scores must be between 0 and 1
-    y_score = (y_score - y_score.min()) / (y_score.max() - y_score.min())
+    scores = (scores - scores.min()) / (scores.max() - scores.min())
 
-    # 1000 thresholds are enough
-    fpr, tpr, thresholds = binary_roc(y_score, y_true, thresholds=1000)
+    aufpr = scores[~labels].mean()  # area under FPR(tau) over tau in [0, 1]
+    aufnr = (1 - scores[labels]).mean()  # area under FNR(tau) over tau in [0, 1]
 
-    # add 0 to FPR and TPR
-    fpr = torch.cat([torch.tensor([0.0], device=fpr.device), fpr])
-    tpr = torch.cat([torch.tensor([0.0], device=tpr.device), tpr])
-    thresholds = torch.cat([torch.tensor([1.0], device=thresholds.device), thresholds])
-
-    return fpr, tpr, thresholds
+    return (aufpr + aufnr) / 2
 
 
 class OODMetrics(object):
@@ -174,8 +182,7 @@ class OODMetrics(object):
         """
         super(OODMetrics, self).__init__()
         self.device = device
-        # always buffer on cpu to not exhaust gpu mem
-        self.buffer = TensorBuffer(device="cpu")
+        self.buffer = TensorBuffer(device=device)
         self.void_label = void_label
 
         if mode not in ["segmentation", "classification"]:
@@ -242,10 +249,7 @@ class OODMetrics(object):
 
         auroc = binary_auroc(scores, labels)
 
-        fpr_values, tpr_values, thresholds_values = binary_clf_curve(labels, scores, pos_label=1)
-        aufpr = auc(thresholds_values, fpr_values)
-        aufnr = auc(thresholds_values, 1 - tpr_values)
-        autc = (aufpr + aufnr) / 2
+        autc = autc_score(labels, scores, pos_label=1)
 
         # num_classes=None for binary
         p, r, t = binary_precision_recall_curve(scores, labels)
