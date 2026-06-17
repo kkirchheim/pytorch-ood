@@ -61,6 +61,7 @@ sphinx_gallery_conf = {
         "../examples/text",
         "../examples/osr",
         "../examples/metrics",
+        "../examples/hpo",
     ],
     # path to where to save gallery generated output,
     "gallery_dirs": [
@@ -71,6 +72,7 @@ sphinx_gallery_conf = {
         "auto_examples/text",
         "auto_examples/osr",
         "auto_examples/metrics",
+        "auto_examples/hpo",
     ],
     "nested_sections": False,
     "line_numbers": True,
@@ -110,3 +112,22 @@ autodoc_typehints_format = "short"
 
 # Graphviz configuration for inheritance diagrams
 graphviz_output_format = "png"
+
+
+def _skip_hpo_members(app, what, name, obj, skip, options):
+    """
+    Keep the hyperparameter-optimization interface from cluttering every detector
+    page. The ``get_hyperparameters``/``set_hyperparameters`` methods are generic
+    boilerplate inherited from :class:`~pytorch_ood.api.Detector`, and the inherited
+    empty ``hyperparameter_space`` adds nothing. Detectors that define a real search
+    space (e.g. ASH, KNN, ReAct) keep showing it.
+    """
+    if name in ("get_hyperparameters", "set_hyperparameters"):
+        return True
+    if name == "hyperparameter_space" and not obj:
+        return True
+    return skip
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", _skip_hpo_members)

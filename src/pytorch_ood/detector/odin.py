@@ -117,6 +117,14 @@ class ODIN(GradientDetector):
 
     """
 
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
+    #: temperature and input-noise (``eps``) sweep used by OpenOOD. The noise values
+    #: assume normalized inputs (pass ``norm_std``).
+    hyperparameter_space = {
+        "temperature": [1, 10, 100, 1000],
+        "eps": [0.0014, 0.0028],
+    }
+
     def __init__(
         self,
         model: Module,

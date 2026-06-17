@@ -62,10 +62,9 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 loader_kwargs = {"batch_size": 128, "num_workers": 12}
 cache_dir = "data/benchmark-cache"
 cache_key = "cifar10-openood-wrn-cifar10-pt"
-react_threshold = 1.0
 
 
-def build_detectors(model, norm_std, react_threshold):
+def build_detectors(model, norm_std):
     detectors = OrderedDict()
 
     detectors["MSP"] = MaxSoftmax(model)
@@ -78,7 +77,7 @@ def build_detectors(model, norm_std, react_threshold):
     detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
     # detectors["MCD"] = MCD(model, samples=30, mode="var")
 
-    detectors["KNN"] = KNN(model.features)
+    detectors["KNN"] = KNN(model.features, k=50)  # k follows the OpenOOD default
     detectors["GMM"] = GMM(model.features)
     detectors["PNML"] = PNML(model.features, model.fc)
     detectors["NNGuide"] = NNGuide(model.features, model.fc)
@@ -91,7 +90,8 @@ def build_detectors(model, norm_std, react_threshold):
     detectors["SHE"] = SHE(model.features, model.fc)
     detectors["DICE"] = DICE(encoder=model.features, w=model.fc.weight, b=model.fc.bias, p=65.0)
     detectors["LTS"] = LTS(encoder=model.features, head=model.fc)
-    detectors["ReAct"] = ReAct(model.features, model.fc, threshold=react_threshold)
+    # threshold is estimated from the training activations during fit()
+    detectors["ReAct"] = ReAct(model.features, model.fc)
     detectors["VRA"] = VRA(model.features, model.fc)
 
     detectors["ASH"] = ASH(
@@ -179,7 +179,7 @@ calibration_loader = DataLoader(
 )
 
 print("STAGE 2: Creating and fitting detectors")
-detectors = build_detectors(model=model, norm_std=norm_std, react_threshold=react_threshold)
+detectors = build_detectors(model=model, norm_std=norm_std)
 fit_detectors(
     detectors=detectors,
     train_loader=train_loader,

@@ -118,6 +118,12 @@ class ASH(FeatureMapsDetector):
         "ash-b": ash_b,
     }
 
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
+    #: percentile sweep used by OpenOOD (expressed here as fractions in ``[0, 1]``).
+    hyperparameter_space = {
+        "percentile": [0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95],
+    }
+
     def __init__(
         self,
         backbone: Callable[[Tensor], Tensor],
