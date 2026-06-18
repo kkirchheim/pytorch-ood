@@ -147,6 +147,6 @@ All AI-assisted contributions were carefully checked and integrated by the autho
 
 # Acknowledgements
 
-The authors acknowledge support from Otto-von-Guericke University Magdeburg, Germany.
+The authors acknowledge institutional support from Otto-von-Guericke University Magdeburg, Germany. No dedicated financial support was received specifically for the development of `pytorch-ood` or for this JOSS submission.
 
 # References
