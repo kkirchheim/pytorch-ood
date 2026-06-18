@@ -1,5 +1,5 @@
 ---
-title: "PyTorch-OOD: A Unified PyTorch Library for Out-of-Distribution Detection"
+title: "pytorch-ood: A Unified PyTorch Library for Out-of-Distribution Detection"
 tags:
   - Python
   - PyTorch
@@ -46,7 +46,7 @@ An earlier version of the library was introduced in [@kirchheim2022pytorch]. The
 
 # State of the field
 
-Several tools for OOD detection exist, many of which were released after `pytorch-ood`. Frameworks such as OpenOOD [@yang2022openood] emphasize standardized benchmark pipelines, enabling consistent large-scale evaluation across datasets and methods. Other tools, such as FrOODo [@stieber2022froodo], focus on specific application domains, for example medical imaging.
+Several tools for OOD detection exist, many of which were released after `pytorch-ood`. Frameworks such as OpenOOD [@yang2022openood] emphasize standardized benchmark pipelines, enabling consistent large-scale evaluation across datasets and methods. Other tools, such as FrOoDo [@stieber2022froodo], focus on specific application domains, for example medical imaging.
 
 `pytorch-ood` targets a complementary use case. Rather than prescribing a fixed evaluation pipeline or domain, it provides a flexible, PyTorch-native layer for composing detectors, models, datasets, and benchmarks under a unified interface. This design is motivated by the observation that exploratory research often requires fine-grained control over experimental details, access to intermediate neural representations, and varying training objectives, which can be difficult to achieve within fixed benchmark frameworks.
 
@@ -133,7 +133,7 @@ Since both detectors used in this example implement the `LogitsDetector` interfa
 
 # Research Impact Statement
 
-The `pytorch-ood` library has seen sustained adoption within the research community. The associated publication has been cited more than 60 times, and the repository has accumulated over 300 GitHub stars with contributions from 9 developers and a substantial number of downloads.
+The `pytorch-ood` library has seen sustained adoption within the research community. The associated publication [@kirchheim2022pytorch] has been cited more than 60 times, and the repository has accumulated over 300 GitHub stars with contributions from 9 developers and a substantial number of downloads.
 Overall, `pytorch-ood` serves both as reusable research infrastructure and as a foundation for further work in OOD detection and machine learning safety.
 
 
@@ -148,3 +148,5 @@ All AI-assisted contributions were carefully checked and integrated by the autho
 # Acknowledgements
 
 The authors acknowledge support from Otto-von-Guericke University Magdeburg, Germany.
+
+# References
