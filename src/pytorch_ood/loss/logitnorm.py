@@ -1,8 +1,7 @@
 import torch
 from torch import Tensor
-from torch import functional as F
 from torch.nn import Module
-from torch.nn.functional import nll_loss
+from torch.nn.functional import cross_entropy
 
 from pytorch_ood.utils import is_known
 
@@ -13,16 +12,16 @@ def logit_norm_loss(
     """
     :param logits:  logits as predicted by the model
     :param target:  labels
-    :param t:
-    :param reduction:
+    :param t: temperature :math:`\\tau`
+    :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
     """
     known = is_known(target)
     logits = logits[known]
     target = target[known]
 
-    norm = F.norm(logits, p=2, dim=1)
-    adjusted = logits / (t * norm.repeat(logits.shape[1], 1).T)
-    return nll_loss(adjusted, target, reduction=reduction)
+    norm = torch.norm(logits, p=2, dim=1, keepdim=True) + 1e-7
+    adjusted = logits / (t * norm)
+    return cross_entropy(adjusted, target, reduction=reduction)
 
 
 class LogitNorm(Module):
