@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v3
@@ -28,10 +28,8 @@ jobs:
           python -m pip install --upgrade pip
           # test requirements
           python -m pip install ruff pytest coverage
-          # install depedencies
-          python -m pip install .
-          # optional dependencies
-          python -m pip install scikit-learn
+          # install depedencies + optional dependencies used by the test suite
+          python -m pip install .[all]
       - name: Lint with ruff
         run: ruff check .
       - name: Check formatting with ruff
@@ -43,7 +41,7 @@ jobs:
           coverage xml -i
           coverage html -i
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.10'
+        if: matrix.python-version == '3.11'
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage.xml
@@ -51,3 +49,42 @@ jobs:
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # Regression guard for a real incident: a change once made a module import an
+  # "optional" dependency unconditionally. Every job above installs the optional
+  # extras, so the tests never saw it fail — it only broke for users who installed
+  # the plain package from PyPI. This job installs ONLY install_requires (no
+  # extras) and imports every public subpackage, so an accidental top-level
+  # `import sklearn` / `import gdown` etc. fails CI instead of a user's install.
+  minimal-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.11"
+      - name: Install with required dependencies only (no extras)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+      - name: Import every public subpackage without optional deps installed
+        run: |
+          python <<'EOF'
+          import importlib
+
+          modules = [
+              "pytorch_ood",
+              "pytorch_ood.detector",
+              "pytorch_ood.loss",
+              "pytorch_ood.model",
+              "pytorch_ood.utils",
+              "pytorch_ood.dataset.img",
+              "pytorch_ood.dataset.txt",
+              "pytorch_ood.dataset.audio",
+              "pytorch_ood.benchmark",
+          ]
+          for name in modules:
+              importlib.import_module(name)
+              print(f"OK: {name}")
+          EOF
