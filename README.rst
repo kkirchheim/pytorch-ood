@@ -322,6 +322,8 @@ If you use this project, please cite:
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | ImageNet - A, O, R    | Different Outlier Variants for the ImageNet.                                                                    | 2019 | [#ImageNets]_ |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| ImageNet-200          | The 200-class ImageNet subset used as in-distribution data in the OpenOOD benchmark.                            | 2023 | [#OpenOOD]_   |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | ImageNet - V2         | A new test set for the ImageNet.                                                                                | 2019 | [#ImageNV2]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | ImageNet - ES         | Event stream (ES) version of the ImageNet.                                                                      | 2021 | [#ImageNES]_  |
@@ -398,6 +400,8 @@ If you use this project, please cite:
 | CIFAR-100 OpenOOD           | CIFAR-100 benchmark with OpenOOD protocol for standardized OOD evaluation.                     | 2023 | [#OpenOOD]_        |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ImageNet OpenOOD            | ImageNet-1K OOD detection benchmark with OpenOOD protocol and evaluation suite.                | 2023 | [#OpenOOD]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| ImageNet-200 OpenOOD        | ImageNet-200 (200-class subset) OOD detection benchmark with OpenOOD protocol.                 | 2023 | [#OpenOOD]_        |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | MIDOG OpenMIBOOD            | Microscopy / mitosis detection with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).    | 2025 | [#OpenMIBOOD]_     |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
