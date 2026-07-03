@@ -78,6 +78,12 @@ ImageNet-R
     :members:
     :no-index:
 
+ImageNet-200
+`````````````
+..  autoclass:: pytorch_ood.dataset.img.ImageNet200
+    :members:
+    :no-index:
+
 ImageNet-V2
 `````````````
 ..  autoclass:: pytorch_ood.dataset.img.ImageNetV2
@@ -251,6 +257,7 @@ from .fooling import FoolingImages
 from .goe import CIFAR100GAN
 from .imagelist import ImageListDataset
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
+from .imagenet200 import ImageNet200
 from .mnistc import MNISTC
 from .mvtech import MVTechAD
 from .ninco import NINCO
@@ -286,6 +293,7 @@ __all__ = [
     "ImageNetC",
     "ImageNetO",
     "ImageNetR",
+    "ImageNet200",
     "MNISTC",
     "MVTechAD",
     "NINCO",

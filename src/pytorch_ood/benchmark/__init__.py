@@ -99,6 +99,13 @@ ImageNet
     :members:
 
 
+ImageNet-200
+---------
+
+.. autoclass:: pytorch_ood.benchmark.ImageNet200_OpenOOD
+    :members:
+
+
 SSB (Semantic Split Benchmark)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -165,6 +172,7 @@ from .img import (
     Aircraft_SSB,
     CIFAR10_OpenOOD,
     CIFAR100_OpenOOD,
+    ImageNet200_OpenOOD,
     ImageNet_OpenOOD,
     MIDOG_OpenMIBOOD,
     OASIS3_OpenMIBOOD,
@@ -179,6 +187,7 @@ __all__ = [
     "CIFAR10_OpenOOD",
     "CIFAR100_OpenOOD",
     "ImageNet_OpenOOD",
+    "ImageNet200_OpenOOD",
     "MIDOG_OpenMIBOOD",
     "PhaKIR_OpenMIBOOD",
     "OASIS3_OpenMIBOOD",
