@@ -226,6 +226,8 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ASH                         | Implements Extremely Simple Activation Shaping                                                 | 2023 | [#Ash]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| SCALE                       | Implements Activation Scaling for OOD Detection                                                | 2024 | [#Scale]_          |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | SHE                         | Implements Simplified Hopfield Networks                                                        | 2023 | [#She]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NCI                         | Neural Collapse Inspired OOD Detection                                                         | 2025 | [#Nci]_            |
@@ -507,6 +509,8 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#DICE] Sun, et al. (2022) DICE: Leveraging Sparsification for Out-of-Distribution Detection. ECCV.
 
 .. [#ASH] Djurisic,  et al. (2023) Extremely Simple Activation Shaping for Out-of-Distribution Detection, ICLR.
+
+.. [#Scale] Xu,  et al. (2024) Scaling for Training Time and Post-hoc Out-of-distribution Detection Enhancement, ICLR.
 
 .. [#She] Zhang,  et al. (2023) Out-of-Distribution Detection Based on In-Distribution Data Patterns Memorization with Modern Hopfield Energy. ICLR.
 
