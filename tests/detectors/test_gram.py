@@ -62,3 +62,42 @@ class GramTest(unittest.TestCase):
 
         with self.assertRaises(RequiresFittingException):
             model(x)
+
+    def test_scores_non_negative(self):
+        """
+        Deviations are sums of relu terms, so scores must be non-negative.
+        """
+        model = InitGram().model
+        y = torch.cat([torch.zeros(50, dtype=torch.int), torch.ones(50, dtype=torch.int)])
+        x = torch.randn(size=(100, 3, 16, 16))
+        model.fit(DataLoader(TensorDataset(x, y), batch_size=16))
+
+        scores = model(x)
+        self.assertTrue((scores >= 0).all())
+
+    def test_score_direction(self):
+        """
+        Inputs whose gram statistics fall far outside the training bounds must
+        receive higher outlier scores than the fitting data (higher = more OOD).
+        The previous implementation returned inverted scores.
+        """
+        from src.pytorch_ood.utils import OODMetrics
+
+        model = InitGram().model
+        y = torch.cat([torch.zeros(50, dtype=torch.int), torch.ones(50, dtype=torch.int)])
+        x_in = torch.randn(size=(100, 3, 16, 16))
+        model.fit(DataLoader(TensorDataset(x_in, y), batch_size=16))
+
+        x_out = 10.0 * torch.randn(size=(100, 3, 16, 16))
+
+        scores_in = model(x_in)
+        scores_out = model(x_out)
+
+        self.assertGreater(scores_out.mean().item(), scores_in.mean().item())
+
+        metrics = OODMetrics()
+        metrics.update(
+            torch.cat([scores_in, scores_out]),
+            torch.cat([torch.zeros(100), -torch.ones(100)]),
+        )
+        self.assertGreater(metrics.compute()["AUROC"], 0.95)
