@@ -41,6 +41,11 @@ class GEN(LogitsDetector):
     uses :math:`M = 100` for ImageNet) discards the noisy near-zero tail, which the power
     transform would otherwise amplify; for small label spaces it has little effect.
 
+    .. note::
+        This implementation averages over the top-:math:`M` terms instead of summing, which
+        rescales the score by a constant factor (no effect on AUROC/AUPR) but keeps it bounded
+        regardless of class count — avoiding float32 saturation in torchmetrics' ``binary_auroc``.
+
     A small :math:`\\gamma` (the paper recommends :math:`\\gamma = 0.1`) amplifies differences
     near :math:`p = 0` and :math:`p = 1`, making the score highly sensitive to the shape of
     the (truncated) softmax distribution rather than only its maximum. In-distribution samples
@@ -92,4 +97,5 @@ class GEN(LogitsDetector):
         if M is not None:
             # keep the M largest probabilities per sample (top-M classes)
             p = p.sort(dim=1, descending=True).values[:, :M]
-        return (p.pow(gamma) * (1 - p).pow(gamma)).sum(dim=1)
+        # mean, not sum, to keep the score bounded regardless of class count (see class docstring)
+        return (p.pow(gamma) * (1 - p).pow(gamma)).mean(dim=1)
