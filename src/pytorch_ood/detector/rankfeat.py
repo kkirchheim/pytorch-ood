@@ -114,4 +114,4 @@ class RankFeat(FeatureMapsDetector):
     def predict_feature_maps(self, x: Tensor) -> Tensor:
         x = _remove_rank1(x)
         x = self.head(x)
-        return -self.detector(x)
+        return self.detector(x)

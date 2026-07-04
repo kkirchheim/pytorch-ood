@@ -136,6 +136,28 @@ class TestRankFeat(unittest.TestCase):
             "RankFeat scores should differ from plain energy scores",
         )
 
+    def test_score_matches_energy_convention(self):
+        """
+        Regression test for the sign convention: the default detector (EnergyBased.score)
+        already follows this library's convention of higher-score-means-more-OOD (see
+        EnergyBased's docstring), so predict_feature_maps must not negate it again. A past
+        version of this file did `return -self.detector(x)`, which silently inverted every
+        AUROC computed with RankFeat's default scoring function.
+        """
+        model = SimpleCNN(num_classes=3).eval()
+        detector = RankFeat(backbone=model.backbone, head=model.head)
+
+        x = torch.randn(8, 3, 8, 8)
+        with torch.no_grad():
+            scores = detector(x)
+            z = _remove_rank1(model.backbone(x))
+            logits = model.head(z)
+            from src.pytorch_ood.detector import EnergyBased
+
+            expected = EnergyBased.score(logits)
+
+        self.assertTrue(torch.allclose(scores, expected, atol=1e-5))
+
 
 if __name__ == "__main__":
     unittest.main()
