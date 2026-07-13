@@ -13,7 +13,7 @@ import torch
 
 from pytorch_ood.benchmark import CIFAR100_ODIN
 from pytorch_ood.detector import ODIN, MaxSoftmax
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import get_model_info, load_model, load_transform
 from pytorch_ood.utils import fix_random_seed
 
 fix_random_seed(123)
@@ -22,9 +22,9 @@ device = "cuda:0"
 loader_kwargs = {"batch_size": 64}
 
 # %%
-model = WideResNet(num_classes=100, pretrained="cifar100-pt").eval().to(device)
-trans = WideResNet.transform_for("cifar100-pt")
-norm_std = WideResNet.norm_std_for("cifar100-pt")
+model = load_model("wrn-40-2/cifar100/crossentropy").to(device)
+trans = load_transform("wrn-40-2/cifar100/crossentropy")
+norm_std = get_model_info("wrn-40-2/cifar100/crossentropy").preprocessing.std
 
 # %%
 detectors = {

@@ -1,0 +1,6 @@
+_target_: pytorch_ood.model.WideResNet
+arch_name: wrn-40-4
+num_classes: ${dataset.num_classes}
+depth: 40
+widen_factor: 4
+drop_rate: 0.3

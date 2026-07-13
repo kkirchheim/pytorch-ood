@@ -10,13 +10,13 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import MCD
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import load_model, load_transform
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
 fix_random_seed(123)
 device = "cuda:0"
 
-trans = WideResNet.transform_for("cifar10-pt")
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
 
 # setup ID test data
@@ -30,7 +30,7 @@ dataset_out_test = Textures(
 test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=128)
 
 # Stage 1: Create DNN
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").to(device)
+model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 
 # Stage 2: Create Detector
 detector = MCD(model, samples=30)

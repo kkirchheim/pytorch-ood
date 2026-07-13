@@ -21,7 +21,7 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import MultiMahalanobis
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import load_model, load_transform
 from pytorch_ood.utils import GridSearch, OODMetrics, ToUnknown, fix_random_seed
 
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +37,7 @@ n_test = 1_000
 
 # %%
 # Set up data: an ID **fit** set, and ID + OOD **validation** and **test** sets.
-trans = WideResNet.transform_for("cifar10-pt")
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
 cifar_train = CIFAR10(root="data", train=True, download=True, transform=trans)
 cifar_test = CIFAR10(root="data", train=False, download=True, transform=trans)
@@ -55,7 +55,7 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
 # %%
 # Decompose the model into a list of layers; each contributes one Mahalanobis score.
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
+model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 layers = [
     model.conv1,
     model.block1,

@@ -37,7 +37,7 @@ from tqdm import tqdm
 
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.loss import MCHADLoss
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import load_model, load_transform
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed, is_known
 
 fix_random_seed(123)
@@ -49,7 +49,7 @@ embedding_dim = 7  # dimensionality of output space
 margin = math.sqrt(embedding_dim)
 batch_size = 256
 
-trans = WideResNet.transform_for("imagenet32-nocifar")
+trans = load_transform("wrn-40-2/imagenet32-nocifar/crossentropy")
 
 # setup ID training data
 data_in_train = CIFAR10(root=data_root, train=True, download=True, transform=trans)
@@ -81,7 +81,7 @@ train_loader = DataLoader(
 # %%
 # Create DNN, pretrained on the imagenet excluding cifar10 classes.
 # We have to replace the final layer to match the number of classes.
-model = WideResNet(num_classes=1000, pretrained="imagenet32-nocifar")
+model = load_model("wrn-40-2/imagenet32-nocifar/crossentropy")
 model.fc = torch.nn.Linear(model.fc.in_features, embedding_dim)
 model.to(device)
 

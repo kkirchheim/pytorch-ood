@@ -28,7 +28,7 @@ from torchvision.datasets import CIFAR10
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.detector import EnergyBased
 from pytorch_ood.loss import EnergyMarginLoss
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import load_model
 from pytorch_ood.utils import OODMetrics, ToUnknown, to_np
 
 torch.manual_seed(123)
@@ -101,7 +101,7 @@ train_loader_in = DataLoader(dataset_in_train, batch_size=128)
 
 # %%
 # Create DNN, pretrained on the imagenet excluding cifar10 classes
-model = WideResNet(num_classes=1000, pretrained="imagenet32-nocifar")
+model = load_model("wrn-40-2/imagenet32-nocifar/crossentropy")
 # we have to replace the final layer to account for the lower number of
 # classes in the CIFAR10 dataset
 model.fc = torch.nn.Linear(model.fc.in_features, 10)
