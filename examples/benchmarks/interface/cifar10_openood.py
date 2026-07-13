@@ -44,7 +44,7 @@ df = pd.DataFrame(results)
 print((df.set_index(["Dataset", "Detector"]) * 100).to_csv(float_format="%.2f"))
 
 # %%
-# This should produces the following table: 
+# This should produces the following table:
 #
 # +---------------+----------+-------+-------+---------+----------+----------+
 # | Dataset       | Detector | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
