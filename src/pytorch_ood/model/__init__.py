@@ -22,6 +22,10 @@ Pre-trained models are identified by a string of the form ``arch/dataset/loss/se
     model = load_model("wrn-40-2/cifar10/logitnorm/s0")
     transform = load_transform("wrn-40-2/cifar10/logitnorm/s0")
 
+
+.. include:: generated/pretrained_models.rst
+
+
 ..  autofunction:: pytorch_ood.model.load_model
 
 ..  autofunction:: pytorch_ood.model.load_transform
@@ -35,6 +39,8 @@ Pre-trained models are identified by a string of the form ``arch/dataset/loss/se
 
 ..  autoclass:: pytorch_ood.model.ImagePreprocessing
     :members:
+
+
 
 
 Vision

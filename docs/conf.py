@@ -105,6 +105,7 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 
 # include init arguments
 autoclass_content = "both"
@@ -123,7 +124,8 @@ def _generate_model_table():
     lines = [
         ".. list-table:: Available Pre-Trained Models",
         "   :header-rows: 1",
-        "   :widths: 30 10 10 20 30",
+        "   :widths: 25 10 10 20 45",
+        "   :class: model-table",
         "",
         "   * - Identifier",
         "     - Dataset",
