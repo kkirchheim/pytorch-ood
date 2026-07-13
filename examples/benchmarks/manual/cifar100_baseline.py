@@ -74,7 +74,7 @@ from pytorch_ood.detector import (
     ViM,
     fDBD,
 )
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import get_model_info, load_model, load_transform
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
 device = "cuda:0"
@@ -82,8 +82,8 @@ device = "cuda:0"
 fix_random_seed(123)
 
 # setup preprocessing
-trans = WideResNet.transform_for("cifar100-pt")
-norm_std = WideResNet.norm_std_for("cifar100-pt")
+trans = load_transform("wrn-40-2/cifar100/crossentropy")
+norm_std = get_model_info("wrn-40-2/cifar100/crossentropy").preprocessing.std
 
 # %%
 # Setup datasets
@@ -112,7 +112,7 @@ for ood_dataset in ood_datasets:
 # %%
 # **Stage 1**: Create DNN with pre-trained weights from the Hendrycks baseline paper
 print("STAGE 1: Creating a Model")
-model = WideResNet(num_classes=100, pretrained="cifar100-pt").eval().to(device)
+model = load_model("wrn-40-2/cifar100/crossentropy").to(device)
 
 # Stage 2: Create OOD detector
 print("STAGE 2: Creating OOD Detectors")

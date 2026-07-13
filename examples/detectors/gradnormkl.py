@@ -21,7 +21,7 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import GradNormKL
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import WideResNet, load_model, load_transform
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
 logging.basicConfig(level=logging.INFO)
@@ -32,7 +32,7 @@ device = "cuda"
 
 # %%
 # Setup preprocessing and data
-trans = WideResNet.transform_for("cifar10-pt")
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
 dataset_in_test = CIFAR10(root="data", train=False, download=True, transform=trans)
 dataset_out_test = Textures(
@@ -44,7 +44,7 @@ test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64, num_
 # %%
 # Stage 1: Load pre-trained WideResNet for CIFAR-10.
 # Disable gradients for the backbone; only the final FC layer needs them.
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").to(device).eval()
+model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 
 model.requires_grad_(False)
 model.fc.requires_grad_(True)

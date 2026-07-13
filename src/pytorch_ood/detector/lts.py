@@ -56,7 +56,7 @@ class LTS(FeaturesDetector):
 
     .. code :: python
 
-        model = WideResNet(num_classes=10, pretrained="cifar10-pt")
+        model = load_model("wrn-40-2/cifar10/crossentropy")
         detector = LTS(
             encoder=model.features,
             head=model.fc,

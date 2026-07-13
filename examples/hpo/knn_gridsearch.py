@@ -23,7 +23,7 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import KNN
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import load_model, load_transform
 from pytorch_ood.utils import GridSearch, OODMetrics, ToUnknown, fix_random_seed
 
 logging.basicConfig(level=logging.INFO)
@@ -43,7 +43,7 @@ n_test = 1_000
 # * a **fit** set of in-distribution features for the nearest-neighbor index,
 # * a **validation** set (ID + OOD) used to select ``k``,
 # * a **test** set (ID + OOD) used for the final, unbiased evaluation.
-trans = WideResNet.transform_for("cifar10-pt")
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
 cifar_train = CIFAR10(root="data", train=True, download=True, transform=trans)
 cifar_test = CIFAR10(root="data", train=False, download=True, transform=trans)
@@ -61,7 +61,7 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
 # %%
 # Create the model and detector.
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
+model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 detector = KNN(model.features)
 
 # %%

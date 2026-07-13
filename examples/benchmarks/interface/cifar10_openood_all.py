@@ -53,7 +53,7 @@ from pytorch_ood.detector import (
     ViM,
     fDBD,
 )
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import WideResNet, get_model_info, load_model, load_transform
 from pytorch_ood.utils import fix_random_seed
 
 fix_random_seed(123)
@@ -165,9 +165,9 @@ def fit_detectors(detectors, train_loader, calibration_loader):
 
 # %%
 print("STAGE 1: Creating model and benchmark")
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
-trans = WideResNet.transform_for("cifar10-pt")
-norm_std = WideResNet.norm_std_for("cifar10-pt")
+model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
+norm_std = get_model_info("wrn-40-2/cifar10/crossentropy").preprocessing.std
 benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
 
 train_dataset = benchmark.train_set()

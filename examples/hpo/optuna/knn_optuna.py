@@ -18,7 +18,7 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import KNN
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import load_model, load_transform
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
 logging.basicConfig(level=logging.INFO)
@@ -31,8 +31,8 @@ n_val = 1_000
 
 # %%
 # Model and data: fit on CIFAR-10 train (ID), validate on CIFAR-10 test (ID) + Textures (OOD).
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
-trans = WideResNet.transform_for("cifar10-pt")
+model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
 cifar_train = CIFAR10(root="data", train=True, download=True, transform=trans)
 cifar_test = CIFAR10(root="data", train=False, download=True, transform=trans)

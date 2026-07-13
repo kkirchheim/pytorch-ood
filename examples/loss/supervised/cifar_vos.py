@@ -18,7 +18,7 @@ from torchvision.datasets import CIFAR10
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import EnergyBased, WeightedEBO
 from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import load_model, load_transform
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
 device = "cuda:0"
@@ -34,7 +34,7 @@ g.manual_seed(0)
 
 # %%
 # Setup datasets, train on cifar.
-trans = WideResNet.transform_for("cifar10-pt")
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
 dataset = CIFAR10(root="data", train=True, transform=trans, download=True)
 
@@ -58,7 +58,7 @@ loader = DataLoader(
 
 # %%
 # Setup model
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").to(device)
+model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 
 # %%
 # Create neural network functions (layers)
@@ -95,6 +95,7 @@ scheduler = CosineAnnealingLR(
     T_max=num_epochs * len(loader),
 )
 loss_ema = 0
+model.train()
 
 for epoch in range(num_epochs):
     for n, (x, y) in enumerate(loader):

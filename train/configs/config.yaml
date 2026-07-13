@@ -1,0 +1,24 @@
+defaults:
+  - model: wrn-40-2
+  - dataset: cifar10
+  - loss: crossentropy
+  - optimizer: sgd
+  - outliers: none
+  - _self_
+
+seed: 0
+deterministic: true
+
+# optional registry identifier to initialize the model weights from
+init_from: null
+
+epochs: 100
+batch_size: 128
+# batch size of the auxiliary outlier loader (only used when outliers != none)
+oe_batch_size: 256
+num_workers: 8
+device: cuda
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: ${epochs}

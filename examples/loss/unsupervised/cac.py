@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.loss import CACLoss
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import load_model, load_transform
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed, is_known
 
 fix_random_seed(123)
@@ -30,7 +30,7 @@ fix_random_seed(123)
 n_epochs = 10
 device = "cuda:0"
 
-trans = WideResNet.transform_for("imagenet32-nocifar")
+trans = load_transform("wrn-40-2/imagenet32-nocifar/crossentropy")
 
 # setup ID training data
 dataset_in_train = CIFAR10(root="data", train=True, download=True, transform=trans)
@@ -50,7 +50,7 @@ test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64, num_
 # %%
 # Create DNN, pretrained on the imagenet excluding cifar10 classes.
 # We have to replace the final layer to match the number of classes.
-model = WideResNet(num_classes=1000, pretrained="imagenet32-nocifar")
+model = load_model("wrn-40-2/imagenet32-nocifar/crossentropy")
 model.fc = torch.nn.Linear(model.fc.in_features, 10)
 model.to(device)
 

@@ -75,13 +75,13 @@ OOD data must be marked with labels < 0.
 
     from pytorch_ood.detector import EnergyBased
     from pytorch_ood.utils import OODMetrics
-    from pytorch_ood.model import WideResNet
+    from pytorch_ood.model import load_model, load_transform
 
     data_loader = ... # your data, OOD with label < 0
 
     # Create Neural Network
-    model = WideResNet(num_classes=10, pretrained="er-cifar10-tune").eval().cuda()
-    preprocess = WideResNet.transform_for("er-cifar10-tune")
+    model = load_model("wrn-40-2/cifar10/energy/s1").cuda()
+    preprocess = load_transform("wrn-40-2/cifar10/energy/s1")
 
     # Create detector
     detector = EnergyBased(model)
@@ -111,10 +111,10 @@ and pooled features can be reused across calls:
    import pandas as pd
    from pytorch_ood.benchmark import CIFAR10_OpenOOD
    from pytorch_ood.detector import EnergyBased, MaxSoftmax
-   from pytorch_ood.model import WideResNet
+   from pytorch_ood.model import load_model, load_transform
 
-   model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to("cuda:0")
-   trans = WideResNet.transform_for("cifar10-pt")
+   model = load_model("wrn-40-2/cifar10/crossentropy").to("cuda:0")
+   trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
    benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
    detectors = {
