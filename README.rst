@@ -252,7 +252,7 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| MCM                         | Maximum Concept Matching for zero-shot OOD detection with vision-language models.               | 2022 | [#MCM]_            |
+| MCM                         | Maximum Concept Matching for zero-shot OOD detection with vision-language models.              | 2022 | [#MCM]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | VRA                         | Variance-based ReAct adjustment with learned percentile thresholds.                            | 2023 | [#VRA]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
