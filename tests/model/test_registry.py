@@ -67,8 +67,14 @@ class TestRegistryLookup(unittest.TestCase):
         self.assertIsNone(entry.seed)
 
     def test_prefix_resolution(self):
-        entry = get_model_info("wrn-40-2/cifar10/logitnorm")
-        self.assertEqual(entry.key, "wrn-40-2/cifar10/logitnorm/s0")
+        entry = get_model_info("wrn-40-2/cifar10/energy")
+        self.assertEqual(entry.key, "wrn-40-2/cifar10/energy/s1")
+
+    def test_prefix_resolution_ambiguous_across_seeds(self):
+        # logitnorm/cifar10 now has multiple seeds registered, so the
+        # seedless prefix is ambiguous
+        with self.assertRaises(ValueError):
+            get_model_info("wrn-40-2/cifar10/logitnorm")
 
     def test_ambiguous(self):
         with self.assertRaises(ValueError):

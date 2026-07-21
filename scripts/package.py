@@ -35,7 +35,7 @@ ModelEntry(
     arch_kwargs={arch_kwargs},
     url="https://huggingface.co/{repo}/resolve/main/{key}/{ckpt_name}",
     sha256="{sha256}",
-    preprocessing=ImagePreprocessing(mean={mean}, std={std}),
+    preprocessing=ImagePreprocessing(mean={mean}, std={std}, size={size}, crop_size={crop_size}),
     metrics={metrics},
     description="",
 )"""
@@ -71,6 +71,13 @@ def main() -> None:
 
     metrics = json.loads((args.run_dir / "metrics.json").read_text())
 
+    if cfg.dataset.get("kind", "cifar") == "imagenet":
+        size = (cfg.dataset.pre_size, cfg.dataset.pre_size)
+        crop_size = (cfg.dataset.image_size, cfg.dataset.image_size)
+    else:
+        size = (32, 32)
+        crop_size = None
+
     target = args.output_dir / key
     target.mkdir(parents=True, exist_ok=True)
     shutil.copy(checkpoint, target / ckpt_name)
@@ -90,6 +97,8 @@ def main() -> None:
         sha256=digest,
         mean=tuple(cfg.dataset.mean),
         std=tuple(cfg.dataset.std),
+        size=size,
+        crop_size=crop_size,
         metrics=dict(metrics),
     )
 

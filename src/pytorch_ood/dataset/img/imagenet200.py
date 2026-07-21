@@ -20,9 +20,6 @@ class ImageNet200(VisionDataset):
     """
     The ImageNet-200 in-distribution dataset used by the OpenOOD v1.5 benchmark.
 
-    .. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-       :alt: slop-badge
-
     ImageNet-200 is the 200-class subset of ImageNet-1K whose classes are identical to
     those of ImageNet-R. Class labels are assigned ``0..199`` in sorted WNID order, matching
     the labelling used by OpenOOD (and the classifiers it provides).

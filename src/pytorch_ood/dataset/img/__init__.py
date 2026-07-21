@@ -80,7 +80,21 @@ ImageNet-R
 
 ImageNet-200
 `````````````
+
+.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
+    :alt: slop-badge
+
 ..  autoclass:: pytorch_ood.dataset.img.ImageNet200
+    :members:
+    :no-index:
+
+ImageNet-800
+`````````````
+
+.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
+    :alt: slop-badge
+
+..  autoclass:: pytorch_ood.dataset.img.ImageNet800
     :members:
     :no-index:
 
@@ -239,15 +253,6 @@ SuMNIST
     :no-index:
 
 
-Generic
-----------------------
-
-ImageListDataset
-`````````````````````
-..  autoclass:: pytorch_ood.dataset.img.ImageListDataset
-    :members:
-    :no-index:
-
 """
 
 from .chars74k import Chars74k
@@ -258,6 +263,7 @@ from .goe import CIFAR100GAN
 from .imagelist import ImageListDataset
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from .imagenet200 import ImageNet200
+from .imagenet800 import ImageNet800
 from .mnistc import MNISTC
 from .mvtech import MVTechAD
 from .ninco import NINCO
@@ -294,6 +300,7 @@ __all__ = [
     "ImageNetO",
     "ImageNetR",
     "ImageNet200",
+    "ImageNet800",
     "MNISTC",
     "MVTechAD",
     "NINCO",
