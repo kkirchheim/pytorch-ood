@@ -53,6 +53,13 @@ Wide ResNet
     :members:
 
 
+ResNet-18
+-------------
+
+..  autoclass:: pytorch_ood.model.ResNet18
+    :members:
+
+
 Language
 ==============================
 
@@ -92,4 +99,5 @@ from .registry import (
     load_model,
     load_transform,
 )
+from .resnet import ResNet18
 from .wrn import WideResNet

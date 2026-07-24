@@ -20,5 +20,5 @@ num_workers: 8
 device: cuda
 
 scheduler:
-  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  T_max: ${epochs}
+  _target_: scheduler.per_iteration_cosine
+  lr_min: 1e-6

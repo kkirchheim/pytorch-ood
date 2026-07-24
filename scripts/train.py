@@ -72,7 +72,7 @@ def infinite(loader: DataLoader) -> Iterator:
 def build_transforms(cfg: DictConfig):
     normalize = tvt.Normalize(mean=list(cfg.dataset.mean), std=list(cfg.dataset.std))
 
-    if cfg.dataset.kind == "imagenet":
+    if cfg.dataset.get("kind", "cifar") == "imagenet":
         # raw ImageNet includes a handful of grayscale/CMYK images; ToRGB()
         # normalizes channel count before ToTensor/Normalize
         train = tvt.Compose(
@@ -108,7 +108,7 @@ def build_transforms(cfg: DictConfig):
 
 
 def build_datasets(cfg: DictConfig, train_transform, test_transform):
-    if cfg.dataset.kind == "imagenet":
+    if cfg.dataset.get("kind", "cifar") == "imagenet":
         train_set = ImageNet200(root=cfg.dataset.root, split="train", transform=train_transform)
         # the 1000-image "val" split is OpenOOD's held-out set for model/hyperparameter
         # selection; the 9000-image "test" split is the in-distribution OOD-benchmark set
