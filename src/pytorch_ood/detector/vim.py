@@ -41,6 +41,11 @@ class ViM(FeaturesDetector):
 
     requires_fit = True
 
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`: the principal-subspace
+    #: dimension ``d``. Candidates exceeding a model's feature dimension are clamped during
+    #: fitting, so this single space is safe across architectures of different width.
+    hyperparameter_space = {"d": [16, 32, 64, 128, 256, 512]}
+
     def __init__(
         self,
         encoder: Optional[Callable[[torch.Tensor], torch.Tensor]],
@@ -57,7 +62,7 @@ class ViM(FeaturesDetector):
         """
         super(ViM, self).__init__()
         self.encoder = encoder
-        self.n_dim = d
+        self.d = d
         w = w.detach().cpu().float()
         b = b.detach().cpu().float()
         self.w = w  # (C, D)
@@ -88,7 +93,7 @@ class ViM(FeaturesDetector):
         return self.predict_features(features)
 
     def __repr__(self):
-        return f"ViM(d={self.n_dim})"
+        return f"ViM(d={self.d})"
 
     def fit(self: Self, data_loader: DataLoader) -> Self:
         """
@@ -118,7 +123,7 @@ class ViM(FeaturesDetector):
         logits = self._get_logits(x)  # (N, C)
 
         # Project centered features onto the null subspace and take L2 norm
-        x_p_t = (x - self.u) @ self.principal_subspace  # (N, D-n_dim)
+        x_p_t = (x - self.u) @ self.principal_subspace  # (N, D-d)
         vlogit = x_p_t.norm(dim=-1) * self.alpha  # (N,)
 
         # Clip for numerical stability: float32 easily overflows in logsumexp
@@ -138,12 +143,12 @@ class ViM(FeaturesDetector):
         device = self.device or self.w.device
         features = features.detach().to(device).float()
 
-        if features.shape[1] < self.n_dim:
+        if features.shape[1] < self.d:
             n = features.shape[1] // 2
             log.warning(
-                f"{features.shape[1]=} is smaller than {self.n_dim=}. Will be adjusted to {n}"
+                f"{features.shape[1]=} is smaller than {self.d=}. Will be adjusted to {n}"
             )
-            self.n_dim = n
+            self.d = n
 
         logits = self._get_logits(features)  # (N, C)
 
@@ -158,14 +163,14 @@ class ViM(FeaturesDetector):
         # corresponding eigenvectors as columns.
         eig_vals, eig_vecs = torch.linalg.eigh(cov)  # vals: (D,), vecs: (D, D)
 
-        # Select the null subspace: the (D - n_dim) eigenvectors that correspond
+        # Select the null subspace: the (D - d) eigenvectors that correspond
         # to the *smallest* eigenvalues (i.e. directions least explained by the
         # training data).  With ascending eigh output these are the first columns.
-        k = eig_vecs.shape[1] - self.n_dim
-        self.principal_subspace = eig_vecs[:, :k].contiguous()  # (D, D-n_dim)
+        k = eig_vecs.shape[1] - self.d
+        self.principal_subspace = eig_vecs[:, :k].contiguous()  # (D, D-d)
 
         log.info("Computing alpha ...")
-        x_p_t = X @ self.principal_subspace  # (N, D-n_dim)
+        x_p_t = X @ self.principal_subspace  # (N, D-d)
         vlogits = x_p_t.norm(dim=-1)  # (N,)
         self.alpha = (logits.max(dim=-1).values.mean() / vlogits.mean()).item()
         log.info(f"{self.alpha=:.4f}")

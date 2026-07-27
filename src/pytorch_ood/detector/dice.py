@@ -38,6 +38,11 @@ class DICE(FeaturesDetector):
 
     requires_fit = True
 
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`: the sparsification
+    #: percentile ``p`` (percentage of weight contributions dropped), matching the sweep
+    #: used by the DICE paper / OpenOOD.
+    hyperparameter_space = {"p": [10, 30, 50, 70, 90]}
+
     def __init__(
         self,
         encoder: Optional[Callable[[Tensor], Tensor]],
@@ -56,7 +61,7 @@ class DICE(FeaturesDetector):
         self.encoder = encoder
         self.weight = w.detach().cpu()
         self.bias = b.detach().cpu()
-        self.percentile = p
+        self.p = p
         self.detector = detector or EnergyBased.score
 
         self._is_fitted = False
@@ -108,7 +113,7 @@ class DICE(FeaturesDetector):
 
         contrib = self.mean_activation[None, :] * weight
         self.threshold = torch.quantile(
-            contrib.flatten(), torch.tensor(self.percentile / 100.0, device=device)
+            contrib.flatten(), torch.tensor(self.p / 100.0, device=device)
         ).item()
         log.info(f"Threshold is {self.threshold:.2f}")
         self.masked_w = torch.where(contrib > self.threshold, weight, 0)
