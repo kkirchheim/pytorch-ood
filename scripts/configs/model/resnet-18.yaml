@@ -1,0 +1,4 @@
+_target_: pytorch_ood.model.ResNet18
+arch_name: resnet-18
+num_classes: ${dataset.num_classes}
+weights: null

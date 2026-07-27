@@ -53,6 +53,10 @@ class NCI(FeaturesDetector):
 
     requires_fit = True
 
+    #: default search space for :class:`pytorch_ood.utils.GridSearch` (APS tuning of
+    #: the feature-norm penalty weight against a held-out ID+OOD validation split)
+    hyperparameter_space = {"alpha": [0.0, 0.001, 0.01, 0.05, 0.1, 0.25, 0.5, 1.0]}
+
     def __init__(self, encoder: Module, head: Linear, alpha: float = 0.0) -> None:
         """
         :param encoder: model mapping inputs to features
