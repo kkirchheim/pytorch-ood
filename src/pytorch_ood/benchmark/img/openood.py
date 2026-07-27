@@ -24,13 +24,13 @@ import os
 from typing import ClassVar, Dict, List, Optional, Tuple
 
 import torch
+from torch.utils.data import ConcatDataset, Dataset
 from torchvision.transforms import Compose
 
-from torch.utils.data import ConcatDataset, Dataset
-
-from ..base import Benchmark
 from pytorch_ood.dataset.img import ImageListDataset
 from pytorch_ood.utils import ToRGB
+
+from ..base import Benchmark
 
 log = logging.getLogger(__name__)
 

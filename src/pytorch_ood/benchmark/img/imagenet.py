@@ -5,6 +5,6 @@ module re-exports them so existing ``from ...img.imagenet import ...`` imports k
 working.
 """
 
-from .openood import ImageNet1K_OpenOOD, ImageNet_OpenOOD, ImageNet200_OpenOOD
+from .openood import ImageNet1K_OpenOOD, ImageNet200_OpenOOD, ImageNet_OpenOOD
 
 __all__ = ["ImageNet_OpenOOD", "ImageNet1K_OpenOOD", "ImageNet200_OpenOOD"]
