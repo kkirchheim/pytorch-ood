@@ -145,9 +145,7 @@ class ViM(FeaturesDetector):
 
         if features.shape[1] < self.d:
             n = features.shape[1] // 2
-            log.warning(
-                f"{features.shape[1]=} is smaller than {self.d=}. Will be adjusted to {n}"
-            )
+            log.warning(f"{features.shape[1]=} is smaller than {self.d=}. Will be adjusted to {n}")
             self.d = n
 
         logits = self._get_logits(features)  # (N, C)
