@@ -203,7 +203,9 @@ class OODMetrics(object):
 
         self.mode = mode
 
-    def update(self: Self, scores: Tensor, y: Tensor, predictions: Optional[Tensor] = None) -> Self:
+    def update(
+        self: Self, scores: Tensor, y: Tensor, predictions: Optional[Tensor] = None
+    ) -> Self:
         """
         Add batch of results to collection.
 
@@ -226,9 +228,7 @@ class OODMetrics(object):
             if predictions is not None:
                 predictions = predictions.detach()
                 if predictions.shape != y.shape:
-                    raise ValueError(
-                        f"Inputs have wrong size: {predictions.shape} and {y.shape}"
-                    )
+                    raise ValueError(f"Inputs have wrong size: {predictions.shape} and {y.shape}")
                 self.buffer.append("predictions", predictions)
 
         elif self.mode == "segmentation":

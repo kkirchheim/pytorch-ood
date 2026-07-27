@@ -240,8 +240,9 @@ class _OpenOOD_ImageNet(_OpenOOD_Imglist):
     ``imagenet_1k/train/<wnid>/...`` and flat ``imagenet_1k/val/ILSVRC2012_val_*.JPEG``.
     """
 
-    def __init__(self, root, transform, image_net_root: Optional[str] = None,
-                 download: bool = True) -> None:
+    def __init__(
+        self, root, transform, image_net_root: Optional[str] = None, download: bool = True
+    ) -> None:
         """
         :param root: directory the OOD imglist paths resolve against; ``imagenet_1k`` is
             set up here from ``image_net_root``
