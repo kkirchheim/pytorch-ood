@@ -63,8 +63,8 @@ class ViM(FeaturesDetector):
         super(ViM, self).__init__()
         self.encoder = encoder
         self.d = d
-        w = w.detach().cpu().float()
-        b = b.detach().cpu().float()
+        w = w.detach().float()
+        b = b.detach().float()
         self.w = w  # (C, D)
         self.b = b  # (C,)
         self.u = -(torch.linalg.pinv(w) @ b)  # (D,)  new origin
@@ -126,8 +126,10 @@ class ViM(FeaturesDetector):
         x_p_t = (x - self.u) @ self.principal_subspace  # (N, D-d)
         vlogit = x_p_t.norm(dim=-1) * self.alpha  # (N,)
 
-        # Clip for numerical stability: float32 easily overflows in logsumexp
-        energy = torch.logsumexp(logits.clamp(-100, 100), dim=-1)  # (N,)
+        # torch.logsumexp subtracts the max internally, so it is already numerically
+        # stable without clamping -- clamping would distort the result for models
+        # whose raw logits exceed +-100.
+        energy = torch.logsumexp(logits, dim=-1)  # (N,)
 
         score = -vlogit + energy
         return -score

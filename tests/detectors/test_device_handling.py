@@ -323,6 +323,21 @@ class TestDetectorDeviceHandling(unittest.TestCase):
         self.assertEqual(next(detector.model.parameters()).device, self.device)
         self.assertEqual(detector.t.device, self.device)
 
+    def test_vim_infers_device_from_constructor_tensors_without_explicit_to(self):
+        # ViM must not silently pin its state to CPU when constructed directly from
+        # GPU-resident weights, without an explicit detector.to(device) call.
+        model = ClassificationModel().to(self.device)
+        detector = ViM(model.features, d=4, w=model.classifier.weight, b=model.classifier.bias)
+
+        self.assertEqual(detector.w.device, self.device)
+        self.assertEqual(detector.u.device, self.device)
+
+        detector.fit(self.classification_loader)
+        self.assertEqual(detector.principal_subspace.device, self.device)
+
+        scores = detector(torch.randn(8, 10, device=self.device))
+        self._assert_scores(scores, self.device, batch_size=8)
+
     def test_logits_fit_and_predict_logits_accept_cpu_tensors_for_cuda_detector(self):
         cached_logits = torch.randn(8, 3)
 
