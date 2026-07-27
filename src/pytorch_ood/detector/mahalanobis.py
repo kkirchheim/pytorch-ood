@@ -247,13 +247,9 @@ class MahalanobisODIN(GradientDetector):
 
                 for clazz in range(self._base.n_classes):
                     centered_features = features.data - self._base.mu[clazz]
-                    term_gau = (
-                        -0.5
-                        * torch.mm(
-                            torch.mm(centered_features, self._base.precision),
-                            centered_features.t(),
-                        ).diag()
-                    )
+                    term_gau = -0.5 * (
+                        (centered_features @ self._base.precision) * centered_features
+                    ).sum(dim=1)
 
                     if clazz == 0:
                         score = term_gau.view(-1, 1)
@@ -263,13 +259,9 @@ class MahalanobisODIN(GradientDetector):
                 sample_pred = score.max(dim=1).indices
                 batch_sample_mean = self._base.mu.index_select(0, sample_pred)
                 centered_features = features - Variable(batch_sample_mean)
-                pure_gau = (
-                    -0.5
-                    * torch.mm(
-                        torch.mm(centered_features, Variable(self._base.precision)),
-                        centered_features.t(),
-                    ).diag()
-                )
+                pure_gau = -0.5 * (
+                    (centered_features @ Variable(self._base.precision)) * centered_features
+                ).sum(dim=1)
                 loss = torch.mean(-pure_gau)
                 loss.backward()
 
