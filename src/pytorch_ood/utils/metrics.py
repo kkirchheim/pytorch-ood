@@ -4,7 +4,7 @@
 
 """
 
-from typing import Dict, TypeVar
+from typing import Dict, Optional, TypeVar
 
 import numpy as np
 import torch
@@ -154,6 +154,9 @@ class OODMetrics(object):
     - AUPR ID (see `ArXiv <https://arxiv.org/pdf/1610.02136>`__ or `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
     - AUPR OUT (see `ArXiv <https://arxiv.org/pdf/1610.02136>`__ or `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
     - FPR\\@95TPR (see `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
+    - ACC: closed-set classification accuracy on the known (in-distribution) samples,
+      included automatically whenever predicted class indices are passed to
+      :meth:`update`.
 
     The interface is similar to ``torchmetrics``.
 
@@ -164,6 +167,16 @@ class OODMetrics(object):
         labels = torch.Tensor([1,2,-1])
         metrics.update(outlier_scores, labels)
         metric_dict = metrics.compute()
+
+    Passing predicted class indices additionally reports closed-set accuracy:
+
+    .. code :: python
+
+        metrics = OODMetrics()
+        logits = model(x)
+        outlier_scores = detector(x)
+        metrics.update(outlier_scores, labels, logits.argmax(dim=1))
+        metric_dict = metrics.compute()  # now also contains "ACC"
 
     In ``classification`` mode, the inputs will be flattened, so we treat each value as an individual example.
     Using this mode for segmentation tasks can require a lot of memory and compute.
@@ -190,12 +203,17 @@ class OODMetrics(object):
 
         self.mode = mode
 
-    def update(self: Self, scores: Tensor, y: Tensor) -> Self:
+    def update(
+        self: Self, scores: Tensor, y: Tensor, predictions: Optional[Tensor] = None
+    ) -> Self:
         """
         Add batch of results to collection.
 
         :param scores: outlier score
         :param y: target label
+        :param predictions: predicted class indices, classification mode only. When
+            given (on every call to this instance), :meth:`compute` additionally
+            reports closed-set accuracy ("ACC") on the known (in-distribution) samples.
         """
         scores = scores.detach()
         y = y.detach()
@@ -207,7 +225,18 @@ class OODMetrics(object):
             self.buffer.append("scores", scores)
             self.buffer.append("y", y)
 
+            if predictions is not None:
+                predictions = predictions.detach()
+                if predictions.shape != y.shape:
+                    raise ValueError(f"Inputs have wrong size: {predictions.shape} and {y.shape}")
+                self.buffer.append("predictions", predictions)
+
         elif self.mode == "segmentation":
+            if predictions is not None:
+                raise NotImplementedError(
+                    "predictions/accuracy are not supported in segmentation mode"
+                )
+
             # Should contain BxHxW
             assert len(scores.shape) == 3
             assert len(y.shape) == 3
@@ -286,6 +315,19 @@ class OODMetrics(object):
             scores = self.buffer.get("scores").view(-1)
 
             metrics = self._compute(labels, scores)
+
+            if "predictions" in self.buffer:
+                predictions = self.buffer.get("predictions").view(-1)
+
+                # mirror the void-label filtering _compute() applies internally
+                if self.void_label:
+                    void_mask = labels != self.void_label
+                    labels = labels[void_mask]
+                    predictions = predictions[void_mask]
+
+                known = labels >= 0
+                if known.any():
+                    metrics["ACC"] = (predictions[known] == labels[known]).float().mean().cpu()
 
         metrics = {k: v.item() for k, v in metrics.items()}
         return metrics

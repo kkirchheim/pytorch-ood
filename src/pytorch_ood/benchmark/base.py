@@ -324,7 +324,8 @@ class Benchmark(ABC):
         logits = payload["data"]["logits"]
         labels = payload["data"]["label"]
         scores = detector.predict_logits(logits)
-        metrics.update(scores, labels.to(scores.device))
+        predictions = logits.argmax(dim=1).to(scores.device)
+        metrics.update(scores, labels.to(scores.device), predictions)
         return metrics.compute()
 
     @staticmethod

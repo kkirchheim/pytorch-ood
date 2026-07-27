@@ -25,6 +25,69 @@ class TestMetrics(unittest.TestCase):
         self.assertEqual(r["AUPR-IN"], 1.0)
         self.assertEqual(r["AUPR-OUT"], 1.0)
         self.assertEqual(r["FPR95TPR"], 0.0)
+        self.assertNotIn("ACC", r)
+
+    def test_accuracy_perfect(self):
+        metrics = OODMetrics()
+        scores = torch.zeros(size=(10,))
+        y = torch.zeros(size=(10,))
+        predictions = torch.zeros(size=(10,))
+        scores[5:] = 1
+        y[5:] = -1
+        # predictions for the OOD samples (y == -1) are irrelevant to accuracy
+        metrics.update(scores, y, predictions)
+        r = metrics.compute()
+        self.assertEqual(r["ACC"], 1.0)
+
+    def test_accuracy_partial(self):
+        metrics = OODMetrics()
+        scores = torch.zeros(size=(10,))
+        y = torch.zeros(size=(10,))
+        predictions = torch.zeros(size=(10,))
+        scores[5:] = 1
+        y[5:] = -1
+        # 2 of the 5 known (ID) samples are misclassified
+        predictions[0] = 1
+        predictions[1] = 1
+        metrics.update(scores, y, predictions)
+        r = metrics.compute()
+        self.assertAlmostEqual(r["ACC"], 3 / 5)
+
+    def test_accuracy_shape_mismatch(self):
+        metrics = OODMetrics()
+        scores = torch.zeros(size=(10,))
+        y = torch.zeros(size=(10,))
+        predictions = torch.zeros(size=(5,))
+        y[5:] = -1
+
+        with self.assertRaises(ValueError):
+            metrics.update(scores, y, predictions)
+
+    def test_accuracy_void_label(self):
+        metrics = OODMetrics(void_label=2)
+        scores = torch.zeros(size=(10,))
+        y = torch.zeros(size=(10,))
+        predictions = torch.zeros(size=(10,))
+
+        # void entry, misclassified but must not count toward accuracy
+        scores[0] = -1
+        y[0] = 2
+        predictions[0] = 1
+
+        scores[5:] = 1
+        y[5:] = -1
+        metrics.update(scores, y, predictions)
+        r = metrics.compute()
+        self.assertEqual(r["ACC"], 1.0)
+
+    def test_accuracy_not_supported_in_segmentation_mode(self):
+        metrics = OODMetrics(mode="segmentation")
+        x = torch.zeros(size=(2, 32, 32))
+        y = torch.zeros(size=(2, 32, 32))
+        predictions = torch.zeros(size=(2, 32, 32))
+
+        with self.assertRaises(NotImplementedError):
+            metrics.update(x, y, predictions)
 
     def test_autc(self):
         # split

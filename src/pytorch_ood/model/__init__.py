@@ -60,6 +60,13 @@ ResNet-18
     :members:
 
 
+ResNet-50
+-------------
+
+..  autoclass:: pytorch_ood.model.ResNet50
+    :members:
+
+
 Language
 ==============================
 
@@ -99,5 +106,5 @@ from .registry import (
     load_model,
     load_transform,
 )
-from .resnet import ResNet18
+from .resnet import ResNet18, ResNet50
 from .wrn import WideResNet

@@ -1,0 +1,3 @@
+name: imagenet800
+_target_: pytorch_ood.dataset.img.ImageNet800
+root: ${imagenet_root}
