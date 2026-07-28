@@ -20,7 +20,7 @@ from torch.nn import Module, Sequential
 from torch.utils.data import DataLoader
 
 from ..api import ModelNotSetException, RequiresFittingException, StructuredDetector
-from ..utils import contains_unknown, extract_feature_avg
+from ..utils import contains_unknown, extract_feature_avg, is_unknown
 
 log = logging.getLogger(__name__)
 
@@ -39,11 +39,14 @@ class MultiMahalanobis(StructuredDetector):
     .. math :: M_i(x) = - \\max_k \\lbrace (f_i(x) - \\mu_{ik})^{\\top} \\Sigma_i^{-1} (f_i(x) - \\mu_{ik}) \\rbrace
 
     The final outlier score is the sum of all scores, weighted by :math:`\\alpha`.
+    :math:`\\alpha` defaults to uniform weighting, can be set manually via the constructor,
+    or fitted via logistic regression on an ID+OOD validation set with :meth:`fit_alpha` /
+    :meth:`fit_alpha_structured`, following the original paper's protocol.
 
     Example code is provided :doc:`here <auto_examples/detectors/mmahalanobis>`
 
     .. note ::
-        This does not yet support ODIN preprocessing. Also, the :math:`\\alpha` values have to be determined manually.
+        This does not yet support ODIN preprocessing.
 
     :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
     :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
@@ -151,6 +154,94 @@ class MultiMahalanobis(StructuredDetector):
             self.precision.append(precision)
             z = z.to(org_device)
 
+        return self
+
+    def fit_alpha(self: Self, data_loader: DataLoader) -> Self:
+        """
+        Fits the per-layer weighting factors :math:`\\alpha` via logistic regression, as
+        described in the paper: given a validation set containing both ID and OOD samples
+        (OOD labeled ``-1``), learns the linear combination of per-layer Mahalanobis scores
+        that best separates ID from OOD. Requires :meth:`fit` (or :meth:`fit_structured`) to
+        have been called first, since the Gaussians are reused as-is.
+
+        :param data_loader: validation dataset containing both ID and OOD samples.
+        :return:
+        """
+        device = self.device
+        if device is None:
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
+
+        # unlike fit()/extract_feature_avg, OOD samples must be kept here
+        zs = [[] for _ in self.model]
+        ys = []
+
+        with torch.no_grad():
+            for x, y in data_loader:
+                x = x.to(device)
+                ys.append(y.to(device))
+
+                for layer_idx in range(len(self.model)):
+                    # NOTE: this could be done more efficiently
+                    model = Sequential(*self.model[: layer_idx + 1])
+                    z = model(x)
+                    z = z.mean(dim=(2, 3)).view(z.shape[0], -1)
+                    zs[layer_idx].append(z)
+
+        zs = [torch.cat(z, dim=0) for z in zs]
+        y = torch.cat(ys, dim=0)
+
+        return self.fit_alpha_structured(zs, y)
+
+    def fit_alpha_structured(self: Self, zs: List[Tensor], y: Tensor) -> Self:
+        """
+        Fits the per-layer weighting factors :math:`\\alpha` via logistic regression, given
+        per-layer features of a validation set containing both ID and OOD samples (OOD
+        labeled ``-1``). Requires :meth:`fit_structured` to have been called first, since the
+        Gaussians are reused as-is.
+
+        :param zs: list of per-layer features of the validation set
+        :param y: labels of the validation set, with OOD samples marked ``-1``
+        :return:
+        """
+        if not self.mu:
+            raise RequiresFittingException
+
+        if not contains_unknown(y):
+            raise ValueError(
+                "fit_alpha_structured requires a validation set containing both ID and OOD "
+                "samples (OOD labeled -1); got ID-only labels."
+            )
+
+        from sklearn.linear_model import LogisticRegressionCV
+
+        device = self.device or zs[0].device
+        y = y.to(device)
+
+        batch_size = zs[0].shape[0]
+        scores = torch.empty(batch_size, len(zs), device=device)
+
+        for layer_idx, z in enumerate(zs):
+            org_device = z.device
+            z = z.to(device)
+            md_k = self._calc_gaussian_scores(z, layer_idx)
+            z = z.to(org_device)
+            scores[:, layer_idx] = -torch.max(md_k, dim=1).values
+
+        x_np = scores.detach().cpu().numpy()
+        y_np = is_unknown(y).detach().cpu().numpy().astype(int)  # 1 = OOD, 0 = ID
+
+        # L2-regularized, with the strength picked by internal cross-validation rather than
+        # fixed -- matching the official reference implementation (LogisticRegressionCV, not
+        # plain LogisticRegression). Unregularized fits overfit badly here: the per-layer
+        # scores are highly correlated, so an unregularized fit finds huge, opposite-signed
+        # per-layer weights that fit the validation set but don't generalize to OOD test data.
+        clf = LogisticRegressionCV(fit_intercept=False)
+        clf.fit(x_np, y_np)
+
+        self.alpha = clf.coef_[0].tolist()
+        log.info(f"Fitted alpha={self.alpha}")
         return self
 
     def _calc_gaussian_scores(self, z: Tensor, layer_idx) -> Tensor:
