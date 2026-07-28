@@ -88,8 +88,10 @@ class DICE(FeaturesDetector):
         if self.masked_w is None:
             raise RequiresFittingException()
 
-        vote = x[:, None, :] * self.masked_w.to(x.device)
-        output = vote.sum(2) + self.bias.to(x.device)
+        # equivalent to (x[:, None, :] * masked_w).sum(2), but O(N*C) memory instead
+        # of O(N*C*D) -- the elementwise-then-sum form OOMs for large N*C*D (e.g. the
+        # full OpenOOD ImageNet validation split against a 1000-class head).
+        output = x @ self.masked_w.to(x.device).T + self.bias.to(x.device)
         score = self.detector(output)
         return score
 
