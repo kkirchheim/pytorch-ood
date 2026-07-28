@@ -184,6 +184,12 @@ class GridSearch:
             score = self._predict_score(cached_features, cached_logits, z_val, y_val)
             self.results_.append({"params": params, "score": score})
 
+            # each candidate's fit/predict can allocate large transient CUDA tensors
+            # (e.g. ViM's principal-subspace projection); release them back to the
+            # allocator before the next candidate to avoid fragmentation-driven OOMs
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
             # never select a non-finite score (e.g. NaN from a degenerate candidate)
             if not math.isfinite(score):
                 continue
