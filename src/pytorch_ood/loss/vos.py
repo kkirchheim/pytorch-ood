@@ -263,10 +263,9 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         # case enough samples collected
         else:
             # update queue with new data
-            target_numpy = target.cpu().data.numpy()
             for index in range(len(target)):
                 # get class id
-                dict_key = target_numpy[index]
+                dict_key = target[index]
                 # update queue
                 self.data_dict[dict_key] = torch.cat(
                     (
