@@ -1,4 +1,6 @@
+import copy
 import unittest
+from unittest.mock import patch
 
 import torch
 
@@ -123,6 +125,47 @@ class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
             str(context.exception),
             "Outlier targets in VirtualOutlierSynthesizingRegLoss. This loss function only supports inlier targets.",
         )
+
+    def test_full_queue_update_is_identical_without_cpu_transfer(self):
+        criterion, model = self.init_loss(3)
+        criterion.data_dict.copy_(
+            torch.arange(criterion.data_dict.numel()).reshape_as(criterion.data_dict)
+        )
+        criterion.number_dict = {
+            index: criterion.sample_number for index in range(criterion.num_classes)
+        }
+        reference = copy.deepcopy(criterion)
+
+        features = torch.arange(70, dtype=torch.float32).reshape(7, 10)
+        target = torch.tensor([2, 0, 2, 1, 2, 0, 2])
+        prediction = model.classifier(features)
+
+        target_numpy = target.cpu().data.numpy()
+        for index in range(len(target)):
+            dict_key = target_numpy[index]
+            reference.data_dict[dict_key] = torch.cat(
+                (
+                    reference.data_dict[dict_key][1:],
+                    features[index].detach().view(1, -1),
+                ),
+                0,
+            )
+
+        torch.manual_seed(123)
+        with patch.object(
+            torch.Tensor,
+            "cpu",
+            side_effect=AssertionError("steady-state queue update transferred to CPU"),
+        ):
+            loss = criterion._regularization_classification(prediction, features, target)
+
+        torch.manual_seed(123)
+        reference_loss = reference._regularization_classification(
+            prediction, features[:0], target[:0]
+        )
+
+        self.assertTrue(torch.equal(criterion.data_dict, reference.data_dict))
+        self.assertTrue(torch.equal(loss, reference_loss))
 
     def test_forward_set_alpha(self):
         criterion, model = self.init_loss(10, alpha=2)
