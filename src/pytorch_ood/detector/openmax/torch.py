@@ -33,6 +33,16 @@ class OpenMax(LogitsDetector):
 
     requires_fit = True
 
+    #: grid explored by :class:`pytorch_ood.utils.GridSearch`. ``alpha``/``euclid_weight``
+    #: anchored around the fixed values used by the OpenOOD reference implementation
+    #: (weibull_alpha=3, eu_weight=0.5); ``tailsize`` around the paper/OpenOOD default of
+    #: 20-25, since OpenOOD itself does not sweep any of these three.
+    hyperparameter_space = {
+        "tailsize": [10, 20, 30, 40, 50],
+        "alpha": [1, 3, 5, 10, 15, 20],
+        "euclid_weight": [0.0, 0.25, 0.5, 0.75, 1.0],
+    }
+
     def __init__(
         self,
         model: Optional[Module],
@@ -48,8 +58,9 @@ class OpenMax(LogitsDetector):
         :param euclid_weight: weight for the Euclidean distance.
         """
         self.model = model
-
-        self._openmax = NumpyOpenMax(tailsize=tailsize, alpha=alpha, euclid_weight=euclid_weight)
+        self.tailsize = tailsize
+        self.alpha = alpha
+        self.euclid_weight = euclid_weight
 
     def fit_logits(self: Self, logits: Tensor, y: Tensor) -> Self:
         """
@@ -59,6 +70,13 @@ class OpenMax(LogitsDetector):
         :param y: class labels
         :return:
         """
+        # Built here (not in __init__) so that GridSearch.set_hyperparameters -- which
+        # only assigns self.tailsize/alpha/euclid_weight, per hyperparameter_space --
+        # takes effect: every GridSearch candidate re-fits after setting hyperparameters,
+        # so a fresh, correctly-configured NumpyOpenMax is guaranteed at fit time.
+        self._openmax = NumpyOpenMax(
+            tailsize=self.tailsize, alpha=self.alpha, euclid_weight=self.euclid_weight
+        )
         logits, y = logits.cpu().numpy(), y.cpu().numpy()
         self._openmax.fit(logits, y)
         return self
