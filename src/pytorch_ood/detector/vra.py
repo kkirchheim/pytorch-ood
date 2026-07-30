@@ -22,7 +22,7 @@ import torch.nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from pytorch_ood.utils import extract_features, is_known
+from pytorch_ood.utils import is_known
 
 from ..api import FeatureMapsDetector, ModelNotSetException, RequiresFittingException
 from .energy import EnergyBased
@@ -159,7 +159,25 @@ class VRA(FeatureMapsDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        z, y = extract_features(data_loader, self.backbone, device=device)
+        # NOTE: unlike pytorch_ood.utils.extract_features (which flattens each sample
+        # to a 1-D vector, for pooled-feature detectors), the per-dimension clipping
+        # thresholds computed by fit_feature_maps require the spatial (N, C, H, W)
+        # shape to be preserved, since predict_feature_maps() clips un-flattened
+        # feature maps of that same shape.
+        zs, ys = [], []
+        with torch.no_grad():
+            for x, y in data_loader:
+                known = is_known(y)
+                if not known.any():
+                    continue
+                zs.append(self.backbone(x[known].to(device)).detach().cpu())
+                ys.append(y[known].cpu())
+
+        if not zs:
+            raise ValueError("No ID data")
+
+        z = torch.cat(zs, dim=0)
+        y = torch.cat(ys, dim=0)
         self.fit_feature_maps(z, y)
         return self
 
