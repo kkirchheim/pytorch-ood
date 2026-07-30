@@ -42,7 +42,7 @@ log = logging.getLogger(__name__)
 CIFAR_DATASETS = {"cifar10": CIFAR10, "cifar100": CIFAR100}
 
 # training methods that require an auxiliary outlier dataset
-REQUIRES_OUTLIERS = {"oe", "energy", "entropic"}
+REQUIRES_OUTLIERS = {"oe", "energy", "entropic", "vos"}
 
 
 def set_seed(seed: int, deterministic: bool) -> None:
@@ -176,8 +176,22 @@ def main(cfg: DictConfig) -> None:
         log.info(f"Initializing weights from '{cfg.init_from}'")
         model.load_state_dict(load_model(cfg.init_from).state_dict())
 
-    criterion = instantiate_without(cfg.loss, "method_name").to(device)
-    optimizer = instantiate(cfg.optimizer, params=model.parameters())
+    criterion_kwargs: Dict[str, Any] = {}
+    if method == "vos":
+        weights_energy = torch.nn.Linear(cfg.dataset.num_classes, 1)
+        # per the VOSRegLoss docstring: the energy re-weighting must start
+        # non-negative, since it is passed through relu() before use
+        torch.nn.init.uniform_(weights_energy.weight)
+        criterion_kwargs = {
+            "logistic_regression": torch.nn.Linear(1, 2),
+            "weights_energy": weights_energy,
+        }
+    criterion = instantiate_without(cfg.loss, "method_name", **criterion_kwargs).to(device)
+    # some losses (e.g. VOSRegLoss) carry their own learnable parameters (the
+    # weighted-energy / logistic-regression heads); include them so they actually train
+    optimizer = instantiate(
+        cfg.optimizer, params=list(model.parameters()) + list(criterion.parameters())
+    )
 
     # OpenOOD's recipe (BaseTrainer, used for every dataset including CIFAR):
     # a LambdaLR cosine schedule stepped once per training iteration (not per
@@ -217,6 +231,9 @@ def main(cfg: DictConfig) -> None:
             best_accuracy = accuracy
             state_dict = {k: v.cpu() for k, v in model.state_dict().items()}
             torch.save(state_dict, output_dir / "model.pt")
+            if criterion_kwargs:
+                criterion_state = {k: v.cpu() for k, v in criterion.state_dict().items()}
+                torch.save(criterion_state, output_dir / "criterion.pt")
 
     metrics = {"final_accuracy": accuracy, "best_accuracy": best_accuracy}
     with open(output_dir / "metrics.json", "w") as f:
