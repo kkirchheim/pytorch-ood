@@ -111,8 +111,13 @@ class PNML(FeaturesDetector):
         z = z[known].detach().to(target_device).float()
         z = torch.nn.functional.normalize(z, p=2, dim=1)
 
-        x_pinv = torch.linalg.pinv(z)
-        self._feature_projector = x_pinv @ x_pinv.T
+        # X^+ (X^+)^T == pinv(X^T X) for any X, and equals (X^T X)^{-1} exactly whenever
+        # X^T X is invertible (the practically-always-true case for real feature data).
+        # Computing it this way -- pinv on the small (D, D) Gram matrix -- instead of
+        # pinv(X) directly avoids an SVD over the full (N, D) training-feature matrix,
+        # which is intractable at full-dataset scale (e.g. N=1.28M for ImageNet-1K)
+        # even though D is typically just a few thousand.
+        self._feature_projector = torch.linalg.pinv(z.T @ z)
         self._log_num_classes = None
         return self
 
