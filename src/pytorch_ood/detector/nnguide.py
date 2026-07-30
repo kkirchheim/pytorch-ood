@@ -113,12 +113,16 @@ class NNGuide(FeaturesDetector):
         z, y = extract_features(model=self.encoder, data_loader=data_loader, device=device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, labels: Tensor) -> Self:
+    def fit_features(self: Self, z: Tensor, labels: Tensor, batch_size: int = 4096) -> Self:
         """
         Build the energy-scaled feature bank from pre-extracted features.
 
         :param z: features, shape ``(n, feature_dim)``
         :param labels: corresponding labels
+        :param batch_size: chunk size used to bound peak GPU memory while computing
+            energies and normalized features -- materializing the whole ``(n, d)``
+            feature/logit/normalized-feature tensor set on GPU at once is intractable
+            at full-dataset scale (e.g. ``n`` = 1.28M for ImageNet-1K)
         """
         known = is_known(labels)
 
@@ -126,20 +130,34 @@ class NNGuide(FeaturesDetector):
             raise ValueError("No ID samples")
 
         device = self.device or z.device
-        z = z[known].detach().to(device).float()
+        z = z[known].detach().float()
 
         if isinstance(self.head, torch.nn.Module):
             self.head.to(device)
 
+        # Two passes so peak GPU memory scales with batch_size, not n: pass 1 computes
+        # the (n,) energy scores; pass 2 (once the global mean is known) builds the
+        # energy-scaled, L2-normalized feature bank chunk by chunk.
+        energies = []
         with torch.no_grad():
-            logits = self.head(z)
-        energy = torch.logsumexp(logits, dim=1)
+            for start in range(0, z.shape[0], batch_size):
+                z_batch = z[start : start + batch_size].to(device)
+                logits = self.head(z_batch)
+                energies.append(torch.logsumexp(logits, dim=1).cpu())
+        energy = torch.cat(energies)
 
         # Normalize energy to avoid numerical issues from large scaling factors
         # Use z/||z|| to normalize features, then scale by normalized energy
-        z_norm = z / (z.norm(dim=1, keepdim=True) + 1e-8)
         energy_norm = energy / (energy.mean() + 1e-8)
-        self._scaled_features = z_norm * energy_norm[:, None]
+
+        scaled_chunks = []
+        with torch.no_grad():
+            for start in range(0, z.shape[0], batch_size):
+                z_batch = z[start : start + batch_size].to(device)
+                z_norm = z_batch / (z_batch.norm(dim=1, keepdim=True) + 1e-8)
+                scale = energy_norm[start : start + batch_size, None].to(device)
+                scaled_chunks.append((z_norm * scale).cpu())
+        self._scaled_features = torch.cat(scaled_chunks)
 
         # Fit k-NN model on normalized features for efficient neighbor search
         self._nbrs.fit(self._scaled_features.detach().cpu().numpy())
