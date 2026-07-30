@@ -61,6 +61,13 @@ class VRA(FeatureMapsDetector):
 
     requires_fit = True
 
+    #: grid explored by :class:`pytorch_ood.utils.GridSearch`, matching the sweep used
+    #: by the OpenOOD reference implementation (``percentile_high``/``percentile_low``)
+    hyperparameter_space = {
+        "upper_percentile": [85.0, 90.0, 95.0, 99.0],
+        "lower_percentile": [1.0, 5.0, 10.0, 15.0],
+    }
+
     def __init__(
         self,
         backbone: Callable[[Tensor], Tensor],
