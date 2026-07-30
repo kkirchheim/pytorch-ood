@@ -1,0 +1,8 @@
+_target_: pytorch_ood.loss.VOSRegLoss
+method_name: vos
+alpha: 0.1
+device: ${device}
+# logistic_regression / weights_energy are built in train.py, since weights_energy
+# needs a non-default nn.init and a dataset.num_classes-sized input -- nesting them
+# here would need a ${dataset.num_classes} interpolation two levels deep, which
+# instantiate_without's node dict can't resolve
