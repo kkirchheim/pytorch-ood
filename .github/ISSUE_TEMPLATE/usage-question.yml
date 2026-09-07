@@ -1,0 +1,60 @@
+name: Usage question
+description: Ask for help using PyTorch-OOD
+title: "[Question]: "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for using PyTorch-OOD. Search the documentation and existing issues before submitting a question.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Explain what you are trying to achieve and where you need help.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Package versions
+      description: Provide the PyTorch-OOD, Python, PyTorch, and torchvision versions.
+      placeholder: "pytorch-ood 0.3.2, Python 3.12, torch 2.7, torchvision 0.22"
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform and device
+      description: Provide the operating system and device in use (CPU, CUDA, or MPS).
+      placeholder: "Ubuntu 24.04, CUDA 12.8, NVIDIA RTX 4090"
+    validations:
+      required: true
+  - type: input
+    id: installation
+    attributes:
+      label: Installation method
+      description: Explain how PyTorch-OOD and its dependencies were installed.
+      placeholder: "pip install pytorch-ood"
+    validations:
+      required: true
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal reproducer
+      description: Provide the smallest self-contained code example that demonstrates the question.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Complete output
+      description: Include the complete, unedited error output or traceback, if applicable.
+      render: shell
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other information that may help answer the question.

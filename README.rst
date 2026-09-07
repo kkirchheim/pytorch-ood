@@ -64,6 +64,18 @@ The documentation is available `here <https://pytorch-ood.readthedocs.io/en/late
 that should be larger for outliers than for inliers.
 If you notice that the scores predicted by a detector do not match the formulas in the corresponding publication, we may have adjusted the score calculation to comply with this convention.
 
+💬  Getting Help
+^^^^^^^^^^^^^^^^^
+
+* For questions about using PyTorch-OOD, open a `usage support request <https://github.com/kkirchheim/pytorch-ood/issues/new?template=usage-question.yml>`_.
+* To report incorrect or broken behavior, open a `bug report <https://github.com/kkirchheim/pytorch-ood/issues/new?template=bug-report.yml>`_.
+* To propose or contribute changes, read the `contribution guidelines <CONTRIBUTING.md>`_.
+
+Before requesting support, please check the `documentation <https://pytorch-ood.readthedocs.io/en/latest/>`_
+and existing `issues <https://github.com/kkirchheim/pytorch-ood/issues>`_. Include the PyTorch-OOD,
+Python, and PyTorch versions, your platform and device, a minimal reproducer, and the complete error output.
+See the `support guide <https://pytorch-ood.readthedocs.io/en/latest/support.html>`_ for details.
+
 ⏳ Quick Start
 ^^^^^^^^^^^^^^^^^
 Load a WideResNet-40 model (used in major publications), pre-trained on CIFAR-10 with the Energy-Bounded Learning Loss [#EnergyBasedOOD]_ (weights from to original paper), and predict on some dataset ``data_loader`` using
@@ -416,7 +428,7 @@ If you use this project, please cite:
 🤝  Contributing
 ^^^^^^^^^^^^^^^^^
 We encourage everyone to contribute to this project by adding implementations of OOD Detection methods, datasets etc,
-or check the existing implementations for bugs.
+or check the existing implementations for bugs. See the `contribution guidelines <CONTRIBUTING.md>`_ to get started.
 
 
 🛡️ ️License
