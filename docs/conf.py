@@ -43,7 +43,13 @@ author = "Konstantin Kirchheim"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinx_gallery.gen_gallery"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.inheritance_diagram",
+    "sphinx.ext.graphviz",
+    "sphinx_gallery.gen_gallery",
+]
 
 sphinx_gallery_conf = {
     # path to your example scripts
@@ -55,6 +61,7 @@ sphinx_gallery_conf = {
         "../examples/text",
         "../examples/osr",
         "../examples/metrics",
+        "../examples/hpo",
     ],
     # path to where to save gallery generated output,
     "gallery_dirs": [
@@ -65,6 +72,7 @@ sphinx_gallery_conf = {
         "auto_examples/text",
         "auto_examples/osr",
         "auto_examples/metrics",
+        "auto_examples/hpo",
     ],
     "nested_sections": False,
     "line_numbers": True,
@@ -90,14 +98,78 @@ html_logo = "_static/pytorch-ood-logo-white.svg"
 
 html_theme_options = {
     "logo_only": True,
-    "display_version": True,
+    # "display_version": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 
 # include init arguments
 autoclass_content = "both"
 autodoc_typehints_format = "short"
+
+# Graphviz configuration for inheritance diagrams
+graphviz_output_format = "png"
+
+
+def _generate_model_table():
+    """
+    Generate an overview table of all models in the registry, included by models.rst.
+    """
+    from pytorch_ood.model import get_model_info, list_models
+
+    lines = [
+        ".. list-table:: Available Pre-Trained Models",
+        "   :header-rows: 1",
+        "   :widths: 25 10 10 20 45",
+        "   :class: model-table",
+        "",
+        "   * - Identifier",
+        "     - Dataset",
+        "     - Method",
+        "     - Metrics",
+        "     - Description",
+    ]
+
+    for key in list_models():
+        entry = get_model_info(key)
+        metrics = ", ".join(f"{k}: {v:.4f}" for k, v in entry.metrics.items()) or "—"
+        description = entry.description
+        if entry.source:
+            description += f" (`Source <{entry.source}>`__)"
+        lines += [
+            f"   * - ``{entry.key}``",
+            f"     - {entry.dataset}",
+            f"     - {entry.loss}",
+            f"     - {metrics}",
+            f"     - {description}",
+        ]
+
+    os.makedirs("generated", exist_ok=True)
+    with open(os.path.join("generated", "pretrained_models.rst"), "w") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+_generate_model_table()
+
+
+def _skip_hpo_members(app, what, name, obj, skip, options):
+    """
+    Keep the hyperparameter-optimization interface from cluttering every detector
+    page. The ``get_hyperparameters``/``set_hyperparameters`` methods are generic
+    boilerplate inherited from :class:`~pytorch_ood.api.Detector`, and the inherited
+    empty ``hyperparameter_space`` adds nothing. Detectors that define a real search
+    space (e.g. ASH, KNN, ReAct) keep showing it.
+    """
+    if name in ("get_hyperparameters", "set_hyperparameters"):
+        return True
+    if name == "hyperparameter_space" and not obj:
+        return True
+    return skip
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", _skip_hpo_members)

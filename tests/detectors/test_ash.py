@@ -4,7 +4,6 @@ import torch
 
 from src.pytorch_ood.detector import ASH
 from src.pytorch_ood.model import WideResNet
-from tests.helpers import ClassificationModel, sample_dataset
 
 
 class TestASH(unittest.TestCase):
@@ -16,8 +15,8 @@ class TestASH(unittest.TestCase):
         """ """
         model = WideResNet(num_classes=10).eval()
         detector = ASH(
-            backbone=model.features_before_pool,
-            head=model.forward_from_before_pool,
+            backbone=model.feature_maps,
+            head=model.forward_feature_maps,
         )
 
         x = torch.randn(size=(16, 3, 32, 32))

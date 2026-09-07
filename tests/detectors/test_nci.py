@@ -1,15 +1,15 @@
 import unittest
 
 import torch
+import torch.nn.functional as F
 from torch.optim import SGD
 from torch.utils.data import DataLoader
-import torch.nn.functional as F
-from tests.helpers import ClassificationModel, sample_dataset
 
 from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import NCI
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import OODMetrics
+from tests.helpers import ClassificationModel, sample_dataset
 
 
 class TestNCI(unittest.TestCase):
@@ -23,8 +23,8 @@ class TestNCI(unittest.TestCase):
 
         with self.assertRaises(RequiresFittingException):
             detector = NCI(
-                encoder=model.features_before_pool,
-                head=model.forward_from_before_pool,
+                encoder=model.feature_maps,
+                head=model.forward_feature_maps,
             )
 
             x = torch.randn(size=(16, 3, 32, 32))

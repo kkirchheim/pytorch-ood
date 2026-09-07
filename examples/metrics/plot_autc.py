@@ -6,12 +6,25 @@ Historgram and Metrics for random scores with different delta.
 
 """
 
-import torch
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torchmetrics.functional.classification import binary_roc
 
-from pytorch_ood.utils.metrics import binary_clf_curve
 from pytorch_ood.utils import OODMetrics
+
+
+def fpr_tpr_curve(labels, scores, pos_label=1):
+    """Compute FPR/TPR over thresholds for min-max normalized scores."""
+    labels = (labels == pos_label).long()
+    scores = (scores - scores.min()) / (scores.max() - scores.min())
+    fpr, tpr, thresholds = binary_roc(scores, labels)
+    # prepend the (threshold=1) point where nothing is flagged as positive
+    fpr = torch.cat([torch.tensor([0.0], device=fpr.device), fpr])
+    tpr = torch.cat([torch.tensor([0.0], device=tpr.device), tpr])
+    thresholds = torch.cat([torch.tensor([1.0], device=thresholds.device), thresholds])
+    return fpr, tpr, thresholds
+
 
 # %%
 # Parameters
@@ -67,7 +80,7 @@ def metrics_and_plots(in_scores, out_scores, delta, name):
     axes[0].legend(loc="upper right")
 
     # Plot FPR and FNR curve
-    fpr, tpr, thresholds = binary_clf_curve(labels, scores)
+    fpr, tpr, thresholds = fpr_tpr_curve(labels, scores)
     axes[1].plot(thresholds, fpr, label="FPR", color="tab:blue")
     axes[1].plot(thresholds, 1 - tpr, label="FNR", color="tab:orange")
     axes[1].set_title(f"{name} FPR and FNR", weight="bold")

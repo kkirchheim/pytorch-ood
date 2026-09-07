@@ -103,6 +103,8 @@ class fDBD(FeaturesDetector):
 
         :param z: training features
         """
+        device = self.device or z.device
+        z = z.detach().to(device).float()
         self.train_mean = z.mean(dim=0)
         self._precompute_denom_matrix()
         return self

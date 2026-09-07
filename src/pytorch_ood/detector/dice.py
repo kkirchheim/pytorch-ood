@@ -15,14 +15,13 @@
 import logging
 from typing import Callable, Optional, TypeVar
 
-import numpy as np
 import torch.nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 
 from pytorch_ood.utils import extract_features, is_known
 
-from ..api import FeaturesDetector, RequiresFittingException, ModelNotSetException
+from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -39,25 +38,30 @@ class DICE(FeaturesDetector):
 
     requires_fit = True
 
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`: the sparsification
+    #: percentile ``p`` (percentage of weight contributions dropped), matching the sweep
+    #: used by the DICE paper / OpenOOD.
+    hyperparameter_space = {"p": [10, 30, 50, 70, 90]}
+
     def __init__(
         self,
-        model: Optional[Callable[[Tensor], Tensor]],
+        encoder: Optional[Callable[[Tensor], Tensor]],
         w: torch.Tensor,
         b: torch.Tensor,
         p: float,
         detector: Callable[[Tensor], Tensor] = None,
     ):
         """
-        :param model: feature extractor. Can be ``None`` when using
+        :param encoder: feature encoder. Can be ``None`` when using
             ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param w: weights of last layer
         :param b: bias of last layer
         :param p: percentile of weights to drop
         """
-        self.model = model
+        self.encoder = encoder
         self.weight = w.detach().cpu()
         self.bias = b.detach().cpu()
-        self.percentile = p
+        self.p = p
         self.detector = detector or EnergyBased.score
 
         self._is_fitted = False
@@ -70,12 +74,13 @@ class DICE(FeaturesDetector):
         """
         :param x: input, will be passed through network
         """
-        if self.model is None:
+        if self.encoder is None:
             raise ModelNotSetException()
 
-        z = self.model(x)
+        z = self.encoder(x)
         return self.predict_features(z)
 
+    @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:
         """
         :param x: features
@@ -100,14 +105,18 @@ class DICE(FeaturesDetector):
         if not known.any():
             raise ValueError("No ID data")
 
-        z = z[known]
+        device = self.device or z.device
+        z = z[known].detach().to(device).float()
+        weight = self.weight.detach().to(device).float()
 
         self.mean_activation = z.mean(dim=0)
 
-        contrib = self.mean_activation[None, :] * self.weight
-        self.threshold = np.percentile(contrib, self.percentile)
+        contrib = self.mean_activation[None, :] * weight
+        self.threshold = torch.quantile(
+            contrib.flatten(), torch.tensor(self.p / 100.0, device=device)
+        ).item()
         log.info(f"Threshold is {self.threshold:.2f}")
-        self.masked_w = torch.where(contrib > self.threshold, self.weight, 0).to(z.device)
+        self.masked_w = torch.where(contrib > self.threshold, weight, 0)
         self._is_fitted = True
         return self
 
@@ -121,6 +130,6 @@ class DICE(FeaturesDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        z, y = extract_features(data_loader, self.model, device=device)
+        z, y = extract_features(data_loader, self.encoder, device=device)
         self.fit_features(z, y)
         return self

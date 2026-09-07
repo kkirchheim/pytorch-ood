@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: 'pytorch-ood: A Unified PyTorch Library for Out-of-Distribution Detection'
+type: software
+authors:
+- given-names: Konstantin
+  family-names: Kirchheim
+  orcid: https://orcid.org/0000-0001-5819-7692
+- given-names: Theo
+  family-names: Langer
+  orcid: https://orcid.org/0009-0001-9393-4747
+- given-names: Frank
+  family-names: Ortmeier
+  orcid: https://orcid.org/0000-0001-6186-4142
+repository-code: https://github.com/kkirchheim/pytorch-ood
+license: Apache-2.0

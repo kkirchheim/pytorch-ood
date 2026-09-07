@@ -25,7 +25,7 @@ from torch.autograd import Variable
 from torch.nn import Module
 from torch.nn import functional as F
 
-from ..api import Detector, ModelNotSetException
+from ..api import GradientDetector, ModelNotSetException
 
 log = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ def odin_preprocessing(
     return x_hat
 
 
-class ODIN(Detector):
+class ODIN(GradientDetector):
     """
     Implements ODIN from the paper *Enhancing The Reliability of Out-of-distribution Image Detection in Neural
     Networks*.
@@ -116,6 +116,14 @@ class ODIN(Detector):
     :see Implementation: `GitHub <https://github.com/facebookresearch/odin/>`__
 
     """
+
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
+    #: temperature and input-noise (``eps``) sweep used by OpenOOD. The noise values
+    #: assume normalized inputs (pass ``norm_std``).
+    hyperparameter_space = {
+        "temperature": [1, 10, 100, 1000],
+        "eps": [0.0014, 0.0028],
+    }
 
     def __init__(
         self,
@@ -152,6 +160,10 @@ class ODIN(Detector):
         :param x: input tensor
         :return: outlier scores for each sample
         """
+        device = self.device
+        if device is not None:
+            x = x.to(device)
+
         x_hat = odin_preprocessing(
             model=self.model,
             x=x,

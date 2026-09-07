@@ -3,9 +3,9 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
+from pytorch_ood.utils import OODMetrics
 from src.pytorch_ood.detector import Entropy
 from tests.helpers import ClassificationModel, SegmentationModel
-from pytorch_ood.utils import OODMetrics
 
 
 def _make_id_ood_data(n_dim=10, n_classes=3, n_per_class=100, ood_offset=20.0, seed=42):

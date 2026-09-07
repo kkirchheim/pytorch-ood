@@ -1,0 +1,4 @@
+name: tinyimages300k
+_target_: pytorch_ood.dataset.img.TinyImages300k
+root: data
+download: true

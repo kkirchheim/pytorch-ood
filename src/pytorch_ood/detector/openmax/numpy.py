@@ -2,7 +2,6 @@ import logging
 from typing import TypeVar
 
 import numpy as np
-import scipy.spatial.distance as distance
 
 from .libnotmr import LibNotMR
 
@@ -154,15 +153,13 @@ class OpenMax(object):
             return euclid_dist
 
         if self.euclid_weight == 0:
-            cos_dist = np.ndarray((x.shape[0],))
-            for i in range(x.shape[0]):
-                cos_dist[i] = distance.cosine(x[i], center)
+            # unlike scipy.spatial.distance.cosine, this yields NaN (not 0) for an all-zero row
+            cos_dist = 1 - (x @ center) / (np.linalg.norm(x, axis=1) * np.linalg.norm(center))
             return cos_dist
 
         euclid_dist = np.linalg.norm(x - center, axis=1)
-        cos_dist = np.ndarray((x.shape[0],))
-        for i in range(x.shape[0]):
-            cos_dist[i] = distance.cosine(x[i], center)
+        # unlike scipy.spatial.distance.cosine, this yields NaN (not 0) for an all-zero row
+        cos_dist = 1 - (x @ center) / (np.linalg.norm(x, axis=1) * np.linalg.norm(center))
         # calculate weighted distance
         d = self.cos_weight * cos_dist + self.euclid_weight * euclid_dist
         return d

@@ -18,6 +18,7 @@ from typing import Optional, TypeVar
 import torch
 from torch import Tensor
 from torch.nn import Module, Parameter, ParameterDict
+
 from ..api import LogitsDetector, ModelNotSetException, RequiresFittingException
 
 log = logging.getLogger()
@@ -61,7 +62,8 @@ class KLMatching(LogitsDetector):
         :param labels: class labels
         """
         device = self.device or logits.device
-
+        logits = logits.to(device)
+        labels = labels.to(device)
         probabilities = logits.softmax(dim=1)
 
         for label in labels.unique():

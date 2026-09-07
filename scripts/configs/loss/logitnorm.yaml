@@ -1,0 +1,3 @@
+_target_: pytorch_ood.loss.LogitNorm
+method_name: logitnorm
+t: 0.04

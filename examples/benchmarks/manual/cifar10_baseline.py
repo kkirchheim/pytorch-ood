@@ -8,88 +8,100 @@ Example benchmark code for CIFAR10
 +------------------+-------+-------+---------+----------+----------+
 | Detector         | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
 +==================+=======+=======+=========+==========+==========+
-| GradNorm         | 50.00 | 60.78 | 18.37   | 81.63    | 100.00   |
-+------------------+-------+-------+---------+----------+----------+
-| Gram             | 69.37 | 46.01 | 58.02   | 77.49    | 75.03    |
-+------------------+-------+-------+---------+----------+----------+
-| KLMatching       | 88.48 | 39.83 | 72.29   | 91.33    | 57.84    |
-+------------------+-------+-------+---------+----------+----------+
-| NAC-UE           | 88.74 | 39.89 | 81.40   | 90.36    | 46.12    |
-+------------------+-------+-------+---------+----------+----------+
-| SHE              | 90.08 | 39.69 | 69.17   | 92.92    | 38.48    |
-+------------------+-------+-------+---------+----------+----------+
-| MSP              | 91.41 | 37.07 | 86.36   | 92.42    | 29.93    |
-+------------------+-------+-------+---------+----------+----------+
-| Entropy          | 92.03 | 35.90 | 86.70   | 93.47    | 29.75    |
-+------------------+-------+-------+---------+----------+----------+
-| Mahalanobis      | 92.14 | 42.76 | 86.39   | 94.36    | 28.25    |
-+------------------+-------+-------+---------+----------+----------+
-| ODIN             | 92.14 | 47.06 | 84.98   | 94.46    | 34.43    |
-+------------------+-------+-------+---------+----------+----------+
-| ViM              | 92.32 | 40.22 | 85.76   | 94.93    | 29.49    |
-+------------------+-------+-------+---------+----------+----------+
-| Mahalanobis+ODIN | 92.60 | 42.76 | 86.81   | 95.08    | 27.11    |
-+------------------+-------+-------+---------+----------+----------+
-| KNN              | 92.67 | 36.61 | 87.07   | 94.21    | 29.49    |
-+------------------+-------+-------+---------+----------+----------+
-| DICE             | 92.80 | 35.83 | 86.68   | 94.20    | 32.35    |
-+------------------+-------+-------+---------+----------+----------+
-| MultiMahalanobis | 92.89 | 45.35 | 85.51   | 96.09    | 24.95    |
-+------------------+-------+-------+---------+----------+----------+
-| MaxLogit         | 93.05 | 35.84 | 87.01   | 94.40    | 31.31    |
-+------------------+-------+-------+---------+----------+----------+
-| ASH              | 93.06 | 35.70 | 77.62   | 94.43    | 31.31    |
+| GEN              | 93.38 | 29.75 | 87.80   | 94.62    | 29.50    |
 +------------------+-------+-------+---------+----------+----------+
 | EnergyBased      | 93.11 | 35.45 | 87.09   | 94.46    | 31.14    |
 +------------------+-------+-------+---------+----------+----------+
-| RMD              | 93.46 | 32.09 | 87.73   | 95.08    | 26.99    |
+| ASH              | 93.06 | 35.70 | 77.62   | 94.43    | 31.31    |
++------------------+-------+-------+---------+----------+----------+
+| MaxLogit         | 93.05 | 35.84 | 87.01   | 94.40    | 31.31    |
++------------------+-------+-------+---------+----------+----------+
+| MultiMahalanobis | 92.89 | 45.35 | 85.51   | 96.09    | 24.95    |
++------------------+-------+-------+---------+----------+----------+
+| DICE             | 92.80 | 35.83 | 86.68   | 94.20    | 32.35    |
++------------------+-------+-------+---------+----------+----------+
+| KNN              | 92.67 | 36.61 | 87.07   | 94.21    | 29.49    |
++------------------+-------+-------+---------+----------+----------+
+| RMD              | 92.61 | 31.24 | 87.21   | 93.81    | 27.96    |
++------------------+-------+-------+---------+----------+----------+
+| Mahalanobis+ODIN | 92.60 | 42.76 | 86.81   | 95.08    | 27.11    |
++------------------+-------+-------+---------+----------+----------+
+| ViM              | 92.31 | 40.25 | 85.77   | 94.93    | 29.48    |
++------------------+-------+-------+---------+----------+----------+
+| ODIN             | 92.14 | 47.06 | 84.98   | 94.46    | 34.32    |
++------------------+-------+-------+---------+----------+----------+
+| Mahalanobis      | 91.82 | 42.93 | 86.21   | 93.85    | 28.60    |
++------------------+-------+-------+---------+----------+----------+
+| fDBD             | 91.82 | 35.31 | 83.54   | 93.98    | 35.72    |
++------------------+-------+-------+---------+----------+----------+
+| Entropy          | 92.03 | 35.90 | 86.70   | 93.47    | 29.75    |
++------------------+-------+-------+---------+----------+----------+
+| MSP              | 91.41 | 37.07 | 86.36   | 92.42    | 29.93    |
++------------------+-------+-------+---------+----------+----------+
+| SHE              | 90.08 | 39.69 | 69.17   | 92.92    | 38.48    |
++------------------+-------+-------+---------+----------+----------+
+| GMM              | 89.99 | 42.95 | 85.59   | 90.26    | 30.42    |
++------------------+-------+-------+---------+----------+----------+
+| NAC-UE           | 88.74 | 39.89 | 81.40   | 90.36    | 46.12    |
++------------------+-------+-------+---------+----------+----------+
+| KLMatching       | 88.48 | 39.83 | 72.29   | 91.33    | 57.84    |
++------------------+-------+-------+---------+----------+----------+
+| GradNormKL       | 80.97 | 49.97 | 68.70   | 89.49    | 79.72    |
++------------------+-------+-------+---------+----------+----------+
+| Gram             | 69.37 | 46.01 | 58.02   | 77.49    | 75.03    |
++------------------+-------+-------+---------+----------+----------+
+| RankFeat         | 55.43 | 49.92 | 45.31   | 63.80    | 86.35    |
++------------------+-------+-------+---------+----------+----------+
+| GradNorm         | 50.00 | 60.78 | 18.37   | 81.63    | 100.00   |
 +------------------+-------+-------+---------+----------+----------+
 
 
 
 """
 
+from copy import deepcopy
+
 import pandas as pd  # additional dependency, used here for convenience
+import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10, CIFAR100, MNIST, FashionMNIST
-from copy import deepcopy
 from tqdm.auto import tqdm  # additional dependency, used here for convenience
-import torch
 
 from pytorch_ood.dataset.img import (
     LSUNCrop,
     LSUNResize,
+    Places365,
     Textures,
     TinyImageNetCrop,
     TinyImageNetResize,
-    Places365,
 )
 from pytorch_ood.detector import (
+    ASH,
+    DICE,
+    GEN,
+    GMM,
+    KNN,
+    NACUE,
     ODIN,
+    RMD,
+    SHE,
     EnergyBased,
     Entropy,
-    GEN,
-    KLMatching,
-    Mahalanobis,
-    MaxLogit,
-    MaxSoftmax,
-    ViM,
-    RMD,
-    DICE,
-    SHE,
-    Gram,
-    GMM,
-    MultiMahalanobis,
-    NACUE,
     GradNorm,
     GradNormKL,
-    ASH,
-    KNN,
+    Gram,
+    KLMatching,
+    Mahalanobis,
+    MahalanobisODIN,
+    MaxLogit,
+    MaxSoftmax,
+    MultiMahalanobis,
     RankFeat,
+    ViM,
     fDBD,
 )
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import get_model_info, load_model, load_transform
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
 device = "cuda:0"
@@ -98,8 +110,8 @@ fix_random_seed(123)
 
 # %%
 # Setup preprocessing
-trans = WideResNet.transform_for("cifar10-pt")
-norm_std = WideResNet.norm_std_for("cifar10-pt")
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
+norm_std = get_model_info("wrn-40-2/cifar10/crossentropy").preprocessing.std
 
 # %%
 # Setup datasets
@@ -129,7 +141,7 @@ for ood_dataset in ood_datasets:
 # %%
 # **Stage 1**: Create DNN with pre-trained weights from the Hendrycks baseline paper
 print("STAGE 1: Creating a Model")
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
+model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 
 # %%
 # **Stage 2**: Create OOD detector
@@ -140,10 +152,8 @@ detectors["KNN"] = KNN(model.features)
 detectors["GMM"] = GMM(model.features)
 detectors["fDBD"] = fDBD(encoder=model.features, head=model.fc)
 
-detectors["ASH"] = ASH(backbone=model.features_before_pool, head=model.forward_from_before_pool)
-detectors["RankFeat"] = RankFeat(
-    backbone=model.features_before_pool, head=model.forward_from_before_pool
-)
+detectors["ASH"] = ASH(backbone=model.feature_maps, head=model.forward_feature_maps)
+detectors["RankFeat"] = RankFeat(backbone=model.feature_maps, head=model.forward_feature_maps)
 
 # we make a copy of the model just so deactivating gradients does not influence other detectors
 model_gn = deepcopy(model)
@@ -158,7 +168,7 @@ detectors["GradNormKL"] = GradNormKL(model_gnkl, param_filter=lambda name: name.
 
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
-detectors["Mahalanobis+ODIN"] = Mahalanobis(model.features, norm_std=norm_std, eps=0.002)
+detectors["Mahalanobis+ODIN"] = MahalanobisODIN(model.features, norm_std=norm_std, eps=0.002)
 detectors["Mahalanobis"] = Mahalanobis(model.features)
 
 detectors["KLMatching"] = KLMatching(model)
@@ -168,7 +178,7 @@ detectors["EnergyBased"] = EnergyBased(model)
 detectors["GEN"] = GEN(model)
 detectors["MaxLogit"] = MaxLogit(model)
 detectors["ODIN"] = ODIN(model, norm_std=norm_std, eps=0.002)
-detectors["DICE"] = DICE(model=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
+detectors["DICE"] = DICE(encoder=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
 detectors["RMD"] = RMD(model.features)
 
 detectors["MultiMahalanobis"] = MultiMahalanobis(
@@ -227,9 +237,9 @@ with torch.no_grad():
             for x, y in tqdm(loader, desc=dataset_name):
                 metrics.update(detector(x.to(device)), y.to(device))
 
-        r = {"Detector": detector_name, "Dataset": dataset_name}
-        r.update(metrics.compute())
-        results.append(r)
+            r = {"Detector": detector_name, "Dataset": dataset_name}
+            r.update(metrics.compute())
+            results.append(r)
 
 # calculate mean scores over all datasets, use percent
 df = pd.DataFrame(results)

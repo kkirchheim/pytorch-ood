@@ -6,7 +6,9 @@ matplotlib
 # required numpy < 2 or crashes
 numpy==1.26.4
 
-# readthedocs build currently fails with torch 1.13.0
-torch==1.11.0
+# torch 1.11.0 doesn't support Python 3.11; using 2.4.0
+torch==2.4.0
+torchmetrics
+torchvision
 
 scikit-learn

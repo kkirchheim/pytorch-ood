@@ -7,16 +7,16 @@ Open Set Simulation on CIFAR 10
 """
 
 import torch.nn
-from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10
 from torch.nn import CrossEntropyLoss
-from tqdm import tqdm
+from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
+from torchvision.datasets import CIFAR10
+from tqdm import tqdm
 
 from pytorch_ood.dataset.ossim import DynamicOSS
-from pytorch_ood.model import WideResNet
 from pytorch_ood.detector import MaxSoftmax
-from pytorch_ood.utils import fix_random_seed, TargetMapping, OODMetrics, is_known
+from pytorch_ood.model import get_model_info, load_model, load_transform
+from pytorch_ood.utils import OODMetrics, TargetMapping, fix_random_seed, is_known
 
 device = "cuda:0"
 num_epochs = 10
@@ -25,8 +25,8 @@ fix_random_seed(12345)
 
 # %%
 # Setup preprocessing
-trans = WideResNet.transform_for("cifar10-pt")
-norm_std = WideResNet.norm_std_for("cifar10-pt")
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
+norm_std = get_model_info("wrn-40-2/cifar10/crossentropy").preprocessing.std
 
 # %%
 # Setup datasets
@@ -38,7 +38,7 @@ dataset = dataset_1 + dataset_2
 # Create DNN with pre-trained on a downscaled version of the image net, excluding cifar images
 # adjust it to output 7 logits
 print("Creating a Model")
-model = WideResNet(num_classes=1000, pretrained="imagenet32-nocifar")
+model = load_model("wrn-40-2/imagenet32-nocifar/crossentropy")
 model.fc = torch.nn.Linear(model.fc.in_features, 7)
 model.to(device)
 

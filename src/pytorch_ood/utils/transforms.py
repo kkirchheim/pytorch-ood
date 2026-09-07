@@ -11,21 +11,9 @@
 
 """
 
-from typing import Set, Callable, Union
+from typing import Set
 
-import os
-import random
-from os.path import join
-
-import numpy as np
-from PIL import Image, ImageDraw
 import torch
-from collections import defaultdict
-import json
-from typing import List, Tuple
-
-from torch import Tensor
-from torchvision.datasets.utils import download_and_extract_archive
 
 
 class ToUnknown(object):

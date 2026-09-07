@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from ..utils import apply_reduction, is_known
+from ..utils import apply_reduction
 
 
 def cross_entropy(

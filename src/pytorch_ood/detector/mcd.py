@@ -143,7 +143,7 @@ class MCD(Detector):
         # else:
         #     var = var[torch.arange(y.shape[1]), indices]
 
-        return mean, mean_var
+        return mean.to(x.device), mean_var.to(x.device)
 
     @staticmethod
     @torch.no_grad()
@@ -183,8 +183,11 @@ class MCD(Detector):
         :param x: input
         :return: outlier score
         """
+        device = self.device
+        if device is not None:
+            x = x.to(device)
+
         if self.mode == "var":
-            print("calculating variance")
             return MCD.run(self.model, x, self.n_samples, batch_norm=self.batch_norm)[1]
 
         return (

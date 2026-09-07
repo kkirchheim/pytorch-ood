@@ -12,19 +12,15 @@ import pandas as pd  # additional dependency, used here for convenience
 import torch
 
 from pytorch_ood.benchmark import CIFAR10_OpenOOD
-from pytorch_ood.detector import MaxSoftmax, ReAct, ASH
-from pytorch_ood.model import WideResNet
-from pytorch_ood.utils import fix_random_seed
-
-fix_random_seed(123)
+from pytorch_ood.detector import MaxSoftmax
+from pytorch_ood.model import load_model, load_transform
 
 device = "cuda:0"
 loader_kwargs = {"batch_size": 64}
 
 # %%
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to(device)
-trans = WideResNet.transform_for("cifar10-pt")
-norm_std = WideResNet.norm_std_for("cifar10-pt")
+model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
+trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
 # %%
 # Just add more detectors here if you want to test more
@@ -48,15 +44,21 @@ df = pd.DataFrame(results)
 print((df.set_index(["Dataset", "Detector"]) * 100).to_csv(float_format="%.2f"))
 
 # %%
-# This should produce a table with results for the following OOD datasets:
+# This should produces the following table:
 #
-# Near-OOD:
-# * CIFAR100
-# * TinyImageNet
-#
-# Far-OOD:
-# * MNIST
-# * SVHN
-# * Textures
-# * Places365
+# +---------------+----------+-------+-------+---------+----------+----------+
+# | Dataset       | Detector | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
+# +===============+==========+=======+=======+=========+==========+==========+
+# | CIFAR100      | MSP      | 87.83 | 40.69 | 88.42   | 85.20    | 43.04    |
+# +---------------+----------+-------+-------+---------+----------+----------+
+# | TinyImageNet  | MSP      | 87.01 | 40.57 | 86.54   | 85.05    | 51.33    |
+# +---------------+----------+-------+-------+---------+----------+----------+
+# | MNIST         | MSP      | 92.66 | 37.24 | 94.32   | 90.29    | 22.47    |
+# +---------------+----------+-------+-------+---------+----------+----------+
+# | SVHN          | MSP      | 91.91 | 36.89 | 86.50   | 95.81    | 28.47    |
+# +---------------+----------+-------+-------+---------+----------+----------+
+# | Textures      | MSP      | 88.51 | 39.69 | 93.00   | 78.50    | 41.30    |
+# +---------------+----------+-------+-------+---------+----------+----------+
+# | Places365     | MSP      | 88.25 | 39.97 | 71.19   | 95.61    | 44.55    |
+# +---------------+----------+-------+-------+---------+----------+----------+
 #

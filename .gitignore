@@ -11,6 +11,9 @@
 # when executing examples creates a data folder
 data/
 
+# Machine-specific training paths (see scripts/configs/local/machine.yaml.example). Never committed.
+scripts/configs/local/machine.yaml
+
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml
@@ -186,6 +189,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/generated/
 
 # PyBuilder
 .pybuilder/
@@ -264,3 +268,4 @@ docs/sg_execution_times.rst
 # AI coding tools
 CLAUDE.md
 .codex
+.claude/

@@ -1,0 +1,13 @@
+[tool.ruff]
+line-length = 99
+exclude = [".git", "__pycache__", "venv", "docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "F401",  # imported but unused (intentional re-exports in __init__.py)
+    "F841",  # local variable assigned but never used
+    "F403",  # from module import *
+    "E501",  # line too long (enforced via line-length)
+    "E203",  # whitespace before ':' (conflicts with formatter)
+]

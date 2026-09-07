@@ -8,7 +8,6 @@ https://github.com/ashafaei/OD-test/blob/8252aace84e2ae1ab95067876985f62a1060aad
 import logging
 
 import numpy as np
-import scipy.stats
 from scipy.stats import exponweib
 
 log = logging.getLogger(__name__)

@@ -64,6 +64,18 @@ The documentation is available `here <https://pytorch-ood.readthedocs.io/en/late
 that should be larger for outliers than for inliers.
 If you notice that the scores predicted by a detector do not match the formulas in the corresponding publication, we may have adjusted the score calculation to comply with this convention.
 
+💬  Getting Help
+^^^^^^^^^^^^^^^^^
+
+* For questions about using PyTorch-OOD, open a `usage support request <https://github.com/kkirchheim/pytorch-ood/issues/new?template=usage-question.yml>`_.
+* To report incorrect or broken behavior, open a `bug report <https://github.com/kkirchheim/pytorch-ood/issues/new?template=bug-report.yml>`_.
+* To propose or contribute changes, read the `contribution guidelines <CONTRIBUTING.md>`_.
+
+Before requesting support, please check the `documentation <https://pytorch-ood.readthedocs.io/en/latest/>`_
+and existing `issues <https://github.com/kkirchheim/pytorch-ood/issues>`_. Include the PyTorch-OOD,
+Python, and PyTorch versions, your platform and device, a minimal reproducer, and the complete error output.
+See the `support guide <https://pytorch-ood.readthedocs.io/en/latest/support.html>`_ for details.
+
 ⏳ Quick Start
 ^^^^^^^^^^^^^^^^^
 Load a WideResNet-40 model (used in major publications), pre-trained on CIFAR-10 with the Energy-Bounded Learning Loss [#EnergyBasedOOD]_ (weights from to original paper), and predict on some dataset ``data_loader`` using
@@ -75,13 +87,13 @@ OOD data must be marked with labels < 0.
 
     from pytorch_ood.detector import EnergyBased
     from pytorch_ood.utils import OODMetrics
-    from pytorch_ood.model import WideResNet
+    from pytorch_ood.model import load_model, load_transform
 
     data_loader = ... # your data, OOD with label < 0
 
     # Create Neural Network
-    model = WideResNet(num_classes=10, pretrained="er-cifar10-tune").eval().cuda()
-    preprocess = WideResNet.transform_for("er-cifar10-tune")
+    model = load_model("wrn-40-2/cifar10/energy/s1").cuda()
+    preprocess = load_transform("wrn-40-2/cifar10/energy/s1")
 
     # Create detector
     detector = EnergyBased(model)
@@ -111,10 +123,10 @@ and pooled features can be reused across calls:
    import pandas as pd
    from pytorch_ood.benchmark import CIFAR10_OpenOOD
    from pytorch_ood.detector import EnergyBased, MaxSoftmax
-   from pytorch_ood.model import WideResNet
+   from pytorch_ood.model import load_model, load_transform
 
-   model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval().to("cuda:0")
-   trans = WideResNet.transform_for("cifar10-pt")
+   model = load_model("wrn-40-2/cifar10/crossentropy").to("cuda:0")
+   trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
    benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
    detectors = {
@@ -137,8 +149,6 @@ and pooled features can be reused across calls:
        results += res
 
    print(pd.DataFrame(results))
-
-
 
 
 🛠 ️️Installation
@@ -206,13 +216,23 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Mahalanobis                 | Implements the Mahalanobis Method.                                                             | 2018 | [#Mahalanobis]_    |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Multi-Layer Mahalanobis     | Mahalanobis distance computed across multiple network layers.                                  | 2018 | [#Mahalanobis]_    |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GRAM                        | Detects OOD elements via deviations in the gram matrices                                       | 2019 | [#GramBased]_      |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Energy-Based OOD Detection  | Implements the energy score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| GradNorm                    | Gradient norms as a measure of uncertainty in neural networks.                                 | 2020 | [#GradNorm]_       |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Entropy                     | Uses entropy to detect OOD inputs.                                                             | 2021 | [#MaxEntropy]_     |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ReAct                       | ReAct: Out-of-distribution detection with Rectified Activations.                               | 2021 | [#ReAct]_          |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| GradNormKL                  | KL-divergence gradient norms for detecting distributional shifts.                              | 2021 | [#GradNormKL]_     |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Relative Mahalanobis (RMD)  | Relative Mahalanobis distance with a background Gaussian.                                      | 2021 | [#RMD]_            |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| PNML                        | Predictive normalized maximum likelihood regret on normalized penultimate-layer features.      | 2021 | [#PNML]_           |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Maximum Logit               | Implements the MaxLogit method.                                                                | 2022 | [#StreeHaz]_       |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
@@ -226,33 +246,29 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | DICE                        | Implements Sparsification for OOD Detection                                                    | 2022 | [#DICE]_           |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| RankFeat                    | Rank-1 feature removal from feature maps for OOD detection.                                    | 2022 | [#RankFeat]_       |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| MCM                         | Maximum Concept Matching for zero-shot OOD detection with vision-language models.              | 2022 | [#MCM]_            |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ASH                         | Implements Extremely Simple Activation Shaping                                                 | 2023 | [#Ash]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | SHE                         | Implements Simplified Hopfield Networks                                                        | 2023 | [#She]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| NCI                         | Neural Collapse Inspired OOD Detection                                                         | 2025 | [#Nci]_            |
-+-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NNGuide                     | Nearest Neighbor Guidance for OOD Detection                                                    | 2023 | [#NNGuide]_        |
-+-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| GradNorm                    | Gradient norms as a measure of uncertainty in neural networks.                                 | 2020 | [#GradNorm]_       |
-+-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| GradNormKL                  | KL-divergence gradient norms for detecting distributional shifts.                              | 2021 | [#GradNormKL]_     |
-+-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Multi-Layer Mahalanobis     | Mahalanobis distance computed across multiple network layers.                                  | 2018 | [#Mahalanobis]_    |
-+-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| Relative Mahalanobis (RMD)  | Relative Mahalanobis distance with a background Gaussian.                                      | 2021 | [#RMD]_            |
-+-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| RankFeat                    | Rank-1 feature removal from feature maps for OOD detection.                                    | 2022 | [#RankFeat]_       |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GEN                         | Generalized entropy score pushing the limits of softmax-based detection.                       | 2023 | [#GEN]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | fDBD                        | Fast decision boundary distance for OOD detection.                                             | 2023 | [#fDBD]_           |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
-+-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | VRA                         | Variance-based ReAct adjustment with learned percentile thresholds.                            | 2023 | [#VRA]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NAC-UE                      | Neuron Activation Coverage for OOD detection.                                                  | 2023 | [#NACUE]_          |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| SCALE                       | Implements Activation Scaling for OOD Detection                                                | 2024 | [#Scale]_          |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| NCI                         | Neural Collapse Inspired OOD Detection                                                         | 2025 | [#Nci]_            |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 
 **Objective Functions**:
@@ -326,11 +342,6 @@ If you use this project, please cite:
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | iNaturalist           | A Subset of iNaturalist, with 10.000 images.                                                                    | 2021 | [#INatural]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| Fractals              | A dataset with Fractals from *PIXMIX: Dreamlike Pictures Comprehensively Improve Safety Measures*               | 2022 | [#PixMix]_    |
-+-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
-| Feature               | A dataset with Feature visualizations from *PIXMIX: Dreamlike Pictures Comprehensively Improve Safety Measures* | 2022 | [#PixMix]_    |
-| Visualizations        |                                                                                                                 |      |               |
-+-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | FS Static             | The FishyScapes (FS) Static dataset contains real world OOD images from the CityScapes dataset.                 | 2021 | [#FS]_        |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | FS LostAndFound       | The FishyScapes dataset contains images from the CityScapes dataset blended with unknown objects scraped from   | 2021 | [#FS]_        |
@@ -338,12 +349,19 @@ If you use this project, please cite:
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | MVTech-AD             | The MVTec AD is a dataset for benchmarking anomaly detection methods with a focus on industrial inspection.     | 2021 | [#MVTech]_    |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| Fractals              | A dataset with Fractals from *PIXMIX: Dreamlike Pictures Comprehensively Improve Safety Measures*               | 2022 | [#PixMix]_    |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| Feature               | A dataset with Feature visualizations from *PIXMIX: Dreamlike Pictures Comprehensively Improve Safety Measures* | 2022 | [#PixMix]_    |
+| Visualizations        |                                                                                                                 |      |               |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | StreetHazards         | Anomaly Segmentation Dataset                                                                                    | 2022 | [#StreeHaz]_  |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | CIFAR100-GAN          | Images sampled from low likelihood regions of a BigGAN trained on CIFAR 100 from the paper *On Outlier Exposure | 2022 | [#CifarGAN]_  |
 |                       | with Generative Models.*                                                                                        |      |               |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | SSB - hard            | The hard split of the Semantic Shift Benchmark, which contains 49.00 images.                                    | 2022 | [#SSB]_       |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| ImageNet-200          | The 200-class ImageNet subset used as in-distribution data in the OpenOOD benchmark.                            | 2023 | [#OpenOOD]_   |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | NINCO                 | The NINCO (No ImageNet Class Objects) dataset which contains 5.879 images of 64 OOD classes.                    | 2023 | [#NINCO]_     |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
@@ -376,16 +394,41 @@ If you use this project, please cite:
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+----------------+
 | Augmentation          | Description                                                                                                     | Year | Ref            |
 +=======================+=================================================================================================================+======+================+
-| PixMix                | PixMix image augmentation method                                                                                | 2022 | [#PixMix]_     |
-+-----------------------+-----------------------------------------------------------------------------------------------------------------+------+----------------+
 | COCO Outlier Pasting  | From "Entropy maximization and meta classification for OOD in semantic segmentation"                            | 2021 | [#MaxEntropy]_ |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+----------------+
+| PixMix                | PixMix image augmentation method                                                                                | 2022 | [#PixMix]_     |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+----------------+
+
+
+**Benchmarks**:
+
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Benchmark                   | Description                                                                                    | Year | Ref                |
++=============================+================================================================================================+======+====================+
+| CIFAR-10 ODIN               | ODIN benchmark for CIFAR-10 OOD detection evaluation.                                          | 2018 | [#ODIN]_           |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| CIFAR-100 ODIN              | ODIN benchmark for CIFAR-100 OOD detection evaluation.                                         | 2018 | [#ODIN]_           |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| CIFAR-10 OpenOOD            | CIFAR-10 benchmark with OpenOOD protocol for standardized OOD evaluation.                      | 2023 | [#OpenOOD]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| CIFAR-100 OpenOOD           | CIFAR-100 benchmark with OpenOOD protocol for standardized OOD evaluation.                     | 2023 | [#OpenOOD]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| ImageNet OpenOOD            | ImageNet-1K OOD detection benchmark with OpenOOD protocol and evaluation suite.                | 2023 | [#OpenOOD]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| ImageNet-200 OpenOOD        | ImageNet-200 (200-class subset) OOD detection benchmark with OpenOOD protocol.                 | 2023 | [#OpenOOD]_        |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| MIDOG OpenMIBOOD            | Microscopy / mitosis detection with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).    | 2025 | [#OpenMIBOOD]_     |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| PhaKIR OpenMIBOOD           | Surgical video frames with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).             | 2025 | [#OpenMIBOOD]_     |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| OASIS-3 OpenMIBOOD          | Brain MRI volumes with 4-way split (ID, covariate-shifted, near-OOD, far-OOD).                 | 2025 | [#OpenMIBOOD]_     |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 
 
 🤝  Contributing
 ^^^^^^^^^^^^^^^^^
 We encourage everyone to contribute to this project by adding implementations of OOD Detection methods, datasets etc,
-or check the existing implementations for bugs.
+or check the existing implementations for bugs. See the `contribution guidelines <CONTRIBUTING.md>`_ to get started.
 
 
 🛡️ ️License
@@ -483,6 +526,8 @@ The legal implications of using pre-trained models in commercial services are, t
 
 .. [#ASH] Djurisic,  et al. (2023) Extremely Simple Activation Shaping for Out-of-Distribution Detection, ICLR.
 
+.. [#Scale] Xu,  et al. (2024) Scaling for Training Time and Post-hoc Out-of-distribution Detection Enhancement, ICLR.
+
 .. [#She] Zhang,  et al. (2023) Out-of-Distribution Detection Based on In-Distribution Data Patterns Memorization with Modern Hopfield Energy. ICLR.
 
 .. [#ReAct] Sun,  et al. (2023) ReAct: Out-of-distribution Detection With Rectified Activations. NeurIPS.
@@ -507,6 +552,14 @@ The legal implications of using pre-trained models in commercial services are, t
 
 .. [#fDBD] Liu, L., & Qin, Y. (2023) Fast Decision Boundary based Out-of-Distribution Detector. `ArXiv <https://arxiv.org/abs/2312.11536>`__.
 
+.. [#PNML] Bibas, K., Feder, M., & Hassner, T. (2021) Single Layer Predictive Normalized Maximum Likelihood for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2110.09246>`__.
+
 .. [#VRA] Xu, M., et al. (2023) VRA: Variational Rectified Activation for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2302.11716>`__.
 
 .. [#NACUE] Liu, Y., et al. (2023) Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization. ICLR.
+
+.. [#MCM] Ming, Y., Cai, Z., Gu, J., Sun, Y., Li, W., & Li, Y. (2022) Delving into Out-of-Distribution Detection with Vision-Language Representations. NeurIPS. `ArXiv <https://arxiv.org/abs/2211.13445>`__.
+
+.. [#OpenOOD] Zhang, J., Yang, J., et al. (2023) OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection. DMLR. `ArXiv <https://arxiv.org/abs/2306.09301>`__.
+
+.. [#OpenMIBOOD] Gutbrod, M., Rauber, D., Nunes, D. W., & Palm, C. (2025) OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection. CVPR. `ArXiv <https://arxiv.org/abs/2503.16247>`__.

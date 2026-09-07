@@ -1,0 +1,34 @@
+defaults:
+  - model: wrn-40-2
+  - dataset: cifar10
+  - loss: crossentropy
+  - optimizer: sgd
+  - outliers: none
+  - _self_
+  # Machine-specific paths live in a git-ignored configs/local/machine.yaml that overrides
+  # the placeholders below. Copy configs/local/machine.yaml.example to configs/local/machine.yaml
+  # and edit it. `optional` -> training still composes without the file (e.g. CIFAR runs, which
+  # need no ImageNet root).
+  - optional local@_global_: machine
+
+seed: 0
+deterministic: true
+
+# Local ImageNet-1K root, referenced by the imagenet200 dataset and imagenet800 outliers
+# configs via ${imagenet_root}. No sensible default (ImageNet is not redistributable) --
+# set it in configs/local/machine.yaml.
+imagenet_root: null
+
+# optional registry identifier to initialize the model weights from
+init_from: null
+
+epochs: 100
+batch_size: 128
+# batch size of the auxiliary outlier loader (only used when outliers != none)
+oe_batch_size: 256
+num_workers: 8
+device: cuda
+
+scheduler:
+  _target_: scheduler.per_iteration_cosine
+  lr_min: 1e-6

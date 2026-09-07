@@ -13,16 +13,26 @@
     :show-inheritance:
     :exclude-members: fit
 """
+
+from typing import Callable, TypeVar
+
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
-from typing import TypeVar, Callable
 
-from ..api import Detector, ModelNotSetException
+from ..api import GradientDetector, ModelNotSetException
 
 try:
-    from torch.func import grad as _func_grad, vmap as _vmap, functional_call as _functional_call
+    from torch.func import (
+        functional_call as _functional_call,
+    )
+    from torch.func import (
+        grad as _func_grad,
+    )
+    from torch.func import (
+        vmap as _vmap,
+    )
 
     _TORCH_FUNC_AVAILABLE = True
 except ImportError:
@@ -31,7 +41,7 @@ except ImportError:
 Self = TypeVar("Self")
 
 
-class GradNormKL(Detector):
+class GradNormKL(GradientDetector):
     """
     Detector from the paper *On the Importance of Gradients for Detecting Distributional Shifts
     in the Wild*.
@@ -60,11 +70,22 @@ class GradNormKL(Detector):
     :see Paper: `NeurIPS <https://arxiv.org/abs/2110.00218>`__
     """
 
-    def __init__(self, model: torch.nn.Module, param_filter: Callable[[str], bool] = None):
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        param_filter: Callable[[str], bool] = None,
+        micro_batch_size: int = 32,
+    ):
         """
         :param model: A pre-trained classification model.
         :param param_filter: Function indicating whether a named parameter should be included in
             the scoring. If ``None``, all parameters are used.
+        :param micro_batch_size: ``_predict_batched`` internally splits the input into chunks
+            of at most this size before calling ``vmap`` -- per-sample gradients require
+            holding every sample's forward activations through the full network
+            simultaneously, so peak memory scales linearly with batch size (e.g. ~53 GB at
+            batch size 128 for a ResNet-50 at 224x224, even restricted to a single layer's
+            gradients). Chunking bounds peak memory independent of the caller's batch size.
         """
         if model is None:
             raise ModelNotSetException("Model must be provided.")
@@ -74,6 +95,7 @@ class GradNormKL(Detector):
 
         self.param_filter = param_filter or default_filter
         self.model = model
+        self.micro_batch_size = micro_batch_size
 
     def fit(self, data_loader: DataLoader, **kwargs) -> Self:
         return self
@@ -100,7 +122,8 @@ class GradNormKL(Detector):
         return self._predict_sequential(x)
 
     def _predict_batched(self, x: Tensor) -> Tensor:
-        """Vectorized per-sample gradients via torch.func (PyTorch ≥ 2.0)."""
+        """Vectorized per-sample gradients via torch.func (PyTorch ≥ 2.0), chunked to
+        bound peak memory (see ``micro_batch_size``)."""
         params = dict(self.model.named_parameters())
         buffers = dict(self.model.named_buffers())
         model = self.model
@@ -112,15 +135,30 @@ class GradNormKL(Detector):
             y_uniform = torch.ones_like(logits) / C
             return F.binary_cross_entropy(logits.softmax(dim=1), y_uniform, reduction="sum")
 
+        chunks = []
         with torch.enable_grad():
-            per_sample_grads = _vmap(_func_grad(loss_for_single), in_dims=(None, 0))(params, x)
+            for start in range(0, x.shape[0], self.micro_batch_size):
+                x_chunk = x[start : start + self.micro_batch_size]
+                per_sample_grads = _vmap(_func_grad(loss_for_single), in_dims=(None, 0))(
+                    params, x_chunk
+                )
 
-        total_norms = x.new_zeros(x.shape[0])
-        for name, g in per_sample_grads.items():
-            if param_filter(name):
-                total_norms = total_norms + g.abs().sum(dim=tuple(range(1, g.ndim)))
+                chunk_norms = x_chunk.new_zeros(x_chunk.shape[0])
+                for name, g in per_sample_grads.items():
+                    if param_filter(name):
+                        chunk_norms = chunk_norms + g.abs().sum(dim=tuple(range(1, g.ndim)))
+                chunks.append(chunk_norms.detach().clone())
 
-        return -total_norms
+                # per_sample_grads holds one gradient tensor per *unfiltered* model
+                # parameter too (vmap computes grad() w.r.t. every leaf in `params`,
+                # even ones param_filter then discards) -- drop the reference explicitly
+                # so the next chunk's allocation can reuse this memory instead of the
+                # CUDA caching allocator accumulating peak usage across chunks.
+                del per_sample_grads, chunk_norms, x_chunk
+                if x.is_cuda:
+                    torch.cuda.empty_cache()
+
+        return -torch.cat(chunks)
 
     def _predict_sequential(self, x: Tensor) -> Tensor:
         """Per-sample gradients via serial backward passes (PyTorch < 2.0 fallback)."""

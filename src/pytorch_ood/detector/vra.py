@@ -22,7 +22,7 @@ import torch.nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from pytorch_ood.utils import extract_features, is_known
+from pytorch_ood.utils import is_known
 
 from ..api import FeatureMapsDetector, ModelNotSetException, RequiresFittingException
 from .energy import EnergyBased
@@ -50,8 +50,8 @@ class VRA(FeatureMapsDetector):
 
         model = WideResNet()
         detector = VRA(
-            backbone=model.features,
-            head=model.fc,
+            backbone=model.feature_maps,
+            head=model.forward_feature_maps,
         )
         detector.fit(train_loader)
         scores = detector(images)
@@ -60,6 +60,13 @@ class VRA(FeatureMapsDetector):
     """
 
     requires_fit = True
+
+    #: grid explored by :class:`pytorch_ood.utils.GridSearch`, matching the sweep used
+    #: by the OpenOOD reference implementation (``percentile_high``/``percentile_low``)
+    hyperparameter_space = {
+        "upper_percentile": [85.0, 90.0, 95.0, 99.0],
+        "lower_percentile": [1.0, 5.0, 10.0, 15.0],
+    }
 
     def __init__(
         self,
@@ -94,9 +101,13 @@ class VRA(FeatureMapsDetector):
         if self._lower_threshold is None:
             raise RequiresFittingException()
 
+        device = self.device
+        if device is not None:
+            x = x.to(device)
         z = self.backbone(x)
         return self.predict_feature_maps(z)
 
+    @torch.no_grad()
     def predict_feature_maps(self, x: Tensor) -> Tensor:
         """
         :param x: features from the backbone
@@ -155,7 +166,25 @@ class VRA(FeatureMapsDetector):
             log.warning(f"No device set. Will use '{device}'.")
             self.to(device)
 
-        z, y = extract_features(data_loader, self.backbone, device=device)
+        # NOTE: unlike pytorch_ood.utils.extract_features (which flattens each sample
+        # to a 1-D vector, for pooled-feature detectors), the per-dimension clipping
+        # thresholds computed by fit_feature_maps require the spatial (N, C, H, W)
+        # shape to be preserved, since predict_feature_maps() clips un-flattened
+        # feature maps of that same shape.
+        zs, ys = [], []
+        with torch.no_grad():
+            for x, y in data_loader:
+                known = is_known(y)
+                if not known.any():
+                    continue
+                zs.append(self.backbone(x[known].to(device)).detach().cpu())
+                ys.append(y[known].cpu())
+
+        if not zs:
+            raise ValueError("No ID data")
+
+        z = torch.cat(zs, dim=0)
+        y = torch.cat(ys, dim=0)
         self.fit_feature_maps(z, y)
         return self
 

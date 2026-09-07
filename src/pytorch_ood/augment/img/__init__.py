@@ -17,5 +17,5 @@ InsertCOCO
     :members: __call__
 """
 
-from .cocopaste import InsertCOCO, COCO
+from .cocopaste import COCO, InsertCOCO
 from .pixmix import PixMixDataset

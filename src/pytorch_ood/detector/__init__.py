@@ -17,6 +17,7 @@ The objects ``__call__`` methods is delegated to the ``predict`` function, so yo
     :members:
 
 
+
 Some of the detectors support grid-like input, so that they can be used for anomaly segmentation
 without further adjustment.
 
@@ -56,6 +57,19 @@ through the full model again. The available methods will depend on the base clas
 ..  autoclass:: pytorch_ood.api.StructuredDetector
     :members:
     :show-inheritance:
+
+..  autoclass:: pytorch_ood.api.GradientDetector
+    :members:
+    :show-inheritance:
+
+
+Overview
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+..  inheritance-diagram:: pytorch_ood.api.Detector pytorch_ood.api.LogitsDetector pytorch_ood.api.FeaturesDetector pytorch_ood.api.FeatureMapsDetector pytorch_ood.api.StructuredDetector pytorch_ood.api.GradientDetector pytorch_ood.detector.MaxSoftmax pytorch_ood.detector.TemperatureScaling pytorch_ood.detector.Entropy pytorch_ood.detector.KLMatching pytorch_ood.detector.GEN pytorch_ood.detector.MCD pytorch_ood.detector.MaxLogit pytorch_ood.detector.OpenMax pytorch_ood.detector.EnergyBased pytorch_ood.detector.WeightedEBO pytorch_ood.detector.Mahalanobis pytorch_ood.detector.MahalanobisODIN pytorch_ood.detector.RMD pytorch_ood.detector.ViM pytorch_ood.detector.KNN pytorch_ood.detector.NNGuide pytorch_ood.detector.SHE pytorch_ood.detector.Gram pytorch_ood.detector.NCI pytorch_ood.detector.fDBD pytorch_ood.detector.GMM pytorch_ood.detector.MCM pytorch_ood.detector.PNML pytorch_ood.detector.GradNorm pytorch_ood.detector.GradNormKL pytorch_ood.detector.ODIN pytorch_ood.detector.MCD pytorch_ood.detector.ASH pytorch_ood.detector.ReAct pytorch_ood.detector.DICE pytorch_ood.detector.RankFeat pytorch_ood.detector.VRA pytorch_ood.detector.SCALE pytorch_ood.detector.MultiMahalanobis pytorch_ood.detector.NACUE
+    :parts: 1
+    :top-classes: pytorch_ood.api.Detector
 
 
 Probability-based
@@ -126,6 +140,13 @@ Multi-Layer Mahalanobis Distance (MD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.mmahalanobis
 
+Mahalanobis Distance with ODIN (MahalanobisODIN)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: pytorch_ood.detector.MahalanobisODIN
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
 
 Relative Mahalanobis Distance (RMD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -170,12 +191,25 @@ Gaussian Mixture Model (GMM)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.gmm
 
+Predictive Normalized Maximum Likelihood (pNML)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.pnml
+
+Maximum Concept Matching (MCM)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.mcm
+
+Logit Scaling (LTS)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.lts
+
 
 Gradient-based
 --------------------------
 
 Gradient-based detectors are based on the observation that the gradients (w.r.t. the model parameters or
-the inputs) for ID and OOD data behave differently.
+the inputs) for ID and OOD data behave differently. All gradient-based detectors inherit from
+:class:`pytorch_ood.api.GradientDetector`.
 
 GradNorm
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -224,6 +258,9 @@ VRA
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: pytorch_ood.detector.vra
 
+SCALE
+^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: pytorch_ood.detector.scale
 
 
 """
@@ -231,33 +268,37 @@ VRA
 from .ash import ASH
 from .dice import DICE
 from .energy import EnergyBased
-from .fdbd import fDBD
 from .entropy import Entropy
+from .fdbd import fDBD
 from .gen import GEN
 from .gmm import GMM
-from .klmatching import KLMatching
+from .gradnorm import GradNorm
+from .gradnormkl import GradNormKL
 from .gram import Gram
+from .klmatching import KLMatching
 from .knn import KNN
-from .nnguide import NNGuide
-from .mahalanobis import Mahalanobis
+from .lts import LTS
+from .mahalanobis import Mahalanobis, MahalanobisODIN
 from .maxlogit import MaxLogit
 from .mcd import MCD
+from .mcm import MCM
 from .mmahalanobis import MultiMahalanobis
+from .nac import NACUE
+from .nci import NCI
+from .nnguide import NNGuide
 from .odin import ODIN, odin_preprocessing
 from .openmax import OpenMax
+from .pnml import PNML
 from .rankfeat import RankFeat
 from .react import ReAct
-from .vra import VRA
 from .rmd import RMD
+from .scale import SCALE
 from .she import SHE
 from .softmax import MaxSoftmax
 from .tscaling import TemperatureScaling
 from .vim import ViM
+from .vra import VRA
 from .webo import WeightedEBO
-from .gradnorm import GradNorm
-from .gradnormkl import GradNormKL
-from .nci import NCI
-from .nac import NACUE
 
 __all__ = [
     "ASH",
@@ -272,10 +313,13 @@ __all__ = [
     "Gram",
     "KLMatching",
     "KNN",
+    "LTS",
     "Mahalanobis",
+    "MahalanobisODIN",
     "MaxLogit",
     "MaxSoftmax",
     "MCD",
+    "MCM",
     "MultiMahalanobis",
     "NACUE",
     "NCI",
@@ -283,9 +327,11 @@ __all__ = [
     "ODIN",
     "odin_preprocessing",
     "OpenMax",
+    "PNML",
     "RMD",
     "RankFeat",
     "ReAct",
+    "SCALE",
     "SHE",
     "TemperatureScaling",
     "ViM",

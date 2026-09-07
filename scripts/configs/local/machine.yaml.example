@@ -1,0 +1,13 @@
+# Template for machine-specific training paths. Copy to `machine.yaml` next to this file and
+# edit for your machine:
+#
+#     cp configs/local/machine.yaml.example configs/local/machine.yaml
+#
+# `machine.yaml` is git-ignored so your local paths are never committed. It is composed over
+# configs/config.yaml via the `- optional local@_global_: machine` default (keys land at the
+# config root). If absent, training still composes -- CIFAR runs need no ImageNet root.
+
+# torchvision-compatible ImageNet-1K directory (train/, val/, meta.bin). Used as the ID root
+# for the imagenet200 dataset and as the outlier root for imagenet800 (both reference
+# ${imagenet_root}). Only needed for ImageNet-200 training / ImageNet-800 outlier exposure.
+imagenet_root: /path/to/imagenet-2012

@@ -3,9 +3,9 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
+from pytorch_ood.utils import OODMetrics
 from src.pytorch_ood.detector import GEN
 from tests.helpers import ClassificationModel, SegmentationModel
-from pytorch_ood.utils import OODMetrics
 
 
 def _make_id_ood_data(n_dim=10, n_classes=3, n_per_class=100, ood_offset=20.0, seed=42):
@@ -95,11 +95,37 @@ class TestGEN(unittest.TestCase):
         # Different gammas should produce different scores
         self.assertFalse(torch.allclose(scores_01, scores_05))
 
-        # gamma=1 should give sum of p*(1-p), i.e. Gini impurity
+        # gamma=1 should give mean of p*(1-p), i.e. average Gini impurity
         p = logits.softmax(dim=1)
-        expected_gini = (p * (1 - p)).sum(dim=1)
+        expected_gini = (p * (1 - p)).mean(dim=1)
         scores_1 = GEN.score(logits, gamma=1.0)
         self.assertTrue(torch.allclose(scores_1, expected_gini, atol=1e-6))
+
+    def test_M_none_matches_full_class_count(self):
+        """M=None (all classes) equals explicitly summing over all C classes."""
+        logits = torch.randn(8, 5)
+        self.assertTrue(torch.allclose(GEN.score(logits, M=None), GEN.score(logits, M=5)))
+
+    def test_M_truncates_to_top_probabilities(self):
+        """M < C sums the power transform over only the M largest probabilities."""
+        logits = torch.randn(8, 10)
+        gamma, M = 0.1, 3
+
+        scores = GEN.score(logits, gamma=gamma, M=M)
+
+        p = logits.softmax(dim=1).clamp(1e-7, 1 - 1e-7)
+        top = p.sort(dim=1, descending=True).values[:, :M]
+        expected = (top.pow(gamma) * (1 - top).pow(gamma)).mean(dim=1)
+
+        self.assertTrue(torch.allclose(scores, expected, atol=1e-6))
+        # truncation changes the score relative to using all classes
+        self.assertFalse(torch.allclose(scores, GEN.score(logits, gamma=gamma)))
+
+    def test_M_via_constructor(self):
+        """The constructor's M is forwarded to predict_logits."""
+        logits = torch.randn(8, 10)
+        detector = GEN(None, gamma=0.1, M=5)
+        self.assertTrue(torch.allclose(detector.predict_logits(logits), GEN.score(logits, M=5)))
 
     def test_mock_performance(self):
         """
@@ -123,6 +149,42 @@ class TestGEN(unittest.TestCase):
         with torch.no_grad():
             for x, y in DataLoader(TensorDataset(x_id, y_id), batch_size=64):
                 metrics.update(detector(x), y)
+            for x, y in DataLoader(TensorDataset(x_ood, y_ood), batch_size=64):
+                metrics.update(detector(x), y)
+
+        results = metrics.compute()
+        self.assertGreater(
+            results["AUROC"], 0.90, f"Expected AUROC > 0.90, got {results['AUROC']:.4f}"
+        )
+
+    def test_mock_performance_many_classes(self):
+        """
+        Regression test: with M=None, the score is computed over all classes. For datasets
+        with many classes (e.g. CIFAR-100, ImageNet), a naive sum grows past 1.0. OODMetrics
+        (via torchmetrics' binary_auroc) silently applies a sigmoid to scores outside [0, 1],
+        which saturates to 1.0 in float32 for such magnitudes and collapses AUROC to ~0.5.
+        Verifies the score stays bounded and AUROC remains high with 100 classes.
+        """
+        torch.manual_seed(42)
+        # n_dim >= n_classes: _make_id_ood_data's one-hot-style centers need at least one
+        # dimension per class to stay separated.
+        n_dim, n_classes, n_per_class = 100, 100, 10
+
+        x_id, y_id, x_ood, y_ood = _make_id_ood_data(
+            n_dim=n_dim, n_classes=n_classes, n_per_class=n_per_class
+        )
+
+        model = ClassificationModel(num_inputs=n_dim, num_outputs=n_classes, n_hidden=64)
+        _train_model(model, x_id, y_id, epochs=300)
+
+        detector = GEN(model)
+
+        metrics = OODMetrics()
+        with torch.no_grad():
+            for x, y in DataLoader(TensorDataset(x_id, y_id), batch_size=64):
+                scores = detector(x)
+                self.assertTrue((scores <= 1.0).all(), "GEN scores should stay within [0, 1]")
+                metrics.update(scores, y)
             for x, y in DataLoader(TensorDataset(x_ood, y_ood), batch_size=64):
                 metrics.update(detector(x), y)
 

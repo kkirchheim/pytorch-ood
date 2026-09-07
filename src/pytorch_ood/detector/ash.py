@@ -102,8 +102,8 @@ class ASH(FeatureMapsDetector):
 
         model = WideResNet()
         detector = ASH(
-            backbone = model.features_before_pool,
-            head = model.forward_from_before_pool,
+            backbone = model.feature_maps,
+            head = model.forward_feature_maps,
             detector=EnergyBased.score
         )
         scores = detector(images)
@@ -116,6 +116,12 @@ class ASH(FeatureMapsDetector):
         "ash-s": ash_s,
         "ash-p": ash_p,
         "ash-b": ash_b,
+    }
+
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
+    #: percentile sweep used by OpenOOD (expressed here as fractions in ``[0, 1]``).
+    hyperparameter_space = {
+        "percentile": [0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95],
     }
 
     def __init__(
@@ -145,9 +151,13 @@ class ASH(FeatureMapsDetector):
         """
         :param x: input, will be passed through network
         """
+        device = self.device
+        if device is not None:
+            x = x.to(device)
         x = self.backbone(x)
         return self.predict_feature_maps(x)
 
+    @torch.no_grad()
     def predict_feature_maps(self, x: Tensor) -> Tensor:
         x = self.ash(x, self.percentile)
         x = self.head(x)

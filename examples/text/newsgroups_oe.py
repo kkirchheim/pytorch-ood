@@ -46,7 +46,6 @@ from pytorch_ood.dataset.txt import (
     WMT16Sentences,
 )
 from pytorch_ood.detector import (
-    ODIN,
     EnergyBased,
     Entropy,
     KLMatching,
@@ -197,7 +196,7 @@ print("STAGE 2: Creating OOD Detectors")
 detectors = {}
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
-detectors["Mahalanobis"] = Mahalanobis(model.features, eps=0.0)
+detectors["Mahalanobis"] = Mahalanobis(model.features)
 detectors["KLMatching"] = KLMatching(model)
 detectors["MaxSoftmax"] = MaxSoftmax(model)
 detectors["EnergyBased"] = EnergyBased(model)

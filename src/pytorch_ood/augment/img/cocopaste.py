@@ -1,16 +1,13 @@
-from typing import Set, Callable, Union
-
+import json
 import os
 import random
+from collections import defaultdict
 from os.path import join
+from typing import Callable, List, Tuple, Union
 
 import numpy as np
-from PIL import Image, ImageDraw
 import torch
-from collections import defaultdict
-import json
-from typing import List, Tuple
-
+from PIL import Image, ImageDraw
 from torch import Tensor
 from torchvision.datasets.utils import download_and_extract_archive
 
@@ -232,9 +229,9 @@ class InsertCOCO(Callable):
 
         # write mask
         for j in range(min(len(annotations), self.annotation_per_coco_image)):
-            mask[
-                self.tools.annToMask(annotations[j], (img["height"], img["width"])) == 1
-            ] = self.out_class_label
+            mask[self.tools.annToMask(annotations[j], (img["height"], img["width"])) == 1] = (
+                self.out_class_label
+            )
 
         annott_segm_arr = np.array(mask)
 

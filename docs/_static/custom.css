@@ -1,0 +1,8 @@
+/* Keep model identifiers on a single line; let the description column wrap
+   instead. The RTD theme sets `.rst-content code.literal { white-space: normal }`,
+   which re-enables wrapping on the inline-code identifier inside the cell, so we
+   have to override it on the code element itself (a plain `td` rule is not enough). */
+.rst-content table.model-table td:first-child,
+.rst-content table.model-table td:first-child code.literal {
+    white-space: nowrap;
+}

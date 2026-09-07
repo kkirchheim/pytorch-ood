@@ -18,6 +18,7 @@ nomenclature, and structured API documentation.
    :caption: Overview
 
    info
+   support
 
 .. toctree::
    :maxdepth: 2
@@ -43,6 +44,7 @@ nomenclature, and structured API documentation.
    auto_examples/text/index
    auto_examples/osr/index
    auto_examples/metrics/index
+   auto_examples/hpo/index
 
 
 Indices and tables

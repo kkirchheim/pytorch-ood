@@ -19,12 +19,12 @@ This model is evaluated using the :class:`EnergyBased<pytorch_ood.detector.Energ
 
 import segmentation_models_pytorch as smp
 import torch
+from PIL import Image
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
 from segmentation_models_pytorch.metrics import iou_score
 from torch.utils.data import DataLoader
-from torchvision.transforms.functional import pad, to_tensor
 from torchvision.datasets import Cityscapes
-from PIL import Image
+from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import RoadAnomaly, SegmentMeIfYouCan
 from pytorch_ood.detector import EnergyBased

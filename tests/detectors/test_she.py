@@ -19,7 +19,7 @@ class TestASH(unittest.TestCase):
         """ """
         model = WideResNet(num_classes=10).eval()
         detector = SHE(
-            backbone=model.features,
+            encoder=model.features,
             head=model.fc,
         )
 

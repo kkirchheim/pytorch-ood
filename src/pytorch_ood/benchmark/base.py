@@ -7,8 +7,7 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union, overload
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from pytorch_ood.api import Detector, FeaturesDetector, LogitsDetector
-from pytorch_ood.detector.mahalanobis import Mahalanobis
+from pytorch_ood.api import Detector, FeaturesDetector, GradientDetector, LogitsDetector
 from pytorch_ood.utils import OODMetrics, TensorBuffer
 
 _CACHE_VERSION = 1
@@ -78,18 +77,30 @@ class Benchmark(ABC):
 
     @staticmethod
     def _get_features_producer(detector: FeaturesDetector):
-        for attr in ("model", "encoder", "backbone"):
-            if hasattr(detector, attr):
-                producer = getattr(detector, attr)
-                if producer is not None:
-                    return producer
-        return None
+        return getattr(detector, "encoder", None)
 
     @staticmethod
     def _producer_token(producer) -> str:
         if producer is None:
             return "none"
-        return f"{producer.__class__.__module__}.{producer.__class__.__qualname__}"
+
+        owner = getattr(producer, "__self__", None)
+        func = getattr(producer, "__func__", None)
+        if owner is not None and func is not None:
+            owner_cls = owner.__class__
+            return (
+                f"bound_method:{owner_cls.__module__}.{owner_cls.__qualname__}.{func.__qualname__}"
+            )
+
+        if isinstance(producer, torch.nn.Module):
+            return f"module:{producer.__class__.__module__}.{producer.__class__.__qualname__}"
+
+        producer_module = getattr(producer, "__module__", None)
+        producer_qualname = getattr(producer, "__qualname__", None)
+        if producer_module is not None and producer_qualname is not None:
+            return f"callable:{producer_module}.{producer_qualname}"
+
+        return f"callable_class:{producer.__class__.__module__}.{producer.__class__.__qualname__}"
 
     def _memory_cache_key(
         self,
@@ -291,7 +302,7 @@ class Benchmark(ABC):
         if not isinstance(detector, FeaturesDetector):
             return False
 
-        if isinstance(detector, Mahalanobis) and detector.eps > 0:
+        if isinstance(detector, GradientDetector):
             return False
 
         return True
@@ -313,7 +324,8 @@ class Benchmark(ABC):
         logits = payload["data"]["logits"]
         labels = payload["data"]["label"]
         scores = detector.predict_logits(logits)
-        metrics.update(scores, labels.to(scores.device))
+        predictions = logits.argmax(dim=1).to(scores.device)
+        metrics.update(scores, labels.to(scores.device), predictions)
         return metrics.compute()
 
     @staticmethod
@@ -382,8 +394,7 @@ class Benchmark(ABC):
         cache: bool = False,
         cache_dir: Optional[str] = None,
         cache_key: Optional[str] = None,
-    ) -> List[Dict]:
-        ...
+    ) -> List[Dict]: ...
 
     @overload
     def evaluate(
@@ -394,8 +405,7 @@ class Benchmark(ABC):
         cache: bool = False,
         cache_dir: Optional[str] = None,
         cache_key: Optional[str] = None,
-    ) -> List[Dict]:
-        ...
+    ) -> List[Dict]: ...
 
     def evaluate(
         self,

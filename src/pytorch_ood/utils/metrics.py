@@ -4,11 +4,20 @@
 
 """
 
-from typing import Dict, TypeVar
+from typing import Dict, Optional, TypeVar
 
 import numpy as np
 import torch
 from torch import Tensor
+
+__all__ = [
+    "OODMetrics",
+    "calibration_error",
+    "aurra",
+    "fpr_at_tpr",
+    "autc_score",
+    "oscr_score",
+]
 from torchmetrics.functional.classification import (
     binary_auroc,
     binary_precision_recall_curve,
@@ -16,7 +25,7 @@ from torchmetrics.functional.classification import (
 )
 from torchmetrics.utilities.compute import auc
 
-from .utils import TensorBuffer, is_unknown, contains_known_and_unknown
+from .utils import TensorBuffer, is_unknown
 
 Self = TypeVar("Self")
 
@@ -101,32 +110,39 @@ def fpr_at_tpr(pred, target, k=0.95):
     return fpr[idx]
 
 
-def binary_clf_curve(y_true, y_score, pos_label=1):
+def autc_score(labels: Tensor, scores: Tensor, pos_label: int = 1) -> Tensor:
     """
-    Calculate the False Positive Rate at a certain True Positive Rate.
-    Args:
-        :param y_true: ground truth labels
-        :param y_score: predicted scores for each sample
-        :param pos_label: positive labels 1 or 0
-    :return: Tuple containing:
-        - fpr: False Positive Rate values
-        - tpr: True Positive Rate values
-        - thresholds: Thresholds used to calculate FPR and TPR.
+    Calculate the Area Under the Threshold Curve (AUTC).
+
+    The AUTC is the mean of the areas under the False Positive Rate and False Negative Rate
+    curves, integrated over thresholds :math:`\\tau \\in [0, 1]` after min-max normalizing the
+    scores. Lower is better. Using the fact that, for scores normalized to :math:`[0, 1]`,
+
+    .. math::
+
+        \\int_0^1 \\mathrm{FPR}(\\tau)\\,d\\tau = \\frac{1}{N_-}\\sum_{i:\\,y_i=0} s_i,
+        \\qquad
+        \\int_0^1 \\mathrm{FNR}(\\tau)\\,d\\tau = \\frac{1}{N_+}\\sum_{i:\\,y_i=1} (1 - s_i),
+
+    the score is computed in closed form in :math:`O(N)`, which is exact and avoids
+    materializing a threshold curve.
+
+    :param labels: ground truth labels, where ``pos_label`` denotes the positive (OOD) class
+    :param scores: predicted outlier scores for each sample (higher = more likely positive)
+    :param pos_label: value in ``labels`` that denotes the positive class
+    :return: AUTC score
+
+    :see Paper: `ArXiv <https://arxiv.org/pdf/2306.14658>`__
     """
-    y_true = (y_true == pos_label).long()
+    labels = labels == pos_label
 
     # all scores must be between 0 and 1
-    y_score = (y_score - y_score.min()) / (y_score.max() - y_score.min())
+    scores = (scores - scores.min()) / (scores.max() - scores.min())
 
-    # 1000 thresholds are enough
-    fpr, tpr, thresholds = binary_roc(y_score, y_true, thresholds=1000)
+    aufpr = scores[~labels].mean()  # area under FPR(tau) over tau in [0, 1]
+    aufnr = (1 - scores[labels]).mean()  # area under FNR(tau) over tau in [0, 1]
 
-    # add 0 to FPR and TPR
-    fpr = torch.cat([torch.tensor([0.0], device=fpr.device), fpr])
-    tpr = torch.cat([torch.tensor([0.0], device=tpr.device), tpr])
-    thresholds = torch.cat([torch.tensor([1.0], device=thresholds.device), thresholds])
-
-    return fpr, tpr, thresholds
+    return (aufpr + aufnr) / 2
 
 
 class OODMetrics(object):
@@ -138,6 +154,9 @@ class OODMetrics(object):
     - AUPR ID (see `ArXiv <https://arxiv.org/pdf/1610.02136>`__ or `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
     - AUPR OUT (see `ArXiv <https://arxiv.org/pdf/1610.02136>`__ or `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
     - FPR\\@95TPR (see `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
+    - ACC: closed-set classification accuracy on the known (in-distribution) samples,
+      included automatically whenever predicted class indices are passed to
+      :meth:`update`.
 
     The interface is similar to ``torchmetrics``.
 
@@ -148,6 +167,16 @@ class OODMetrics(object):
         labels = torch.Tensor([1,2,-1])
         metrics.update(outlier_scores, labels)
         metric_dict = metrics.compute()
+
+    Passing predicted class indices additionally reports closed-set accuracy:
+
+    .. code :: python
+
+        metrics = OODMetrics()
+        logits = model(x)
+        outlier_scores = detector(x)
+        metrics.update(outlier_scores, labels, logits.argmax(dim=1))
+        metric_dict = metrics.compute()  # now also contains "ACC"
 
     In ``classification`` mode, the inputs will be flattened, so we treat each value as an individual example.
     Using this mode for segmentation tasks can require a lot of memory and compute.
@@ -166,8 +195,7 @@ class OODMetrics(object):
         """
         super(OODMetrics, self).__init__()
         self.device = device
-        # always buffer on cpu to not exhaust gpu mem
-        self.buffer = TensorBuffer(device="cpu")
+        self.buffer = TensorBuffer(device=device)
         self.void_label = void_label
 
         if mode not in ["segmentation", "classification"]:
@@ -175,12 +203,17 @@ class OODMetrics(object):
 
         self.mode = mode
 
-    def update(self: Self, scores: Tensor, y: Tensor) -> Self:
+    def update(
+        self: Self, scores: Tensor, y: Tensor, predictions: Optional[Tensor] = None
+    ) -> Self:
         """
         Add batch of results to collection.
 
         :param scores: outlier score
         :param y: target label
+        :param predictions: predicted class indices, classification mode only. When
+            given (on every call to this instance), :meth:`compute` additionally
+            reports closed-set accuracy ("ACC") on the known (in-distribution) samples.
         """
         scores = scores.detach()
         y = y.detach()
@@ -192,7 +225,18 @@ class OODMetrics(object):
             self.buffer.append("scores", scores)
             self.buffer.append("y", y)
 
+            if predictions is not None:
+                predictions = predictions.detach()
+                if predictions.shape != y.shape:
+                    raise ValueError(f"Inputs have wrong size: {predictions.shape} and {y.shape}")
+                self.buffer.append("predictions", predictions)
+
         elif self.mode == "segmentation":
+            if predictions is not None:
+                raise NotImplementedError(
+                    "predictions/accuracy are not supported in segmentation mode"
+                )
+
             # Should contain BxHxW
             assert len(scores.shape) == 3
             assert len(y.shape) == 3
@@ -234,10 +278,7 @@ class OODMetrics(object):
 
         auroc = binary_auroc(scores, labels)
 
-        fpr_values, tpr_values, thresholds_values = binary_clf_curve(labels, scores, pos_label=1)
-        aufpr = auc(thresholds_values, fpr_values)
-        aufnr = auc(thresholds_values, 1 - tpr_values)
-        autc = (aufpr + aufnr) / 2
+        autc = autc_score(labels, scores, pos_label=1)
 
         # num_classes=None for binary
         p, r, t = binary_precision_recall_curve(scores, labels)
@@ -275,6 +316,19 @@ class OODMetrics(object):
 
             metrics = self._compute(labels, scores)
 
+            if "predictions" in self.buffer:
+                predictions = self.buffer.get("predictions").view(-1)
+
+                # mirror the void-label filtering _compute() applies internally
+                if self.void_label:
+                    void_mask = labels != self.void_label
+                    labels = labels[void_mask]
+                    predictions = predictions[void_mask]
+
+                known = labels >= 0
+                if known.any():
+                    metrics["ACC"] = (predictions[known] == labels[known]).float().mean().cpu()
+
         metrics = {k: v.item() for k, v in metrics.items()}
         return metrics
 
@@ -284,3 +338,61 @@ class OODMetrics(object):
         """
         self.buffer.clear()
         return self
+
+
+@torch.no_grad()
+def oscr_score(outlier_scores: Tensor, predictions: Tensor, labels: Tensor) -> float:
+    """
+    Open-Set Classification Rate (OSCR).
+
+    Measures joint closed-set classification accuracy and open-set detection by
+    plotting the Correct Classification Rate (CCR) against the False Positive Rate
+    (FPR) of accepting unknown samples as in-distribution, then returning the AUC.
+
+    A perfect detector that also classifies all known samples correctly returns 1.0.
+    A random detector returns roughly equal to the closed-set accuracy.
+
+    .. code :: python
+
+        scores = detector(x)                    # higher = more OOD
+        preds  = model(x).argmax(dim=1)
+        result = oscr_score(scores, preds, labels)
+
+    :param outlier_scores: 1-D tensor of outlier scores (higher = more likely OOD)
+    :param predictions: 1-D tensor of predicted class indices
+    :param labels: 1-D tensor of true labels; ``>= 0`` for known, ``< 0`` for unknown
+    :returns: OSCR score in ``[0, 1]``
+
+    :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
+    """
+    known_mask = labels >= 0
+
+    s_id = outlier_scores[known_mask].cpu()
+    s_ood = outlier_scores[~known_mask].cpu()
+    correct = (predictions[known_mask] == labels[known_mask]).cpu()
+
+    n_id = s_id.shape[0]
+    n_ood = s_ood.shape[0]
+
+    if n_id == 0 or n_ood == 0:
+        raise ValueError("oscr_score requires both known and unknown samples.")
+
+    # Sort ID samples by ascending score; use their score values as thresholds.
+    # At threshold τ = s_id_sorted[i]:
+    #   CCR(τ) = fraction of ID samples with score ≤ τ that are also correct
+    #   FPR(τ) = fraction of OOD samples with score ≤ τ
+    sort_idx = torch.argsort(s_id)
+    s_id_sorted = s_id[sort_idx]
+    correct_sorted = correct[sort_idx]
+
+    ccr = torch.cumsum(correct_sorted.float(), dim=0) / n_id
+
+    s_ood_sorted, _ = torch.sort(s_ood)
+    fpr_counts = torch.searchsorted(s_ood_sorted, s_id_sorted, right=True)
+    fpr = fpr_counts.float() / n_ood
+
+    # Full curve: (0, 0) → evaluated points → (1, ccr_max)
+    fpr = torch.cat([torch.zeros(1), fpr, torch.ones(1)])
+    ccr = torch.cat([torch.zeros(1), ccr, ccr[-1:]])
+
+    return float(torch.trapezoid(ccr, fpr).item())
