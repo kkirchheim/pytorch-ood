@@ -133,8 +133,7 @@ Since both detectors used in this example implement the `LogitsDetector` interfa
 
 # Research Impact Statement
 
-The `pytorch-ood` library has seen sustained adoption within the research community. The associated publication [@kirchheim2022pytorch] has been cited more than 60 times, and the repository has accumulated over 300 GitHub stars with contributions from 9 developers and a substantial number of downloads.
-Overall, `pytorch-ood` serves both as reusable research infrastructure and as a foundation for further work in OOD detection and machine learning safety.
+The `pytorch-ood` library has seen sustained adoption within the research community. As of 7 September 2026, Google Scholar reported 72 citations to the associated publication [@kirchheim2022pytorch], GitHub listed 346 stars and 11 contributors, and [PePy](https://pepy.tech/projects/pytorch-ood) recorded 76,545 total downloads from PyPI.
 
 
 # AI Usage Disclosure
