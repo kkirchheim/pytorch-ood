@@ -106,12 +106,16 @@ In practice, benchmark objects allow users to evaluate multiple detectors on sha
 For example, a minimal evaluation workflow to replicate the OpenOOD v1.5 CIFAR-10 benchmark [@yang2022openood] with the pre-trained model and baseline detector from one of the first OOD detection benchmark papers [@hendrycks2016baseline] and an additional, more recent detector [@liu2023gen] can be written directly as:
 
 ```python
+import torch
+
 from pytorch_ood.detector import MaxSoftmax, GEN
-from pytorch_ood.model import WideResNet
+from pytorch_ood.model import load_model, load_transform
 from pytorch_ood.benchmark import CIFAR10_OpenOOD
 
-model = WideResNet(num_classes=10, pretrained="cifar10-pt").eval()
-preprocess = WideResNet.transform_for("cifar10-pt")
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model_id = "wrn-40-2/cifar10/crossentropy"
+model = load_model(model_id).to(device)
+preprocess = load_transform(model_id)
 
 msp = MaxSoftmax(model)
 gen = GEN(model, gamma=0.1)
@@ -121,13 +125,13 @@ benchmark = CIFAR10_OpenOOD(root="data", transform=preprocess)
 metrics = benchmark.evaluate(
   [gen, msp],
   loader_kwargs={"batch_size": 64},
-  device="cuda",
+  device=device,
   cache=True
 )
 
 print(metrics)
 ```
-Required datasets and weights will be downloaded automatically.
+The model weights and the OpenOOD CIFAR-10 benchmark datasets are downloaded automatically.
 Since both detectors used in this example implement the `LogitsDetector` interface, logits will be extracted from the deep neural network only once and then passed through both detectors.
 
 
