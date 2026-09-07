@@ -1,3 +1,4 @@
+import os
 import unittest
 from urllib.request import urlopen
 
@@ -31,6 +32,10 @@ from src.pytorch_ood.dataset.txt import (
 )
 
 
+@unittest.skipUnless(
+    os.environ.get("PYTORCH_OOD_DOWNLOAD_TESTS"),
+    "Requires external dataset hosts; set PYTORCH_OOD_DOWNLOAD_TESTS=1 to run",
+)
 class TestDatasetAvailability(unittest.TestCase):
     def test_download_ImageNetA(self):
         status = urlopen(ImageNetA.url).getcode()
