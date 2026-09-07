@@ -140,7 +140,8 @@ Overall, `pytorch-ood` serves both as reusable research infrastructure and as a 
 # AI Usage Disclosure
 
 Generative AI tools were used during the development of `pytorch-ood` and the preparation of this manuscript.
-In particular, we used systems from OpenAI (including ChatGPT and Codex) and Anthropic (Claude), in various versions available at the time, for parts of the codebase, documentation, and manuscript text.
+In particular, we used systems from OpenAI (including ChatGPT and Codex) and Anthropic (Claude) for parts of the codebase, documentation, and manuscript text.
+The exact historical model versions used for this assistance cannot be recovered.
 These tools provided assistance with code generation and refactoring, drafting and improving documentation, generating testing scaffolding, and editorial support.
 All AI-assisted contributions were carefully checked and integrated by the authors. All architectural and design decisions were made by the authors, who take full responsibility for the software and this manuscript.
 
