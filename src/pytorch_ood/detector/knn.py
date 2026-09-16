@@ -53,16 +53,18 @@ class KNN(FeaturesDetector):
     #: ``K`` sweep used by OpenOOD.
     hyperparameter_space = {"k": [50, 100, 200, 500, 1000]}
 
-    def __init__(self, encoder: Optional[Callable[[Tensor], Tensor]], k: int = 1, **knn_kwargs):
+    def __init__(self, encoder: Optional[Callable[[Tensor], Tensor]], k: int = 1, norm_features: bool = False, **knn_kwargs):
         """
         :param encoder: feature encoder. Can be ``None`` when using
             ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param k: number of neighbors; the score is the distance to the ``k``-th
             nearest neighbor. The paper recommends larger values (e.g. ``50``).
+        :param norm_features: if True, applies L2 normalization to features before distance computation.
         :param knn_kwargs: dict with keyword arguments that will be passed to the scikit learns k-NN
         """
         self.encoder = encoder
         self.k = k
+        self.norm_features = norm_features
         self._is_fitted = False
 
         try:
@@ -90,6 +92,9 @@ class KNN(FeaturesDetector):
         """
         :param z: features
         """
+        if getattr(self, "norm_features", False):
+            import torch.nn.functional as F
+            z = F.normalize(z, p=2, dim=-1)
 
         if not self._is_fitted:
             raise RequiresFittingException()
@@ -109,6 +114,10 @@ class KNN(FeaturesDetector):
         :param z: features
         :param labels: labels for features
         """
+        if getattr(self, "norm_features", False):
+            import torch.nn.functional as F
+            z = F.normalize(z, p=2, dim=-1)
+
         known = is_known(labels)
 
         if not known.any():

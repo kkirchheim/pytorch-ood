@@ -56,13 +56,16 @@ class Mahalanobis(FeaturesDetector):
     def __init__(
         self,
         encoder: Optional[Callable[[Tensor], Tensor]],
+        eps: float = 1e-6,
     ):
         """
         :param encoder: feature encoder. Can be ``None`` when
             using ``fit_features(...)`` and ``predict_features(...)`` directly.
+        :param eps: small noise added to the diagonal of the covariance matrix to prevent singularity.
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder
+        self.eps = eps
         self.mu: Tensor = None  #: Centers
         self.cov: Tensor = None  #: Covariance Matrix
         self.precision: Tensor = None  #: Precision Matrix
@@ -111,8 +114,10 @@ class Mahalanobis(FeaturesDetector):
             self.mu[clazz] = zs.mean(dim=0)
             self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
 
-        self.cov += torch.eye(self.cov.shape[0], device=self.cov.device) * 1e-6
-        self.precision = torch.linalg.inv(self.cov)
+        self.cov += torch.eye(self.cov.shape[0], device=self.cov.device) * self.eps
+        # Use pseudo-inverse (pinv) instead of standard inverse (inv) to smoothly handle 
+        # rank-deficient covariance matrices when N_samples < D_features.
+        self.precision = torch.linalg.pinv(self.cov)
         return self
 
     def _calc_gaussian_scores(self, z: Tensor) -> Tensor:

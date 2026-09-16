@@ -44,13 +44,17 @@ class KLMatching(LogitsDetector):
 
     requires_fit = True
 
-    def __init__(self, model: Optional[Module]):
+    def __init__(self, model: Optional[Module], use_predictions: bool = False, minimum_kl: bool = False):
         """
         :param model: neural network, is assumed to output logits. Can be ``None`` when
             using ``fit_logits(...)`` and ``predict_logits(...)`` directly.
+        :param use_predictions: if True, uses the model's predicted class instead of the ground truth labels to build the reference distributions.
+        :param minimum_kl: if True, returns the minimum KL-divergence to any class reference distribution as the OOD score, instead of just the predicted class.
         """
         super(KLMatching, self).__init__()
         self.model = model
+        self.use_predictions = use_predictions
+        self.minimum_kl = minimum_kl
         self.dists: ParameterDict = ParameterDict()  #: Typical posteriors per class
 
     def fit_logits(self: Self, logits: Tensor, labels: Tensor) -> Self:
@@ -65,6 +69,9 @@ class KLMatching(LogitsDetector):
         logits = logits.to(device)
         labels = labels.to(device)
         probabilities = logits.softmax(dim=1)
+        
+        if self.use_predictions:
+            labels = logits.argmax(dim=1)
 
         for label in labels.unique():
             log.debug(f"Fitting class {label}")
@@ -90,15 +97,27 @@ class KLMatching(LogitsDetector):
         predictions = p.argmax(dim=1)
         scores = torch.empty(size=(p.shape[0],), device=device)
 
-        for label in predictions.unique():
-            if str(label.item()) not in self.dists:
-                raise ValueError(f"Label {label.item()} not fitted.")
+        if self.minimum_kl:
+            # Score is the minimum KL-divergence across ALL class reference distributions
+            if not self.dists:
+                raise ValueError("No fitted distributions found.")
+            
+            all_d_kl = []
+            for label_str, dist in self.dists.items():
+                class_d = dist.unsqueeze(0).repeat(p.shape[0], 1)
+                d_kl = (p * (p / class_d).log()).sum(dim=1)
+                all_d_kl.append(d_kl)
+            scores = torch.stack(all_d_kl, dim=1).min(dim=1).values
+        else:
+            for label in predictions.unique():
+                if str(label.item()) not in self.dists:
+                    raise ValueError(f"Label {label.item()} not fitted.")
 
-            dist = self.dists[str(label.item())]
-            class_p = p[predictions == label]
-            class_d = dist.unsqueeze(0).repeat(class_p.shape[0], 1)
-            d_kl = (class_p * (class_p / class_d).log()).sum(dim=1)
-            scores[predictions == label] = d_kl
+                dist = self.dists[str(label.item())]
+                class_p = p[predictions == label]
+                class_d = dist.unsqueeze(0).repeat(class_p.shape[0], 1)
+                d_kl = (class_p * (class_p / class_d).log()).sum(dim=1)
+                scores[predictions == label] = d_kl
 
         return scores
 

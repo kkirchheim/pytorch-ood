@@ -269,6 +269,14 @@ class OODMetrics(object):
         # map OOD to 1 (positive), map ID to 0 (negative)
         labels = is_unknown(labels).long()
 
+        # Scale scores to [0, 1] to prevent torchmetrics sigmoid saturation
+        if scores.numel() > 0:
+            s_min, s_max = scores.min(), scores.max()
+            if s_max > s_min:
+                scores = (scores - s_min) / (s_max - s_min)
+            else:
+                scores = torch.zeros_like(scores)
+
         # there must now be ID and OOD samples
         if len(torch.unique(labels)) != 2:
             raise ValueError("Data must contain ID and OOD samples.")

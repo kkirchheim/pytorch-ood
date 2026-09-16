@@ -291,6 +291,7 @@ from .openmax import OpenMax
 from .pnml import PNML
 from .rankfeat import RankFeat
 from .react import ReAct
+from .residual import Residual
 from .rmd import RMD
 from .scale import SCALE
 from .she import SHE
@@ -328,6 +329,7 @@ __all__ = [
     "odin_preprocessing",
     "OpenMax",
     "PNML",
+    "Residual",
     "RMD",
     "RankFeat",
     "ReAct",
