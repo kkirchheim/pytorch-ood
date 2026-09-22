@@ -21,6 +21,8 @@ from src.pytorch_ood.detector import (
     RMD,
     SHE,
     VRA,
+    CADRef,
+    CARef,
     EnergyBased,
     Entropy,
     GradNorm,
@@ -198,6 +200,14 @@ class TestAllDetectorsSmoke(unittest.TestCase):
             (
                 "fDBD",
                 lambda: (lambda model: fDBD(model.features, model.classifier))(eval_model()),
+            ),
+            (
+                "CARef",
+                lambda: (lambda model: CARef(model.features, model.classifier))(eval_model()),
+            ),
+            (
+                "CADRef",
+                lambda: (lambda model: CADRef(model.features, model.classifier))(eval_model()),
             ),
             (
                 "Mahalanobis",

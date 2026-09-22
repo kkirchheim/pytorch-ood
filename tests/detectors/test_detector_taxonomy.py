@@ -19,6 +19,8 @@ from pytorch_ood.detector import (
     ODIN,
     SHE,
     VRA,
+    CADRef,
+    CARef,
     EnergyBased,
     Entropy,
     GradNorm,
@@ -107,6 +109,8 @@ class TestDetectorTaxonomy(unittest.TestCase):
             fDBD,
             SHE,
             DICE,
+            CARef,
+            CADRef,
         )
 
         for detector_cls in detectors:
