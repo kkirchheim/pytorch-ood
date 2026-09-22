@@ -268,6 +268,10 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NCI                         | Neural Collapse Inspired OOD Detection                                                         | 2025 | [#Nci]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| CARef                       | Class-aware relative feature error against class-mean features.                                | 2025 | [#CADRef]_         |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| CADRef                      | Decoupled class-aware relative feature error, scaled by a logit-based score.                   | 2025 | [#CADRef]_         |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 
@@ -537,6 +541,8 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#LOGNORM] Wei,  et al. (2022) Mitigating Neural Network Overconfidence with Logit Normalization. ICML.
 
 .. [#Nci] Liu,  et al. (2025) Detecting Out-of-distribution through the Lens of Neural Collapse. CVPR.
+
+.. [#CADRef] Ling,  et al. (2025) CADRef: Robust Out-of-Distribution Detection via Class-Aware Decoupled Relative Feature Leveraging. CVPR.
 
 .. [#NNGuide] Park, J., et al. (2023) Nearest Neighbor Guidance for Out-of-Distribution Detection. ICCV.
 
