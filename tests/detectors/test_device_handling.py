@@ -13,6 +13,7 @@ from src.pytorch_ood.detector import (
     MCD,
     NACUE,
     NCI,
+    NECO,
     ODIN,
     PNML,
     RMD,
@@ -73,6 +74,57 @@ class TinyConvDetectorModel(torch.nn.Module):
         return self.fc(self.features(x))
 
 
+#: Seed used for every model built by the registries below. It is not arbitrary: SHE refuses to
+#: fit unless the (untrained) model predicts at least one sample of every class correctly on
+#: ``_classification_loader()``, so the seed and that loader have to agree. See
+#: :class:`TestDeviceRegistryFixtures`, which fails loudly if this stops holding.
+_MODEL_SEED = 0
+
+
+def _seeded_classification_model(**kwargs) -> ClassificationModel:
+    """
+    Build a model from a fixed seed, so that every registry entry sees identical weights no
+    matter where it sits in the registry.
+
+    Several detectors have fit-time preconditions that depend on the randomly initialised
+    weights. Without seeding, inserting a new entry shifts the RNG stream and breaks an
+    unrelated detector further down the list.
+    """
+    torch.manual_seed(_MODEL_SEED)
+    return ClassificationModel(**kwargs)
+
+
+def _seeded_conv_model(**kwargs) -> "TinyConvDetectorModel":
+    """
+    Seeded counterpart of :func:`_seeded_classification_model` for the feature-map detectors.
+    """
+    torch.manual_seed(_MODEL_SEED)
+    return TinyConvDetectorModel(**kwargs)
+
+
+class TestDeviceRegistryFixtures(unittest.TestCase):
+    """
+    Guards the shared fixtures of the (CUDA-only) registries, so that a broken assumption is
+    reported here instead of surfacing as a confusing failure inside an unrelated detector.
+    """
+
+    def test_seeded_model_satisfies_she_precondition(self):
+        model = _seeded_classification_model().eval()
+        loader = TestDetectorDeviceHandling._classification_loader()
+
+        x = torch.cat([batch for batch, _ in loader])
+        y = torch.cat([labels for _, labels in loader])
+        with torch.no_grad():
+            y_hat = model(x).argmax(dim=1)
+
+        for clazz in y.unique():
+            self.assertTrue(
+                (y_hat[y == clazz] == clazz).any(),
+                f"_MODEL_SEED={_MODEL_SEED} yields no correct prediction for class "
+                f"{clazz.item()}; SHE cannot be fitted with it",
+            )
+
+
 @unittest.skipUnless(torch.cuda.is_available(), "CUDA required for device handling tests")
 class TestDetectorDeviceHandling(unittest.TestCase):
     def setUp(self) -> None:
@@ -112,31 +164,33 @@ class TestDetectorDeviceHandling(unittest.TestCase):
         return [
             (
                 "KNN",
-                lambda: (lambda model: KNN(model.features))(ClassificationModel()),
+                lambda: (lambda model: KNN(model.features))(_seeded_classification_model()),
             ),
             (
                 "GMM",
-                lambda: (lambda model: GMM(model.features))(ClassificationModel()),
+                lambda: (lambda model: GMM(model.features))(_seeded_classification_model()),
             ),
             (
                 "PNML",
                 lambda: (lambda model: PNML(model.features, model.classifier))(
-                    ClassificationModel()
+                    _seeded_classification_model()
                 ),
             ),
             (
                 "fDBD",
                 lambda: (lambda model: fDBD(model.features, model.classifier))(
-                    ClassificationModel()
+                    _seeded_classification_model()
                 ),
             ),
             (
                 "Mahalanobis",
-                lambda: (lambda model: Mahalanobis(model.features))(ClassificationModel()),
+                lambda: (lambda model: Mahalanobis(model.features))(
+                    _seeded_classification_model()
+                ),
             ),
             (
                 "RMD",
-                lambda: (lambda model: RMD(model.features))(ClassificationModel()),
+                lambda: (lambda model: RMD(model.features))(_seeded_classification_model()),
             ),
             (
                 "ViM",
@@ -147,7 +201,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         w=model.classifier.weight,
                         b=model.classifier.bias,
                     )
-                )(ClassificationModel()),
+                )(_seeded_classification_model()),
             ),
             (
                 "NCI",
@@ -157,12 +211,22 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         head=model.classifier,
                         alpha=0.0,
                     )
-                )(ClassificationModel()),
+                )(_seeded_classification_model()),
+            ),
+            (
+                "NECO",
+                lambda: (
+                    lambda model: NECO(
+                        encoder=model.features,
+                        head=model.classifier,
+                        d=4,
+                    )
+                )(_seeded_classification_model()),
             ),
             (
                 "SHE",
                 lambda: (lambda model: SHE(model.features, model.classifier))(
-                    ClassificationModel()
+                    _seeded_classification_model()
                 ),
             ),
             (
@@ -174,7 +238,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         b=model.classifier.bias,
                         p=65.0,
                     )
-                )(ClassificationModel()),
+                )(_seeded_classification_model()),
             ),
             (
                 "NNGuide",
@@ -184,14 +248,14 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         model.classifier,
                         k=3,
                     )
-                )(ClassificationModel()),
+                )(_seeded_classification_model()),
             ),
         ]
 
     @staticmethod
     def _classification_fit_and_predict_logits_registry():
         def make_eval_model():
-            model = ClassificationModel()
+            model = _seeded_classification_model()
             model.eval()
             return model
 
@@ -213,15 +277,15 @@ class TestDetectorDeviceHandling(unittest.TestCase):
     @staticmethod
     def _raw_predict_registry():
         def make_gradnorm_model():
-            model = ClassificationModel()
+            model = _seeded_classification_model()
             model.requires_grad_(False)
             model.classifier.requires_grad_(True)
             model.eval()
             return model
 
         return [
-            ("ODIN", lambda: ODIN(ClassificationModel().eval(), eps=0.001)),
-            ("MCD", lambda: MCD(ClassificationModel().eval(), samples=4, mode="var")),
+            ("ODIN", lambda: ODIN(_seeded_classification_model().eval(), eps=0.001)),
+            ("MCD", lambda: MCD(_seeded_classification_model().eval(), samples=4, mode="var")),
             (
                 "GradNorm",
                 lambda: GradNorm(
@@ -248,7 +312,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         backbone=model.feature_maps,
                         head=model.forward_feature_maps,
                     )
-                )(TinyConvDetectorModel()),
+                )(_seeded_conv_model()),
                 False,
                 "maps",
             ),
@@ -259,7 +323,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         backbone=model.feature_maps,
                         head=model.forward_feature_maps,
                     )
-                )(TinyConvDetectorModel()),
+                )(_seeded_conv_model()),
                 False,
                 "maps",
             ),
@@ -270,7 +334,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         backbone=model.features,
                         head=model.classifier,
                     )
-                )(ClassificationModel()),
+                )(_seeded_classification_model()),
                 True,
                 "features",
             ),
@@ -281,7 +345,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         backbone=model.features,
                         head=model.classifier,
                     )
-                )(ClassificationModel()),
+                )(_seeded_classification_model()),
                 True,
                 "features",
             ),
@@ -293,7 +357,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
             (
                 "MultiMahalanobis",
                 lambda: (lambda model: MultiMahalanobis([model.conv1, model.relu]))(
-                    TinyConvDetectorModel()
+                    _seeded_conv_model()
                 ),
             ),
             (
@@ -309,12 +373,12 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         num_classes=3,
                         num_poles_list=[1, 2],
                     )
-                )(TinyConvDetectorModel()),
+                )(_seeded_conv_model()),
             ),
         ]
 
     def test_to_moves_detector_state(self):
-        model = ClassificationModel()
+        model = _seeded_classification_model()
         detector = MaxSoftmax(model)
 
         detector.to(self.device)
@@ -326,7 +390,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
     def test_vim_infers_device_from_constructor_tensors_without_explicit_to(self):
         # ViM must not silently pin its state to CPU when constructed directly from
         # GPU-resident weights, without an explicit detector.to(device) call.
-        model = ClassificationModel().to(self.device)
+        model = _seeded_classification_model().to(self.device)
         detector = ViM(model.features, d=4, w=model.classifier.weight, b=model.classifier.bias)
 
         self.assertEqual(detector.w.device, self.device)
@@ -418,7 +482,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                 self._assert_scores(scores, self.device, batch_size=8)
 
     def test_nacue_accepts_cpu_inputs_for_cuda_detector(self):
-        model = TinyConvDetectorModel().to(self.device)
+        model = _seeded_conv_model().to(self.device)
         detector = NACUE(
             model=model,
             layers=[model.conv1, model.relu],

@@ -266,6 +266,8 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | SCALE                       | Implements Activation Scaling for OOD Detection                                                | 2024 | [#Scale]_          |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| NECO                        | Neural collapse based OOD detection via the ETF subspace projection ratio.                     | 2024 | [#NECO]_           |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NCI                         | Neural Collapse Inspired OOD Detection                                                         | 2025 | [#Nci]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
@@ -557,6 +559,8 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#VRA] Xu, M., et al. (2023) VRA: Variational Rectified Activation for Out-of-Distribution Detection. `ArXiv <https://arxiv.org/abs/2302.11716>`__.
 
 .. [#NACUE] Liu, Y., et al. (2023) Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization. ICLR.
+
+.. [#NECO] Ben Ammar, M., et al. (2024) NECO: NEural Collapse Based Out-of-distribution detection. ICLR. `ArXiv <https://arxiv.org/abs/2310.06823>`__.
 
 .. [#MCM] Ming, Y., Cai, Z., Gu, J., Sun, Y., Li, W., & Li, Y. (2022) Delving into Out-of-Distribution Detection with Vision-Language Representations. NeurIPS. `ArXiv <https://arxiv.org/abs/2211.13445>`__.
 

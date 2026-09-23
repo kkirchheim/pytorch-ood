@@ -29,6 +29,7 @@ from pytorch_ood.detector import (
     LTS,
     NACUE,
     NCI,
+    NECO,
     ODIN,
     PNML,
     RMD,
@@ -87,6 +88,9 @@ def build_detectors(model, norm_std):
     detectors["RMD"] = RMD(model.features)
     detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
     detectors["NCI"] = NCI(encoder=model.features, head=model.fc, alpha=0.0)
+    # WRN-40-2 features are 128-dimensional, so d stays well below that; the reference
+    # implementation disables the max-logit calibration for CNN backbones
+    detectors["NECO"] = NECO(encoder=model.features, head=model.fc, d=32, use_max_logit=False)
     detectors["SHE"] = SHE(model.features, model.fc)
     detectors["DICE"] = DICE(encoder=model.features, w=model.fc.weight, b=model.fc.bias, p=65.0)
     detectors["LTS"] = LTS(encoder=model.features, head=model.fc)

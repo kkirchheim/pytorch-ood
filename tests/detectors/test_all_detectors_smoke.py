@@ -16,6 +16,7 @@ from src.pytorch_ood.detector import (
     MCM,
     NACUE,
     NCI,
+    NECO,
     ODIN,
     PNML,
     RMD,
@@ -225,6 +226,16 @@ class TestAllDetectorsSmoke(unittest.TestCase):
                         encoder=model.features,
                         head=model.classifier,
                         alpha=0.0,
+                    )
+                )(eval_model()),
+            ),
+            (
+                "NECO",
+                lambda: (
+                    lambda model: NECO(
+                        encoder=model.features,
+                        head=model.classifier,
+                        d=4,
                     )
                 )(eval_model()),
             ),

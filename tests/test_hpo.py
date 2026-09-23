@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from src.pytorch_ood.api import Detector, FeaturesDetector
-from src.pytorch_ood.detector import ASH, GEN, KNN, ODIN, ReAct
+from src.pytorch_ood.detector import ASH, GEN, KNN, NECO, ODIN, ReAct
 from src.pytorch_ood.model import WideResNet
 from src.pytorch_ood.utils import GridSearch
 from tests.helpers import ClassificationModel
@@ -204,6 +204,40 @@ class TestDetectorHyperparameterInterface(unittest.TestCase):
         self.assertEqual(set(detector.hyperparameter_space), {"gamma", "M"})
         detector.set_hyperparameters(gamma=2, M=100)
         self.assertEqual(detector.get_hyperparameters(), {"gamma": 2, "M": 100})
+
+    def test_neco_exposes_space(self):
+        model = ClassificationModel()
+        detector = NECO(encoder=model.features, head=model.classifier)
+        self.assertEqual(set(detector.hyperparameter_space), {"d"})
+        detector.set_hyperparameters(d=64)
+        self.assertEqual(detector.get_hyperparameters(), {"d": 64})
+
+    def test_neco_grid_search_selects_a_candidate(self):
+        """
+        NECO is a fitting feature detector, so GridSearch refits it per candidate through the
+        cached-features path.
+        """
+        torch.manual_seed(0)
+        model = ClassificationModel(num_inputs=10, n_hidden=10, num_outputs=3).eval()
+
+        x_train = torch.randn(120, 10)
+        fit_loader = DataLoader(TensorDataset(x_train, torch.arange(120) % 3), batch_size=40)
+        x_val = torch.cat([torch.randn(60, 10), torch.randn(60, 10) * 6.0])
+        y_val = torch.cat([torch.arange(60) % 3, torch.full((60,), -1)])
+        val_loader = DataLoader(TensorDataset(x_val, y_val), batch_size=40)
+
+        detector = NECO(model.features, model.classifier, use_max_logit=False)
+        search = GridSearch(
+            detector,
+            fit_loader=fit_loader,
+            val_loader=val_loader,
+            hyperparameter_space={"d": [1, 2, 4]},
+        )
+        best = search.run()
+
+        self.assertIn(best["d"], [1, 2, 4])
+        self.assertEqual(detector.d, best["d"])
+        self.assertEqual(len(search.results_), 3)
 
     def test_odin_exposes_space(self):
         detector = ODIN(ClassificationModel())
