@@ -242,3 +242,37 @@ class TestMetrics(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             metrics.update(x, y)
+
+
+class TestVoidLabelZero(unittest.TestCase):
+    """void_label=0 must exclude label 0, like any other void label."""
+
+    @staticmethod
+    def _batch():
+        # ID label 1 with low scores, OOD with high scores, void label 0 with the highest scores
+        scores = torch.tensor([0.0, 0.1, 0.2, 1.0, 1.1, 1.2, 2.0, 2.1])
+        y = torch.tensor([1, 1, 1, -1, -1, -1, 0, 0])
+        return scores, y
+
+    def test_classification(self):
+        scores, y = self._batch()
+        r = OODMetrics(void_label=0).update(scores, y).compute()
+        self.assertEqual(r["AUROC"], 1.0)
+        self.assertEqual(r["FPR95TPR"], 0.0)
+        # without the void label, the void samples count as ID with the highest scores
+        self.assertLess(OODMetrics().update(scores, y).compute()["AUROC"], 1.0)
+
+    def test_accuracy(self):
+        scores, y = self._batch()
+        predictions = torch.tensor([1, 1, 1, 0, 0, 0, 1, 1])  # void samples misclassified
+        r = OODMetrics(void_label=0).update(scores, y, predictions).compute()
+        self.assertEqual(r["ACC"], 1.0)
+
+    def test_segmentation(self):
+        scores, y = self._batch()
+        r = (
+            OODMetrics(mode="segmentation", void_label=0)
+            .update(scores.view(1, 2, 4), y.view(1, 2, 4))
+            .compute()
+        )
+        self.assertEqual(r["AUROC"], 1.0)

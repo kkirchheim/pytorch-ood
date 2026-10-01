@@ -217,7 +217,9 @@ class OODMetrics(object):
     therefore contain both ID and OOD pixels.
     """
 
-    def __init__(self, device: str = "cpu", mode: str = "classification", void_label: int = None):
+    def __init__(
+        self, device: str = "cpu", mode: str = "classification", void_label: Optional[int] = None
+    ):
         """
         :param device: where tensors should be stored
         :param mode: either ``classification`` or ``segmentation``.
@@ -294,7 +296,7 @@ class OODMetrics(object):
             raise ValueError(f"Inputs have wrong size: {labels.shape} and {scores.shape}")
 
         # filter all void labels
-        if self.void_label:
+        if self.void_label is not None:
             void_mask = labels != self.void_label
             labels = labels[void_mask]
             scores = scores[void_mask]
@@ -354,7 +356,7 @@ class OODMetrics(object):
                 predictions = self.buffer.get("predictions").view(-1)
 
                 # mirror the void-label filtering _compute() applies internally
-                if self.void_label:
+                if self.void_label is not None:
                     void_mask = labels != self.void_label
                     labels = labels[void_mask]
                     predictions = predictions[void_mask]
