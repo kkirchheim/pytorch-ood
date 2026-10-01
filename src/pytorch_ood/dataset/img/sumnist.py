@@ -125,7 +125,7 @@ class SuMNIST(Dataset):
         target["labels"] = labels
         target["image_id"] = torch.tensor([index])
         target["area"] = area
-        target["iscrowd"] = labels = torch.zeros((len(boxes),), dtype=torch.int64)
+        target["iscrowd"] = torch.zeros((len(boxes),), dtype=torch.int64)
         target["anomaly"] = torch.tensor(-1 if labels.sum().item() != 20 else 0).long()
 
         if self.transforms is not None:
