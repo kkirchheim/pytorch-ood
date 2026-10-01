@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.MultiMahalanobis
     :members:
     :inherited-members:
@@ -20,7 +15,14 @@ from torch.nn import Module, Sequential
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import ModelNotSetException, RequiresFittingException, StructuredDetector
+from ..api import (
+    DetectorInfo,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    StructuredDetector,
+    Task,
+)
 from ..utils import contains_unknown, extract_feature_avg
 
 log = logging.getLogger(__name__)
@@ -39,14 +41,24 @@ class MultiMahalanobis(StructuredDetector):
 
     The final outlier score is the sum of all scores, weighted by :math:`\\alpha`.
 
-    Example code is provided :doc:`here </auto_examples/detectors/mmahalanobis>`
-
     .. note ::
         This does not yet support ODIN preprocessing. Also, the :math:`\\alpha` values have to be determined manually.
 
-    :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
+    .. rubric:: Examples
+
+    See the :doc:`gallery example </auto_examples/detectors/mmahalanobis>`.
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="A Simple Unified Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks",
+            venue="NeurIPS",
+            year=2018,
+            url="https://arxiv.org/abs/1807.03888",
+            code="https://github.com/pokaxpoka/deep_Mahalanobis_detector",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

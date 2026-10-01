@@ -6,6 +6,7 @@ from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.transforms.functional import to_tensor
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -21,10 +22,20 @@ class RoadAnomaly(ImageDatasetBase):
         :width: 800px
         :alt: Street Hazards Dataset Example
         :align: center
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1904.07595>`__
-    :see Website: `EPFL <https://www.epfl.ch/labs/cvlab/data/road-anomaly/>`__
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license="Research use only (images are not owned by the authors)",
+        paper=Paper(
+            title="Detecting the Unexpected via Image Resynthesis",
+            venue="ICCV",
+            year=2019,
+            url="https://arxiv.org/abs/1904.07595",
+        ),
+        homepage="https://www.epfl.ch/labs/cvlab/data/road-anomaly/",
+    )
 
     root_dir_name = "RoadAnomaly"
 

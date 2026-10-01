@@ -8,6 +8,8 @@ from scipy.io import wavfile
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_and_extract_archive
 
+from ...api import DatasetInfo, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -15,9 +17,13 @@ class FSDD(Dataset):
     """
     Free Spoken Digit Dataset, a simple audio/speech dataset consisting of recordings of spoken
     digits in `wav` format at 8kHz.
-
-    :see Website: `GitHub <https://github.com/Jakobovski/free-spoken-digit-dataset>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license="CC-BY-SA-4.0",
+        homepage="https://github.com/Jakobovski/free-spoken-digit-dataset",
+    )
 
     metadata = {
         "jackson": {"gender": "male", "accent": "USA/neutral", "language": "english"},

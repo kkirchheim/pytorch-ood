@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.LTS
     :members:
     :inherited-members:
@@ -21,7 +14,7 @@ import torch
 from torch import Tensor
 from torch.nn import Module
 
-from ..api import FeaturesDetector, ModelNotSetException
+from ..api import DetectorInfo, FeaturesDetector, ModelNotSetException, Paper, Task
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -48,11 +41,8 @@ class LTS(FeaturesDetector):
     the feature distribution, enabling feature-aware temperature scaling.
 
     This is a fully post-hoc method: no fitting or access to training data is required.
-    Supports both classification (pooled features) and segmentation (spatial feature maps).
 
-    :see Paper: `ArXiv <https://arxiv.org/abs/2409.01175>`__
-
-    Example Code (Classification):
+    .. rubric:: Examples
 
     .. code :: python
 
@@ -62,17 +52,19 @@ class LTS(FeaturesDetector):
             head=model.fc,
         )
         scores = detector(images)  # (batch_size,)
-
-    Example Code (Segmentation):
-
-    .. code :: python
-
-        encoder = UNetBackbone(...)  # produces (B, C, H, W) features
-        head = Conv1x1Head(...)       # produces (B, K, H, W) logits
-        detector = LTS(encoder=encoder, head=head)
-        scores = detector(images)  # (batch_size, H, W)
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Logit Scaling for Out-of-Distribution Detection",
+            venue="Machine Vision and Applications",
+            year=2025,
+            url="https://arxiv.org/abs/2409.01175",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = False
 
@@ -119,10 +111,8 @@ class LTS(FeaturesDetector):
         """
         Compute LTS scores from pre-extracted features.
 
-        Supports both classification (2D pooled features) and segmentation (4D spatial features).
-
-        :param z: penultimate-layer features, either :math:`(B, D)` or :math:`(B, C, H, W)`.
-        :return: outlier scores, either :math:`(B,)` or :math:`(B, H, W)`.
+        :param z: penultimate-layer features of shape :math:`(B, D)`.
+        :return: outlier scores of shape :math:`(B,)`.
         """
         t = self.temperature(z, self.p)
         logits = self.head(z)

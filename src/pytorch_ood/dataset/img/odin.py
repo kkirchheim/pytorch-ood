@@ -12,15 +12,27 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
 class TinyImageNetCrop(VisionDataset):
     """
     Cropped version of the TinyImageNet, often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+        ),
+    )
 
     base_folder = "Imagenet/test/"
     url = "https://www.dropbox.com/s/raw/avgm2u562itwpkl/Imagenet.tar.gz"
@@ -86,9 +98,19 @@ class TinyImageNetCrop(VisionDataset):
 class TinyImageNetResize(TinyImageNetCrop):
     """
     Resized version of the TinyImageNet, often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+        ),
+    )
 
     base_folder = "Imagenet_resize/Imagenet_resize/"
     url = "https://www.dropbox.com/s/raw/kp3my3412u5k9rl/Imagenet_resize.tar.gz"
@@ -113,9 +135,19 @@ class TinyImageNetResize(TinyImageNetCrop):
 class LSUNCrop(TinyImageNetCrop):
     """
     Cropped version of the LSUN, often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+        ),
+    )
 
     base_folder = "LSUN/test/"
     url = "https://www.dropbox.com/s/raw/fhtsw1m3qxlwj6h/LSUN.tar.gz"
@@ -140,9 +172,19 @@ class LSUNCrop(TinyImageNetCrop):
 class LSUNResize(TinyImageNetCrop):
     """
     Resized version of the LSUN dataset, often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+        ),
+    )
 
     base_folder = "LSUN_resize/LSUN_resize"
     url = "https://www.dropbox.com/s/raw/moqh2wh8696c3yl/LSUN_resize.tar.gz"

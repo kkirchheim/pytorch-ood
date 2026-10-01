@@ -1,10 +1,4 @@
 """
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
 
 ..  autoclass:: pytorch_ood.detector.MCM
     :members:
@@ -20,7 +14,14 @@ import torch.nn.functional as F
 from torch import Tensor
 from typing_extensions import Self
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 
 log = logging.getLogger(__name__)
 
@@ -46,9 +47,19 @@ class MCM(FeaturesDetector):
     where :math:`\\hat{z}(x)` is the L2-normalized image embedding, :math:`\\hat{T}` is
     the matrix of L2-normalized class text embeddings, :math:`\\tau` is the temperature
     scaling factor, and higher scores indicate more likely OOD samples.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2211.13445>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Delving into Out-of-Distribution Detection with Vision-Language Representations",
+            venue="NeurIPS",
+            year=2022,
+            url="https://arxiv.org/abs/2211.13445",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = False
 

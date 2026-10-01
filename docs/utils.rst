@@ -27,6 +27,17 @@ Data and Labels
    utils/transforms
 
 
+Data Loading
+====================================
+
+Loaders for your own data in formats used by other benchmark suites.
+
+.. toctree::
+   :maxdepth: 1
+
+   utils/imagelistdataset
+
+
 Features
 ====================================
 

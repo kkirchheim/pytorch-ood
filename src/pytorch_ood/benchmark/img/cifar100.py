@@ -5,6 +5,7 @@ from typing import List
 from torch.utils.data import Dataset
 from torchvision.datasets import CIFAR100
 
+from pytorch_ood.api import BenchmarkInfo, Paper, Task
 from pytorch_ood.benchmark import Benchmark
 from pytorch_ood.dataset.img import (
     GaussianNoise,
@@ -21,17 +22,26 @@ class CIFAR100_ODIN(Benchmark):
     """
     Replicates the OOD detection benchmark from the ODIN paper for CIFAR 100.
 
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
-
     Outlier datasets are
 
-     * TinyImageNetCrop
-     * TinyImageNetResize
-     * LSUNResize
-     * LSUNCrop
-     * Uniform
-     * Gaussian
+    * TinyImageNetCrop
+    * TinyImageNetResize
+    * LSUNResize
+    * LSUNCrop
+    * Uniform
+    * Gaussian
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+            code="https://github.com/facebookresearch/odin",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     def __init__(self, root, transform):
         """

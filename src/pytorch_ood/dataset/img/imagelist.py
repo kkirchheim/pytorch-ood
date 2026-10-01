@@ -27,8 +27,7 @@ class ImageListDataset(VisionDataset):
     For non-PIL formats (e.g. NIfTI ``.nii.gz`` volumes used by OASIS-3),
     pass a custom ``loader`` callable.
 
-    .. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-       :alt: slop-badge
+    :bdg-warning-line:`AI-coded`
     """
 
     def __init__(

@@ -5,6 +5,7 @@ from typing import Any, Callable, Optional, Tuple
 import numpy as np
 from PIL import Image
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -14,10 +15,20 @@ class CIFAR10C(ImageDatasetBase):
     """
     Corrupted version of the CIFAR10 from the paper *Benchmarking Neural
     Network Robustness to Common Corruptions and Perturbations.*
-
-    :see Website: `Zenodo <https://zenodo.org/record/2535967>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1903.12261>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="Benchmarking Neural Network Robustness to Common Corruptions and Perturbations",
+            venue="ICLR",
+            year=2019,
+            url="https://arxiv.org/abs/1903.12261",
+        ),
+        homepage="https://zenodo.org/record/2535967",
+    )
 
     subsets = [
         "brightness",
@@ -96,10 +107,20 @@ class CIFAR100C(CIFAR10C):
     """
     Corrupted version of the CIFAR100 from the paper *Benchmarking Neural Network
     Robustness to Common Corruptions and Perturbations.*
-
-    :see Website: `Zenodo <https://zenodo.org/record/3555552>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1903.12261>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="Benchmarking Neural Network Robustness to Common Corruptions and Perturbations",
+            venue="ICLR",
+            year=2019,
+            url="https://arxiv.org/abs/1903.12261",
+        ),
+        homepage="https://zenodo.org/record/3555552",
+    )
 
     base_folder = "CIFAR-100-C/"
     url = "https://zenodo.org/record/3555552/files/CIFAR-100-C.tar"

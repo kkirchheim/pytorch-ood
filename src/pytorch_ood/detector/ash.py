@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.ASH
     :members:
     :inherited-members:
@@ -20,7 +15,7 @@ import torch.nn
 from torch import Tensor
 from typing_extensions import Self
 
-from ..api import FeatureMapsDetector
+from ..api import DetectorInfo, FeatureMapsDetector, Paper, Task
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -96,7 +91,7 @@ class ASH(FeatureMapsDetector):
 
     The paper applies ASH after the last average pooling layer.
 
-    Example Code:
+    .. rubric:: Examples
 
     .. code :: python
 
@@ -108,9 +103,19 @@ class ASH(FeatureMapsDetector):
         )
         scores = detector(images)
 
-    :see Paper: `ICLR 2023 <https://openreview.net/pdf?id=ndYXTEL6cZz>`__
     :see Website: `github.io <https://andrijazz.github.io/ash/>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Extremely Simple Activation Shaping for Out-of-Distribution Detection",
+            venue="ICLR",
+            year=2023,
+            url="https://openreview.net/pdf?id=ndYXTEL6cZz",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     variants = {
         "ash-s": ash_s,

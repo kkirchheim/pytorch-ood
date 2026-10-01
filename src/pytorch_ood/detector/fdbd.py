@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.fDBD
     :members:
     :inherited-members:
@@ -22,7 +15,14 @@ from torch.nn import Linear, Module
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from ..utils import extract_features
 
 log = logging.getLogger(__name__)
@@ -46,10 +46,19 @@ class fDBD(FeaturesDetector):
 
     where :math:`w_k` are the weight vectors of the classification head and :math:`\\mu`
     is the mean of training features. This method is hyperparameter-free.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2312.11536>`__
-    :see Implementation: `GitHub <https://github.com/litianliu/fDBD-OOD>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Fast Decision Boundary based Out-of-Distribution Detector",
+            venue="ICML",
+            year=2024,
+            url="https://arxiv.org/abs/2312.11536",
+            code="https://github.com/litianliu/fDBD-OOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = True
 

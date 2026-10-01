@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import (
     apply_reduction,
     contains_known,
@@ -36,12 +37,21 @@ class EntropicOpenSetLoss(nn.Module):
 
     where :math:`\\sigma` is the softmax function and :math:`C` is the number of classes.
 
-
-    :see Paper:
-        `NeurIPS <https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf>`__
-    :see Paper:
-        `ArXiv <https://arxiv.org/pdf/2012.06575.pdf>`__
+    :see Segmentation Paper: `ArXiv <https://arxiv.org/pdf/2012.06575.pdf>`__
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Reducing Network Agnostophobia",
+            venue="NeurIPS",
+            year=2018,
+            url="https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+        inputs={Representation.LOGITS},
+        supervised=True,
+    )
 
     def __init__(self, reduction: Optional[str] = "mean"):
         """

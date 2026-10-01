@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch.nn.functional import softmin
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..model.centers import RunningCenters
 from ..utils import is_known, pairwise_distances
 
@@ -30,16 +31,25 @@ class IILoss(nn.Module):
     II Loss function from *Learning a neural network based representation for open set recognition*.
 
 
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1802.04365.pdf>`__
-    :see Implementation: `GitHub <https://github.com/shrtCKT/opennet>`__
-
     .. warning::
          * We added running centers for online class center estimation. This is only an approximation and results
            might be different if the centers are actually calculated as described in the paper.
            However, this enables better estimation of the performance during training, without having calculate
            the centers over the entire dataset. Empirically, we found that these centers work well.
-
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Learning a Neural-network-based Representation for Open Set Recognition",
+            venue="SDM",
+            year=2020,
+            url="https://arxiv.org/abs/1802.04365",
+            code="https://github.com/shrtCKT/opennet",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.FEATURES},
+        supervised=False,
+    )
 
     def __init__(self, n_classes: int, n_embedding: int, alpha: float = 1.0):
         """

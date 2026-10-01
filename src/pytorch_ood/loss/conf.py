@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import is_known
 
 
@@ -17,16 +18,24 @@ class ConfidenceLoss(nn.Module):
 
         \\text{where} \\quad p_i' = c \\cdot p_i + (1-c) y_i
 
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1802.04865>`_
-
-
     .. note::
         * We implemented clipping for numerical stability.
         * This implementation uses mean reduction for batches.
         * The authors additionally used ODIN preprocessing
-
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Learning Confidence for Out-of-Distribution Detection in Neural Networks",
+            venue="arXiv",
+            year=2018,
+            url="https://arxiv.org/abs/1802.04865",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.LOGITS, Representation.CONFIDENCE},
+        supervised=False,
+    )
 
     def __init__(self, alpha: float = 1.0, eps: float = 1e-24):
         """

@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.PNML
     :members:
     :inherited-members:
@@ -22,7 +15,14 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from ..utils import extract_features, is_known
 
 log = logging.getLogger(__name__)
@@ -49,12 +49,19 @@ class PNML(FeaturesDetector):
 
     Intuitively, the score is low when a sample is well supported by the training feature geometry
     and the classifier is confident, and high when the sample falls in weakly supported directions.
-
-    :see Paper:
-        `ArXiv <https://arxiv.org/abs/2110.09246>`__
-    :see Implementation:
-        `GitHub <https://github.com/kobybibas/pnml_ood_detection>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Single Layer Predictive Normalized Maximum Likelihood for Out-of-Distribution Detection",
+            venue="NeurIPS",
+            year=2021,
+            url="https://arxiv.org/abs/2110.09246",
+            code="https://github.com/kobybibas/pnml_ood_detection",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = True
 

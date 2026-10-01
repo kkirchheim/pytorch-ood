@@ -10,6 +10,8 @@ from typing import Tuple
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 
+from ...api import DatasetInfo, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -19,6 +21,11 @@ class Multi30k(Dataset):
 
     Usually used as OOD data, labels are -1 by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license=None,
+    )
 
     train_url = "https://github.com/hendrycks/outlier-exposure/raw/master/NLP_classification/multi30k/train.txt"
     test_url = "https://raw.githubusercontent.com/hendrycks/outlier-exposure/master/NLP_classification/multi30k/val.txt"

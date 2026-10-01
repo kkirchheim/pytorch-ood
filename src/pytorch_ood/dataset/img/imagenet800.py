@@ -4,6 +4,7 @@ from typing import Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.datasets import ImageNet, VisionDataset
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import _get_resource_file
 
 log = logging.getLogger(__name__)
@@ -23,9 +24,20 @@ class ImageNet800(VisionDataset):
     be used as auxiliary/outlier data during training (e.g. with
     :class:`pytorch_ood.loss.OutlierExposureLoss`), not as a standalone classification task,
     so ``__getitem__`` always returns a target of ``-1``.
-
-    :see Paper: `OpenOOD v1.5 <https://arxiv.org/abs/2306.09301>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license="ImageNet terms of access (non-commercial research)",
+        paper=Paper(
+            title="OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection",
+            venue="DMLR",
+            year=2024,
+            url="https://arxiv.org/abs/2306.09301",
+        ),
+        ai_coded=True,
+    )
 
     def __init__(
         self,

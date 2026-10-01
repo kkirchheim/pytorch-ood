@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from ..api import LossInfo, Representation, Task
 from ..utils import apply_reduction
 
 
@@ -22,6 +23,13 @@ class CrossEntropyLoss(nn.Module):
     """
     Standard Cross-entropy, but ignores OOD inputs.
     """
+
+    # the standard objective; no OOD paper introduced it
+    info = LossInfo(
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+        inputs={Representation.LOGITS},
+        supervised=False,
+    )
 
     def __init__(self, reduction: Optional[str] = "mean"):
         """

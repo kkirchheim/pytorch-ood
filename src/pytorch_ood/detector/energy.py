@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.EnergyBased
     :members:
     :inherited-members:
@@ -18,7 +13,7 @@ from torch import Tensor, logsumexp
 from torch.nn import Module
 from typing_extensions import Self
 
-from ..api import LogitsDetector
+from ..api import DetectorInfo, LogitsDetector, Paper, Task
 
 
 class EnergyBased(LogitsDetector):
@@ -32,14 +27,18 @@ class EnergyBased(LogitsDetector):
         E(x) = -T \\log{\\sum_i e^{f_i(x)/T}}
 
     where :math:`f_i(x)` indicates the :math:`i^{th}` logit value predicted by :math:`f`.
-
-    :see Paper:
-        `NeurIPS <https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf>`__
-
-    :see Implementation:
-        `GitHub <https://github.com/wetliu/energy_ood>`__
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Energy-based Out-of-distribution Detection",
+            venue="NeurIPS",
+            year=2020,
+            url="https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf",
+            code="https://github.com/weitliu/energy_ood",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+    )
 
     def __init__(self, model: Optional[Module], t: Optional[float] = 1.0):
         """

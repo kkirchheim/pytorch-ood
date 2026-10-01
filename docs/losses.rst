@@ -26,6 +26,7 @@ Therefore, all of these loss functions expect that the target labels are strictl
    losses/crossentropyloss
    losses/confidenceloss
    losses/logitnorm
+   losses/virtualoutliersynthesizingregloss
 
 
 Supervised
@@ -42,7 +43,6 @@ Thus, these losses can handle samples with target values :math:`< 0`.
    losses/objectosphereloss
    losses/energyregularizedloss
    losses/vosregloss
-   losses/virtualoutliersynthesizingregloss
    losses/mchadloss
    losses/deepsadloss
    losses/backgroundclassloss

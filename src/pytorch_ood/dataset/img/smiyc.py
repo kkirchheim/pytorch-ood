@@ -6,6 +6,7 @@ from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.transforms.functional import to_tensor
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -18,11 +19,20 @@ class SegmentMeIfYouCan(ImageDatasetBase):
     From the paper *SegmentMeIfYouCan: A Benchmark for Anomaly Segmentation*. Contains two subsets: RoadAnomaly21 and RoadObstacle21
 
     .. note:: Similar to Paper *Segment Every Out-of-Distribution Object* (`ArXiv <https://arxiv.org/pdf/2311.16516v3>`__, `Github <https://github.com/WenjieZhao1/S2M>`__) for ``RoadAnomaly21`` only **10** and for ``RoadObstacle21`` only **30** images are available.
-
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/2104.14812>`__
-    :see Website: `Website <https://segmentmeifyoucan.com/datasets>`__
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license="RoadObstacle21 CC-BY-4.0; RoadAnomaly21 images CC-BY, CC-BY-SA or public domain",
+        paper=Paper(
+            title="SegmentMeIfYouCan: A Benchmark for Anomaly Segmentation",
+            venue="NeurIPS",
+            year=2021,
+            url="https://arxiv.org/abs/2104.14812",
+        ),
+        homepage="https://segmentmeifyoucan.com/datasets",
+    )
 
     root_dir_name = "SMIYC"
     subset_list = ["RoadAnomaly21", "RoadObstacle21"]

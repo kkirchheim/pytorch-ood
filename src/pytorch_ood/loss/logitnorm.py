@@ -3,6 +3,7 @@ from torch import Tensor
 from torch.nn import Module
 from torch.nn.functional import cross_entropy
 
+from pytorch_ood.api import LossInfo, Paper, Representation, Task
 from pytorch_ood.utils import is_known
 
 
@@ -37,11 +38,20 @@ class LogitNorm(Module):
     where :math:`\\tau` is a temperature  value.
 
     Will ignore  OOD inputs.
-
-    :see Paper:
-        `ICML <https://arxiv.org/abs/2205.09310>`__
-
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Mitigating Neural Network Overconfidence with Logit Normalization",
+            venue="ICML",
+            year=2022,
+            url="https://arxiv.org/abs/2205.09310",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.LOGITS},
+        supervised=False,
+    )
 
     def __init__(self, t=1.0, reduction="mean"):
         """

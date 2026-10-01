@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.ReAct
     :members:
     :inherited-members:
@@ -21,7 +16,14 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import FeatureMapsDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeatureMapsDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from ..utils import is_known
 from .energy import EnergyBased
 
@@ -44,7 +46,7 @@ class ReAct(FeatureMapsDetector):
     The output of the network is then passed to an outlier detector that maps the output of
     the model to outlier scores.
 
-    Example Code:
+    .. rubric:: Examples
 
     .. code :: python
 
@@ -56,9 +58,18 @@ class ReAct(FeatureMapsDetector):
         )
         detector.fit(train_loader)
         scores = detector(images)
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2111.12797>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="ReAct: Out-of-distribution Detection With Rectified Activations",
+            venue="NeurIPS",
+            year=2021,
+            url="https://arxiv.org/abs/2111.12797",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+    )
 
     requires_fit = True
 

@@ -1,7 +1,6 @@
 """
 Medical imaging OOD benchmarks from OpenMIBOOD (CVPR 2025).
 
-:see Paper: `OpenMIBOOD <https://arxiv.org/abs/2503.16247>`__
 :see Setup: https://github.com/remic-othr/OpenMIBOOD
 """
 
@@ -13,6 +12,7 @@ from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 from torchvision.transforms import Compose
 
+from pytorch_ood.api import BenchmarkInfo, Paper, Task
 from pytorch_ood.benchmark import Benchmark
 from pytorch_ood.dataset.img import ImageListDataset
 from pytorch_ood.utils import ToRGB, ToUnknown
@@ -43,7 +43,7 @@ class _OpenMIBOODBase(Benchmark):
     ) -> None:
         """
         :param root: directory containing the prepared OpenMIBOOD data for this benchmark
-        :param transform: transform applied to each loaded image (after :class:`ToRGB`)
+        :param transform: transform applied to each loaded image (after :class:`~pytorch_ood.utils.ToRGB`)
         :param loader: callable mapping a file path to an image; defaults to :func:`PIL.Image.open`.
             Required for benchmarks whose image format is not handled by PIL (e.g. NIfTI).
         :param download: if ``True``, download missing imglist files to ``root/imglists/<bench>/``.
@@ -117,21 +117,32 @@ class MIDOG_OpenMIBOOD(_OpenMIBOODBase):
 
     Covariate-shifted ID datasets:
 
-     * ``midog_csid_1b`` — Domain 1b (different scanner, same task)
-     * ``midog_csid_1c`` — Domain 1c (different scanner, same task)
+    * midog_csid_1b — Domain 1b (different scanner, same task)
+    * midog_csid_1c — Domain 1c (different scanner, same task)
 
     Near-OOD datasets (other scanner/staining domains):
 
-     * ``midog_2``, ``midog_3``, ``midog_4``, ``midog_5``, ``midog_6a``, ``midog_6b``, ``midog_7``
+    * midog_2, midog_3, midog_4, midog_5, midog_6a, midog_6b, midog_7
 
     Far-OOD datasets (different cytology):
 
-     * ``midog_ccagt`` — cervical cells (CCAgT)
-     * ``midog_fnac2019`` — fine-needle aspirate cytology (FNAC 2019)
+    * midog_ccagt — cervical cells (CCAgT)
+    * midog_fnac2019 — fine-needle aspirate cytology (FNAC 2019)
 
-    :see Paper: `OpenMIBOOD <https://arxiv.org/abs/2503.16247>`__
     :see Setup: https://github.com/remic-othr/OpenMIBOOD
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection",
+            venue="CVPR",
+            year=2025,
+            url="https://arxiv.org/abs/2503.16247",
+            code="https://github.com/remic-othr/OpenMIBOOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     _dataset_subdir = "midog"
     _train_imglist = "train_midog.txt"
@@ -175,23 +186,34 @@ class PhaKIR_OpenMIBOOD(_OpenMIBOODBase):
 
     Covariate-shifted ID datasets:
 
-     * ``phakir_medium_smoke`` — same procedure with medium smoke artifacts
-     * ``phakir_heavy_smoke`` — same procedure with heavy smoke artifacts
+    * phakir_medium_smoke — same procedure with medium smoke artifacts
+    * phakir_heavy_smoke — same procedure with heavy smoke artifacts
 
     Near-OOD datasets (other laparoscopic surgery videos):
 
-     * ``phakir_cholec`` — Cholec80
-     * ``phakir_endovis2015`` — EndoVis 2015
-     * ``phakir_endovis2018`` — EndoVis 2018
+    * phakir_cholec — Cholec80
+    * phakir_endovis2015 — EndoVis 2015
+    * phakir_endovis2018 — EndoVis 2018
 
     Far-OOD datasets (different surgical/clinical domains):
 
-     * ``phakir_kvasir`` — Kvasir-SEG (gastrointestinal endoscopy)
-     * ``phakir_cataracts`` — CATARACTS (ophthalmic surgery)
+    * phakir_kvasir — Kvasir-SEG (gastrointestinal endoscopy)
+    * phakir_cataracts — CATARACTS (ophthalmic surgery)
 
-    :see Paper: `OpenMIBOOD <https://arxiv.org/abs/2503.16247>`__
     :see Setup: https://github.com/remic-othr/OpenMIBOOD
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection",
+            venue="CVPR",
+            year=2025,
+            url="https://arxiv.org/abs/2503.16247",
+            code="https://github.com/remic-othr/OpenMIBOOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     _dataset_subdir = "phakir"
     _train_imglist = "train_phakir.txt"
@@ -240,23 +262,34 @@ class OASIS3_OpenMIBOOD(_OpenMIBOODBase):
 
     Covariate-shifted ID datasets:
 
-     * ``oasis3_scanner`` — Siemens MAGNETOM Vision scanner T1w
-     * ``oasis3_t2w`` — T2-weighted modality
+    * oasis3_scanner — Siemens MAGNETOM Vision scanner T1w
+    * oasis3_t2w — T2-weighted modality
 
     Near-OOD datasets (other brain MRI):
 
-     * ``oasis3_atlas`` — ATLAS R2.0 (stroke lesions)
-     * ``oasis3_brats`` — BraTS 2023 glioma
-     * ``oasis3_ct`` — OASIS-3 CT
+    * oasis3_atlas — ATLAS R2.0 (stroke lesions)
+    * oasis3_brats — BraTS 2023 glioma
+    * oasis3_ct — OASIS-3 CT
 
     Far-OOD datasets (other body regions):
 
-     * ``oasis3_heart`` — MSD Task02 Heart
-     * ``oasis3_chaos_inPhase`` — CHAOS abdominal MRI (in-phase)
+    * oasis3_heart — MSD Task02 Heart
+    * oasis3_chaos_inPhase — CHAOS abdominal MRI (in-phase)
 
-    :see Paper: `OpenMIBOOD <https://arxiv.org/abs/2503.16247>`__
     :see Setup: https://github.com/remic-othr/OpenMIBOOD
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection",
+            venue="CVPR",
+            year=2025,
+            url="https://arxiv.org/abs/2503.16247",
+            code="https://github.com/remic-othr/OpenMIBOOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     _dataset_subdir = "oasis3"
     _train_imglist = "train_oasis3.txt"

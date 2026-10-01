@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.NNGuide
     :members:
 
@@ -20,7 +13,14 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from pytorch_ood.api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from pytorch_ood.api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from pytorch_ood.utils import extract_features, is_known
 
 log = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class NNGuide(FeaturesDetector):
     The encoder extracts penultimate-layer features. The head computes logits from features
     and is used internally to compute energy scores, similar to :class:`ViM`.
 
-    Example Code:
+    .. rubric:: Examples
 
     .. code :: python
 
@@ -59,10 +59,19 @@ class NNGuide(FeaturesDetector):
         )
         detector.fit(train_loader)
         scores = detector(images)
-
-    :see Paper: `arXiv <https://arxiv.org/abs/2309.14888>`__
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Nearest Neighbor Guidance for Out-of-Distribution Detection",
+            venue="ICCV",
+            year=2023,
+            url="https://arxiv.org/abs/2309.14888",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = True
 

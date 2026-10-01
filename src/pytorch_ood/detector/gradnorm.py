@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.GradNorm
     :members:
     :inherited-members:
@@ -20,7 +15,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import GradientDetector, ModelNotSetException
+from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, Task
 
 try:
     from torch.func import (
@@ -69,9 +64,18 @@ class GradNorm(GradientDetector):
         when ID and OOD datasets are of similar complexity, because the scalar sum loses the
         per-layer discriminative structure the classifier exploits. For an unsupervised
         gradient-based alternative see :class:`~pytorch_ood.detector.GradNormKL`.
-
-    :see Paper: `ICIP <https://arxiv.org/abs/2008.08030v2>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Gradients as a Measure of Uncertainty in Neural Networks",
+            venue="ICIP",
+            year=2020,
+            url="https://arxiv.org/abs/2008.08030v2",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     def __init__(self, model: torch.nn.Module, param_filter: Callable[[str], bool] = None):
         """

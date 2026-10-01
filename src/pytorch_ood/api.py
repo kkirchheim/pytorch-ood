@@ -1,6 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from dataclasses import dataclass
+from enum import Enum
+from typing import ClassVar, Dict, FrozenSet, Iterable, List, Optional
 
 import torch
 from torch import Tensor
@@ -29,6 +31,170 @@ class ModelNotSetException(ValueError):
         super(ModelNotSetException, self).__init__(msg)
 
 
+# -- Component metadata --------------------------------------------------------
+# Detectors, training objectives, datasets and benchmarks carry a class attribute
+# ``info`` with one of the records below. The documentation renders badges, links and
+# comparison tables from it, and the tests check the claims it makes.
+
+
+class Task(str, Enum):
+    """
+    Granularity at which inputs are labeled or scored as in- or out-of-distribution.
+    """
+
+    #: one label or outlier score per input, e.g. a :math:`B \times C` logit tensor
+    CLASSIFICATION = "classification"
+    #: one label or outlier score per pixel, e.g. a :math:`B \times C \times H \times W` logit tensor
+    SEGMENTATION = "segmentation"
+
+
+class Representation(str, Enum):
+    """
+    What a component is applied to. For detectors, this follows from their base
+    class (see :doc:`/core_api/detectors`); training objectives list it in their ``info``.
+    """
+
+    #: model outputs before the softmax
+    LOGITS = "logits"
+    #: pooled features of the penultimate layer, shape :math:`B \times D`
+    FEATURES = "features"
+    #: activations of a convolutional layer, shape :math:`B \times C \times H \times W`
+    FEATURE_MAPS = "feature maps"
+    #: activations of several layers at once
+    LAYERS = "several layers"
+    #: distances to class centers
+    DISTANCES = "distances"
+    #: a separately predicted confidence
+    CONFIDENCE = "confidence"
+    #: the model's original inputs, e.g. to compute gradients with respect to them or to
+    #: sample with dropout
+    INPUTS = "model inputs"
+
+
+class Role(str, Enum):
+    """
+    The part a dataset usually plays in OOD detection experiments.
+    """
+
+    #: in-distribution data that models are trained and evaluated on
+    IN_DISTRIBUTION = "in-distribution"
+    #: out-of-distribution data used only for evaluation
+    OOD_TEST = "OOD test set"
+    #: in-distribution data under distribution shift, e.g. corruptions
+    DISTRIBUTION_SHIFT = "distribution shift"
+    #: example outliers used during training, e.g. for Outlier Exposure
+    AUXILIARY_OUTLIERS = "auxiliary outliers"
+    #: in- and out-of-distribution samples in one dataset, e.g. anomaly segmentation benchmarks
+    BENCHMARK = "benchmark"
+
+
+@dataclass(frozen=True)
+class Paper:
+    """
+    The publication that introduced a component.
+    """
+
+    #: title of the publication
+    title: str
+    #: short venue name, e.g. ``"NeurIPS"`` or ``"arXiv"``
+    venue: str
+    #: year of publication
+    year: int
+    #: link to the publication
+    url: str
+    #: reference implementation by the authors, if public
+    code: Optional[str] = None
+
+
+def _frozen(values: Iterable) -> FrozenSet:
+    return values if isinstance(values, frozenset) else frozenset(values)
+
+
+@dataclass(frozen=True)
+class DetectorInfo:
+    """
+    Metadata of an OOD detector, see :attr:`pytorch_ood.api.Detector.info`.
+    """
+
+    #: tasks the detector supports; checked by the test suite
+    tasks: FrozenSet[Task]
+    #: publication that introduced the detector; ``None`` for baselines without one
+    paper: Optional[Paper] = None
+    #: whether the implementation was written with an AI coding assistant
+    ai_coded: bool = False
+
+    def __post_init__(self):
+        object.__setattr__(self, "tasks", _frozen(self.tasks))
+
+
+@dataclass(frozen=True)
+class LossInfo:
+    """
+    Metadata of a training objective.
+    """
+
+    #: tasks the objective supports; checked by the test suite
+    tasks: FrozenSet[Task]
+    #: what the objective is applied to, e.g. logits, or logits and features
+    inputs: FrozenSet[Representation]
+    #: whether the objective takes example outliers (targets :math:`< 0`, e.g. auxiliary OOD
+    #: data) during training; unsupervised objectives only take in-distribution data, possibly
+    #: synthesizing outliers from it internally
+    supervised: bool
+    #: publication that introduced the objective; ``None`` for baselines without one
+    paper: Optional[Paper] = None
+    #: whether the implementation was written with an AI coding assistant
+    ai_coded: bool = False
+
+    def __post_init__(self):
+        object.__setattr__(self, "tasks", _frozen(self.tasks))
+        object.__setattr__(self, "inputs", _frozen(self.inputs))
+
+
+@dataclass(frozen=True)
+class DatasetInfo:
+    """
+    Metadata of a dataset.
+    """
+
+    #: granularity of the labels
+    task: Task
+    #: SPDX identifier (e.g. ``"CC-BY-4.0"``) or short description of the license or terms
+    #: of use; ``None`` if no license statement is known
+    license: Optional[str]
+    #: parts the dataset usually plays in OOD experiments; empty where no usage is established
+    roles: FrozenSet[Role] = frozenset()
+    #: publication that introduced the dataset, if any
+    paper: Optional[Paper] = None
+    #: project page of the dataset, if any
+    homepage: Optional[str] = None
+    #: whether the implementation was written with an AI coding assistant
+    ai_coded: bool = False
+
+    def __post_init__(self):
+        object.__setattr__(self, "roles", _frozen(self.roles))
+
+
+@dataclass(frozen=True)
+class BenchmarkInfo:
+    """
+    Metadata of a benchmark, see :attr:`pytorch_ood.benchmark.Benchmark.info`.
+    """
+
+    #: publication whose evaluation protocol the benchmark reproduces
+    paper: Paper
+    #: tasks the benchmark evaluates
+    tasks: FrozenSet[Task]
+    #: whether the implementation was written with an AI coding assistant
+    ai_coded: bool = False
+
+    def __post_init__(self):
+        object.__setattr__(self, "tasks", _frozen(self.tasks))
+
+
+# -- Detectors ------------------------------------------------------------------
+
+
 class Detector(ABC):
     """
     Root public API for out-of-distribution detectors.
@@ -46,6 +212,13 @@ class Detector(ABC):
     Search space for hyperparameter optimization, mapping each tunable hyperparameter
     name to the list of candidate values to try. Empty for detectors without tunable
     hyperparameters. Used by :class:`pytorch_ood.utils.GridSearch`.
+    """
+
+    info: ClassVar[Optional[DetectorInfo]] = None
+    """
+    Metadata of the detector: the paper that introduced it, the tasks it supports,
+    and so on (see :doc:`/core_api/metadata`). Every detector in
+    :mod:`pytorch_ood.detector` defines its own.
     """
 
     @staticmethod
@@ -230,7 +403,7 @@ class Detector(ABC):
         :param x: batch of data
         :return: outlier scores for points
 
-        :raise RequiresFitException: if detector has to be fitted to some data
+        :raise RequiresFittingException: if detector has to be fitted to some data
         :raise ModelNotSetException: if model was not set
         """
         raise NotImplementedError

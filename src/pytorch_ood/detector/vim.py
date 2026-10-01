@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.ViM
     :members:
     :inherited-members:
@@ -20,7 +15,14 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from ..utils import extract_features
 
 log = logging.getLogger(__name__)
@@ -30,14 +32,20 @@ class ViM(FeaturesDetector):
     """
     Implements Virtual Logit Matching (ViM) from the paper *ViM: Out-Of-Distribution with Virtual-logit Matching*.
 
-    :see Paper:
-        `ArXiv <https://arxiv.org/abs/2203.10807>`__
-    :see Implementation:
-        `GitHub <https://github.com/haoqiwang/vim/>`__
-
     .. note::
         Requires PyTorch ≥ 1.9 (``torch.linalg``).
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="ViM: Out-Of-Distribution with Virtual-logit Matching",
+            venue="CVPR",
+            year=2022,
+            url="https://arxiv.org/abs/2203.10807",
+            code="https://github.com/haoqiwang/vim/",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

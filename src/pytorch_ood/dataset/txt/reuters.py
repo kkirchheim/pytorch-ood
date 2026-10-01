@@ -12,6 +12,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 
+from ...api import DatasetInfo, Task
 from .stop_words import stop_words
 
 log = logging.getLogger(__name__)
@@ -23,6 +24,11 @@ class Reuters52(Dataset):
 
     Contains 52 classes.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license=None,
+    )
 
     train_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r52-train.txt"
     test_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r52-test.txt"
@@ -161,6 +167,11 @@ class Reuters8(Reuters52):
 
     Contains 8 classes.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license=None,
+    )
 
     train_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r8-train.txt"
     test_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r8-test.txt"

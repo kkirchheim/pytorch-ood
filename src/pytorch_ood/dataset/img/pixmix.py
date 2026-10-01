@@ -7,6 +7,8 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -95,9 +97,19 @@ class FeatureVisDataset(PixMixExampleDatasets):
     """
     Dataset with Feature visualizations, as used in
     *PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures*.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2112.05135>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license=None,
+        paper=Paper(
+            title="PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures",
+            venue="CVPR",
+            year=2022,
+            url="https://arxiv.org/abs/2112.05135",
+        ),
+    )
 
     def __init__(
         self,
@@ -119,9 +131,19 @@ class FractalDataset(PixMixExampleDatasets):
     """
     Dataset with Fractals, as used in
     *PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures*.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2112.05135>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license=None,
+        paper=Paper(
+            title="PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures",
+            venue="CVPR",
+            year=2022,
+            url="https://arxiv.org/abs/2112.05135",
+        ),
+    )
 
     def __init__(
         self,

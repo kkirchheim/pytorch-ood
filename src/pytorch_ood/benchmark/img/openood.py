@@ -27,6 +27,7 @@ import torch
 from torch.utils.data import ConcatDataset, Dataset
 from torchvision.transforms import Compose
 
+from pytorch_ood.api import BenchmarkInfo, Paper, Task
 from pytorch_ood.dataset.img import ImageListDataset
 from pytorch_ood.utils import ToRGB
 
@@ -277,9 +278,18 @@ class CIFAR10_OpenOOD(_OpenOOD_Imglist):
     Near-OOD: CIFAR-100, TinyImageNet. Far-OOD: MNIST, SVHN, Textures, Places365.
     The hyperparameter-tuning validation split is a held-out 1000-image slice of the
     CIFAR-10 test set (all 10 classes) plus a disjoint TinyImageNet OOD subset.
-
-    :see Paper: `OpenOOD v1.5 <https://arxiv.org/abs/2306.09301>`__
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection",
+            venue="DMLR",
+            year=2024,
+            url="https://arxiv.org/abs/2306.09301",
+            code="https://github.com/Jingkang50/OpenOOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     _subdir = "cifar10"
     _train_imglist = "train_cifar10.txt"
@@ -304,9 +314,18 @@ class CIFAR100_OpenOOD(_OpenOOD_Imglist):
     Exact OpenOOD v1.5 CIFAR-100 benchmark (imglist-driven, auto-downloading).
 
     Near-OOD: CIFAR-10, TinyImageNet. Far-OOD: MNIST, SVHN, Textures, Places365.
-
-    :see Paper: `OpenOOD v1.5 <https://arxiv.org/abs/2306.09301>`__
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection",
+            venue="DMLR",
+            year=2024,
+            url="https://arxiv.org/abs/2306.09301",
+            code="https://github.com/Jingkang50/OpenOOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     _subdir = "cifar100"
     _train_imglist = "train_cifar100.txt"
@@ -333,9 +352,18 @@ class ImageNet200_OpenOOD(_OpenOOD_ImageNet):
     In-distribution is the 200-class ImageNet-R subset of ImageNet-1K. Near-OOD:
     SSB-Hard, NINCO. Far-OOD: iNaturalist, Textures, OpenImage-O. The OOD sets
     auto-download; ImageNet-1K comes from ``image_net_root``.
-
-    :see Paper: `OpenOOD v1.5 <https://arxiv.org/abs/2306.09301>`__
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection",
+            venue="DMLR",
+            year=2024,
+            url="https://arxiv.org/abs/2306.09301",
+            code="https://github.com/Jingkang50/OpenOOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     _subdir = "imagenet200"
     _train_imglist = "train_imagenet200.txt"
@@ -362,9 +390,18 @@ class ImageNet_OpenOOD(_OpenOOD_ImageNet):
     SSB-Hard, NINCO. Far-OOD: iNaturalist, Textures, OpenImage-O. The validation split
     (5 images per class, all 1000 classes, plus a held-out OpenImage-O OOD subset)
     covers every class, so class-conditional calibration detectors fit all classes.
-
-    :see Paper: `OpenOOD v1.5 <https://arxiv.org/abs/2306.09301>`__
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection",
+            venue="DMLR",
+            year=2024,
+            url="https://arxiv.org/abs/2306.09301",
+            code="https://github.com/Jingkang50/OpenOOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     _subdir = "imagenet"  # OpenOOD names the 1K benchmark's imglist dir "imagenet"
     _train_imglist = "train_imagenet.txt"

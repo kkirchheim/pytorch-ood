@@ -7,6 +7,8 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -14,10 +16,20 @@ class Textures(VisionDataset):
     """
     Textures dataset from the paper *Describing Textures in the Wild*, also known as DTD.
     Often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1311.3618v2>`__
-    :see Website: `Link <https://www.robots.ox.ac.uk/~vgg/data/dtd/>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Describing Textures in the Wild",
+            venue="CVPR",
+            year=2014,
+            url="https://arxiv.org/abs/1311.3618",
+        ),
+        homepage="https://www.robots.ox.ac.uk/~vgg/data/dtd/",
+    )
 
     base_folder = "dtd/images/"
     url = "https://www.robots.ox.ac.uk/~vgg/data/dtd/download/dtd-r1.0.1.tar.gz"

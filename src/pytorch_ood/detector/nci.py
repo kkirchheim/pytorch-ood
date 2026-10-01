@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.NCI
     :members:
     :inherited-members:
@@ -19,7 +14,14 @@ from torch import Tensor
 from torch.nn import Linear, Module
 from typing_extensions import Self
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from ..utils import extract_features
 
 log = logging.getLogger(__name__)
@@ -41,14 +43,18 @@ class NCI(FeaturesDetector):
 
     The first term will penalize inputs whose representation does not align with the class vectors,
     while the second term penalizes inputs whose representation resides close to the origin.
-
-    :see Paper:
-        `CVPR <https://arxiv.org/pdf/2311.01479>`__
-
-    :see Implementation:
-        `GitHub <https://github.com/litianliu/NCI-OOD>`__
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Detecting Out-of-Distribution Through the Lens of Neural Collapse",
+            venue="CVPR",
+            year=2025,
+            url="https://arxiv.org/pdf/2311.01479",
+            code="https://github.com/litianliu/NCI-OOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

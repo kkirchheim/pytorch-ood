@@ -10,6 +10,8 @@ from typing import Tuple
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 
+from ...api import DatasetInfo, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -19,6 +21,11 @@ class WMT16Sentences(Dataset):
 
     Usually used os OOD data, labels are -1 by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license=None,
+    )
 
     url = "https://raw.githubusercontent.com/hendrycks/outlier-exposure/master/NLP_classification/wmt16/wmt16_sentences"
     md5 = "6dff65f45ac112c150b8a2cc30509b03"

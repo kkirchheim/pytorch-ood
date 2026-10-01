@@ -3,6 +3,7 @@
 import torch
 import torch.nn as nn
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..loss.crossentropy import cross_entropy
 from ..utils import apply_reduction, is_known, is_unknown
 
@@ -26,12 +27,20 @@ class EnergyRegularizedLoss(nn.Module):
     where :math:`E(x) = - \\log(\\sum_i e^{f_i(x)} )` is the energy of :math:`x`, and samples
     with targets :math:`< 0` are OOD. The expectations are means over the ID and over the OOD
     samples of the batch (``reduction="mean"``). For segmentation, every pixel is a sample.
-
-    :see Paper:
-        `NeurIPS <https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf>`__
-
-    :see Implementation: `GitHub <https://github.com/wetliu/energy_ood>`__
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Energy-based Out-of-distribution Detection",
+            venue="NeurIPS",
+            year=2020,
+            url="https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf",
+            code="https://github.com/weitliu/energy_ood",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+        inputs={Representation.LOGITS},
+        supervised=True,
+    )
 
     # defaults: the values the paper uses for CIFAR (Sec. 4.1)
     def __init__(

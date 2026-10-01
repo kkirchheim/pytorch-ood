@@ -5,6 +5,7 @@ from typing import Any, Callable, Optional, Tuple
 import numpy as np
 from PIL import Image
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -27,10 +28,21 @@ class MNISTC(ImageDatasetBase):
         The same test digit under each corruption. Images from MNIST-C by Norman Mu and Justin Gilmer,
         licensed under `CC BY 4.0 <https://creativecommons.org/licenses/by/4.0/>`__.
 
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1906.02337.pdf>`__
     :see Download: `Zenodo <https://zenodo.org/record/3239543>`__
-
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="MNIST-C: A Robustness Benchmark for Computer Vision",
+            venue="arXiv",
+            year=2019,
+            url="https://arxiv.org/abs/1906.02337",
+            code="https://github.com/google-research/mnist-c",
+        ),
+    )
 
     splits = ["train", "test", "leftovers"]
 

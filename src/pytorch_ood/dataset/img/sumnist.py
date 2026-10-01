@@ -7,6 +7,8 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import check_integrity, download_url
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -19,8 +21,6 @@ class SuMNIST(Dataset):
 
     Returns a tuple with ``(img, dict)``  where dict contains bounding boxes, labels, etc.
 
-
-    :see Paper: `LNCS <https://link.springer.com/chapter/10.1007/978-3-031-40953-0_32>`__
     :see Examples: `GitHub <https://github.com/kkirchheim/sumnist>`__
 
     .. figure:: /_static/datasets/sumnist.webp
@@ -28,8 +28,20 @@ class SuMNIST(Dataset):
         :alt: Eight SuMNIST test images with digit bounding boxes, four normal and four anomalous
 
         Test images with their bounding boxes: normal (digits sum to 20) and anomalous.
-
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.BENCHMARK},
+        license="MIT",
+        paper=Paper(
+            title="Towards Deep Anomaly Detection with Structured Knowledge Representations",
+            venue="SAFECOMP",
+            year=2023,
+            url="https://link.springer.com/chapter/10.1007/978-3-031-40953-0_32",
+        ),
+        homepage="https://github.com/kkirchheim/sumnist",
+    )
 
     url = "https://files.kondas.de/sumnist/"
 

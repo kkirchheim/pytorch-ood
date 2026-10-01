@@ -3,6 +3,7 @@ import logging
 import torch
 import torch.nn as nn
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..model.centers import ClassCenters
 from ..utils import is_known
 
@@ -25,10 +26,20 @@ class CenterLoss(nn.Module):
 
     With radius :math:`r=0` and the squared euclidean distance as :math:`d(\\cdot,\\cdot)`, this is equivalent to
     the original center loss, which is also referred to as the *soft-margin loss* in some publications.
-
-    :see Implementation: `GitHub <https://github.com/KaiyangZhou/pytorch-center-loss>`__
-    :see Paper: `ECCV 2016 <https://ydwen.github.io/papers/WenECCV16.pdf>`__
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="A Discriminative Feature Learning Approach for Deep Face Recognition",
+            venue="ECCV",
+            year=2016,
+            url="https://ydwen.github.io/papers/WenECCV16.pdf",
+            code="https://github.com/KaiyangZhou/pytorch-center-loss",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.DISTANCES},
+        supervised=False,
+    )
 
     def __init__(
         self,

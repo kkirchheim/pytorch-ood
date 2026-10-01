@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightred?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.Entropy
     :members:
     :inherited-members:
@@ -18,7 +13,7 @@ from torch import Tensor
 from torch.nn import Module
 from typing_extensions import Self
 
-from ..api import LogitsDetector
+from ..api import DetectorInfo, LogitsDetector, Paper, Task
 
 
 class Entropy(LogitsDetector):
@@ -33,8 +28,18 @@ class Entropy(LogitsDetector):
         H(x) = - \\sum_i^C  \\sigma_i(f(x)) \\log( \\sigma_i(f(x)) )
 
     where :math:`\\sigma_i` indicates the :math:`i^{th}` softmax value and :math:`C` is the number of classes.
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Entropy Maximization and Meta Classification for Out-of-Distribution Detection in Semantic Segmentation",
+            venue="ICCV",
+            year=2021,
+            url="https://arxiv.org/abs/2012.06575",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+    )
 
     def __init__(self, model: Optional[Module]):
         """

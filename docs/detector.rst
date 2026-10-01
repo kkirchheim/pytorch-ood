@@ -4,13 +4,14 @@ Detectors
 .. py:module:: pytorch_ood.detector
 
 Out-of-Distribution detectors, grouped by method family. All of them implement the
-common :doc:`Detector API <detectors/api>`: ``fit`` on in-distribution data (only where a detector
+common :doc:`detector interface </core_api/detectors>`: ``fit`` on in-distribution data (only where a detector
 requires it), then call the detector to get outlier scores, which are larger for outliers.
 
-.. toctree::
-   :hidden:
 
-   detectors/api
+Comparison
+-------------------------------
+
+.. include:: generated/detector_table.rst
 
 
 Probability-based
@@ -52,7 +53,6 @@ Feature-based
 
    detectors/mahalanobis
    detectors/mmahalanobis
-   detectors/mahalanobis_odin
    detectors/rmd
    detectors/vim
    detectors/knn
@@ -80,6 +80,7 @@ the inputs) for ID and OOD data behave differently. All gradient-based detectors
    detectors/gradnorm
    detectors/gradnormkl
    detectors/odin
+   detectors/mahalanobis_odin
    detectors/nac
 
 

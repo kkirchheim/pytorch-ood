@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.RMD
     :members:
     :inherited-members:
@@ -22,7 +17,7 @@ from typing_extensions import Self
 
 from pytorch_ood.detector.mahalanobis import Mahalanobis
 
-from ..api import ModelNotSetException, RequiresFittingException
+from ..api import DetectorInfo, ModelNotSetException, Paper, RequiresFittingException, Task
 from ..utils import (
     extract_features,
     is_known,
@@ -46,9 +41,18 @@ class RMD(Mahalanobis):
 
     where :math:`d_k` is the mahalanobis score for class :math:`k` and :math:`d_0` is the
     mahalanobis score under the background gaussian.
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/2106.09022.pdf>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="A Simple Fix to Mahalanobis Distance for Improving Near-OOD Detection",
+            venue="arXiv",
+            year=2021,
+            url="https://arxiv.org/pdf/2106.09022.pdf",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     def __init__(
         self,

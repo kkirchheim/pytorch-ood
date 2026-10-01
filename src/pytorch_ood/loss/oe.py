@@ -4,6 +4,7 @@ from typing import Optional
 import torch
 from torch import nn
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import apply_reduction, contains_unknown, is_unknown
 from .crossentropy import cross_entropy
 
@@ -31,10 +32,20 @@ class OutlierExposureLoss(nn.Module):
 
     where :math:`C` is the number of classes, :math:`\\alpha` is a hyper parameter, and :math:`\\sigma_y`
     denotes the :math:`y^{th}` softmax output.
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1812.04606v1.pdf>`__
-    :see Implementation: `GitHub <https://github.com/hendrycks/outlier-exposure>`__
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Deep Anomaly Detection with Outlier Exposure",
+            venue="ICLR",
+            year=2019,
+            url="https://arxiv.org/abs/1812.04606",
+            code="https://github.com/hendrycks/outlier-exposure",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+        inputs={Representation.LOGITS},
+        supervised=True,
+    )
 
     def __init__(self, alpha: float = 0.5, reduction: Optional[str] = "mean"):
         """

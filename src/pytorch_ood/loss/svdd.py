@@ -5,6 +5,7 @@ from typing import Optional
 import torch.nn
 from torch import Tensor
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..model.centers import ClassCenters
 from ..utils import apply_reduction, is_known
 
@@ -26,11 +27,21 @@ class DeepSVDDLoss(torch.nn.Module):
 
     In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before training.
 
-
-    :see Paper: `ICML <http://proceedings.mlr.press/v80/ruff18a/ruff18a.pdf>`__
-
     .. note:: This module should be moved to the correct device before using ``forward()``
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Deep One-Class Classification",
+            venue="ICML",
+            year=2018,
+            url="http://proceedings.mlr.press/v80/ruff18a/ruff18a.pdf",
+            code="https://github.com/lukasruff/Deep-SVDD-PyTorch",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.FEATURES},
+        supervised=False,
+    )
 
     def __init__(
         self,
@@ -122,6 +133,19 @@ class DeepSADLoss(torch.nn.Module):
 
     In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before training.
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Deep Semi-Supervised Anomaly Detection",
+            venue="ICLR",
+            year=2020,
+            url="https://arxiv.org/abs/1906.02694",
+            code="https://github.com/lukasruff/Deep-SAD-PyTorch",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.FEATURES},
+        supervised=True,
+    )
 
     def __init__(self, n_features: int, reduction: Optional[str] = "mean"):
         """

@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.VRA
     :members:
     :inherited-members:
@@ -25,7 +18,14 @@ from typing_extensions import Self
 
 from pytorch_ood.utils import is_known
 
-from ..api import FeatureMapsDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeatureMapsDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ class VRA(FeatureMapsDetector):
     VRA learns per-dimension lower and upper clipping bounds from the training data
     using configurable percentiles.
 
-    Example Code:
+    .. rubric:: Examples
 
     .. code :: python
 
@@ -55,9 +55,19 @@ class VRA(FeatureMapsDetector):
         )
         detector.fit(train_loader)
         scores = detector(images)
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2302.11716>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Variational Rectified Activation for Out-of-distribution Detection",
+            venue="NeurIPS",
+            year=2023,
+            url="https://arxiv.org/abs/2302.11716",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = True
 

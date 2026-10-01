@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.MCD
     :members:
     :inherited-members:
@@ -21,7 +16,7 @@ from torch import Tensor, nn
 from torch.nn import Module
 from typing_extensions import Self
 
-from ..api import Detector, ModelNotSetException
+from ..api import Detector, DetectorInfo, ModelNotSetException, Paper, Task
 
 log = logging.getLogger(__name__)
 
@@ -43,13 +38,22 @@ class MCD(Detector):
     per class variance, which was used in *Bayesian SegNet: Model Uncertainty in Deep Convolutional
     Encoder-Decoder Architectures for Scene Understanding*.
 
-    :see MCD Paper: `ICML <http://proceedings.mlr.press/v48/gal16.pdf>`__
     :see Bayesian SegNet: `ArXiv <https://arxiv.org/abs/1511.02680>`__
 
     .. warning:: This implementations puts the model into evaluation mode (except for variants of the BatchNorm Layers).
         This could also affect other modules.
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning",
+            venue="ICML",
+            year=2016,
+            url="http://proceedings.mlr.press/v48/gal16.pdf",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+    )
 
     def __init__(
         self,

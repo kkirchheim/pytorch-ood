@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.WeightedEBO
     :members:
     :inherited-members:
@@ -18,7 +13,7 @@ import torch
 from torch import Tensor
 from typing_extensions import Self
 
-from ..api import LogitsDetector
+from ..api import DetectorInfo, LogitsDetector, Paper, Task
 
 
 class WeightedEBO(LogitsDetector):
@@ -35,22 +30,25 @@ class WeightedEBO(LogitsDetector):
 
     where :math:`f_i(x)` indicates the :math:`i^{th}` logit value predicted by :math:`f` and :math:`w` indicates the weights.
 
-    Example Code:
+    .. rubric:: Examples
 
     .. code :: python
 
         weights = torch.nn.Linear(num_classes, 1))
         detector = WeightedEBO(model, weights)
         scores = detector(images)
-
-
-    :see Paper:
-        `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
-
-    :see Implementation:
-        `GitHub <https://github.com/deeplearning-wisc/vos/>`__
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="VOS: Learning What You Don't Know by Virtual Outlier Synthesis",
+            venue="ICLR",
+            year=2022,
+            url="https://arxiv.org/pdf/2202.01197.pdf",
+            code="https://github.com/deeplearning-wisc/vos/",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+    )
 
     def __init__(self, model: Optional[torch.nn.Module], weights: torch.Tensor):
         """

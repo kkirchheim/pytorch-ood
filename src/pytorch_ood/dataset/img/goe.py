@@ -8,6 +8,8 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -21,17 +23,25 @@ class CIFAR100GAN(Dataset):
 
     Default sample :math:`\\sigma` is 50.0. Contains 50,000 samples. Label is `-1` by default.
 
-
     .. figure:: /_static/datasets/cifar100gan.webp
         :width: 100%
         :alt: 48 samples from the CIFAR 100 GAN dataset
 
         Random samples (:math:`\\sigma = 50`).
-
-    :see Website: `GitHub <https://github.com/kkirchheim/mlsw2022-goe>`__
-    :see Paper: `NeurIPS MLSW <https://openreview.net/forum?id=SU7OAfhc8OM>`__
-
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license="MIT",
+        paper=Paper(
+            title="On Outlier Exposure with Generative Models",
+            venue="NeurIPS MLSW",
+            year=2022,
+            url="https://openreview.net/forum?id=SU7OAfhc8OM",
+        ),
+        homepage="https://github.com/kkirchheim/mlsw2022-goe",
+    )
 
     filename = {2.0: "samples-2.0.npz", 50.0: "samples-50.0.npz"}
 

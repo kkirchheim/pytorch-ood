@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from PIL import Image
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -18,7 +19,6 @@ class MVTechAD(ImageDatasetBase):
     MVTec AD is a dataset for benchmarking anomaly detection methods with a focus on industrial inspection.
     The dataset provides segmentation masks for anomalies.
 
-    :see Paper: https://link.springer.com/content/pdf/10.1007/s11263-020-01400-4.pdf
     :see Download: https://www.mvtec.com/company/research/datasets/mvtec-ad/
 
     Split must be one of ``train`` or ``test``.
@@ -27,6 +27,19 @@ class MVTechAD(ImageDatasetBase):
     ``grid``, ``hazelnut``, ``leather``, ``metal_nut``, ``pill``, ``screw``, ``tile``,
     ``toothbrush``, ``transistor``, ``wood`` and ``zipper``.
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license="CC-BY-NC-SA-4.0",
+        paper=Paper(
+            title="The MVTec Anomaly Detection Dataset: A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection",
+            venue="IJCV",
+            year=2021,
+            url="https://link.springer.com/article/10.1007/s11263-020-01400-4",
+        ),
+        homepage="https://www.mvtec.com/company/research/datasets/mvtec-ad/",
+    )
 
     splits = ["train", "test"]
     subsets = [

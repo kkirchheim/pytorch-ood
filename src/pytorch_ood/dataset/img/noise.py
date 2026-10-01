@@ -10,6 +10,8 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 
+from ...api import DatasetInfo, Role, Task
+
 
 class NoiseDataset(Dataset, ABC):
     """
@@ -28,6 +30,12 @@ class GaussianNoise(NoiseDataset):
     """
     Dataset with samples drawn from a normal distribution.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+    )
 
     def __init__(
         self,
@@ -84,6 +92,12 @@ class UniformNoise(NoiseDataset):
     """
     Dataset with samples drawn from uniform distribution.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+    )
 
     def __init__(
         self,

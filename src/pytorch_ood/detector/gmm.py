@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.GMM
     :members:
     :inherited-members:
@@ -22,7 +15,13 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    RequiresFittingException,
+    Task,
+)
 from ..utils import contains_unknown, extract_features, is_known
 
 log = logging.getLogger(__name__)
@@ -42,6 +41,9 @@ class GMM(FeaturesDetector):
     This extends :class:`Mahalanobis` by allowing **per-class covariance matrices** and
     using the full mixture likelihood (logsumexp) instead of the max over classes.
     """
+
+    # a classical baseline (class-conditional Gaussians); no single paper introduced it
+    info = DetectorInfo(tasks={Task.CLASSIFICATION}, ai_coded=True)
 
     requires_fit = True
 

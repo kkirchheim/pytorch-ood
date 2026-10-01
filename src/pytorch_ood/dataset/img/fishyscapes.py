@@ -8,6 +8,8 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import check_md5, download_and_extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -29,12 +31,21 @@ class FishyScapes(Dataset):
         :width: 800px
         :alt: FishyScapes example
         :align: center
-
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1904.03215>`__
-    :see Website: `Website <https://fishyscapes.com/>`__
-    :see Implementation: `GitHub <https://github.com/hermannsblum/bdl-benchmark>`__
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license="CC-BY-4.0 (Lost and Found validation annotations)",
+        paper=Paper(
+            title="The Fishyscapes Benchmark: Measuring Blind Spots in Semantic Segmentation",
+            venue="IJCV",
+            year=2021,
+            url="https://arxiv.org/abs/1904.03215",
+            code="https://github.com/hermannsblum/bdl-benchmark",
+        ),
+        homepage="https://fishyscapes.com/",
+    )
 
     dataset_links = {
         "1.0.0": (
@@ -158,13 +169,21 @@ class LostAndFound(Dataset):
         :alt: LostAndFound (Fishy edition) example
         :align: center
 
-    :see Paper: `ArXiv <https://arxiv.org/abs/1609.04653>`__
-    :see Website: `Website <http://wwwlehre.dhbw-stuttgart.de/~sgehrig/lostAndFoundDataset/index.html>`__
-
-
     .. warning:: The image with index 79 does not contain any outlier pixels.
-
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license="Daimler AG non-commercial license",
+        paper=Paper(
+            title="Lost and Found: Detecting Small Road Hazards for Self-Driving Vehicles",
+            venue="IROS",
+            year=2016,
+            url="https://arxiv.org/abs/1609.04653",
+        ),
+        homepage="http://wwwlehre.dhbw-stuttgart.de/~sgehrig/lostAndFoundDataset/index.html",
+    )
 
     annotation_url = (
         "http://robotics.ethz.ch/~asl-datasets/Fishyscapes/fishyscapes_lostandfound.zip",

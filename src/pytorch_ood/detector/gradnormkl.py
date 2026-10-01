@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.GradNormKL
     :members:
     :inherited-members:
@@ -22,7 +15,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import GradientDetector, ModelNotSetException
+from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, Task
 
 try:
     from torch.func import (
@@ -65,9 +58,19 @@ class GradNormKL(GradientDetector):
     .. note:: On PyTorch ≥ 2.0, per-sample gradients are computed with ``torch.func.vmap`` +
         ``torch.func.grad`` in a single batched forward+backward pass. On PyTorch 1.x the
         original sequential loop over individual samples is used as a fallback.
-
-    :see Paper: `NeurIPS <https://arxiv.org/abs/2110.00218>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="On the Importance of Gradients for Detecting Distributional Shifts in the Wild",
+            venue="NeurIPS",
+            year=2021,
+            url="https://arxiv.org/abs/2110.00218",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     def __init__(
         self,

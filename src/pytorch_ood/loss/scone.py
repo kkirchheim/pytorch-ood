@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from numpy import floating
 from torch.utils.data import DataLoader
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import apply_reduction, evaluate_energy_logistic_loss, is_known, is_unknown
 
 
@@ -17,12 +18,21 @@ class EnergyMarginLoss(nn.Module):
     Introducing a margin to further improve performance Energy-based OOD detection method,
     specifically for handling covariate shifted data.
 
-    :see Paper:
-        `ArXiv <https://arxiv.org/pdf/2306.09158>`__
-
-    :see Implementation: `GitHub <https://github.com/deeplearning-wisc/scone>`__
     :see Derivation: `ArXiv <https://arxiv.org/pdf/2202.03299>`__
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Feed Two Birds with One Scone: Exploiting Wild Data for Both Out-of-Distribution Generalization and Detection",
+            venue="ICML",
+            year=2023,
+            url="https://arxiv.org/abs/2306.09158",
+            code="https://github.com/deeplearning-wisc/scone",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.LOGITS},
+        supervised=True,
+    )
 
     def __init__(
         self,

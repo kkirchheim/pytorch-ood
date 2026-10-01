@@ -14,6 +14,8 @@ from torchvision.datasets.utils import (
     download_url,
 )
 
+from ...api import DatasetInfo, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -22,15 +24,20 @@ class TinyImages(Dataset):
     The TinyImages dataset is often used as auxiliary OOD training data.
     While it has been removed from the website, downloadable versions can be found on the internet.
 
-    :see Website: `Link <https://groups.csail.mit.edu/vision/TinyImages/>`__
     :see Mirror: `archive.org <https://archive.org/details/80-million-tiny-images-1-of-2>`__
 
     ..  warning::
         The use of this dataset is discouraged by the authors.
         If you are interested in the underlying reasons, see *Large image datasets:
         A pyrrhic win for computer vision?*
-
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license=None,
+        homepage="https://groups.csail.mit.edu/vision/TinyImages/",
+    )
 
     def __init__(
         self,
@@ -100,9 +107,14 @@ class TinyImages300k(Dataset):
     """
     A cleaned version of the TinyImages Dataset with 300.000 images, often used as auxiliary data
     from training more robust models.
-
-    :see Website: `GitHub <https://github.com/hendrycks/outlier-exposure>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license=None,
+        homepage="https://github.com/hendrycks/outlier-exposure",
+    )
 
     filename = "300K_random_images.npy"
     url = "https://people.eecs.berkeley.edu/~hendrycks/300K_random_images.npy"

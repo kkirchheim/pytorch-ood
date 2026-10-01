@@ -6,6 +6,7 @@ from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.transforms.functional import to_tensor
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -21,10 +22,20 @@ class StreetHazards(ImageDatasetBase):
         :width: 800px
         :alt: Street Hazards Dataset Example
         :align: center
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1911.11132>`__
-    :see Website: `GitHub <https://github.com/hendrycks/anomaly-seg>`__
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license=None,
+        paper=Paper(
+            title="Scaling Out-of-Distribution Detection for Real-World Settings",
+            venue="ICML",
+            year=2022,
+            url="https://arxiv.org/abs/1911.11132",
+        ),
+        homepage="https://github.com/hendrycks/anomaly-seg",
+    )
 
     classes: List[str] = [
         "unlabeled",

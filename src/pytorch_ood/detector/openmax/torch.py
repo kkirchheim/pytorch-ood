@@ -10,7 +10,7 @@ from torch import Tensor
 from torch.nn import Module
 from typing_extensions import Self
 
-from ...api import LogitsDetector, ModelNotSetException
+from ...api import DetectorInfo, LogitsDetector, ModelNotSetException, Paper, Task
 from .numpy import OpenMax as NumpyOpenMax
 
 log = logging.getLogger(__name__)
@@ -26,10 +26,18 @@ class OpenMax(LogitsDetector):
     distribution.
 
     We use the pseudo-activation of the *unknown* class as outlier score.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1511.06233>`__
-    :see Implementation: `GitHub <https://github.com/abhijitbendale/OSDN>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Towards Open Set Deep Networks",
+            venue="CVPR",
+            year=2016,
+            url="https://arxiv.org/abs/1511.06233",
+            code="https://github.com/abhijitbendale/OSDN",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

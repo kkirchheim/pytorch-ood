@@ -89,6 +89,10 @@ intersphinx_mapping = {
 }
 intersphinx_timeout = 30
 
+# Report every cross-reference that does not resolve: with -W, a broken :class: link
+# fails the build instead of silently rendering as plain text.
+nitpicky = True
+
 # Link previews (Slack, Mastodon, GitHub, ...). On Read the Docs the canonical
 # URL of the version being built, otherwise the stable docs.
 ogp_site_url = _CANONICAL_URL or "https://pytorch-ood.readthedocs.io/en/stable/"
@@ -256,6 +260,16 @@ _REGISTRY_SECTIONS = {
 }
 
 
+def _write_generated(name, lines):
+    # rewritten only on change, so unchanged content does not mark pages outdated
+    content = "\n".join(lines) + "\n"
+    path = os.path.join("generated", name)
+    if not os.path.exists(path) or open(path).read() != content:
+        os.makedirs("generated", exist_ok=True)
+        with open(path, "w") as f:
+            f.write(content)
+
+
 def _generate_model_registry():
     """
     Write the model tables of docs/models/registry.rst: one section per training
@@ -337,13 +351,7 @@ def _generate_model_registry():
             ]
         lines.append("")
 
-    # rewritten only on change, so an unchanged registry does not mark the page outdated
-    content = "\n".join(lines) + "\n"
-    path = os.path.join("generated", "model_registry.rst")
-    if not os.path.exists(path) or open(path).read() != content:
-        os.makedirs("generated", exist_ok=True)
-        with open(path, "w") as f:
-            f.write(content)
+    _write_generated("model_registry.rst", lines)
 
 
 _generate_model_registry()
@@ -387,6 +395,69 @@ def _component_counts():
 rst_epilog = _component_counts()
 
 
+def _detector_input(cls):
+    """What a detector is applied to, from its semantic base class (see pytorch_ood.api)."""
+    from pytorch_ood import api
+    from pytorch_ood.api import Representation
+
+    for base, representation in (
+        (api.LogitsDetector, Representation.LOGITS),
+        (api.FeaturesDetector, Representation.FEATURES),
+        (api.FeatureMapsDetector, Representation.FEATURE_MAPS),
+        (api.StructuredDetector, Representation.LAYERS),
+    ):
+        if issubclass(cls, base):
+            return representation
+    # gradient-based detectors, and those without a representation interface (MCD)
+    return Representation.INPUTS
+
+
+def _generate_detector_table():
+    """
+    Comparison table of the detectors on docs/detector.rst, generated from their
+    ``info`` (see pytorch_ood.api) and from the classes themselves.
+    """
+    from pytorch_ood import detector
+    from pytorch_ood.api import Task
+
+    classes = sorted(
+        {
+            obj
+            for obj in vars(detector).values()
+            if inspect.isclass(obj) and "info" in vars(obj) and obj.info is not None
+        },
+        key=lambda cls: cls.__name__.lower(),
+    )
+    lines = [
+        ".. list-table::",
+        "   :header-rows: 1",
+        "   :class: component-table",
+        "",
+        "   * - Detector",
+        "     - Input",
+        "     - Fit",
+        "     - Classification",
+        "     - Segmentation",
+        "     - Paper",
+    ]
+    for cls in classes:
+        info = cls.info
+        lines += [
+            f"   * - :class:`~pytorch_ood.detector.{cls.__name__}`",
+            f"     - {_detector_input(cls).value}",
+            f"     - {'yes' if cls.requires_fit else ''}",
+            f"     - {'✓' if Task.CLASSIFICATION in info.tasks else ''}",
+            f"     - {'✓' if Task.SEGMENTATION in info.tasks else ''}",
+            f"     - `{info.paper.venue} {info.paper.year} <{info.paper.url}>`__"
+            if info.paper
+            else "     - —",
+        ]
+    _write_generated("detector_table.rst", lines)
+
+
+_generate_detector_table()
+
+
 def _skip_hpo_members(app, what, name, obj, skip, options):
     """
     Keep the hyperparameter-optimization interface from cluttering every detector
@@ -397,9 +468,89 @@ def _skip_hpo_members(app, what, name, obj, skip, options):
     """
     if name in ("get_hyperparameters", "set_hyperparameters"):
         return True
+    # rendered as badges and fields by _render_info instead; documented as an
+    # attribute on the base classes (Detector, Benchmark), where it is None
+    if name == "info" and obj is not None:
+        return True
     if name == "hyperparameter_space" and not obj:
         return True
     return skip
+
+
+def _paper_fields(paper):
+    """Field-list lines for a :class:`pytorch_ood.api.Paper`."""
+    lines = [f":Paper: `{paper.title} <{paper.url}>`__, {paper.venue} {paper.year}"]
+    if paper.code:
+        label = paper.code.split("github.com/")[-1] if "github.com/" in paper.code else "Code"
+        lines.append(f":Code: `{label} <{paper.code}>`__")
+    return lines
+
+
+def _info_lines(obj):
+    """
+    Badges (placed first) and fields (placed before the parameters) that render the
+    ``info`` of a detector, loss, dataset or benchmark class, see
+    docs/core_api/metadata.rst.
+    """
+    from pytorch_ood.api import BenchmarkInfo, DatasetInfo, DetectorInfo, LossInfo, Task
+
+    info = obj.info
+    badges, fields = [], []
+
+    def task_badges(tasks):
+        return [
+            f":bdg-primary-line:`{task.value}`"
+            if task in tasks
+            else f":bdg-secondary-line:`no {task.value}`"
+            for task in (Task.CLASSIFICATION, Task.SEGMENTATION)
+        ]
+
+    if isinstance(info, DetectorInfo):
+        badges += task_badges(info.tasks)
+        if obj.requires_fit:
+            badges.append(":bdg-secondary:`requires fit`")
+        fields.append(f":Input: {_detector_input(obj).value}")
+    elif isinstance(info, LossInfo):
+        badges += task_badges(info.tasks)
+        badges.append(
+            ":bdg-secondary:`supervised`" if info.supervised else ":bdg-secondary:`unsupervised`"
+        )
+        fields.append(f":Input: {', '.join(r.value for r in sorted(info.inputs))}")
+    elif isinstance(info, DatasetInfo):
+        badges.append(f":bdg-primary-line:`{info.task.value}`")
+        badges += [f":bdg-secondary:`{role.value}`" for role in sorted(info.roles)]
+    elif isinstance(info, BenchmarkInfo):
+        # all benchmarks evaluate classification so far; "no segmentation" would be noise
+        badges += [f":bdg-primary-line:`{task.value}`" for task in sorted(info.tasks)]
+    if info.ai_coded:
+        badges.append(":bdg-warning-line:`AI-coded`")
+
+    if getattr(info, "paper", None):
+        fields += _paper_fields(info.paper)
+    if isinstance(info, DatasetInfo):
+        if info.homepage:
+            fields.append(f":Homepage: `{info.homepage} <{info.homepage}>`__")
+        fields.append(f":License: {info.license or 'no license statement known'}")
+    return [" ".join(badges), ""], fields
+
+
+def _render_info(app, what, name, obj, options, lines):
+    """Render a component's ``info`` into its class documentation."""
+    if what != "class" or "info" not in vars(obj) or obj.info is None:
+        return
+    # with autoclass_content = "both", this runs for the class and for the __init__
+    # docstring; render into the class docstring only
+    own = inspect.cleandoc(obj.__doc__ or "").splitlines()
+    if not lines or not own or lines[0] != own[0]:
+        return
+    badges, fields = _info_lines(obj)
+    # fields go before the constructor's parameters (autoclass_content = "both")
+    at = next(
+        (i for i, line in enumerate(lines) if line.startswith((":param", ":type", ":raises"))),
+        len(lines),
+    )
+    lines[at:at] = fields + [""]
+    lines[0:0] = badges
 
 
 def _sidebar_with_sections(app, pagename, templatename, context, doctree):
@@ -421,8 +572,10 @@ def _sidebar_with_sections(app, pagename, templatename, context, doctree):
 
         kwargs.update(titles_only=False, maxdepth=4)
         soup = BeautifulSoup(toctree(**kwargs), "html.parser")
-        for link in soup.select("li > a > code"):
-            link.parent.parent.decompose()
+        for code in soup.select("li > a > code"):
+            # nested object entries (a class and its members) go with their parent
+            if not code.decomposed:
+                code.find_parent("li").decompose()
         for empty in soup.select("li > ul"):
             if not empty.find("li"):
                 empty.decompose()
@@ -467,14 +620,21 @@ def _is_dataset(obj):
 
 
 _SPLIT_SECTIONS = [
+    # not a split of a former page: the interfaces, metadata records and exceptions
+    _SplitSection(
+        overview="core_api",
+        prefix="core_api/",
+        packages=("pytorch_ood.api",),
+        needs_page=_is_class_or_function,
+    ),
     _SplitSection(
         overview="detector",
         prefix="detectors/",
         packages=("pytorch_ood.detector",),
         needs_page=_is_detector,
         legacy_anchors={
-            "api": ("detectors/api", None),
-            "overview": ("detectors/api", "class-hierarchy"),
+            "api": ("core_api/detectors", None),
+            "overview": ("core_api/detectors", "class-hierarchy"),
         },
     ),
     _SplitSection(
@@ -494,6 +654,8 @@ _SPLIT_SECTIONS = [
             "pytorch_ood.dataset.ossim",
         ),
         needs_page=_is_dataset,
+        # a loader for the user's own data, documented under Utilities (utils/imagelistdataset)
+        ignore=("ImageListDataset",),
     ),
     # not a package: "Getting Started" was the second half of info.rst
     _SplitSection(
@@ -519,10 +681,12 @@ _SPLIT_SECTIONS = [
         prefix="benchmarks/",
         packages=("pytorch_ood.benchmark",),
         needs_page=_is_class_or_function,
+        # the base class, documented under Core API (core_api/benchmarks)
+        ignore=("Benchmark",),
         # headings of the former single page that the new page titles do not reproduce;
         # repeated headings (the second "CIFAR-10", ...) had generated ids and are not mapped
         legacy_anchors={
-            "api": ("benchmarks/api", None),
+            "api": ("core_api/benchmarks", None),
             "image": ("benchmark", "odin"),
             "cifar-10": ("benchmarks/cifar10_odin", None),
             "cifar-100": ("benchmarks/cifar100_odin", None),
@@ -775,6 +939,69 @@ def _style_inheritance_diagrams(app, exception):
             f.write(styled)
 
 
+_ATTRIBUTE_TYPES = ("attribute", "property")
+_METHOD_TYPES = ("method", "classmethod", "staticmethod")
+
+
+def _group_class_members(app, doctree):
+    """
+    Give class documentation a fixed structure, as in scikit-learn's API docs: the
+    description, its fields (parameters, paper, ...), "Examples", then the members
+    under "Attributes" and "Methods". autodoc lists all members in one sequence, and an
+    ``.. rubric:: Examples`` in a class docstring would otherwise end up before the
+    constructor's parameters. Members keep their order within a group. Runs before the
+    table of contents is collected, so "On this page" follows.
+    """
+    from docutils import nodes
+    from sphinx import addnodes
+
+    for cls in list(doctree.findall(addnodes.desc)):
+        if cls.get("objtype") != "class":
+            continue
+        content = next((c for c in cls.children if isinstance(c, addnodes.desc_content)), None)
+        if content is None:
+            continue
+
+        # the Examples section runs from its rubric to the next field list, rubric or member
+        examples = []
+        for child in list(content.children):
+            if isinstance(child, nodes.rubric) and child.astext() == "Examples":
+                examples = [child]
+                child["classes"].append("member-group")
+            elif examples and not isinstance(
+                child, (nodes.field_list, nodes.rubric, addnodes.desc, addnodes.index)
+            ):
+                examples.append(child)
+            elif examples:
+                break
+        for node in examples:
+            content.remove(node)
+        # after the description and its fields; the members are re-appended below
+        content.extend(examples)
+
+        members = [
+            c
+            for c in content.children
+            if isinstance(c, addnodes.desc)
+            and c.get("objtype") in _ATTRIBUTE_TYPES + _METHOD_TYPES
+        ]
+        if not members:
+            continue
+        moved = []
+        for member in members:
+            # autodoc puts each member's index entry right before it
+            index = member.previous_sibling()
+            entry = [index, member] if isinstance(index, addnodes.index) else [member]
+            for node in entry:
+                content.remove(node)
+            moved.append((member["objtype"], entry))
+        for title, types in (("Attributes", _ATTRIBUTE_TYPES), ("Methods", _METHOD_TYPES)):
+            group = [node for objtype, entry in moved if objtype in types for node in entry]
+            if group:
+                content += nodes.rubric("", title, classes=["member-group"])
+                content.extend(group)
+
+
 def _preview_description(app, doctree):
     """Describe component pages by their first sentence of prose in link previews.
 
@@ -842,6 +1069,8 @@ def _ancestors(node):
 
 
 def setup(app):
+    # before Sphinx collects the table of contents (default priority 500)
+    app.connect("doctree-read", _group_class_members, priority=400)
     app.connect("doctree-read", _preview_description)
     # before sphinxext-opengraph's own handler (default priority 500)
     app.connect("html-page-context", _meta_description, priority=400)
@@ -849,6 +1078,7 @@ def setup(app):
     app.connect("env-check-consistency", _check_component_pages)
     app.connect("html-page-context", _redirect_moved_anchors)
     app.connect("autodoc-skip-member", _skip_hpo_members)
+    app.connect("autodoc-process-docstring", _render_info)
     app.connect("html-page-context", _source_links)
     # must run before Furo's own html-page-context handler (default priority 500)
     app.connect("html-page-context", _sidebar_with_sections, priority=400)

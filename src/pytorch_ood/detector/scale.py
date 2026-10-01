@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.SCALE
     :members:
     :inherited-members:
@@ -22,7 +15,7 @@ import torch.nn
 from torch import Tensor
 from typing_extensions import Self
 
-from ..api import FeatureMapsDetector
+from ..api import DetectorInfo, FeatureMapsDetector, Paper, Task
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -81,7 +74,7 @@ class SCALE(FeatureMapsDetector):
 
     The paper applies SCALE after the last average pooling layer.
 
-    Example Code:
+    .. rubric:: Examples
 
     .. code :: python
 
@@ -92,10 +85,19 @@ class SCALE(FeatureMapsDetector):
             detector = EnergyBased.score
         )
         scores = detector(images)
-
-    :see Paper: `ICLR 2024 <https://arxiv.org/abs/2310.00227>`__
-    :see Implementation: `GitHub <https://github.com/kai422/SCALE>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Scaling for Training Time and Post-hoc Out-of-distribution Detection Enhancement",
+            venue="ICLR",
+            year=2024,
+            url="https://arxiv.org/abs/2310.00227",
+            code="https://github.com/kai422/SCALE",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
     #: percentile sweep used by OpenOOD (expressed here as fractions in ``[0, 1]``).

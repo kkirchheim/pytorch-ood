@@ -117,14 +117,3 @@ Open Set Simulations
    :maxdepth: 1
 
    datasets/ossim
-
-
-Custom Data
-====================================================
-
-Loaders for your own data in formats used by other benchmark suites.
-
-.. toctree::
-   :maxdepth: 1
-
-   datasets/imagelistdataset

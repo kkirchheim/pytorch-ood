@@ -1,5 +1,5 @@
-Detector API
-============
+Detector Interface
+==================
 
 .. The module target lives on docs/detector.rst (py:module), hence :no-index: here.
 

@@ -1,8 +1,4 @@
 """
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
 
 ..  autoclass:: pytorch_ood.detector.SHE
     :members:
@@ -21,7 +17,7 @@ from typing_extensions import Self
 from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.utils import TensorBuffer, extract_features, is_known
 
-from ..api import FeaturesDetector, ModelNotSetException
+from ..api import DetectorInfo, FeaturesDetector, ModelNotSetException, Paper, Task
 
 log = logging.getLogger(__name__)
 
@@ -34,9 +30,18 @@ class SHE(FeaturesDetector):
     For each class, SHE estimates the mean feature vector :math:`S_i` of correctly classified instances.
     For some new instances with predicted class :math:`\\hat{y}`, SHE then
     uses the inner product :math:`f(x)^{\\top} S_{\\hat{y}}` as outlier score.
-
-    :see Paper: `OpenReview <https://openreview.net/pdf?id=KkazG4lgKL>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Out-of-Distribution Detection based on In-Distribution Data Patterns Memorization with Modern Hopfield Energy",
+            venue="ICLR",
+            year=2023,
+            url="https://openreview.net/pdf?id=KkazG4lgKL",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

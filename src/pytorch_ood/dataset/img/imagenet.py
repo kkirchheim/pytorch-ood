@@ -7,6 +7,7 @@ from PIL import Image
 from torchvision.datasets import DatasetFolder
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -16,10 +17,20 @@ class ImageNetA(DatasetFolder):
     """
     From the paper *Natural Adversarial Examples*.
     Contains images that classifiers should be able to classify
-
-    :see Website: `GitHub <https://github.com/hendrycks/natural-adv-examples>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1907.07174>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license=None,
+        paper=Paper(
+            title="Natural Adversarial Examples",
+            venue="CVPR",
+            year=2021,
+            url="https://arxiv.org/abs/1907.07174",
+        ),
+        homepage="https://github.com/hendrycks/natural-adv-examples",
+    )
 
     base_folder = "imagenet-a"
     url = "https://people.eecs.berkeley.edu/~hendrycks/imagenet-a.tar"
@@ -66,10 +77,20 @@ class ImageNetO(ImageNetA):
     """
     From the paper *Natural Adversarial Examples*.
     Contains anomalies of unforeseen classes
-
-    :see Website: `GitHub <https://github.com/hendrycks/natural-adv-examples>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1907.07174>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Natural Adversarial Examples",
+            venue="CVPR",
+            year=2021,
+            url="https://arxiv.org/abs/1907.07174",
+        ),
+        homepage="https://github.com/hendrycks/natural-adv-examples",
+    )
 
     base_folder = "imagenet-o"
     url = "https://people.eecs.berkeley.edu/~hendrycks/imagenet-o.tar"
@@ -83,11 +104,20 @@ class ImageNetR(ImageNetA):
     Analysis of Out-of-Distribution Generalization* contains art, cartoons, deviantart,
     graffiti, embroidery, graphics, origami, paintings, patterns, plastic objects,
     plush objects, sculptures, sketches, tattoos, toys, and video game renditions of ImageNet classes.
-
-
-    :see Website: `GitHub <https://github.com/hendrycks/imagenet-r>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/2006.16241>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license=None,
+        paper=Paper(
+            title="The Many Faces of Robustness: A Critical Analysis of Out-of-Distribution Generalization",
+            venue="ICCV",
+            year=2021,
+            url="https://arxiv.org/abs/2006.16241",
+        ),
+        homepage="https://github.com/hendrycks/imagenet-r",
+    )
 
     base_folder = "imagenet-r"
     url = "https://people.eecs.berkeley.edu/~hendrycks/imagenet-r.tar"
@@ -107,9 +137,19 @@ class ImageNetC(ImageDatasetBase):
     * ``weather`` (12GB):  frost, snow, fog, and brightness.
     * ``digital`` (7GB): contrast, elastic_transform, pixelate, and jpeg_compression.
     * ``extra`` (15GB): speckle_noise, spatter, gaussian_blur, and saturate.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1903.12261v1>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="Benchmarking Neural Network Robustness to Common Corruptions and Perturbations",
+            venue="ICLR",
+            year=2019,
+            url="https://arxiv.org/abs/1903.12261",
+        ),
+    )
 
     subset_list = ["blur", "digital", "extra", "noise", "weather"]
 

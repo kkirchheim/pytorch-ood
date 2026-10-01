@@ -1,10 +1,4 @@
 """
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
 
 ..  autoclass:: pytorch_ood.detector.NACUE
     :members:
@@ -22,9 +16,12 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 
 from pytorch_ood.api import (
+    DetectorInfo,
     GradientDetector,
     ModelNotSetException,
+    Paper,
     RequiresFittingException,
+    Task,
 )
 
 
@@ -97,10 +94,19 @@ class _LayerStats:
 class NACUE(GradientDetector):
     """
     Neuron Activation Coverage from the paper *Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization*
-
-    :see Paper:
-        `ICLR <https://arxiv.org/pdf/2306.02879>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Neuron Activation Coverage: Rethinking Out-of-distribution Detection and Generalization",
+            venue="ICLR",
+            year=2024,
+            url="https://arxiv.org/pdf/2306.02879",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = True
 

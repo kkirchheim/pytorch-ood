@@ -5,6 +5,7 @@ from torch import nn
 
 from pytorch_ood.model import ClassCenters
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import apply_reduction, is_unknown
 from .center import CenterLoss
 from .crossentropy import CrossEntropyLoss
@@ -31,10 +32,20 @@ class MCHADLoss(nn.Module):
     The third term makes sure that OOD samples have at least a distance :math:`m` to the surface of each hypersphere.
 
     The loss can be used in a supervised, as well as in an unsupervised manner.
-
-    :see Implementation: `GitLab <https://gitlab.com/kkirchheim/mchad>`__
-    :see Paper: `ICPR <https://ieeexplore.ieee.org/document/9956337>`__
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Multi-Class Hypersphere Anomaly Detection",
+            venue="ICPR",
+            year=2022,
+            url="https://ieeexplore.ieee.org/document/9956337",
+            code="https://gitlab.com/kkirchheim/mchad",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.DISTANCES},
+        supervised=True,
+    )
 
     def __init__(
         self,

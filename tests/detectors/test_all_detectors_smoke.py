@@ -19,6 +19,7 @@ from src.pytorch_ood.detector import (
     ODIN,
     PNML,
     RMD,
+    SCALE,
     SHE,
     VRA,
     EnergyBased,
@@ -28,6 +29,7 @@ from src.pytorch_ood.detector import (
     Gram,
     KLMatching,
     Mahalanobis,
+    MahalanobisODIN,
     MaxLogit,
     MaxSoftmax,
     MultiMahalanobis,
@@ -281,6 +283,10 @@ class TestAllDetectorsSmoke(unittest.TestCase):
                 ),
             ),
             (
+                "MahalanobisODIN",
+                lambda: (lambda model: MahalanobisODIN(model.features, eps=0.001))(eval_model()),
+            ),
+            (
                 "GradNormKL",
                 lambda: GradNormKL(
                     gradnorm_model(),
@@ -296,6 +302,15 @@ class TestAllDetectorsSmoke(unittest.TestCase):
                 "ASH",
                 lambda: (
                     lambda model: ASH(
+                        backbone=model.feature_maps,
+                        head=model.forward_feature_maps,
+                    )
+                )(TinyConvDetectorModel().eval()),
+            ),
+            (
+                "SCALE",
+                lambda: (
+                    lambda model: SCALE(
                         backbone=model.feature_maps,
                         head=model.forward_feature_maps,
                     )

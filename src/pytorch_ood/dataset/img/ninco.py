@@ -3,6 +3,7 @@ import os
 from os.path import join
 from typing import Callable, Optional
 
+from pytorch_ood.api import DatasetInfo, Paper, Role, Task
 from pytorch_ood.dataset.img.base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -20,12 +21,21 @@ class NINCO(ImageDatasetBase):
         to the original publication, as they calculate metrics over each class individually and
         report the mean.
 
-
-    :see Paper: `ICML <https://arxiv.org/pdf/2306.00826.pdf>`__
-    :see Code: `GitHub <https://github.com/j-cb/NINCO>`__
     :see Download: `Zenodo <https://zenodo.org/record/8013288>`__
-
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="In or Out? Fixing ImageNet Out-of-Distribution Detection Evaluation",
+            venue="ICML",
+            year=2023,
+            url="https://arxiv.org/abs/2306.00826",
+            code="https://github.com/j-cb/NINCO",
+        ),
+    )
 
     base_folders = [
         "NINCO_OOD_classes"

@@ -13,6 +13,7 @@ import torch.nn as nn
 #
 from torch.nn import functional as F
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..model.centers import ClassCenters
 from ..utils import is_known
 
@@ -28,13 +29,23 @@ class CACLoss(nn.Module):
 
     They also propose an outlier score based on the distance which is implemented in the :meth:`CACLoss.score` method.
 
-    Example code is provided :doc:`here </auto_examples/loss/unsupervised/cac>`
+    .. rubric:: Examples
 
-
-    :see Paper: `WACV 2022 <https://arxiv.org/abs/2004.02434>`_
-    :see Implementation: `GitHub <https://github.com/dimitymiller/cac-openset/>`_
-
+    See the :doc:`gallery example </auto_examples/loss/unsupervised/cac>`.
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Class Anchor Clustering: a Loss for Distance-based Open Set Recognition",
+            venue="WACV",
+            year=2021,
+            url="https://arxiv.org/abs/2004.02434",
+            code="https://github.com/dimitymiller/cac-openset/",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.DISTANCES},
+        supervised=False,
+    )
 
     def __init__(self, n_classes: int, magnitude: float = 1.0, alpha: float = 1.0):
         """

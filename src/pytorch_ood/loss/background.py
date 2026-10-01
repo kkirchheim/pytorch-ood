@@ -3,6 +3,7 @@
 import torch.nn
 import torch.nn.functional as F
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import is_unknown
 
 
@@ -17,6 +18,19 @@ class BackgroundClassLoss(torch.nn.Module):
     The networks output layer has to include :math:`N+1` outputs, so logits are
     in the shape  :math:`B \\times (N + 1)`.
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Reducing Network Agnostophobia",
+            venue="NeurIPS",
+            year=2018,
+            url="https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+        inputs={Representation.LOGITS},
+        supervised=True,
+    )
 
     def __init__(self, n_classes: int, reduction: str = "mean"):
         """

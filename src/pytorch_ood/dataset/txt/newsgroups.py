@@ -11,6 +11,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 
+from ...api import DatasetInfo, Task
 from .stop_words import stop_words
 
 log = logging.getLogger(__name__)
@@ -22,6 +23,11 @@ class NewsGroup20(Dataset):
 
     Contains 20 classes.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license=None,
+    )
 
     train_url = (
         "https://raw.githubusercontent.com/hendrycks/outlier-exposure/"

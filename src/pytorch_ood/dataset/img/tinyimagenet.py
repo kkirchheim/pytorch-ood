@@ -6,6 +6,8 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import download_and_extract_archive
 
+from ...api import DatasetInfo, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -14,12 +16,15 @@ class TinyImageNet(VisionDataset):
     Small Version of the ImageNet with images of size :math:`64 \\times 64` from 200 classes used by
     Stanford. Each class has 500 images for training.
 
-
     This dataset is often used for training, but not included in Torchvision.
-
-    :see Website: `Stanford <http://cs231n.stanford.edu/>`__
-
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.IN_DISTRIBUTION, Role.OOD_TEST},
+        license=None,
+        homepage="http://cs231n.stanford.edu/",
+    )
 
     url = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
     dir_name = "tiny-imagenet-200"

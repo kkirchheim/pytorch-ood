@@ -2,12 +2,18 @@ import re
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple, Union, overload
+from typing import ClassVar, Dict, List, Optional, Sequence, Tuple, Union, overload
 
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from pytorch_ood.api import Detector, FeaturesDetector, GradientDetector, LogitsDetector
+from pytorch_ood.api import (
+    BenchmarkInfo,
+    Detector,
+    FeaturesDetector,
+    GradientDetector,
+    LogitsDetector,
+)
 from pytorch_ood.utils import OODMetrics, TensorBuffer
 
 _CACHE_VERSION = 1
@@ -20,6 +26,12 @@ def _sanitize_cache_token(value: str) -> str:
 class Benchmark(ABC):
     """
     Base class for Benchmarks
+    """
+
+    info: ClassVar[Optional[BenchmarkInfo]] = None
+    """
+    Metadata of the benchmark: the paper whose evaluation protocol it reproduces,
+    and so on (see :doc:`/core_api/metadata`).
     """
 
     @abstractmethod

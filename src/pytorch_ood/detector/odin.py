@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.ODIN
     :members:
     :inherited-members:
@@ -26,7 +21,7 @@ from torch.nn import Module
 from torch.nn import functional as F
 from typing_extensions import Self
 
-from ..api import GradientDetector, ModelNotSetException
+from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, Task
 
 log = logging.getLogger(__name__)
 
@@ -110,11 +105,18 @@ class ODIN(GradientDetector):
         \\hat{x} = x - \\epsilon \\ \\text{sign}(\\nabla_x \\mathcal{L}(f(x) / T, \\hat{y}))
 
     where :math:`\\hat{y}` is the predicted class of the network.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
-    :see Implementation: `GitHub <https://github.com/facebookresearch/odin/>`__
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+            code="https://github.com/facebookresearch/odin/",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
     #: temperature and input-noise (``eps``) sweep used by OpenOOD. The noise values

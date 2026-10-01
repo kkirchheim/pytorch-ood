@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.KNN
     :members:
     :inherited-members:
@@ -19,7 +14,14 @@ from torch import Tensor, tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from pytorch_ood.api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from pytorch_ood.api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from pytorch_ood.utils import extract_features, is_known
 
 log = logging.getLogger(__name__)
@@ -43,9 +45,18 @@ class KNN(FeaturesDetector):
     dataset used to train the nearest neighbor model.
 
     The original paper found that using contrastive pre-training could increase the performance.
-
-    :see PMLR: `arXiv <https://proceedings.mlr.press/v162/sun22d.html>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Out-of-Distribution Detection with Deep Nearest Neighbors",
+            venue="ICML",
+            year=2022,
+            url="https://proceedings.mlr.press/v162/sun22d.html",
+            code="https://github.com/deeplearning-wisc/knn-ood",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

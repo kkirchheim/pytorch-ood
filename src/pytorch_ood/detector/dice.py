@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.DICE
     :members:
     :inherited-members:
@@ -22,7 +17,14 @@ from typing_extensions import Self
 
 from pytorch_ood.utils import extract_features, is_known
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -32,9 +34,18 @@ class DICE(FeaturesDetector):
     """
     Implements DICE from the paper
     *DICE: Leveraging Sparsification for Out-of-Distribution Detection*.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2111.09805>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="DICE: Leveraging Sparsification for Out-of-Distribution Detection",
+            venue="ECCV",
+            year=2022,
+            url="https://arxiv.org/abs/2111.09805",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

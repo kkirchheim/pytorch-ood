@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..loss.crossentropy import cross_entropy
 from ..utils import apply_reduction, is_known, is_unknown
 
@@ -30,13 +31,6 @@ class VOSRegLoss(nn.Module):
     where :math:`\\phi` is a possibly non-linear function, :math:`E` is the weighted energy
     and :math:`V` and :math:`D` are the distributions of the (possibly virtual) outliers and the ID data respectively.
 
-
-    :see Paper:
-        `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
-
-    :see Implementation:
-        `GitHub <https://github.com/deeplearning-wisc/vos/>`__
-
     For initialisation of :math:`\\phi` and the weights for weighted energy:
 
     .. code :: python
@@ -48,8 +42,20 @@ class VOSRegLoss(nn.Module):
 
     .. note ::
         This implementation does not generate synthetic outliers. For this feature, see  :class:`pytorch_ood.loss.vos.VirtualOutlierSynthesizingRegLoss`.
-
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="VOS: Learning What You Don't Know by Virtual Outlier Synthesis",
+            venue="ICLR",
+            year=2022,
+            url="https://arxiv.org/pdf/2202.01197.pdf",
+            code="https://github.com/deeplearning-wisc/vos/",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+        inputs={Representation.LOGITS},
+        supervised=True,
+    )
 
     def __init__(
         self,
@@ -155,14 +161,20 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
     sampling from low-likelihood regions. This alleviates the need for real outliers during training.
 
     For more information see :class:`VOS Energy-Based Loss<pytorch_ood.loss.vos.VOSRegLoss>`.
-
-    :see Paper:
-        `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
-
-    :see Implementation:
-        `GitHub <https://github.com/deeplearning-wisc/vos/>`__
-
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="VOS: Learning What You Don't Know by Virtual Outlier Synthesis",
+            venue="ICLR",
+            year=2022,
+            url="https://arxiv.org/pdf/2202.01197.pdf",
+            code="https://github.com/deeplearning-wisc/vos/",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.LOGITS, Representation.FEATURES},
+        supervised=False,
+    )
 
     def __init__(
         self,

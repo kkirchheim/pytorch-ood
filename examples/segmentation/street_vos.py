@@ -7,7 +7,7 @@ with a ResNet-50 backbone pre-trained on the ImageNet
 on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` **test set** using
 the supervised :class:`VOSRegLoss<pytorch_ood.loss.VOSRegLoss>`.
 
-We then use the :class:`VOSBased<pytorch_ood.detector.VOSBased>` OOD detector.
+We then use the :class:`WeightedEBO<pytorch_ood.detector.WeightedEBO>` OOD detector.
 
 This setup is merely made to demonstrate how to train a supervised anomaly segmentation model with
 this loss function.

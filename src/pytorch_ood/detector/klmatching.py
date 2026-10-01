@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.KLMatching
     :members:
     :inherited-members:
@@ -20,7 +15,14 @@ from torch import Tensor
 from torch.nn import Module, Parameter, ParameterDict
 from typing_extensions import Self
 
-from ..api import LogitsDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    LogitsDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 
 log = logging.getLogger()
 
@@ -37,9 +39,18 @@ class KLMatching(LogitsDetector):
     :math:`D_{KL}[p(y \\vert x) \\Vert d_y]` is used as outlier score.
 
     This method can also be applied to multi-class settings.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1911.11132>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Scaling Out-of-Distribution Detection for Real-World Settings",
+            venue="ICML",
+            year=2022,
+            url="https://arxiv.org/abs/1911.11132",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

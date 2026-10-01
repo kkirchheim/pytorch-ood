@@ -4,6 +4,7 @@ import os
 from os.path import join
 from typing import Callable, Optional
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 
@@ -15,11 +16,20 @@ class FoolingImages(ImageDatasetBase):
         :width: 800px
         :alt: Fooling Images
         :align: center
-
-
-    :see Website: `Link <https://anhnguyen.me/project/fooling/>`__
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1412.1897>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Deep Neural Networks are Easily Fooled: High Confidence Predictions for Unrecognizable Images",
+            venue="CVPR",
+            year=2015,
+            url="https://arxiv.org/abs/1412.1897",
+        ),
+        homepage="https://anhnguyen.me/project/fooling/",
+    )
 
     dirs = [f"run_{i}" for i in range(10)]
 

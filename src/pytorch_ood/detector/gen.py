@@ -1,13 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
-
 ..  autoclass:: pytorch_ood.detector.GEN
     :members:
     :inherited-members:
@@ -21,7 +13,7 @@ from torch import Tensor
 from torch.nn import Module
 from typing_extensions import Self
 
-from ..api import LogitsDetector
+from ..api import DetectorInfo, LogitsDetector, Paper, Task
 
 
 class GEN(LogitsDetector):
@@ -49,13 +41,19 @@ class GEN(LogitsDetector):
     near :math:`p = 0` and :math:`p = 1`, making the score highly sensitive to the shape of
     the (truncated) softmax distribution rather than only its maximum. In-distribution samples
     produce confident (peaky) posteriors with low scores, while OOD samples yield higher scores.
-
-    :see Paper:
-        `CVPR 2023 <https://openaccess.thecvf.com/content/CVPR2023/html/Liu_GEN_Pushing_the_Limits_of_Softmax-Based_Out-of-Distribution_Detection_CVPR_2023_paper.html>`__
-
-    :see Implementation:
-        `GitHub <https://github.com/XixiLiu95/GEN>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="GEN: Pushing the Limits of Softmax-Based Out-of-Distribution Detection",
+            venue="CVPR",
+            year=2023,
+            url="https://openaccess.thecvf.com/content/CVPR2023/html/Liu_GEN_Pushing_the_Limits_of_Softmax-Based_Out-of-Distribution_Detection_CVPR_2023_paper.html",
+            code="https://github.com/XixiLiu95/GEN",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+        ai_coded=True,
+    )
 
     #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
     #: ``gamma`` and ``M`` sweep used by OpenOOD.

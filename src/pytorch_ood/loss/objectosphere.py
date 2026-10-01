@@ -4,6 +4,7 @@ from typing import Optional
 import torch
 from torch import Tensor, nn
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import (
     apply_reduction,
     contains_known,
@@ -31,12 +32,20 @@ class ObjectosphereLoss(nn.Module):
 
     where :math:`F(x)` are deep features in some layer of the model, and
     :math:`\\mathcal{L}_E` is the Entropic Open-Set Loss.
-
-
-    :see Paper:
-        `NeurIPS <https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf>`__
-
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Reducing Network Agnostophobia",
+            venue="NeurIPS",
+            year=2018,
+            url="https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.LOGITS, Representation.FEATURES},
+        supervised=True,
+    )
 
     def __init__(self, alpha: float = 1.0, xi: float = 1.0, reduction: Optional[str] = "mean"):
         """

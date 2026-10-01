@@ -6,9 +6,6 @@ SSB provides fine-grained evaluation of OOD detection on fine-grained visual dat
 Each dataset is partitioned into ID and OOD classes, with OOD classes further split by semantic
 similarity: far-OOD (Easy, maximally dissimilar) and near-OOD (Hard/Medium, visually similar to ID).
 This enables nuanced evaluation of OOD detection methods under varying difficulty levels.
-
-:see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
-:see Repository: `Visual-AI/Dissect-OOD-OSR <https://github.com/Visual-AI/Dissect-OOD-OSR>`__
 """
 
 import logging
@@ -22,6 +19,7 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import download_and_extract_archive, download_url
 
+from pytorch_ood.api import BenchmarkInfo, Paper, Task
 from pytorch_ood.benchmark import Benchmark
 from pytorch_ood.utils import ToUnknown
 
@@ -171,15 +169,8 @@ class _CUB200(VisionDataset):
 
 class _StanfordCars(VisionDataset):
     """
-    Stanford Cars dataset.
-
-    .. note::
-
-        Auto-download is not supported because the original Stanford host is no
-        longer available. Download the dataset manually from
-        https://www.kaggle.com/datasets/jessicali9530/stanford-cars-dataset
-        and extract it so that ``<root>/stanford_cars/`` contains
-        ``cars_train/``, ``cars_test/``, and ``devkit/``.
+    Stanford Cars dataset. Not auto-downloadable; see :class:`StanfordCars_SSB` for the manual
+    download.
     """
 
     base_folder = "stanford_cars"
@@ -358,10 +349,19 @@ class CUB_SSB(_SSBBase):
 
     ``test_sets()`` returns two combined datasets:
     ``[ID_test + Easy_OOD, ID_test + Hard_OOD]`` with ``ood_names = ["Easy", "Hard"]``.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
-    :see Repository: `Visual-AI/Dissect-OOD-OSR <https://github.com/Visual-AI/Dissect-OOD-OSR>`__
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="Dissecting Out-of-Distribution Detection and Open-Set Recognition: A Critical Analysis of Methods and Benchmarks",
+            venue="IJCV",
+            year=2024,
+            url="https://arxiv.org/abs/2408.16757",
+            code="https://github.com/Visual-AI/Dissect-OOD-OSR",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     def __init__(self, root: str, transform: Callable, download: bool = False) -> None:
         """
@@ -409,12 +409,24 @@ class StanfordCars_SSB(_SSBBase):
 
     .. note::
 
-        Stanford Cars cannot be downloaded automatically. See :class:`_StanfordCars`
-        for manual download instructions.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
-    :see Repository: `Visual-AI/Dissect-OOD-OSR <https://github.com/Visual-AI/Dissect-OOD-OSR>`__
+        Stanford Cars cannot be downloaded automatically, because the original Stanford host is
+        no longer available. Download the dataset manually from
+        https://www.kaggle.com/datasets/jessicali9530/stanford-cars-dataset
+        and extract it so that ``<root>/stanford_cars/`` contains
+        ``cars_train/``, ``cars_test/``, and ``devkit/``.
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="Dissecting Out-of-Distribution Detection and Open-Set Recognition: A Critical Analysis of Methods and Benchmarks",
+            venue="IJCV",
+            year=2024,
+            url="https://arxiv.org/abs/2408.16757",
+            code="https://github.com/Visual-AI/Dissect-OOD-OSR",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     def __init__(self, root: str, transform: Callable) -> None:
         """
@@ -456,10 +468,19 @@ class Aircraft_SSB(_SSBBase):
 
     ``test_sets()`` returns two combined datasets:
     ``[ID_test + Easy_OOD, ID_test + Hard_OOD]`` with ``ood_names = ["Easy", "Hard"]``.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
-    :see Repository: `Visual-AI/Dissect-OOD-OSR <https://github.com/Visual-AI/Dissect-OOD-OSR>`__
     """
+
+    info = BenchmarkInfo(
+        paper=Paper(
+            title="Dissecting Out-of-Distribution Detection and Open-Set Recognition: A Critical Analysis of Methods and Benchmarks",
+            venue="IJCV",
+            year=2024,
+            url="https://arxiv.org/abs/2408.16757",
+            code="https://github.com/Visual-AI/Dissect-OOD-OSR",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     def __init__(self, root: str, transform: Callable, download: bool = False) -> None:
         """

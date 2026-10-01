@@ -7,6 +7,8 @@ from typing import Tuple
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_and_extract_archive
 
+from ...api import DatasetInfo, Paper, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -19,9 +21,18 @@ class WikiText2(Dataset):
     :class:`Outlier Exposure <pytorch_ood.loss.OutlierExposureLoss>`. Labels are -1 by default.
 
     Split can be one of ``train``, ``test`` and ``val``.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1609.07843>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license="CC-BY-SA-3.0",
+        paper=Paper(
+            title="Pointer Sentinel Mixture Models",
+            venue="ICLR",
+            year=2017,
+            url="https://arxiv.org/abs/1609.07843",
+        ),
+    )
 
     url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip"
     md5 = "542ccefacc6c27f945fb54453812b3cd"
@@ -101,9 +112,18 @@ class WikiText103(WikiText2):
     :class:`Outlier Exposure <pytorch_ood.loss.OutlierExposureLoss>`. Labels are -1 by default.
 
     Split can be one of ``train``, ``test`` and ``val``.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1609.07843>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license="CC-BY-SA-3.0",
+        paper=Paper(
+            title="Pointer Sentinel Mixture Models",
+            venue="ICLR",
+            year=2017,
+            url="https://arxiv.org/abs/1609.07843",
+        ),
+    )
 
     url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-103-v1.zip"
     md5 = "9ddaacaf6af0710eda8c456decff7832"

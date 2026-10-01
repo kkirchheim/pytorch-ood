@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.TemperatureScaling
     :members:
     :inherited-members:
@@ -25,7 +20,7 @@ from typing_extensions import Self
 from pytorch_ood.detector.softmax import MaxSoftmax
 from pytorch_ood.utils import is_known
 
-from ..api import RequiresFittingException
+from ..api import DetectorInfo, Paper, RequiresFittingException, Task
 
 log = logging.getLogger(__name__)
 
@@ -44,9 +39,18 @@ class TemperatureScaling(MaxSoftmax):
 
     where :math:`\\sigma` is the softmax function, :math:`T` is the optimal temperature and :math:`\\sigma_y`
     indicates the :math:`y^{th}` value of the resulting probability vector.
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1706.04599.pdf>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="On Calibration of Modern Neural Networks",
+            venue="ICML",
+            year=2017,
+            url="https://arxiv.org/pdf/1706.04599.pdf",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

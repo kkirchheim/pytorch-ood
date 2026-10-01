@@ -1,11 +1,6 @@
 # Adapted from https://github.com/VectorInstitute/gram-ood-detection
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.Gram
     :members:
     :inherited-members:
@@ -22,7 +17,14 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import ModelNotSetException, RequiresFittingException, StructuredDetector
+from ..api import (
+    DetectorInfo,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    StructuredDetector,
+    Task,
+)
 
 log = logging.getLogger(__name__)
 
@@ -50,10 +52,18 @@ class Gram(StructuredDetector):
     .. math :: \\Delta(x) = \\sum_{l} \\frac{\\delta_l(x)}{\\mathbb{E}[\\delta_l]}
 
     Higher values indicate more likely OOD inputs.
-
-    :see Implementation: `GitHub <https://github.com/VectorInstitute/gram-ood-detection>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1912.12510>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Detecting Out-of-Distribution Examples with Gram Matrices",
+            venue="ICML",
+            year=2020,
+            url="https://arxiv.org/abs/1912.12510",
+            code="https://github.com/VectorInstitute/gram-ood-detection",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

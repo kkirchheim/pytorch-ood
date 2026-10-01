@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.Mahalanobis
     :members:
     :inherited-members:
@@ -22,10 +17,13 @@ from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import (
+    DetectorInfo,
     FeaturesDetector,
     GradientDetector,
     ModelNotSetException,
+    Paper,
     RequiresFittingException,
+    Task,
 )
 from ..utils import (
     contains_unknown,
@@ -45,10 +43,18 @@ class Mahalanobis(FeaturesDetector):
     The outlier scores are then calculated as
 
     .. math :: - \\max_k \\lbrace (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k) \\rbrace
-
-    :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="A Simple Unified Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks",
+            venue="NeurIPS",
+            year=2018,
+            url="https://arxiv.org/abs/1807.03888",
+            code="https://github.com/pokaxpoka/deep_Mahalanobis_detector",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 
@@ -167,18 +173,25 @@ class Mahalanobis(FeaturesDetector):
 
 class MahalanobisODIN(GradientDetector):
     """
-    Mahalanobis distance detector with ODIN input preprocessing.
+    Mahalanobis distance detector with input preprocessing, as proposed in *A Simple Unified
+    Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks*: the input is
+    perturbed in the style of :class:`ODIN <pytorch_ood.detector.ODIN>` before the Mahalanobis
+    distance is computed.
 
-    Combines the Mahalanobis distance from *A Simple Unified Framework for Detecting
-    Out-of-Distribution Samples and Adversarial Attacks* with ODIN input perturbation
-    from *Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks*.
-
-    Adds gradient-guided input perturbation (FGSM-style) before computing the
-    Mahalanobis distance. Requires gradient computation during prediction.
-
-    :see Paper (Mahalanobis): `ArXiv <https://arxiv.org/abs/1807.03888>`__
-    :see Paper (ODIN): `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    The perturbation is gradient-guided (FGSM-style), so prediction requires gradient
+    computation.
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="A Simple Unified Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks",
+            venue="NeurIPS",
+            year=2018,
+            url="https://arxiv.org/abs/1807.03888",
+            code="https://github.com/pokaxpoka/deep_Mahalanobis_detector",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 

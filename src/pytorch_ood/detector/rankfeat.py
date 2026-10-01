@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.RankFeat
     :members:
     :inherited-members:
@@ -21,7 +14,7 @@ import torch
 from torch import Tensor
 from typing_extensions import Self
 
-from ..api import FeatureMapsDetector
+from ..api import DetectorInfo, FeatureMapsDetector, Paper, Task
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -68,7 +61,7 @@ class RankFeat(FeatureMapsDetector):
     the model must be split into a ``backbone`` (up to and including the target
     convolutional block) and a ``head`` (the remaining layers including the classifier).
 
-    Example Code:
+    .. rubric:: Examples
 
     .. code :: python
 
@@ -78,10 +71,19 @@ class RankFeat(FeatureMapsDetector):
             head=model.forward_feature_maps,
         )
         scores = detector(images)
-
-    :see Paper: `NeurIPS 2022 <https://arxiv.org/abs/2209.08590>`__
-    :see Implementation: `GitHub <https://github.com/KingJamesSong/RankFeat>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="RankFeat: Rank-1 Feature Removal for Out-of-distribution Detection",
+            venue="NeurIPS",
+            year=2022,
+            url="https://arxiv.org/abs/2209.08590",
+            code="https://github.com/KingJamesSong/RankFeat",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     def __init__(
         self,

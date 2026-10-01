@@ -236,6 +236,7 @@ If you use PyTorch-OOD in your research, please cite
    :caption: Library
    :hidden:
 
+   core_api
    detector
    losses
    data

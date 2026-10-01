@@ -5,6 +5,7 @@ from typing import Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.datasets import ImageNet, VisionDataset
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import _get_resource_file
 
 log = logging.getLogger(__name__)
@@ -31,12 +32,23 @@ class ImageNet200(VisionDataset):
 
     The OpenOOD splits are reproduced exactly:
 
-     * ``train`` -- all ImageNet-train images of the 200 classes (~259k images)
-     * ``val`` -- 1000 held-out ImageNet-val images (5 per class) for hyperparameter tuning
-     * ``test`` -- 9000 ImageNet-val images (45 per class), the in-distribution test set
-
-    :see Paper: `OpenOOD v1.5 <https://arxiv.org/abs/2306.09301>`__
+    * ``train`` -- all ImageNet-train images of the 200 classes (~259k images)
+    * ``val`` -- 1000 held-out ImageNet-val images (5 per class) for hyperparameter tuning
+    * ``test`` -- 9000 ImageNet-val images (45 per class), the in-distribution test set
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.IN_DISTRIBUTION},
+        license="ImageNet terms of access (non-commercial research)",
+        paper=Paper(
+            title="OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection",
+            venue="DMLR",
+            year=2024,
+            url="https://arxiv.org/abs/2306.09301",
+        ),
+        ai_coded=True,
+    )
 
     splits = ("train", "val", "test")
 
