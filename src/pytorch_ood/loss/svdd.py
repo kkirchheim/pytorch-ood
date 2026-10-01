@@ -7,7 +7,7 @@ from torch import Tensor
 
 from ..api import LossInfo, Paper, Representation, Task
 from ..model.centers import ClassCenters
-from ..utils import apply_reduction, is_known
+from ..utils import apply_reduction, drop_unknown, is_known
 
 
 class DeepSVDDLoss(torch.nn.Module):
@@ -88,11 +88,16 @@ class DeepSVDDLoss(torch.nn.Module):
     def forward(self, x: Tensor, y: Optional[Tensor] = None) -> Tensor:
         """
         :param x: features of shape :math:`B \\times D`
-        :param y: target labels of shape :math:`B` (either ID or OOD). If not given, will assume all samples are IN.
-        :return: loss :math:`\\max\\{0, \\lVert x - \\mu \\rVert^2 - r^2\\}`, where OOD samples contribute zero;
-            shape :math:`B` if the reduction is ``none``
+        :param y: target labels of shape :math:`B`; samples with labels :math:`< 0` are discarded.
+            If not given, all samples are assumed to be ID.
+        :return: loss :math:`\\max\\{0, \\lVert x - \\mu \\rVert^2 - r^2\\}`; one entry per ID sample if the
+            reduction is ``none``
         """
-        loss = DeepSVDDLoss.svdd_loss(x, self.center, radius=self.radius, y=y)
+        if y is not None:
+            y, x = drop_unknown(y, x)
+        if len(x) == 0 and self.reduction == "mean":
+            return x.sum() * 0.0
+        loss = DeepSVDDLoss.svdd_loss(x, self.center, radius=self.radius)
         return apply_reduction(loss, self.reduction)
 
     @staticmethod

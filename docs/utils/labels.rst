@@ -5,6 +5,8 @@ Label Utilities
 
 .. autofunction:: pytorch_ood.utils.is_unknown
 
+.. autofunction:: pytorch_ood.utils.drop_unknown
+
 .. autofunction:: pytorch_ood.utils.contains_known
 
 .. autofunction:: pytorch_ood.utils.contains_unknown

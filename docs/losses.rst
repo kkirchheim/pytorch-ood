@@ -14,7 +14,11 @@ Unsupervised
 Unsupervised losses only use in-distribution data (or similarly, only on
 examples from "known known" classes.)
 
-Therefore, these loss functions do not require OOD samples; labels :math:`< 0`, if present, are ignored.
+Therefore, these loss functions do not require OOD samples. Samples with labels :math:`< 0`, if present, are
+discarded with a warning (see :func:`~pytorch_ood.utils.drop_unknown`), so the loss equals the loss on the batch
+without them. With ``reduction="none"``, the output has one entry per ID sample, except for
+:class:`~pytorch_ood.loss.CrossEntropyLoss`, which keeps the shape of the targets (to support segmentation) and
+returns zero for OOD entries.
 
 .. toctree::
    :maxdepth: 1

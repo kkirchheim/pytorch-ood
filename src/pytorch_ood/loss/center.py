@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from ..api import LossInfo, Paper, Representation, Task
 from ..model.centers import ClassCenters
-from ..utils import is_known
+from ..utils import drop_unknown
 
 log = logging.getLogger(__name__)
 
@@ -100,19 +100,13 @@ class CenterLoss(nn.Module):
         :param target: ground truth labels with shape :math:`B`; labels :math:`< 0` are ignored
         :return: scalar loss
         """
-        known = is_known(target)
+        target, distmat = drop_unknown(target, distmat)
+        if len(target) == 0:
+            return distmat.sum() * 0.0
 
-        if known.any():
-            distmat = distmat[known]
-            target = target[known]
-            batch_size = distmat.size(0)
-
-            classes = torch.arange(self.num_classes).long().to(distmat.device)
-            target = target.unsqueeze(1).expand(batch_size, self.num_classes)
-            mask = target.eq(classes.expand(batch_size, self.num_classes))
-            dist = (distmat - self.radius).relu() * mask.float()
-            loss = dist.clamp(min=1e-12, max=1e12).mean()
-        else:
-            loss = torch.tensor(0.0, device=distmat.device)
-
-        return loss
+        batch_size = distmat.size(0)
+        classes = torch.arange(self.num_classes).long().to(distmat.device)
+        target = target.unsqueeze(1).expand(batch_size, self.num_classes)
+        mask = target.eq(classes.expand(batch_size, self.num_classes))
+        dist = (distmat - self.radius).relu() * mask.float()
+        return dist.clamp(min=1e-12, max=1e12).mean()
