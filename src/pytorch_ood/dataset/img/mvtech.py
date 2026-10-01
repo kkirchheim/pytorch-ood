@@ -18,11 +18,6 @@ class MVTechAD(ImageDatasetBase):
     MVTec AD is a dataset for benchmarking anomaly detection methods with a focus on industrial inspection.
     The dataset provides segmentation masks for anomalies.
 
-    .. image:: https://www.mvtec.com/fileadmin/Redaktion/mvtec.com/company/research/datasets/dataset_overview_large.png
-        :width: 800px
-        :alt: MVTech Anomaly Detection Dataset
-        :align: center
-
     :see Paper: https://link.springer.com/content/pdf/10.1007/s11263-020-01400-4.pdf
     :see Download: https://www.mvtec.com/company/research/datasets/mvtec-ad/
 

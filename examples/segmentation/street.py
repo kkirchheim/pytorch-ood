@@ -20,6 +20,8 @@ We then use the :class:`EnergyBased<pytorch_ood.detector.EnergyBased>` OOD detec
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/segmentation.png"
+
 import segmentation_models_pytorch as smp
 import torch
 from segmentation_models_pytorch.encoders import get_preprocessing_fn

@@ -1,8 +1,13 @@
-sphinx
-furo
-sphinx-gallery
-sphinx-copybutton
-sphinx-design
+# Build tooling is pinned: with -W, a new release that adds a warning would
+# otherwise break the docs build on CI and Read the Docs without any change here.
+sphinx==9.1.0
+# pinned: docs/_templates/page.html extends Furo's page template
+furo==2025.12.19
+sphinx-gallery==0.21.0
+sphinx-copybutton==0.5.2
+sphinx-design==0.7.0
+sphinxext-opengraph==0.13.0
+sphinx-notfound-page==1.1.0
 # github-light/-dark code highlighting styles
 pygments>=2.19
 matplotlib

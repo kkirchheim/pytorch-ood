@@ -145,10 +145,6 @@ class Places365(OpenOOD):
 
     :see Website: `Places <http://places.csail.mit.edu/browser.html>`__
 
-    .. image:: https://production-media.paperswithcode.com/datasets/Places-0000003475-4b6da14b.jpg
-      :target: http://places.csail.mit.edu/browser.html
-      :alt: Places 365 examples
-
     """
 
     gdrive_id = "1Ec-LRSTf6u5vEctKX9vRp9OA6tqnJ0Ay"

@@ -14,11 +14,6 @@ class TinyImageNet(VisionDataset):
     Small Version of the ImageNet with images of size :math:`64 \\times 64` from 200 classes used by
     Stanford. Each class has 500 images for training.
 
-    .. image :: https://production-media.paperswithcode.com/datasets/Tiny_ImageNet-0000001404-a53923c3_XCrVSGm.jpg
-        :width: 400px
-        :alt: Textured Dataset
-        :align: center
-
 
     This dataset is often used for training, but not included in Torchvision.
 

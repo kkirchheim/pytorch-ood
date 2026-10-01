@@ -33,18 +33,18 @@ class Chars74k(ImageDatasetBase):
     """
     Dataset from the paper *Character Recognition in Natural Images*. Can be used as example OOD data.
 
-    .. image:: http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/Samples/confusing_english.png
+    .. image:: https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/Samples/confusing_english.png
         :width: 800px
         :alt: Chars47k Dataset Example
         :align: center
 
-    :see Website: `Link <http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/>`__
+    :see Website: `Link <https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/>`__
     :see Paper: `Link <http://personal.ee.surrey.ac.uk/Personal/T.Decampos/papers/decampos_etal_visapp2009.pdf>`__
     """
 
     base_folder = "chars74k"
-    url_dataset = "http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/EnglishImg.tgz"
-    url_list = "http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/ListsTXT.tgz"
+    url_dataset = "https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/EnglishImg.tgz"
+    url_list = "https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/ListsTXT.tgz"
     filename_dataset = "EnglishImg.tgz"
     filename_list = "ListsTXT.tgz"
 

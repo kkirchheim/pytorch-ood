@@ -6,6 +6,8 @@ Historgram and Metrics for random scores with different delta.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/metrics.png"
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch

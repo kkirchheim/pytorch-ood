@@ -1,5 +1,6 @@
-{#- Adds a site-wide top header (desktop only) to Furo's page layout. On narrow
-    screens Furo's own mobile header takes over, see custom.css. -#}
+{#- Adds a site-wide top header and footer to Furo's page layout. Below Furo's
+    63em breakpoint the header swaps tabs and search field for buttons that open
+    Furo's navigation and table-of-contents drawers; see custom.css. -#}
 {% extends "!page.html" %}
 
 {%- macro nav_link(target, label, prefix=None) -%}
@@ -7,12 +8,26 @@
   <a class="site-header-link{% if active %} active{% endif %}" href="{{ pathto(target) }}">{{ label }}</a>
 {%- endmacro -%}
 
+{% block extrahead -%}
+{{ super() }}
+{#- Required by Read the Docs before it hands its add-on config to page scripts. #}
+<meta name="readthedocs-addons-api-version" content="1">
+{#- SVG favicon (adapts to dark browser UIs) with a PNG fallback; listing the PNG
+    first with sizes set makes browsers that support SVG prefer it. Plus the iOS
+    home screen icon. #}
+<link rel="icon" type="image/png" sizes="32x32" href="{{ pathto('_static/favicon-32.png', 1) }}">
+<link rel="icon" type="image/svg+xml" href="{{ pathto('_static/favicon.svg', 1) }}">
+<link rel="apple-touch-icon" href="{{ pathto('_static/apple-touch-icon.png', 1) }}">
+{%- endblock %}
+
 {% block body -%}
 <header class="site-header">
   <div class="site-header-inner">
+    <label class="site-header-icon site-header-mobile" for="__navigation" aria-label="Open navigation">
+      <svg><use href="#svg-menu"></use></svg>
+    </label>
     <a class="site-header-brand" href="{{ pathto(master_doc) }}">
-      <img class="only-light" src="{{ pathto('_static/' + theme_light_logo, 1) }}" alt="">
-      <img class="only-dark" src="{{ pathto('_static/' + theme_dark_logo, 1) }}" alt="">
+      <img src="{{ pathto('_static/' + theme_light_logo, 1) }}" alt="">
       <span>{{ project }}</span>
     </a>
     {%- if release %}
@@ -23,12 +38,16 @@
       {{ nav_link(master_doc, "Home") }}
       {{ nav_link("detector", "Detectors", "detectors/") }}
       {{ nav_link("losses", "Losses", "losses/") }}
+      {{ nav_link("data", "Datasets", "datasets/") }}
       {{ nav_link("models", "Models", "models/") }}
       {{ nav_link("benchmark", "Benchmarks", "benchmarks/") }}
       {{ nav_link("auto_examples/detectors/index", "Examples", "auto_examples/") }}
     </nav>
 
     <div class="site-header-actions">
+      <button class="site-header-icon site-header-mobile site-header-search-button" aria-label="Search the docs">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
       <form class="site-header-search" action="{{ pathto('search') }}" method="get" role="search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input type="search" name="q" placeholder="Search docs" aria-label="Search the docs" autocomplete="off">
@@ -43,20 +62,54 @@
         <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
         <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
       </button>
+      {%- if not furo_hide_toc %}
+      <label class="site-header-icon site-header-mobile" for="__toc" aria-label="Open table of contents">
+        <svg><use href="#svg-toc"></use></svg>
+      </label>
+      {%- endif %}
     </div>
   </div>
 </header>
 {{ super() }}
-<script>
-  // Ctrl/Cmd+K or "/" focuses the header search, as on most modern doc sites.
-  document.addEventListener("keydown", function (e) {
-    var input = document.querySelector(".site-header-search input");
-    if (!input || input.offsetParent === null) return;
-    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
-    if (((e.ctrlKey || e.metaKey) && e.key === "k") || (e.key === "/" && !typing)) {
-      e.preventDefault();
-      input.focus();
-    }
-  });
-</script>
 {%- endblock %}
+
+{% block footer -%}
+{{ super() }}
+<div class="site-footer">
+  <div class="site-footer-main">
+    <div class="site-footer-about">
+      <a class="site-footer-brand" href="{{ pathto(master_doc) }}">
+        <img src="{{ pathto('_static/' + theme_light_logo, 1) }}" alt="">
+        <span>{{ project }}</span>
+      </a>
+      <p>Out-of-Distribution detection for PyTorch. Released under the
+        <a href="https://github.com/kkirchheim/pytorch-ood/blob/dev/LICENSE">Apache License 2.0</a>.</p>
+    </div>
+    <nav class="site-footer-links" aria-label="Footer">
+      <div>
+        <h2>Docs</h2>
+        <a href="{{ pathto('getting_started') }}">Getting Started</a>
+        <a href="{{ pathto('detector') }}">Detectors</a>
+        <a href="{{ pathto('models/registry') }}">Model Registry</a>
+        <a href="{{ pathto('auto_examples/detectors/index') }}">Examples</a>
+      </div>
+      <div>
+        <h2>Project</h2>
+        <a href="https://github.com/kkirchheim/pytorch-ood">GitHub</a>
+        <a href="https://pypi.org/project/pytorch-ood/">PyPI</a>
+        <a href="https://github.com/kkirchheim/pytorch-ood/issues">Issues</a>
+        <a href="{{ pathto('support') }}">Support</a>
+      </div>
+      <div>
+        <h2>Research</h2>
+        <a href="https://openaccess.thecvf.com/content/CVPR2022W/HCIS/papers/Kirchheim_PyTorch-OOD_A_Library_for_Out-of-Distribution_Detection_Based_on_PyTorch_CVPRW_2022_paper.pdf">Paper (CVPRW 2022)</a>
+        <a href="{{ pathto(master_doc) }}#citing-pytorch-ood">How to cite</a>
+      </div>
+    </nav>
+  </div>
+  <div class="site-footer-bottom">
+    <span>&#169; {{ copyright }}</span>
+    <span>Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a></span>
+  </div>
+</div>
+{%- endblock footer %}

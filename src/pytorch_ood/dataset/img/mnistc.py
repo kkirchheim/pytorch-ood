@@ -20,13 +20,15 @@ class MNISTC(ImageDatasetBase):
     ``motion_blur``, ``rotate``, ``scale``, ``shear``, ``shot_noise``,
     ``spatter``, ``stripe``, ``translate`` and ``zigzag``.
 
+    .. figure:: /_static/datasets/mnistc.webp
+        :width: 100%
+        :alt: The same MNIST-C test digit under each of the 16 corruptions
+
+        The same test digit under each corruption. Images from MNIST-C by Norman Mu and Justin Gilmer,
+        licensed under `CC BY 4.0 <https://creativecommons.org/licenses/by/4.0/>`__.
+
     :see Paper: `ArXiv <https://arxiv.org/pdf/1906.02337.pdf>`__
     :see Download: `Zenodo <https://zenodo.org/record/3239543>`__
-
-    .. image:: https://media.arxiv-vanity.com/render-output/4755208/corruption_examples.png
-        :width: 800px
-        :alt: MNIST-C Dataset examples
-        :align: center
 
     """
 

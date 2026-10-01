@@ -6,6 +6,8 @@ Running :class:`GradNorm <pytorch_ood.detector.GradNorm>` on CIFAR 10.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/detectors.png"
+
 import logging
 
 from torch.utils.data import DataLoader

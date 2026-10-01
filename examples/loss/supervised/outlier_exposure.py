@@ -12,6 +12,8 @@ TinyImages database, which contains random images scraped from the internet.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/loss.png"
+
 import torch
 import torchvision.transforms as tvt
 from torch.optim import Adam

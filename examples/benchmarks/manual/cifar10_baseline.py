@@ -59,6 +59,8 @@ Example benchmark code for CIFAR10
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
+
 from copy import deepcopy
 
 import pandas as pd  # additional dependency, used here for convenience

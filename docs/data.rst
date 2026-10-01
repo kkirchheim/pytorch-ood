@@ -12,8 +12,11 @@ implementations support auto-downloading.
 .. py:module:: pytorch_ood.dataset.audio
 
 
-Image Classification
+Image
 ====================================================
+
+Classification
+----------------------------------------------------
 
 Contains datasets often used in anomaly detection, where the entire input is labeled as either ID or OOD.
 
@@ -53,8 +56,8 @@ Contains datasets often used in anomaly detection, where the entire input is lab
    datasets/uniformnoise
 
 
-Image Segmentation
-====================================================
+Segmentation
+----------------------------------------------------
 
 .. toctree::
    :maxdepth: 1
@@ -68,7 +71,7 @@ Image Segmentation
 
 
 Object Detection
-====================================================
+----------------------------------------------------
 
 .. toctree::
    :maxdepth: 1

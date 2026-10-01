@@ -6,6 +6,8 @@ Running :class:`MultiMahalanobis <pytorch_ood.detector.MultiMahalanobis>` on CIF
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/detectors.png"
+
 import logging
 
 from torch import nn

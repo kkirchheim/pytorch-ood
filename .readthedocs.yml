@@ -13,3 +13,27 @@ python:
 
 sphinx:
   configuration: docs/conf.py
+  fail_on_warning: true
+
+# Server-side search (the search window our header opens on Read the Docs).
+search:
+  ranking:
+    # pages documenting one component first, ahead of the overviews listing them
+    "detectors/*": 2
+    "losses/*": 2
+    "datasets/*": 2
+    "models/*": 2
+    "benchmarks/*": 2
+    "augmentations/*": 2
+    "utils/*": 2
+  ignore:
+    # Read the Docs' defaults, which this list replaces
+    - search.html
+    - search/index.html
+    - 404.html
+    - 404/index.html
+    # generated listings and highlighted source code, which duplicate the API pages
+    - genindex.html
+    - py-modindex.html
+    - "*sg_execution_times.html"
+    - "_modules/*"

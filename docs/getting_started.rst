@@ -4,11 +4,10 @@ Getting Started
 
 Setting up Environment
 ------------------------
-It is recommended to set up an anaconda environment with
-
-.. code-block:: shell
-
-    conda install pytorch torchvision torchaudio torchtext==0.14.0 pytorch-cuda=11.7 -c pytorch -c nvidia
+pytorch-ood runs on Python 3.8 or newer and any recent PyTorch. Install PyTorch first, with the
+command for your platform and CUDA version from the
+`PyTorch installation guide <https://pytorch.org/get-started/locally/>`__, for example in a fresh
+virtual environment or conda environment.
 
 Installing
 ----------------------
@@ -23,6 +22,13 @@ You can install the latest stable version directly via Python Packaging Index (P
 
    pip install pytorch-ood
 
+Some components need optional dependencies (scikit-learn for e.g. KNN and ViM, gdown for some
+dataset downloads). To install them as well:
+
+.. code-block:: shell
+
+   pip install "pytorch-ood[all]"
+
 
 Installing from Git
 ======================
@@ -31,7 +37,7 @@ To install the latest ``dev`` branch directly from git:
 
 .. code-block:: shell
 
-    pip install git+ssh://git@github.com/kkirchheim/pytorch-ood.git@dev
+    pip install git+https://github.com/kkirchheim/pytorch-ood.git@dev
 
 
 

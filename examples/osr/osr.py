@@ -6,6 +6,8 @@ Open Set Simulation on CIFAR 10
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/osr.png"
+
 import torch.nn
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader

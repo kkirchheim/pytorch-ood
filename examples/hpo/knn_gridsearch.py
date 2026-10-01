@@ -15,6 +15,8 @@ Since ``KNN`` exposes a feature encoder, ``GridSearch`` extracts the features
 once and reuses them across all candidate values of :math:`k`.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/hpo.png"
+
 import logging
 
 import torch

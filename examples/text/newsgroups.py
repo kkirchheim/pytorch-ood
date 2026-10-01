@@ -30,6 +30,8 @@ The original results can not be reproduced, as the dictionaries (word-to-token-m
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/text.png"
+
 import pandas as pd
 import torch
 import torch.nn.functional as F

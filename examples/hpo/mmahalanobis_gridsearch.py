@@ -12,6 +12,8 @@ each layer on its own), assigns it to the detector, and selects the best weighti
 held-out validation set with :class:`GridSearch <pytorch_ood.utils.GridSearch>`.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/hpo.png"
+
 import logging
 
 import torch

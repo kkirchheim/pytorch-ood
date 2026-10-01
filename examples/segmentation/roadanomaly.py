@@ -17,6 +17,8 @@ This model is evaluated using the :class:`EnergyBased<pytorch_ood.detector.Energ
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/segmentation.png"
+
 import segmentation_models_pytorch as smp
 import torch
 from PIL import Image
