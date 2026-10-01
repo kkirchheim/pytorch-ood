@@ -44,5 +44,6 @@ Thus, these losses can handle samples with target values :math:`< 0`.
    losses/vosregloss
    losses/virtualoutliersynthesizingregloss
    losses/mchadloss
+   losses/deepsadloss
    losses/backgroundclassloss
    losses/energymarginloss

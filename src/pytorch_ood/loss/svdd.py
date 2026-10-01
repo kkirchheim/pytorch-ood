@@ -111,9 +111,10 @@ class DeepSVDDLoss(torch.nn.Module):
         return loss
 
 
-class SSDeepSVDDLoss(torch.nn.Module):
+class DeepSADLoss(torch.nn.Module):
     """
-    Semi-Supervised generalization of Deep Support Vector Data Description.
+    Deep Semi-supervised Anomaly Detection (Deep SAD), the semi-supervised generalization of
+    Deep Support Vector Data Description, which also uses labeled outliers.
     It places a center :math:`\\mu` in the output space of the model and pulls ID samples towards this center in order
     to learn the common factors of intra class variance.
 
@@ -127,7 +128,7 @@ class SSDeepSVDDLoss(torch.nn.Module):
         :param n_features: dimensionality of the output space
         :param reduction: reduction method to apply
         """
-        super(SSDeepSVDDLoss, self).__init__()
+        super(DeepSADLoss, self).__init__()
         self._center = ClassCenters(1, n_features, fixed=True)
         self.reduction = reduction
 

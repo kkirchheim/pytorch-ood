@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.optim import SGD
 
-from src.pytorch_ood.loss import DeepSVDDLoss, SSDeepSVDDLoss
+from src.pytorch_ood.loss import DeepSADLoss, DeepSVDDLoss
 from tests.helpers import ClassificationModel
 
 
@@ -41,9 +41,9 @@ class TestDeepSVDD(unittest.TestCase):
         self.assertTrue((loss[5:] == 0).all())
 
 
-class TestSSDeepSVDD(unittest.TestCase):
+class TestDeepSAD(unittest.TestCase):
     def test_forward(self):
-        criterion = SSDeepSVDDLoss(n_features=10)
+        criterion = DeepSADLoss(n_features=10)
         logits = torch.randn(size=(10, 10))
         target = torch.zeros(size=(10,)).long()
         target[5:] = -1
@@ -51,9 +51,15 @@ class TestSSDeepSVDD(unittest.TestCase):
         self.assertIsNotNone(loss)
 
     def test_forward_2(self):
-        criterion = SSDeepSVDDLoss(n_features=10, reduction=None)
+        criterion = DeepSADLoss(n_features=10, reduction=None)
         logits = torch.randn(size=(10, 10))
         target = -1 * torch.ones(size=(10,)).long()
         loss = criterion(logits, target)
         self.assertIsNotNone(loss)
         self.assertFalse((loss == 0).any())
+
+    def test_deprecated_name(self):
+        import src.pytorch_ood.loss as losses
+
+        with self.assertWarns(DeprecationWarning):
+            self.assertIs(losses.SSDeepSVDDLoss, DeepSADLoss)

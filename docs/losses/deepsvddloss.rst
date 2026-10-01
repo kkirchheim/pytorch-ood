@@ -9,6 +9,3 @@ Deep SVDD Loss
 
 .. autoclass:: pytorch_ood.loss.DeepSVDDLoss
     :members:
-
-.. autoclass:: pytorch_ood.loss.SSDeepSVDDLoss
-    :members:
