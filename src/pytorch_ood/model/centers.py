@@ -14,6 +14,8 @@ class ClassCenters(nn.Module):
     These centers are either static, or learned via gradient descent.
     The centers :math:`\\mu_y` are stored in :attr:`params` as a matrix of shape
     :math:`K \\times D`, and are initialized randomly from a standard normal distribution.
+    Calling the module returns the squared Euclidean distances :math:`\\lVert x - \\mu_y \\rVert_2^2`
+    of the inputs to each center.
 
     The centers are also known as class proxy, class prototype or class anchor.
     """
@@ -64,7 +66,7 @@ class ClassCenters(nn.Module):
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Make class membership predictions based on the softmin of the distances to each center.
+        Make class membership predictions based on the softmin of the squared distances to each center.
 
         :param x: embeddings of samples of shape :math:`N \\times D`
         :return: class membership probabilities (softmin over the squared distances to the
@@ -77,6 +79,7 @@ class ClassCenters(nn.Module):
 class RunningCenters(nn.Module):
     """
     Estimates class centers from batches of data using a running mean estimator.
+    Calling the module returns the squared Euclidean distances of the inputs to each center.
     """
 
     def __init__(self, n_classes: int, n_embedding: int):
