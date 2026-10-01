@@ -37,7 +37,7 @@ class EnergyMarginLoss(nn.Module):
     Every batch has to contain both ID and OOD samples, otherwise the loss is not defined.
     Only classification is supported.
 
-    :see Derivation: `ArXiv <https://arxiv.org/pdf/2202.03299>`__
+    :see Constrained formulation: `Training OOD Detectors in their Natural Habitats (WOODS, Katz-Samuels et al., ICML 2022) <https://arxiv.org/abs/2202.03299>`__
     """
 
     info = LossInfo(
