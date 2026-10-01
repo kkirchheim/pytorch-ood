@@ -1,8 +1,814 @@
+/* Styling on top of Furo, modeled on the TorchMetrics docs: a near-black canvas,
+   the page content on a raised rounded card, a blue accent, Inter for text and
+   JetBrains Mono for code. Colors are set through Furo's CSS variables so the
+   theme's own components follow along; the rules further down only cover layout
+   and details Furo has no variable for. */
+
+/* ---------------------------------------------------------------- palette -- */
+
+body {
+    --radius-card: 8px;
+    --radius-small: 6px;
+
+    /* Light mode: same structure, inverted, so the toggle stays usable. */
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f4f6fa;
+    --color-background-border: #e3e8f0;
+    --color-sidebar-background: #f4f6fa;
+    --color-sidebar-background-border: transparent;
+    --color-sidebar-caption-text: #1a1a1a;
+    --color-sidebar-link-text: #4a4a55;
+    --color-sidebar-link-text--top-level: #4a4a55;
+    --color-sidebar-item-background--current: transparent;
+    --color-sidebar-item-background--hover: rgba(31, 100, 214, 0.06);
+    --color-sidebar-search-background: #ffffff;
+    --color-sidebar-search-border: #d6dde8;
+    --color-toc-background: transparent;
+    --color-foreground-primary: #1a1a1a;
+    --color-foreground-secondary: #4a4a55;
+    --color-foreground-muted: #6e6e7a;
+    --color-accent: #1f64d6;
+    --color-accent-tint: rgba(31, 100, 214, 0.05);
+    --color-inline-code-background: rgba(31, 100, 214, 0.07);
+    --color-inline-code-foreground: #1a56b8;
+    --color-api-background: rgba(31, 100, 214, 0.05);
+    --color-api-background-hover: rgba(31, 100, 214, 0.09);
+    --color-api-name: #1a1a1a;
+    --color-api-pre-name: #6e6e7a;
+    --color-link: var(--color-accent);
+    --color-link--hover: var(--color-accent);
+    --color-brand-visited: var(--color-accent);
+    --color-link--visited: var(--color-accent);
+    --color-link--visited--hover: var(--color-accent);
+    --color-link-underline--visited: transparent;
+    --color-link-underline--visited--hover: var(--color-accent);
+    --color-link-underline: transparent;
+    --color-link-underline--hover: var(--color-accent);
+    --color-table-header-background: #f4f6fa;
+    --color-table-border: #e3e8f0;
+}
+
+/* Dark mode values are taken from the TorchMetrics site. They are defined twice
+   because Furo resolves "auto" through the media query and an explicit choice
+   through the data-theme attribute. */
+@media (prefers-color-scheme: dark) {
+    body:not([data-theme="light"]) {
+        --color-background-primary: #131313;
+        --color-background-secondary: #080808;
+        --color-background-border: #262626;
+        --color-background-hover: #1c1c1c;
+        --color-background-item: #262626;
+        --color-sidebar-background: #080808;
+        --color-sidebar-background-border: transparent;
+        --color-sidebar-caption-text: #fafafa;
+        --color-sidebar-link-text: rgba(255, 255, 255, 0.75);
+        --color-sidebar-link-text--top-level: rgba(255, 255, 255, 0.75);
+        --color-sidebar-item-background--current: transparent;
+        --color-sidebar-item-background--hover: rgba(255, 255, 255, 0.04);
+        --color-sidebar-search-background: #080808;
+        --color-sidebar-search-background--focus: #131313;
+        --color-sidebar-search-border: #3a3a3a;
+        --color-toc-background: transparent;
+        --color-foreground-primary: #fafafa;
+        --color-foreground-secondary: #cfcfcf;
+        --color-foreground-muted: #8f8f8f;
+        --color-foreground-border: #3a3a3a;
+        --color-accent: #78b4ff;
+        --color-accent-tint: rgba(120, 180, 255, 0.04);
+        --color-inline-code-background: rgba(120, 180, 255, 0.08);
+        --color-inline-code-foreground: #78b4ff;
+        --color-code-foreground: #e6e6e6;
+        --color-api-background: rgba(120, 180, 255, 0.04);
+        --color-api-background-hover: rgba(120, 180, 255, 0.08);
+        --color-api-name: #fafafa;
+        --color-api-pre-name: #9a9a9a;
+        --color-link: var(--color-accent);
+        --color-link--hover: var(--color-accent);
+    --color-brand-visited: var(--color-accent);
+    --color-link--visited: var(--color-accent);
+    --color-link--visited--hover: var(--color-accent);
+    --color-link-underline--visited: transparent;
+    --color-link-underline--visited--hover: var(--color-accent);
+        --color-link-underline: transparent;
+        --color-link-underline--hover: var(--color-accent);
+        --color-table-header-background: #1a1a1a;
+        --color-table-border: #262626;
+        --color-admonition-background: #181818;
+        --color-card-background: #181818;
+        --color-card-border: #262626;
+    }
+}
+
+body[data-theme="dark"] {
+    --color-background-primary: #131313;
+    --color-background-secondary: #080808;
+    --color-background-border: #262626;
+    --color-background-hover: #1c1c1c;
+    --color-background-item: #262626;
+    --color-sidebar-background: #080808;
+    --color-sidebar-background-border: transparent;
+    --color-sidebar-caption-text: #fafafa;
+    --color-sidebar-link-text: rgba(255, 255, 255, 0.75);
+    --color-sidebar-link-text--top-level: rgba(255, 255, 255, 0.75);
+    --color-sidebar-item-background--current: transparent;
+    --color-sidebar-item-background--hover: rgba(255, 255, 255, 0.04);
+    --color-sidebar-search-background: #080808;
+    --color-sidebar-search-background--focus: #131313;
+    --color-sidebar-search-border: #3a3a3a;
+    --color-toc-background: transparent;
+    --color-foreground-primary: #fafafa;
+    --color-foreground-secondary: #cfcfcf;
+    --color-foreground-muted: #8f8f8f;
+    --color-foreground-border: #3a3a3a;
+    --color-accent: #78b4ff;
+    --color-accent-tint: rgba(120, 180, 255, 0.04);
+    --color-inline-code-background: rgba(120, 180, 255, 0.08);
+    --color-inline-code-foreground: #78b4ff;
+    --color-code-foreground: #e6e6e6;
+    --color-api-background: rgba(120, 180, 255, 0.04);
+    --color-api-background-hover: rgba(120, 180, 255, 0.08);
+    --color-api-name: #fafafa;
+    --color-api-pre-name: #9a9a9a;
+    --color-link: var(--color-accent);
+    --color-link--hover: var(--color-accent);
+    --color-brand-visited: var(--color-accent);
+    --color-link--visited: var(--color-accent);
+    --color-link--visited--hover: var(--color-accent);
+    --color-link-underline--visited: transparent;
+    --color-link-underline--visited--hover: var(--color-accent);
+    --color-link-underline: transparent;
+    --color-link-underline--hover: var(--color-accent);
+    --color-table-header-background: #1a1a1a;
+    --color-table-border: #262626;
+    --color-admonition-background: #181818;
+    --color-card-background: #181818;
+    --color-card-border: #262626;
+}
+
+/* ----------------------------------------------------------------- layout -- */
+
+/* The canvas is the secondary color; the article and its on-page TOC sit on a
+   rounded card in the primary color. */
+body,
+.page {
+    background: var(--color-background-secondary);
+}
+
+@media (min-width: 63em) {
+    .main {
+        background: var(--color-background-primary);
+        border: 1px solid var(--color-background-border);
+        border-radius: var(--radius-card);
+        margin: 12px 12px 12px 0;
+    }
+}
+
+/* ------------------------------------------------------------- typography -- */
+
+body {
+    letter-spacing: -0.01em;
+}
+
+article {
+    color: var(--color-foreground-secondary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--color-foreground-primary);
+    letter-spacing: -0.02em;
+}
+
+h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- sidebar -- */
+
+/* Compact brand row (small logo next to the name) instead of Furo's large
+   centered logo. */
+.sidebar-brand {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 1rem var(--sidebar-item-spacing-horizontal) 0.75rem;
+}
+
+.sidebar-logo-container {
+    margin: 0;
+}
+
+.sidebar-logo {
+    width: auto;
+    height: 2.25rem;
+    max-width: none;
+}
+
+.sidebar-brand-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--color-foreground-primary);
+}
+
+.sidebar-tree .caption,
+.sidebar-tree :not(.caption) > .caption-text {
+    font-size: 0.67rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.sidebar-tree .reference {
+    font-size: 0.875rem;
+}
+
+/* Active entry: accent-colored text with a vertical rule to its left. */
+.sidebar-tree .current-page > .reference {
+    color: var(--color-accent);
+    font-weight: 500;
+    box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.sidebar-tree li.toctree-l1 > ul {
+    border-left: 1px solid var(--color-background-border);
+    margin-left: var(--sidebar-item-spacing-horizontal);
+}
+
+/* The search field is inset as a rounded box, so the container's horizontal
+   padding has to be added to Furo's icon offset as well. */
+.sidebar-search-container {
+    padding: 0.25rem var(--sidebar-item-spacing-horizontal) 0.75rem;
+    background: transparent;
+}
+
+.sidebar-search-container:hover,
+.sidebar-search-container:focus-within {
+    background: transparent;
+}
+
+.sidebar-search-container::before {
+    left: calc(2 * var(--sidebar-item-spacing-horizontal));
+    /* Center on the input, not on the container, whose bottom padding is larger. */
+    top: 0.25rem;
+    bottom: 0.75rem;
+    margin: auto 0;
+    /* Furo puts the input at z-index 10; it now has a background, so lift the icon above it. */
+    z-index: 11;
+    pointer-events: none;
+}
+
+.sidebar-search {
+    border: 1px solid var(--color-sidebar-search-border);
+    border-radius: var(--radius-small);
+    padding-left: calc(var(--sidebar-item-spacing-horizontal) + var(--sidebar-search-icon-size) + 0.5rem);
+    background: var(--color-sidebar-search-background);
+}
+
+.sidebar-search:focus {
+    border-color: var(--color-accent);
+}
+
+/* ------------------------------------------------------------------- code -- */
+
+code.literal {
+    background: var(--color-inline-code-background);
+    color: var(--color-inline-code-foreground);
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8125em;
+}
+
+a code.literal {
+    color: inherit;
+}
+
+.highlight,
+div[class*="highlight-"] {
+    border-radius: var(--radius-small);
+}
+
+div[class*="highlight-"] {
+    border: 1px solid var(--color-background-border);
+}
+
+/* pygments.css paints its own (navy/white) block background; use the palette's
+   neutral one instead. Furo scopes those rules as body[data-theme=...] .highlight,
+   hence the matching selector. The color itself is set in conf.py. */
+body[data-theme] .highlight {
+    background: var(--color-code-background);
+}
+
+/* sphinx-copybutton: Furo already styles the button (borderless, shown on
+   hover); only recolor it. The selector matches Furo's. */
+.highlight button.copybtn {
+    color: var(--color-foreground-muted);
+}
+
+.highlight button.copybtn:hover {
+    color: var(--color-accent);
+}
+
+.highlight button.copybtn.success {
+    color: #3fb950;
+}
+
+/* The "Copied!" tooltip. */
+.o-tooltip--left:after {
+    background: var(--color-foreground-primary);
+    color: var(--color-background-primary);
+    border-radius: 4px;
+}
+
+/* API signatures: tinted box with an accent rule on the left. */
+dl.py:not(.field-list) > dt {
+    background: var(--color-api-background);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-small);
+    /* Furo wraps long signatures with a hanging indent (text-indent: -2.5em), so
+       only the vertical padding may change here. */
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+dl.py:not(.field-list) > dt .sig-name {
+    color: var(--color-api-name);
+}
+
+dl.py:not(.field-list) > dt .viewcode-link {
+    color: var(--color-accent);
+}
+
+/* ----------------------------------------------------------------- tables -- */
+
+table.docutils {
+    border-radius: var(--radius-small);
+    box-shadow: none;
+    border: 1px solid var(--color-table-border);
+    overflow: hidden;
+}
+
+table.docutils th {
+    color: var(--color-foreground-primary);
+}
+
 /* Keep model identifiers on a single line; let the description column wrap
-   instead. The RTD theme sets `.rst-content code.literal { white-space: normal }`,
-   which re-enables wrapping on the inline-code identifier inside the cell, so we
-   have to override it on the code element itself (a plain `td` rule is not enough). */
-.rst-content table.model-table td:first-child,
-.rst-content table.model-table td:first-child code.literal {
+   instead. */
+table.model-table td:first-child,
+table.model-table td:first-child code.literal {
     white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ admonitions -- */
+
+.admonition {
+    border-radius: var(--radius-small);
+    box-shadow: none;
+    border: 1px solid var(--color-background-border);
+}
+
+/* --------------------------------------------------------- sphinx-gallery -- */
+
+.sphx-glr-thumbcontainer {
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-background-border);
+    border-radius: var(--radius-card);
+    box-shadow: none;
+}
+
+.sphx-glr-thumbcontainer:hover {
+    border-color: var(--color-accent);
+    box-shadow: none;
+}
+
+/* ------------------------------------------------------------ diagrams ---- */
+
+/* Graphviz renders black edges on a transparent background, which disappear on
+   the dark canvas. Inverting turns them into light edges between dark boxes. */
+@media (prefers-color-scheme: dark) {
+    body:not([data-theme="light"]) img.graphviz {
+        filter: invert(0.9);
+    }
+}
+
+body[data-theme="dark"] img.graphviz {
+    filter: invert(0.9);
+}
+
+/* ------------------------------------------------------------ site header -- */
+
+/* Sticky top bar from _templates/page.html. Desktop only: below Furo's 63em
+   breakpoint its own mobile header (hamburger + TOC toggle) is used instead. */
+body {
+    --site-header-height: 3.5rem;
+}
+
+.site-header {
+    display: none;
+}
+
+@media (min-width: 63em) {
+    .site-header {
+        display: block;
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        height: var(--site-header-height);
+        background: color-mix(in srgb, var(--color-background-secondary) 82%, transparent);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        border-bottom: 1px solid var(--color-background-border);
+    }
+
+    .site-header-inner {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        height: 100%;
+        padding: 0 1.25rem;
+    }
+
+    .site-header-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        color: var(--color-foreground-primary);
+        font-size: 1.05rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .site-header-brand img {
+        height: 1.9rem;
+        width: auto;
+    }
+
+    .site-header-version {
+        margin-left: -0.6rem;
+        padding: 0.1rem 0.45rem;
+        border: 1px solid var(--color-background-border);
+        border-radius: 999px;
+        color: var(--color-foreground-muted);
+        font-family: var(--font-stack--monospace);
+        font-size: 0.7rem;
+        white-space: nowrap;
+    }
+
+    .site-header-nav {
+        display: flex;
+        gap: 0.25rem;
+        margin-left: 0.75rem;
+    }
+
+    .site-header-link {
+        padding: 0.4rem 0.7rem;
+        border-radius: var(--radius-small);
+        color: var(--color-foreground-secondary);
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 120ms, background 120ms;
+    }
+
+    /* Furo colors a:visited, which would otherwise win over the rules above. */
+    .site-header-link:visited,
+    .site-header-brand:visited {
+        color: var(--color-foreground-secondary);
+    }
+
+    .site-header-brand:visited {
+        color: var(--color-foreground-primary);
+    }
+
+    .site-header-link:hover {
+        color: var(--color-foreground-primary);
+        background: var(--color-sidebar-item-background--hover);
+    }
+
+    .site-header-link.active,
+    .site-header-link.active:visited {
+        color: var(--color-accent);
+        background: var(--color-inline-code-background);
+    }
+
+    .site-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1 1 auto;
+        justify-content: flex-end;
+        min-width: 0;
+        margin-left: auto;
+    }
+
+    .site-header-search {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 0 1 15rem;
+        min-width: 8rem;
+        height: 2.1rem;
+        padding: 0 0.6rem;
+        border: 1px solid var(--color-sidebar-search-border);
+        border-radius: var(--radius-small);
+        background: var(--color-background-primary);
+        transition: border-color 120ms, box-shadow 120ms;
+    }
+
+    .site-header-search:focus-within {
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 3px var(--color-inline-code-background);
+    }
+
+    .site-header-search svg {
+        flex-shrink: 0;
+        width: 1rem;
+        height: 1rem;
+        fill: none;
+        stroke: var(--color-foreground-muted);
+        stroke-width: 2;
+        stroke-linecap: round;
+    }
+
+    .site-header-search input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--color-foreground-primary);
+        font: inherit;
+        font-size: 0.85rem;
+    }
+
+    .site-header-search input::-webkit-search-cancel-button {
+        display: none;
+    }
+
+    .site-header-search kbd {
+        padding: 0.05rem 0.35rem;
+        border: 1px solid var(--color-background-border);
+        border-radius: 4px;
+        color: var(--color-foreground-muted);
+        background: transparent;
+        box-shadow: none;
+        font-family: var(--font-stack);
+        font-size: 0.68rem;
+        white-space: nowrap;
+    }
+
+    .site-header-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.1rem;
+        height: 2.1rem;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius-small);
+        background: transparent;
+        color: var(--color-foreground-secondary);
+        cursor: pointer;
+    }
+
+    .site-header-icon:hover {
+        color: var(--color-foreground-primary);
+        background: var(--color-sidebar-item-background--hover);
+    }
+
+    .site-header-icon svg {
+        width: 1.15rem;
+        height: 1.15rem;
+    }
+
+    /* Furo's theme toggle icons are stroked, the GitHub mark is filled. */
+    .theme-toggle.site-header-icon svg {
+        color: inherit;
+        stroke: currentColor;
+    }
+
+    /* The header now carries brand, search and theme toggle. */
+    .sidebar-brand,
+    .sidebar-search-container,
+    .content-icon-container .theme-toggle-container {
+        display: none;
+    }
+
+    .sidebar-tree {
+        margin-top: 0.75rem;
+    }
+
+    /* Furo's sticky columns assume they start at the top of the viewport. */
+    .sidebar-sticky,
+    .toc-sticky {
+        top: var(--site-header-height);
+        height: calc(100vh - var(--site-header-height));
+    }
+
+    html {
+        scroll-padding-top: calc(var(--site-header-height) + 1rem);
+    }
+}
+
+/* Between the mobile breakpoint and a comfortable desktop width, drop the
+   decorative bits first so the navigation never wraps. */
+@media (min-width: 63em) and (max-width: 80em) {
+    .site-header-inner {
+        gap: 0.75rem;
+    }
+
+    .site-header-nav {
+        margin-left: 0;
+    }
+
+    .site-header-link {
+        padding: 0.4rem 0.5rem;
+    }
+
+    .site-header-version,
+    .site-header-search kbd {
+        display: none;
+    }
+}
+
+/* Furo's mobile header, restyled to match. */
+.mobile-header {
+    background: var(--color-background-secondary);
+    border-bottom: 1px solid var(--color-background-border);
+}
+
+/* ------------------------------------------------------- sphinx-design -- */
+
+/* Buttons, tabs and cards from sphinx-design follow the palette. */
+body {
+    --sd-color-primary: var(--color-accent);
+    --sd-color-primary-highlight: var(--color-accent);
+    --sd-color-primary-text: var(--color-background-primary);
+    --sd-color-secondary: var(--color-foreground-muted);
+    --sd-color-secondary-highlight: var(--color-foreground-secondary);
+    --sd-color-secondary-text: var(--color-background-primary);
+    --sd-color-card-background: var(--color-background-secondary);
+    --sd-color-card-border: var(--color-background-border);
+    --sd-color-card-border-hover: var(--color-accent);
+    --sd-color-tabs-label-active: var(--color-accent);
+    --sd-color-tabs-label-hover: var(--color-foreground-primary);
+    --sd-color-tabs-label-inactive: var(--color-foreground-muted);
+    --sd-color-tabs-underline-active: var(--color-accent);
+    --sd-color-tabs-underline-hover: var(--color-background-border);
+    --sd-color-tabs-underline: var(--color-background-border);
+}
+
+.sd-card {
+    border-radius: var(--radius-card);
+    box-shadow: none !important;
+}
+
+/* ------------------------------------------------------------- landing -- */
+
+/* index.rst. The page title is the hero headline; :has() scopes these rules to
+   the landing page without a page-specific template. */
+article:has(.landing-hero) h1 {
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+    margin-top: 1.5rem;
+    background: linear-gradient(120deg, var(--color-foreground-primary) 30%, var(--color-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.landing-lead {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--color-foreground-secondary);
+    max-width: 40em;
+}
+
+.landing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 1.75rem 0 0;
+}
+
+.landing-actions p {
+    margin: 0;
+}
+
+.landing-button.sd-btn {
+    padding: 0.5rem 1.1rem;
+    border-radius: var(--radius-small);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.landing-button.sd-btn-outline-secondary {
+    color: var(--color-foreground-primary);
+    border-color: var(--color-background-border);
+}
+
+.landing-button.sd-btn-outline-secondary:hover {
+    color: var(--color-foreground-primary);
+    background: var(--color-sidebar-item-background--hover);
+    border-color: var(--color-foreground-muted);
+}
+
+/* Stats: a quiet "proof strip" under the hero, not tiles, so the buttons stay
+   the only focal point. A hairline separates it from the hero; thin dividers
+   separate the numbers. */
+.landing-stats {
+    margin: 2.75rem 0 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-background-border);
+}
+
+.landing-stat {
+    padding-left: 1rem;
+    border-left: 1px solid var(--color-background-border);
+    color: var(--color-foreground-muted);
+    font-size: 0.8rem;
+}
+
+.landing-stats .sd-col:first-child .landing-stat {
+    padding-left: 0;
+    border-left: none;
+}
+
+.landing-stat p {
+    margin: 0;
+}
+
+.landing-stat-value {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    color: var(--color-foreground-primary);
+}
+
+/* Two per row on narrow screens: no divider at the start of a row. */
+@media (max-width: 767.98px) {
+    .landing-stats .sd-col:nth-child(odd) .landing-stat {
+        padding-left: 0;
+        border-left: none;
+    }
+
+    .landing-stats .sd-col:nth-child(n + 3) {
+        margin-top: 0.75rem;
+    }
+}
+
+/* Section cards */
+.landing-cards .sd-card {
+    font-size: 0.9rem;
+    transition: border-color 120ms, transform 120ms;
+}
+
+.landing-cards .sd-card:hover {
+    transform: translateY(-2px);
+}
+
+.landing-cards .sd-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-foreground-primary);
+}
+
+.landing-cards .sd-card-title svg {
+    color: var(--color-accent);
+}
+
+.landing-cards .sd-card-text {
+    color: var(--color-foreground-secondary);
+}
+
+.landing-more {
+    margin-top: 1.25rem;
+    font-size: 0.9rem;
+    color: var(--color-foreground-muted);
+}
+
+/* sphinx-design pads its grid container, which indents the tiles and cards
+   relative to the surrounding text. */
+.landing-stats.sd-container-fluid,
+.landing-cards.sd-container-fluid {
+    padding-left: 0;
+    padding-right: 0;
 }

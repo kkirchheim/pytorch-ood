@@ -1,6 +1,10 @@
 sphinx
-sphinx-rtd-theme
+furo
 sphinx-gallery
+sphinx-copybutton
+sphinx-design
+# github-light/-dark code highlighting styles
+pygments>=2.19
 matplotlib
 
 # required numpy < 2 or crashes

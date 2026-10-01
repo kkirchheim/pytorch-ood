@@ -137,7 +137,7 @@ To build the documentation, run
 
 .. code-block:: shell
 
-    pip install sphinx_gallery sphinx_rtd_theme sphinx
+    pip install -r docs/requirements.txt
     cd docs
     make html
 
