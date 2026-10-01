@@ -112,6 +112,7 @@ class DeepSVDDLoss(torch.nn.Module):
         :param y: Optional labels of shape :math:`B`.
         :return: per-sample loss of shape :math:`B`
         """
+        radius = torch.as_tensor(radius)
         if y is not None:
             known = is_known(y)
         else:
@@ -133,8 +134,18 @@ class DeepSADLoss(torch.nn.Module):
     to learn the common factors of intra class variance.
 
     The distance of a representation to this center can be used as outlier score for the corresponding input.
-    Labeled outliers (targets :math:`< 0`) are pushed away from the center by minimizing the inverse of their
-    distance, whereas samples with targets :math:`\\geq 0` are pulled towards it.
+    Samples with targets :math:`\\geq 0` are pulled towards the center, and labeled outliers (targets :math:`< 0`)
+    are pushed away from it by minimizing the inverse of their squared distance. The per-sample loss is
+
+    .. math::
+        \\begin{cases}
+            \\lVert f(x) - \\mu \\rVert_2^2 & \\text{if } y \\geq 0 \\\\
+            \\eta \\, (\\lVert f(x) - \\mu \\rVert_2^2 + \\epsilon)^{-1} & \\text{if } y < 0
+        \\end{cases}
+
+    .. warning:: The paper also distinguishes labeled from unlabeled normal samples and weights all
+        labeled samples with :math:`\\eta`. Here, all samples with targets :math:`\\geq 0` are treated
+        as unlabeled normal data, so :math:`\\eta` weights only the labeled outliers.
 
     In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before training.
     This implementation has no ``center`` argument; to initialize it, set ``loss.center.params.data``.
@@ -153,13 +164,24 @@ class DeepSADLoss(torch.nn.Module):
         supervised=True,
     )
 
-    def __init__(self, n_features: int, reduction: Optional[str] = "mean"):
+    def __init__(
+        self,
+        n_features: int,
+        eta: float = 1.0,
+        eps: float = 1e-6,
+        reduction: Optional[str] = "mean",
+    ):
         """
         :param n_features: dimensionality :math:`D` of the output space
+        :param eta: weight :math:`\\eta` of the labeled outliers
+        :param eps: added to the squared distance of labeled outliers before inverting it, so that
+            outliers at the center give a finite loss
         :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
         """
         super(DeepSADLoss, self).__init__()
         self._center = ClassCenters(1, n_features, fixed=True)
+        self.eta = eta
+        self.eps = eps
         self.reduction = reduction
 
     @property
@@ -176,13 +198,10 @@ class DeepSADLoss(torch.nn.Module):
         :return: the loss; of shape :math:`B` if the reduction is ``none``
         """
         known = is_known(y)
-        loss = torch.zeros(size=(x.shape[0],))
-
-        if known.any():
-            loss[known] = self._center(x[known]).squeeze(1).pow(2)
-
-        # TODO
-        if (~known).any():
-            loss[~known] = 1 / self._center(x[~known]).squeeze(1).pow(2)
-
+        # squared distances to the center
+        d = self._center(x).squeeze(1)
+        loss = torch.zeros_like(d)
+        loss[known] = d[known]
+        # eps as in the reference implementation
+        loss[~known] = self.eta / (d[~known] + self.eps)
         return apply_reduction(loss, self.reduction)

@@ -63,3 +63,31 @@ class TestDeepSAD(unittest.TestCase):
 
         with self.assertWarns(DeprecationWarning):
             self.assertIs(losses.SSDeepSVDDLoss, DeepSADLoss)
+
+
+class TestDeepSADValues(unittest.TestCase):
+    def _loss(self, **kwargs):
+        criterion = DeepSADLoss(n_features=2, reduction="none", **kwargs)
+        criterion.center.params.data.zero_()
+        return criterion
+
+    def test_squared_distance(self):
+        x = torch.tensor([[2.0, 0.0], [2.0, 0.0]])
+        loss = self._loss()(x, torch.tensor([0, -1]))
+        torch.testing.assert_close(loss, torch.tensor([4.0, 1 / (4.0 + 1e-6)]))
+
+    def test_eta_weights_outliers(self):
+        x = torch.tensor([[2.0, 0.0], [2.0, 0.0]])
+        loss = self._loss(eta=3.0)(x, torch.tensor([0, -1]))
+        torch.testing.assert_close(loss, torch.tensor([4.0, 3 / (4.0 + 1e-6)]))
+
+    def test_outlier_at_center_is_finite(self):
+        loss = self._loss()(torch.zeros(1, 2), torch.tensor([-1]))
+        self.assertTrue(torch.isfinite(loss).all())
+
+
+class TestSVDDLossDefaultRadius(unittest.TestCase):
+    def test_default_radius(self):
+        criterion = DeepSVDDLoss(n_dim=2)
+        loss = DeepSVDDLoss.svdd_loss(torch.randn(3, 2), criterion.center)
+        self.assertEqual(loss.shape, (3,))
