@@ -20,7 +20,7 @@ class GRUClassifier(nn.Module):
         `GitHub <https://github.com/hendrycks/outlier-exposure/blob/master/NLP_classification/train.py>`__
     """
 
-    def __init__(self, num_classes, n_vocab, embedding_dim=50):
+    def __init__(self, num_classes: int, n_vocab: int, embedding_dim: int = 50):
         """
         :param num_classes: number of classes in the dataset
         :param n_vocab: size of the vocabulary, i.e. number of distinct tokens
@@ -29,7 +29,7 @@ class GRUClassifier(nn.Module):
         super().__init__()
         self.embedding = nn.Embedding(n_vocab, embedding_dim, padding_idx=1)
         self.gru = nn.GRU(
-            input_size=50,
+            input_size=embedding_dim,
             hidden_size=128,
             num_layers=2,
             bias=True,
