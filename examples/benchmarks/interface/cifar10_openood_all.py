@@ -11,6 +11,8 @@ external dependencies or method-specific trained weights, such as OpenMax and
 WeightedEBO.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
+
 from collections import OrderedDict
 from copy import deepcopy
 

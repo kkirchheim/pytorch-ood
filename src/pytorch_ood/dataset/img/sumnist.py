@@ -23,10 +23,11 @@ class SuMNIST(Dataset):
     :see Paper: `LNCS <https://link.springer.com/chapter/10.1007/978-3-031-40953-0_32>`__
     :see Examples: `GitHub <https://github.com/kkirchheim/sumnist>`__
 
-    .. image:: https://github.com/kkirchheim/sumnist/blob/master/img/mnist-example.png?raw=true
-        :width: 800px
-        :alt: SuMNIST Dataset examples
-        :align: center
+    .. figure:: /_static/datasets/sumnist.webp
+        :width: 100%
+        :alt: Eight SuMNIST test images with digit bounding boxes, four normal and four anomalous
+
+        Test images with their bounding boxes: normal (digits sum to 20) and anomalous.
 
     """
 
@@ -125,7 +126,7 @@ class SuMNIST(Dataset):
         target["labels"] = labels
         target["image_id"] = torch.tensor([index])
         target["area"] = area
-        target["iscrowd"] = labels = torch.zeros((len(boxes),), dtype=torch.int64)
+        target["iscrowd"] = torch.zeros((len(boxes),), dtype=torch.int64)
         target["anomaly"] = torch.tensor(-1 if labels.sum().item() != 20 else 0).long()
 
         if self.transforms is not None:

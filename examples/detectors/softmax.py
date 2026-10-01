@@ -6,6 +6,8 @@ Uses MSP based on a pre-trained model from the Hendrycks baseline paper.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/detectors.png"
+
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 

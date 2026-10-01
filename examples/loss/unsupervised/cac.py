@@ -12,6 +12,8 @@ Here, we train the model for 10 epochs on the CIFAR10 dataset, using a backbone 
 :math:`32 \\times 32` resized version of the ImageNet as a foundation.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/loss.png"
+
 import torch
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR

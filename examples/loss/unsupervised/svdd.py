@@ -16,6 +16,8 @@ We test the model against FashionMNIST.
 First, some imports etc.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/loss.png"
+
 import torch
 from torch import nn
 from torch.optim import Adam

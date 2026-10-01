@@ -10,6 +10,8 @@ This example mirrors the other detector demos, but keeps fitting and evaluation 
 small subsets so it stays reasonably fast.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/detectors.png"
+
 import logging
 
 import torch

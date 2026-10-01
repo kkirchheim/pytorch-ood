@@ -8,6 +8,8 @@ trial only changes ``k`` (which does not affect the fitted index) and re-scores 
 validation set. Ranges are defined by hand in the objective with ``trial.suggest_*``.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/hpo.png"
+
 import logging
 
 import optuna

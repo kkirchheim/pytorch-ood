@@ -22,10 +22,11 @@ class CIFAR100GAN(Dataset):
     Default sample :math:`\\sigma` is 50.0. Contains 50,000 samples. Label is `-1` by default.
 
 
-    .. image :: https://files.kondas.de/goe-data/cifar100gan.jpg
-        :width: 600px
-        :alt: CIFAR 100 GAN Dataset
-        :align: center
+    .. figure:: /_static/datasets/cifar100gan.webp
+        :width: 100%
+        :alt: 48 samples from the CIFAR 100 GAN dataset
+
+        Random samples (:math:`\\sigma = 50`).
 
     :see Website: `GitHub <https://github.com/kkirchheim/mlsw2022-goe>`__
     :see Paper: `NeurIPS MLSW <https://openreview.net/forum?id=SU7OAfhc8OM>`__

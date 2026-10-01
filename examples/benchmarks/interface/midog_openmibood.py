@@ -13,6 +13,8 @@ Reproduces the MIDOG benchmark from
     the relative paths in the bundled image list files (e.g. ``1a/017/...``).
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
+
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 from torchvision import transforms

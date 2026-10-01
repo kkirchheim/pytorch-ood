@@ -14,6 +14,8 @@ classifier is required.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/detectors.png"
+
 import logging
 
 from torch.utils.data import DataLoader

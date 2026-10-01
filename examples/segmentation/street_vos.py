@@ -22,6 +22,8 @@ this loss function.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/segmentation.png"
+
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch

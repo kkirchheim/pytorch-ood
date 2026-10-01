@@ -1,34 +1,46 @@
 Utilities
 ************************************
 
-.. automodule:: pytorch_ood.utils
-   :members:
-      is_known,
-      is_unknown,
-      contains_known,
-      contains_unknown,
-      contains_known_and_unknown,
-      calc_openness,
-      TensorBuffer,
-      fix_random_seed,
-      extract_features
-   :undoc-members:
+Helpers that the rest of the library builds on: evaluation metrics, the label conventions for
+in- and out-of-distribution samples, dataset transforms, and feature extraction.
+
+.. py:module:: pytorch_ood.utils
 
 
-Transformations
-================
+Evaluation
+====================================
 
-.. automodule:: pytorch_ood.utils.transforms
+.. toctree::
+   :maxdepth: 1
 
-
-Metrics
-================
-
-.. automodule:: pytorch_ood.utils.metrics
-    :members: calibration_error, aurra
+   utils/metrics
+   utils/hpo
 
 
-Hyperparameter Optimization
-============================
+Data and Labels
+====================================
 
-.. automodule:: pytorch_ood.utils.hpo
+.. toctree::
+   :maxdepth: 1
+
+   utils/labels
+   utils/transforms
+
+
+Features
+====================================
+
+.. toctree::
+   :maxdepth: 1
+
+   utils/features
+   utils/tensorbuffer
+
+
+Miscellaneous
+====================================
+
+.. toctree::
+   :maxdepth: 1
+
+   utils/misc

@@ -20,7 +20,7 @@ class WikiText2(Dataset):
 
     Split can be one of ``train``, ``test`` and ``val``.
 
-    :see Paper: `ArXiv <https://.org/abs/1609.07843>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/1609.07843>`__
     """
 
     url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip"
@@ -102,7 +102,7 @@ class WikiText103(WikiText2):
 
     Split can be one of ``train``, ``test`` and ``val``.
 
-    :see Paper: `ArXiv <https://.org/abs/1609.07843>`__
+    :see Paper: `ArXiv <https://arxiv.org/abs/1609.07843>`__
     """
 
     url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-103-v1.zip"

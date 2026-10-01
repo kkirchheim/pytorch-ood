@@ -1,9 +1,5 @@
 """
-Free Spoken Digit Dataset
-----------------------------------------------
-.. autoclass:: pytorch_ood.dataset.audio.FSDD
-   :members:
-
+Audio datasets for OOD detection.
 """
 
 from .fsdd import FSDD

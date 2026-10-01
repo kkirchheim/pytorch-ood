@@ -25,6 +25,8 @@ You can run this example with:
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/loss.png"
+
 import math
 
 import torch

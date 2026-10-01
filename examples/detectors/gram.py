@@ -6,6 +6,8 @@ Running :class:`Gram <pytorch_ood.detector.Gram>` on CIFAR 10.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/detectors.png"
+
 import logging
 
 from torch import nn

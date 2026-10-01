@@ -50,6 +50,26 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  # Builds the documentation like Read the Docs does (.readthedocs.yml), with
+  # warnings as errors: broken cross-references, components without a docs page
+  # (see _SplitSection in docs/conf.py) and docstring markup errors fail CI.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          python -m pip install --upgrade pip
+          python -m pip install -r docs/requirements.txt
+      - name: Build documentation
+        run: sphinx-build -W --keep-going -b html docs docs/_build/html
+
   # Regression guard for a real incident: a change once made a module import an
   # "optional" dependency unconditionally. Every job above installs the optional
   # extras, so the tests never saw it fail — it only broke for users who installed

@@ -15,11 +15,6 @@ class Textures(VisionDataset):
     Textures dataset from the paper *Describing Textures in the Wild*, also known as DTD.
     Often used as OOD data.
 
-    .. image :: https://production-media.paperswithcode.com/datasets/DTD-0000002377-abe5e400_AubcN36.jpg
-        :width: 600px
-        :alt: Textured Dataset
-        :align: center
-
     :see Paper: `ArXiv <https://arxiv.org/abs/1311.3618v2>`__
     :see Website: `Link <https://www.robots.ox.ac.uk/~vgg/data/dtd/>`__
     """

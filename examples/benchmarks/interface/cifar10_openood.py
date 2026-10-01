@@ -8,6 +8,8 @@ model from the Hendrycks baseline paper.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
+
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 
