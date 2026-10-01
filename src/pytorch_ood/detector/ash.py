@@ -8,7 +8,7 @@
 """
 
 import logging
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 import torch.nn
@@ -22,50 +22,36 @@ from .energy import EnergyBased
 log = logging.getLogger(__name__)
 
 
-def ash_b(x: Tensor, percentile: float = 0.65) -> Tensor:
+def _prune(x: Tensor, percentile: float, fill: Optional[Tensor] = None) -> Tensor:
+    """
+    Keep the largest activations per sample and set the rest to zero, without modifying ``x``.
+    If ``fill`` (shape :math:`B`) is given, the kept activations are replaced by it.
+    """
     assert x.dim() == 4
-    b, c, h, w = x.shape
-
-    # calculate the sum of the input per sample
-    s1 = x.sum(dim=[1, 2, 3])
-
+    b = x.shape[0]
     n = x.shape[1:].numel()
     k = n - int(np.round(n * percentile))
-    t = x.view((b, c * h * w))
+    # reshape instead of view, since the feature maps may be non-contiguous (e.g. channels_last)
+    t = x.reshape(b, n)
     v, i = torch.topk(t, k, dim=1)
-    fill = s1 / k
-    fill = fill.unsqueeze(dim=1).expand(v.shape)
-    t.zero_().scatter_(dim=1, index=i, src=fill)
-    return x
+    if fill is not None:
+        v = (fill / k).unsqueeze(dim=1).expand(v.shape)
+    return torch.zeros_like(t).scatter_(dim=1, index=i, src=v).view_as(x)
+
+
+def ash_b(x: Tensor, percentile: float = 0.65) -> Tensor:
+    # the kept activations are binarized to the mean that preserves the sum of the input
+    return _prune(x, percentile, fill=x.sum(dim=[1, 2, 3]))
 
 
 def ash_p(x: Tensor, percentile: float = 0.65) -> Tensor:
-    assert x.dim() == 4
-
-    b, c, h, w = x.shape
-
-    n = x.shape[1:].numel()
-    k = n - int(np.round(n * percentile))
-    t = x.view((b, c * h * w))
-    v, i = torch.topk(t, k, dim=1)
-    t.zero_().scatter_(dim=1, index=i, src=v)
-
-    return x
+    return _prune(x, percentile)
 
 
 def ash_s(x: Tensor, percentile: float = 0.65) -> Tensor:
-    assert x.dim() == 4
-    b, c, h, w = x.shape
-
-    # calculate the sum of the input per sample
+    # sum of the input per sample before and after pruning
     s1 = x.sum(dim=[1, 2, 3])
-    n = x.shape[1:].numel()
-    k = n - int(np.round(n * percentile))
-    t = x.view((b, c * h * w))
-    v, i = torch.topk(t, k, dim=1)
-    t.zero_().scatter_(dim=1, index=i, src=v)
-
-    # calculate new sum of the input per sample after pruning
+    x = _prune(x, percentile)
     s2 = x.sum(dim=[1, 2, 3])
 
     # apply sharpening
@@ -95,8 +81,7 @@ class ASH(FeatureMapsDetector):
     average pooling are shaped.
 
     .. note::
-        The activations passed to the detector are modified in place, so cached feature maps should not be
-        reused afterwards. Feature maps have to be 4-dimensional; pooled features of shape
+        Feature maps have to be 4-dimensional; pooled features of shape
         :math:`B \\times C` can be passed as :math:`B \\times C \\times 1 \\times 1`.
 
     .. rubric:: Examples
@@ -179,7 +164,7 @@ class ASH(FeatureMapsDetector):
     def predict_feature_maps(self, feature_maps: Tensor) -> Tensor:
         """
         :param feature_maps: activations of the backbone, shape
-            :math:`B \\times C \\times H \\times W`. Modified in place.
+            :math:`B \\times C \\times H \\times W`
         :return: outlier scores of shape :math:`B`
         """
         x = self.ash(feature_maps, self.percentile)
