@@ -14,6 +14,8 @@ from torchvision.datasets.utils import (
     download_url,
 )
 
+from ...api import DatasetInfo, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -22,15 +24,26 @@ class TinyImages(Dataset):
     The TinyImages dataset is often used as auxiliary OOD training data.
     While it has been removed from the website, downloadable versions can be found on the internet.
 
-    :see Website: `Link <https://groups.csail.mit.edu/vision/TinyImages/>`__
+    Items are :math:`32 \\times 32` RGB images as :class:`numpy.ndarray` (not PIL images) read from the binary file
+    of all 79,302,017 images; the target is always ``-1`` (the label of OOD samples) by default.
+    Indices wrap around modulo the number of images. If an image is unreadable, or listed in the CIFAR
+    index file while ``exclude_cifar`` is set, it is replaced by a randomly drawn one, so an item is not
+    deterministic in these cases, and ``len`` is always the size of the full dataset.
+
     :see Mirror: `archive.org <https://archive.org/details/80-million-tiny-images-1-of-2>`__
 
     ..  warning::
         The use of this dataset is discouraged by the authors.
         If you are interested in the underlying reasons, see *Large image datasets:
         A pyrrhic win for computer vision?*
-
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license=None,
+        homepage="https://groups.csail.mit.edu/vision/TinyImages/",
+    )
 
     def __init__(
         self,
@@ -40,6 +53,13 @@ class TinyImages(Dataset):
         target_transform=None,
         exclude_cifar=True,
     ):
+        """
+        :param datafile: path to the binary file with the 79,302,017 images (``tiny_images.bin``)
+        :param cifar_index_file: path to the file with the (1-based) indices of the images that are part of CIFAR
+        :param transform: function applied to the image (a :class:`numpy.ndarray`)
+        :param target_transform: function applied to the target
+        :param exclude_cifar: do not return images that are listed in ``cifar_index_file``
+        """
         self.datafile = datafile
         self.cifar_index_file = cifar_index_file
         self.n_images = 79302017  #
@@ -98,17 +118,30 @@ class TinyImages(Dataset):
 
 class TinyImages300k(Dataset):
     """
-    A cleaned version of the TinyImages Dataset with 300.000 images, often used as auxiliary data
-    from training more robust models.
-
-    :see Website: `GitHub <https://github.com/hendrycks/outlier-exposure>`__
+    A cleaned version of the TinyImages Dataset with 300,000 images, often used as auxiliary data
+    for training more robust models. Images are returned as :class:`PIL.Image.Image` of size
+    :math:`32 \\times 32`; all targets are ``-1`` (the label of OOD samples) by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license=None,
+        homepage="https://github.com/hendrycks/outlier-exposure",
+    )
 
     filename = "300K_random_images.npy"
     url = "https://people.eecs.berkeley.edu/~hendrycks/300K_random_images.npy"
     md5 = "64ca64357de98351f28454274a112dc3"
 
     def __init__(self, root, transform=None, target_transform=None, download=False):
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        :raises FileNotFoundError: if the data is missing and ``download`` is false
+        """
         self.datafile = join(root, self.filename)
         if not exists(self.datafile):
             if download:

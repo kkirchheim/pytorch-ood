@@ -2,12 +2,18 @@ import re
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple, Union, overload
+from typing import ClassVar, Dict, List, Optional, Sequence, Tuple, Union, overload
 
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from pytorch_ood.api import Detector, FeaturesDetector, GradientDetector, LogitsDetector
+from pytorch_ood.api import (
+    BenchmarkInfo,
+    Detector,
+    FeaturesDetector,
+    GradientDetector,
+    LogitsDetector,
+)
 from pytorch_ood.utils import OODMetrics, TensorBuffer
 
 _CACHE_VERSION = 1
@@ -19,13 +25,26 @@ def _sanitize_cache_token(value: str) -> str:
 
 class Benchmark(ABC):
     """
-    Base class for Benchmarks
+    Base class for benchmarks.
+
+    A benchmark provides an in-distribution training set via :meth:`train_set` and a list of
+    test sets via :meth:`test_sets`, one per OOD dataset. In the test sets, ID samples carry
+    their class labels and OOD samples are labelled with values :math:`< 0`. Subclasses set the
+    attribute ``ood_names``, a list with the name of each OOD dataset in the order of
+    :meth:`test_sets`. These names are the values of the ``Dataset`` field in the results of
+    :meth:`evaluate`.
+    """
+
+    info: ClassVar[Optional[BenchmarkInfo]] = None
+    """
+    Metadata of the benchmark: the paper whose evaluation protocol it reproduces,
+    and so on (see :doc:`/core_api/metadata`).
     """
 
     @abstractmethod
     def train_set(self) -> Dataset:
         """
-        Training dataset
+        In-distribution training dataset, e.g. to fit a detector or train a model.
         """
 
     @abstractmethod
@@ -36,6 +55,9 @@ class Benchmark(ABC):
 
         :param known: include ID
         :param unknown: include OOD
+        :return: test datasets, in the order of ``ood_names``. OOD samples are labelled
+            :math:`< 0`.
+        :raises ValueError: if both ``known`` and ``unknown`` are false (in the implementations)
         """
         pass
 
@@ -423,20 +445,31 @@ class Benchmark(ABC):
         together, this method can reuse cached intermediate representations
         instead of recomputing model outputs for every detector. If ``cache=True``,
         those representations are also kept on the benchmark instance and reused
-        across later ``evaluate(...)`` calls. If ``cache_dir`` is given, cached
-        tensors are additionally persisted to disk.
+        across later ``evaluate(...)`` calls (this also holds if ``cache_dir`` is
+        given). If ``cache_dir`` is given, cached tensors are additionally persisted to disk.
 
         Disk-backed cache reuse is keyed only by user-provided ``cache_key`` and
         lightweight metadata, so cache correctness is the caller's responsibility.
 
+        Only logits detectors (using ``model``) and pooled-feature detectors (using
+        ``encoder``) can reuse cached representations; all other detectors run the full
+        pipeline. Detectors are not fitted by this method, call ``fit()`` beforehand. They are
+        moved to ``device``. The metrics are those computed by
+        :class:`~pytorch_ood.utils.OODMetrics`. Each OOD dataset in ``ood_names`` is evaluated
+        together with the ID test data.
+
         :param detector: detector instance or a sequence of detectors
-        :param loader_kwargs: keyword arguments forwarded to the data loader
+        :param loader_kwargs: keyword arguments for :class:`torch.utils.data.DataLoader`, e.g.
+            ``{"batch_size": 128}``. Without a ``batch_size``, samples are processed one at a time.
         :param device: device to move inputs and detectors to
         :param cache: keep cached representations on the benchmark instance
-        :param cache_dir: optional directory for file-backed caches
+        :param cache_dir: optional directory for file-backed caches. Requires ``cache_key``,
+            otherwise a warning is issued and only in-memory caching is used.
         :param cache_key: user-supplied cache key used for disk cache reuse
-        :return: benchmark results. For multiple detectors, each result includes
-            a ``Detector`` field with the detector class name.
+        :return: list with one dictionary per OOD dataset (and per detector, if a sequence was
+            given) containing the metrics of :class:`~pytorch_ood.utils.OODMetrics` and the
+            field ``Dataset`` with the name of the OOD dataset. For a sequence of detectors, each
+            result also includes a ``Detector`` field with the detector class name.
         """
         detectors, many = self._normalize_detectors(detector)
 

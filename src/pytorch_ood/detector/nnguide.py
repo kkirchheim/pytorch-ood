@@ -1,29 +1,29 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.NNGuide
     :members:
 
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
-from pytorch_ood.api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from pytorch_ood.api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from pytorch_ood.utils import extract_features, is_known
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class NNGuide(FeaturesDetector):
@@ -37,7 +37,7 @@ class NNGuide(FeaturesDetector):
     energy-scaled feature bank) and the sample's own energy:
 
     .. math::
-        s(x) = - \\underbrace{\\frac{1}{k} \\sum_{z \\in \\mathcal{N}_k(x)}
+        - \\underbrace{\\frac{1}{k} \\sum_{z \\in \\mathcal{N}_k(x)}
         \\langle f(x),\\, E(z) \\cdot f(z) \\rangle}_{\\text{guidance}} \\cdot E(x)
 
     where :math:`E(x) = \\log \\sum_i \\exp(l_i(x))` is the energy score,
@@ -45,11 +45,11 @@ class NNGuide(FeaturesDetector):
     :math:`k` nearest neighbors in the energy-scaled feature bank measured by inner product.
 
     The encoder extracts penultimate-layer features. The head computes logits from features
-    and is used internally to compute energy scores, similar to :class:`ViM`.
+    and is used internally to compute energy scores, similar to :class:`ViM <pytorch_ood.detector.ViM>`.
 
-    Example Code:
+    .. rubric:: Examples
 
-    .. code :: python
+    .. code-block:: python
 
         model = WideResNet()
         detector = NNGuide(
@@ -59,10 +59,19 @@ class NNGuide(FeaturesDetector):
         )
         detector.fit(train_loader)
         scores = detector(images)
-
-    :see Paper: `arXiv <https://arxiv.org/abs/2309.14888>`__
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Nearest Neighbor Guidance for Out-of-Distribution Detection",
+            venue="ICCV",
+            year=2023,
+            url="https://arxiv.org/abs/2309.14888",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = True
 
@@ -76,6 +85,7 @@ class NNGuide(FeaturesDetector):
         :param encoder: neural network that extracts penultimate-layer features
         :param head: callable that maps features to logits (e.g., a linear layer)
         :param k: number of nearest neighbors for guidance (default: 10)
+        :raise ImportError: if scikit-learn is not installed
         """
         super(NNGuide, self).__init__()
         self.encoder = encoder
@@ -90,12 +100,14 @@ class NNGuide(FeaturesDetector):
 
         self._nbrs = NearestNeighbors(n_neighbors=k, metric="cosine", n_jobs=-1)
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
+    def fit(self, data_loader: DataLoader, device=None) -> Self:
         """
         Extract features from the data loader and build the energy-scaled feature bank.
 
         :param data_loader: data loader with ID training data
-        :param device: device for feature extraction. If ``None``, inferred from encoder.
+        :param device: device for feature extraction. If ``None``, the detector device is used, else the
+            device of the encoder parameters, else ``cpu``.
+        :return: self
         """
         if device is None:
             device = self.device
@@ -113,17 +125,18 @@ class NNGuide(FeaturesDetector):
         z, y = extract_features(model=self.encoder, data_loader=data_loader, device=device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, labels: Tensor, batch_size: int = 4096) -> Self:
+    def fit_features(self, z: Tensor, labels: Tensor, batch_size: int = 4096) -> Self:
         """
         Build the energy-scaled feature bank from pre-extracted features.
 
-        :param z: features, shape ``(n, feature_dim)``
-        :param labels: corresponding labels
-        :param batch_size: chunk size used to bound peak GPU memory while computing
-            energies and normalized features -- materializing the whole ``(n, d)``
-            feature/logit/normalized-feature tensor set on GPU at once is intractable
-            at full-dataset scale (e.g. ``n`` = 1.28M for ImageNet-1K)
+        :param z: features of shape :math:`N \\times D`
+        :param labels: class labels of shape :math:`N`; OOD samples (label below zero) are ignored
+        :param batch_size: number of samples processed at once; lower it to reduce peak GPU memory
+        :return: self
+        :raise ValueError: if no ID sample is given
         """
+        # Chunking bounds peak GPU memory: materializing the whole feature/logit/normalized-feature
+        # tensor set on GPU at once is intractable at full-dataset scale (e.g. n = 1.28M for ImageNet-1K).
         known = is_known(labels)
 
         if not known.any():
@@ -167,6 +180,7 @@ class NNGuide(FeaturesDetector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: model inputs
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -182,7 +196,8 @@ class NNGuide(FeaturesDetector):
         """
         Compute the NNGuide outlier score from pre-extracted features.
 
-        :param z: features, shape ``(batch, feature_dim)``
+        :param z: features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
         if self._scaled_features is None:
             raise RequiresFittingException()

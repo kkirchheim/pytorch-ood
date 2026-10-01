@@ -33,12 +33,17 @@ class ResNet18(ResNet):
         :param weights: unused; accepted for interface compatibility with
             ``torchvision.models.resnet18`` (weights are loaded separately by the
             model registry)
+        :param kwargs: further arguments forwarded to ``torchvision.models.ResNet``
         """
         super().__init__(block=BasicBlock, layers=[2, 2, 2, 2], num_classes=num_classes, **kwargs)
 
     def feature_maps(self, x: Tensor) -> Tensor:
         """
         Spatial feature maps before global average pooling.
+
+        :param x: input images of shape :math:`B \\times 3 \\times H \\times W`
+        :return: feature maps of shape :math:`B \\times D \\times H' \\times W'`, with
+            :math:`D = 512`
         """
         x = self.conv1(x)
         x = self.bn1(x)
@@ -53,6 +58,9 @@ class ResNet18(ResNet):
     def forward_feature_maps(self, x: Tensor) -> Tensor:
         """
         Maps spatial feature maps (as returned by :meth:`feature_maps`) to logits.
+
+        :param x: feature maps of shape :math:`B \\times D \\times H' \\times W'`
+        :return: class logits of shape :math:`B \\times K`
         """
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
@@ -61,6 +69,9 @@ class ResNet18(ResNet):
     def features(self, x: Tensor) -> Tensor:
         """
         Extracts (flattened, pooled) features before the last fully connected layer.
+
+        :param x: input images of shape :math:`B \\times 3 \\times H \\times W`
+        :return: features of shape :math:`B \\times D`, with :math:`D = 512`
         """
         x = self.avgpool(self.feature_maps(x))
         return torch.flatten(x, 1)
@@ -80,12 +91,17 @@ class ResNet50(ResNet):
         :param weights: unused; accepted for interface compatibility with
             ``torchvision.models.resnet50`` (weights are loaded separately by the
             model registry)
+        :param kwargs: further arguments forwarded to ``torchvision.models.ResNet``
         """
         super().__init__(block=Bottleneck, layers=[3, 4, 6, 3], num_classes=num_classes, **kwargs)
 
     def feature_maps(self, x: Tensor) -> Tensor:
         """
         Spatial feature maps before global average pooling.
+
+        :param x: input images of shape :math:`B \\times 3 \\times H \\times W`
+        :return: feature maps of shape :math:`B \\times D \\times H' \\times W'`, with
+            :math:`D = 2048`
         """
         x = self.conv1(x)
         x = self.bn1(x)
@@ -100,6 +116,9 @@ class ResNet50(ResNet):
     def forward_feature_maps(self, x: Tensor) -> Tensor:
         """
         Maps spatial feature maps (as returned by :meth:`feature_maps`) to logits.
+
+        :param x: feature maps of shape :math:`B \\times D \\times H' \\times W'`
+        :return: class logits of shape :math:`B \\times K`
         """
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
@@ -108,6 +127,9 @@ class ResNet50(ResNet):
     def features(self, x: Tensor) -> Tensor:
         """
         Extracts (flattened, pooled) features before the last fully connected layer.
+
+        :param x: input images of shape :math:`B \\times 3 \\times H \\times W`
+        :return: features of shape :math:`B \\times D`, with :math:`D = 2048`
         """
         x = self.avgpool(self.feature_maps(x))
         return torch.flatten(x, 1)

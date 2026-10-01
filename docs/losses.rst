@@ -14,7 +14,7 @@ Unsupervised
 Unsupervised losses only use in-distribution data (or similarly, only on
 examples from "known known" classes.)
 
-Therefore, all of these loss functions expect that the target labels are strictly :math:`\geq 0`.
+Therefore, these loss functions do not require OOD samples; labels :math:`< 0`, if present, are ignored.
 
 .. toctree::
    :maxdepth: 1
@@ -26,12 +26,13 @@ Therefore, all of these loss functions expect that the target labels are strictl
    losses/crossentropyloss
    losses/confidenceloss
    losses/logitnorm
+   losses/virtualoutliersynthesizingregloss
 
 
 Supervised
 ========================================
 
-Supervised Losses make use from example Out-of-Distribution samples (or samples from known unknown classes).
+Supervised Losses make use of example Out-of-Distribution samples (or samples from known unknown classes).
 Thus, these losses can handle samples with target values :math:`< 0`.
 
 .. toctree::
@@ -42,7 +43,7 @@ Thus, these losses can handle samples with target values :math:`< 0`.
    losses/objectosphereloss
    losses/energyregularizedloss
    losses/vosregloss
-   losses/virtualoutliersynthesizingregloss
    losses/mchadloss
+   losses/deepsadloss
    losses/backgroundclassloss
    losses/energymarginloss

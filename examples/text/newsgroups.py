@@ -83,8 +83,8 @@ def prep(x):
 
 
 # %%
-train_dataset = NewsGroup20(root, train=True, transform=prep)
-dataset_in_test = NewsGroup20(root, train=False, transform=prep)
+train_dataset = NewsGroup20(root, train=True, transform=prep, download=True)
+dataset_in_test = NewsGroup20(root, train=False, transform=prep, download=True)
 
 # %%
 # Add padding, etc.

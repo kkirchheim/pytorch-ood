@@ -6,6 +6,7 @@ from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.transforms.functional import to_tensor
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -17,12 +18,28 @@ class SegmentMeIfYouCan(ImageDatasetBase):
 
     From the paper *SegmentMeIfYouCan: A Benchmark for Anomaly Segmentation*. Contains two subsets: RoadAnomaly21 and RoadObstacle21
 
-    .. note:: Similar to Paper *Segment Every Out-of-Distribution Object* (`ArXiv <https://arxiv.org/pdf/2311.16516v3>`__, `Github <https://github.com/WenjieZhao1/S2M>`__) for ``RoadAnomaly21`` only **10** and for ``RoadObstacle21`` only **30** images are available.
+    Only the publicly available validation images with annotations are provided: **10** images for
+    ``RoadAnomaly21`` and **30** images for ``RoadObstacle21``. The same images are used in the paper
+    *Segment Every Out-of-Distribution Object* (`ArXiv <https://arxiv.org/pdf/2311.16516v3>`__,
+    `Github <https://github.com/WenjieZhao1/S2M>`__).
 
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/2104.14812>`__
-    :see Website: `Website <https://segmentmeifyoucan.com/datasets>`__
+    Images are :class:`PIL.Image.Image` whose size depends on the subset. The target is a long tensor of shape
+    :math:`H \\times W` with value ``0`` for in-distribution pixels, ``-1`` for anomalous pixels and
+    ``VOID_LABEL`` (``1``) for pixels that should be ignored.
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license="RoadObstacle21 CC-BY-4.0; RoadAnomaly21 images CC-BY, CC-BY-SA or public domain",
+        paper=Paper(
+            title="SegmentMeIfYouCan: A Benchmark for Anomaly Segmentation",
+            venue="NeurIPS",
+            year=2021,
+            url="https://arxiv.org/abs/2104.14812",
+        ),
+        homepage="https://segmentmeifyoucan.com/datasets",
+    )
 
     root_dir_name = "SMIYC"
     subset_list = ["RoadAnomaly21", "RoadObstacle21"]
@@ -55,14 +72,16 @@ class SegmentMeIfYouCan(ImageDatasetBase):
         self,
         root: str,
         subset: str,
-        transform: Optional[Callable[[Tuple], Tuple]] = None,
+        transform: Optional[Callable[[Any, Any], Tuple[Any, Any]]] = None,
         download: bool = False,
     ) -> None:
         """
-        :param root: root path for dataset
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
         :param subset: one of ``RoadAnomaly21``, ``RoadObstacle21``
-        :param transform: transformations to apply to images and masks, will get tuple as argument
-        :param download: if dataset should be downloaded automatically
+        :param transform: called as ``transform(image, mask)`` with the PIL image and the target mask,
+            and must return the transformed ``(image, mask)`` tuple
+        :param download: download the data to ``root`` if it is not found there
+        :raises ValueError: if ``subset`` is invalid
         """
         root = join(root, self.root_dir_name)
         super(ImageDatasetBase, self).__init__(root, transform=transform)
@@ -130,7 +149,7 @@ class SegmentMeIfYouCan(ImageDatasetBase):
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
         :param index: index
-        :returns: (image, target) where target is the annotation of the image.
+        :return: tuple of the image and the target mask of shape :math:`H \\times W`
         """
         file, target = self.all_images[index], self.all_masks[index]
 

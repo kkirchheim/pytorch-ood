@@ -1,10 +1,4 @@
 """
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
 
 ..  autoclass:: pytorch_ood.detector.NACUE
     :members:
@@ -22,9 +16,12 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 
 from pytorch_ood.api import (
+    DetectorInfo,
     GradientDetector,
     ModelNotSetException,
+    Paper,
     RequiresFittingException,
+    Task,
 )
 
 
@@ -98,9 +95,36 @@ class NACUE(GradientDetector):
     """
     Neuron Activation Coverage from the paper *Neuron Activation Coverage: Rethinking Out-of-Distribution Detection and Generalization*
 
-    :see Paper:
-        `ICLR <https://arxiv.org/pdf/2306.02879>`__
+    For each of the given layers, the detector computes :math:`z \\cdot \\partial \\mathrm{KL} / \\partial z` for every neuron,
+    where the KL divergence is taken between the softmax output and the uniform distribution.
+    This value is squashed with a sigmoid of steepness :math:`\\alpha` and assigned to one of :math:`M` bins per neuron.
+    The bins are geometric, i.e., dense near 0 and 1.
+    :meth:`fit <pytorch_ood.detector.NACUE.fit>` counts how often each bin is hit on ID data.
+    A sample is scored by its coverage :math:`\\phi = \\min(\\text{count} / O^*, 1)`, averaged over neurons and
+    summed over layers. The negative coverage is returned, so larger scores indicate outliers.
+
+    Both fitting and prediction need gradients and run forward and backward passes of the model.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        detector = NACUE(model, layers=[model.layer3, model.layer4])
+        detector.fit(train_loader)
+        scores = detector(x)
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Neuron Activation Coverage: Rethinking Out-of-distribution Detection and Generalization",
+            venue="ICLR",
+            year=2024,
+            url="https://arxiv.org/pdf/2306.02879",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = True
 
@@ -111,22 +135,23 @@ class NACUE(GradientDetector):
         m_bins: Union[int, Sequence[int]] = 50,
         alpha: Union[float, Sequence[float]] = 100.0,
         o_star: Union[int, Sequence[int]] = 50,
-        feature_reduce: Callable[[Tensor], Tensor] = None,
+        feature_reduce: Optional[Callable[[Tensor], Tensor]] = None,
         device: Optional[Union[str, torch.device]] = None,
     ):
         """
-        :param model: A classifier that returns logits of shape :math:`(B, C)`, where :math:`B` denotes the batch size and
-                      :math:`C` the number of classes.
+        :param model: A classifier that returns logits of shape :math:`B \\times C`, where :math:`B` denotes the batch size and
+                      :math:`C` the number of classes. ``None`` raises a
+                      :class:`~pytorch_ood.api.ModelNotSetException` in ``fit`` and ``predict``.
         :param layers: Sequence of modules whose outputs :math:`z` are used to compute NAC. For a ResNet-style architecture, e.g.
                       ``[model.layer1, model.layer2, model.layer3, model.layer4]``.
-        :param m_bins: Number of histogram bins :math:`M`. Either a single value (shared across all layers) or one value per layer.
+        :param m_bins: Number of histogram bins :math:`M` per neuron (geometrically spaced). Either a single value (shared across all layers) or one value per layer.
         :param alpha: Sigmoid steepness parameter :math:`\\alpha`. Either a single value (shared across all layers) or one value
                       per layer.
         :param o_star: Bin-filling parameter :math:`O^*` (minimum count required for full coverage). Either a single value
                        (shared across all layers) or one value per layer.
-        :param feature_reduce: Function mapping a layer output tensor to a 2D tensor of shape :math:`(B, N)`, where :math:`B`
+        :param feature_reduce: Function mapping a layer output tensor to a 2D tensor of shape :math:`B \\times N`, where :math:`B`
                               denotes the batch size and :math:`N` the number of neurons. Defaults to: identity for tensors of
-                              shape :math:`(B, N)`, spatial mean for tensors of shape :math:`(B, C, H, W)`, otherwise flatten.
+                              shape :math:`B \\times N`, spatial mean for tensors of shape :math:`B \\times C \\times H \\times W`, otherwise flatten.
         :param device: Optional device used during fitting and prediction.
         """
         self.model = model
@@ -155,6 +180,14 @@ class NACUE(GradientDetector):
     # ----------------------------- pytorch-ood API -----------------------------
 
     def fit(self, data_loader: DataLoader) -> "NACUE":
+        """
+        Collect the activation histograms of all neurons. Calls ``model.eval()``.
+
+        :param data_loader: loader with ID samples; batches may be tensors or ``(x, y)`` tuples.
+            Labels are ignored, so the loader must not contain OOD samples. Gradients are required,
+            so the call must not be wrapped in ``torch.no_grad``.
+        :return: self
+        """
         if self.model is None:
             raise ModelNotSetException("NACUE requires a model.")
         self.model.eval()
@@ -228,6 +261,11 @@ class NACUE(GradientDetector):
         return self
 
     def predict(self, x: Tensor) -> Tensor:
+        """
+        :param x: input batch of shape :math:`B \\times C \\times H \\times W`. Gradients are
+            required, so the call must not be wrapped in ``torch.no_grad``.
+        :return: outlier scores of shape :math:`B`
+        """
         if self.model is None:
             raise ModelNotSetException("NACUE requires a model.")
         if not self._fitted:

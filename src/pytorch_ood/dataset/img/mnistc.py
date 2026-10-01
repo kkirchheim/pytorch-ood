@@ -5,6 +5,7 @@ from typing import Any, Callable, Optional, Tuple
 import numpy as np
 from PIL import Image
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -14,11 +15,8 @@ class MNISTC(ImageDatasetBase):
     """
     MNIST-C is MNIST with corruptions for benchmarking OOD methods.
 
-    Split can be one of ``train``, ``test`` and ``leftovers``.
-
-    Subsets can be one of ``all``, ``brightness``, ``canny_edges``, ``dotted_line``, ``fog``, ``glass_blur``, ``identity``, ``impulse_noise``,
-    ``motion_blur``, ``rotate``, ``scale``, ``shear``, ``shot_noise``,
-    ``spatter``, ``stripe``, ``translate`` and ``zigzag``.
+    Images are returned as grayscale :class:`PIL.Image.Image` of size :math:`28 \\times 28`. Targets are the digit
+    class indices, **not** ``-1``.
 
     .. figure:: /_static/datasets/mnistc.webp
         :width: 100%
@@ -27,10 +25,21 @@ class MNISTC(ImageDatasetBase):
         The same test digit under each corruption. Images from MNIST-C by Norman Mu and Justin Gilmer,
         licensed under `CC BY 4.0 <https://creativecommons.org/licenses/by/4.0/>`__.
 
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1906.02337.pdf>`__
     :see Download: `Zenodo <https://zenodo.org/record/3239543>`__
-
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="MNIST-C: A Robustness Benchmark for Computer Vision",
+            venue="arXiv",
+            year=2019,
+            url="https://arxiv.org/abs/1906.02337",
+            code="https://github.com/google-research/mnist-c",
+        ),
+    )
 
     splits = ["train", "test", "leftovers"]
 
@@ -78,6 +87,19 @@ class MNISTC(ImageDatasetBase):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param subset: corruption to load. One of ``all`` (concatenates all corruptions), ``brightness``,
+            ``canny_edges``, ``dotted_line``, ``fog``, ``glass_blur``, ``identity``, ``impulse_noise``,
+            ``motion_blur``, ``rotate``, ``scale``, ``shear``, ``shot_noise``, ``spatter``, ``stripe``,
+            ``translate`` and ``zigzag``
+        :param split: one of ``train``, ``test`` and ``leftovers``; ``leftovers`` is read from the separate
+            ``mnist_c_leftovers`` archive
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        :raises ValueError: if ``subset`` or ``split`` is unknown
+        """
         super(ImageDatasetBase, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
@@ -125,7 +147,7 @@ class MNISTC(ImageDatasetBase):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is the digit class index.
         """
         img = self.data[index]
         target = self.targets[index]

@@ -7,17 +7,30 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
 class Textures(VisionDataset):
     """
     Textures dataset from the paper *Describing Textures in the Wild*, also known as DTD.
-    Often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1311.3618v2>`__
-    :see Website: `Link <https://www.robots.ox.ac.uk/~vgg/data/dtd/>`__
+    Often used as OOD data. Images are returned as :class:`PIL.Image.Image`; all targets are ``-1``
+    (the label of OOD samples) by default, use ``target_transform`` to change them.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Describing Textures in the Wild",
+            venue="CVPR",
+            year=2014,
+            url="https://arxiv.org/abs/1311.3618",
+        ),
+        homepage="https://www.robots.ox.ac.uk/~vgg/data/dtd/",
+    )
 
     base_folder = "dtd/images/"
     url = "https://www.robots.ox.ac.uk/~vgg/data/dtd/download/dtd-r1.0.1.tar.gz"
@@ -31,6 +44,12 @@ class Textures(VisionDataset):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(Textures, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
@@ -57,7 +76,7 @@ class Textures(VisionDataset):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is ``-1`` (the label of OOD samples).
         """
         file, target = self.files[index], -1
         # doing this so that it is consistent with all other datasets

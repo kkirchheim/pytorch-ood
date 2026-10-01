@@ -3,15 +3,10 @@ Benchmarks
 
 Benchmark objects aim to provide a higher level interface to recreate the
 OOD detection benchmarks used in the literature. All of them implement the common
-:doc:`Benchmark API <benchmarks/api>`. Examples can be found
-:doc:`here <auto_examples/benchmarks/index>`.
+:doc:`benchmark interface </core_api/benchmarks>`. Examples can be found
+:doc:`in the benchmark examples <auto_examples/benchmarks/index>`.
 
 .. py:module:: pytorch_ood.benchmark
-
-.. toctree::
-   :hidden:
-
-   benchmarks/api
 
 
 ODIN

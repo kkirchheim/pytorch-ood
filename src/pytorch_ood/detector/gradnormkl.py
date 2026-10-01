@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.GradNormKL
     :members:
     :inherited-members:
@@ -14,14 +7,15 @@
     :exclude-members: fit
 """
 
-from typing import Callable, TypeVar
+from typing import Callable
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
-from ..api import GradientDetector, ModelNotSetException
+from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, Task
 
 try:
     from torch.func import (
@@ -38,8 +32,6 @@ try:
 except ImportError:
     _TORCH_FUNC_AVAILABLE = False
 
-Self = TypeVar("Self")
-
 
 class GradNormKL(GradientDetector):
     """
@@ -51,7 +43,8 @@ class GradNormKL(GradientDetector):
     :math:`1/C` per class). The outlier score is the **negated** :math:`\\ell_1`-norm of the
     gradients of this loss w.r.t. the selected model parameters.
 
-    The key insight is that the gradient w.r.t. the logits simplifies to
+    The key insight is that the gradient w.r.t. the logits :math:`z` (the output of the model, :math:`C` is the
+    number of classes) simplifies to
     :math:`\\text{softmax}(z) - 1/C`, which is zero when the model predicts a uniform distribution
     and grows as the prediction becomes more peaked. For in-distribution inputs the model is
     typically more confident (larger gradient norm) than for OOD inputs, so the negated norm gives
@@ -66,9 +59,19 @@ class GradNormKL(GradientDetector):
     .. note:: On PyTorch ≥ 2.0, per-sample gradients are computed with ``torch.func.vmap`` +
         ``torch.func.grad`` in a single batched forward+backward pass. On PyTorch 1.x the
         original sequential loop over individual samples is used as a fallback.
-
-    :see Paper: `NeurIPS <https://arxiv.org/abs/2110.00218>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="On the Importance of Gradients for Detecting Distributional Shifts in the Wild",
+            venue="NeurIPS",
+            year=2021,
+            url="https://arxiv.org/abs/2110.00218",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     def __init__(
         self,
@@ -80,13 +83,15 @@ class GradNormKL(GradientDetector):
         :param model: A pre-trained classification model.
         :param param_filter: Function indicating whether a named parameter should be included in
             the scoring. If ``None``, all parameters are used.
-        :param micro_batch_size: ``_predict_batched`` internally splits the input into chunks
-            of at most this size before calling ``vmap`` -- per-sample gradients require
-            holding every sample's forward activations through the full network
-            simultaneously, so peak memory scales linearly with batch size (e.g. ~53 GB at
-            batch size 128 for a ResNet-50 at 224x224, even restricted to a single layer's
-            gradients). Chunking bounds peak memory independent of the caller's batch size.
+        :param micro_batch_size: maximum number of samples whose per-sample gradients are computed at
+            once. Smaller values reduce peak memory. Must be at least 1. Only used on PyTorch >= 2.0.
+        :raises ModelNotSetException: if ``model`` is ``None``
         """
+        # _predict_batched splits the input into chunks of at most micro_batch_size before calling vmap:
+        # per-sample gradients require holding every sample's forward activations through the full network
+        # simultaneously, so peak memory scales linearly with batch size (e.g. ~53 GB at
+        # batch size 128 for a ResNet-50 at 224x224, even restricted to a single layer's
+        # gradients). Chunking bounds peak memory independent of the caller's batch size.
         if model is None:
             raise ModelNotSetException("Model must be provided.")
 
@@ -104,18 +109,13 @@ class GradNormKL(GradientDetector):
         """
         Compute outlier scores for an input batch.
 
-        Uses the device of the model parameters for all computations.
-        On PyTorch ≥ 2.0, per-sample gradients are batched via ``torch.func``; on older
-        versions a sequential loop is used.
-
-        :param x: input tensor, will be passed through the network
-        :return: vector of outlier scores (higher = more likely OOD)
+        :param x: input tensor of shape :math:`B \\times \\ldots`, will be passed through the network
+        :return: outlier scores of shape :math:`B`
         """
         if self.model is None:
             raise ModelNotSetException()
 
-        device = next(self.model.parameters()).device
-        x = x.to(device)
+        x = x.to(self.device)
 
         if _TORCH_FUNC_AVAILABLE:
             return self._predict_batched(x)

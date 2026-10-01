@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.Mahalanobis
     :members:
     :inherited-members:
@@ -13,18 +8,22 @@
 
 import logging
 import warnings
-from typing import Callable, List, Optional, TypeVar
+from typing import Callable, List, Optional
 
 import torch
 from torch import Tensor
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from ..api import (
+    DetectorInfo,
     FeaturesDetector,
     GradientDetector,
     ModelNotSetException,
+    Paper,
     RequiresFittingException,
+    Task,
 )
 from ..utils import (
     contains_unknown,
@@ -33,23 +32,29 @@ from ..utils import (
 
 log = logging.getLogger(__name__)
 
-Self = TypeVar("Self")
-
 
 class Mahalanobis(FeaturesDetector):
     """
     Implements the Mahalanobis Method from the paper *A Simple Unified Framework for Detecting
     Out-of-Distribution Samples and Adversarial Attacks*.
 
-    This method calculates a class center :math:`\\mu_y` for each class,
+    This method calculates a class center :math:`\\mu_k` for each class :math:`k`,
     and a shared covariance matrix :math:`\\Sigma` from the data.
     The outlier scores are then calculated as
 
     .. math :: - \\max_k \\lbrace (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k) \\rbrace
-
-    :see Implementation: `GitHub <https://github.com/pokaxpoka/deep_Mahalanobis_detector>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1807.03888>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="A Simple Unified Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks",
+            venue="NeurIPS",
+            year=2018,
+            url="https://arxiv.org/abs/1807.03888",
+            code="https://github.com/pokaxpoka/deep_Mahalanobis_detector",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 
@@ -67,11 +72,13 @@ class Mahalanobis(FeaturesDetector):
         self.cov: Tensor = None  #: Covariance Matrix
         self.precision: Tensor = None  #: Precision Matrix
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
-        Fit parameters of the multi variate gaussian.
+        Fit parameters of the multivariate Gaussian.
 
-        :param data_loader: dataset to fit on.
+        :param data_loader: dataset to fit on. Should only contain in-distribution samples, with
+            contiguous class labels :math:`0, \\ldots, C-1`, all of which have to occur.
+        :return: the fitted detector
         """
         device = self.device
         if device is None:
@@ -82,12 +89,14 @@ class Mahalanobis(FeaturesDetector):
         z, y = extract_features(data_loader, self.encoder, device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+    def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
-        Fit parameters of the multi variate gaussian.
+        Fit parameters of the multivariate Gaussian.
 
-        :param z: features
-        :param y: class labels
+        :param z: features of shape :math:`N \\times D`. Should only contain in-distribution samples.
+        :param y: class labels of shape :math:`N`, contiguous :math:`0, \\ldots, C-1`; all classes have to
+            occur. OOD samples (labels below zero) are not supported and raise an ``AssertionError``.
+        :return: the fitted detector
         """
         device = self.device or z.device
         z = z.detach().to(device)
@@ -111,6 +120,7 @@ class Mahalanobis(FeaturesDetector):
             self.mu[clazz] = zs.mean(dim=0)
             self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
 
+        # the covariance is the sum of the centered outer products (not divided by N), plus a small ridge term
         self.cov += torch.eye(self.cov.shape[0], device=self.cov.device) * 1e-6
         self.precision = torch.linalg.inv(self.cov)
         return self
@@ -133,9 +143,12 @@ class Mahalanobis(FeaturesDetector):
     def predict_features(self, z: Tensor) -> Tensor:
         """
         Calculates mahalanobis distance directly on features.
-        ODIN preprocessing will not be applied.
+        The input preprocessing of :class:`~pytorch_ood.detector.MahalanobisODIN` is not applied.
 
-        :param z: features, as given by the model.
+        :param z: features, as given by the model, of shape :math:`B \\times D`. Feature maps of shape
+            :math:`B \\times C \\times H \\times W` are averaged over the spatial dimensions.
+        :return: outlier scores of shape :math:`B`
+        :raises RequiresFittingException: if the detector was not fitted
         """
         if self.mu is None:
             raise RequiresFittingException
@@ -147,7 +160,8 @@ class Mahalanobis(FeaturesDetector):
     @torch.no_grad()
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: input tensor
+        :param x: input tensor, will be passed through ``encoder``
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException
@@ -168,18 +182,31 @@ class Mahalanobis(FeaturesDetector):
 
 class MahalanobisODIN(GradientDetector):
     """
-    Mahalanobis distance detector with ODIN input preprocessing.
+    Mahalanobis distance detector with input preprocessing, as proposed in *A Simple Unified
+    Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks*: the input is
+    perturbed in the style of :class:`ODIN <pytorch_ood.detector.ODIN>` before the Mahalanobis
+    distance is computed.
 
-    Combines the Mahalanobis distance from *A Simple Unified Framework for Detecting
-    Out-of-Distribution Samples and Adversarial Attacks* with ODIN input perturbation
-    from *Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks*.
+    The perturbation is gradient-guided (FGSM-style), so prediction requires gradient
+    computation:
 
-    Adds gradient-guided input perturbation (FGSM-style) before computing the
-    Mahalanobis distance. Requires gradient computation during prediction.
+    .. math:: x' = x - \\varepsilon \\cdot \\text{sign}(\\nabla_x L(x))
 
-    :see Paper (Mahalanobis): `ArXiv <https://arxiv.org/abs/1807.03888>`__
-    :see Paper (ODIN): `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    where :math:`\\varepsilon` is ``eps`` and :math:`L` is the Mahalanobis distance of the features of :math:`x`
+    to the closest class center. The outlier score is the score of
+    :class:`Mahalanobis <pytorch_ood.detector.Mahalanobis>` for :math:`x'`.
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="A Simple Unified Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks",
+            venue="NeurIPS",
+            year=2018,
+            url="https://arxiv.org/abs/1807.03888",
+            code="https://github.com/pokaxpoka/deep_Mahalanobis_detector",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 
@@ -187,34 +214,38 @@ class MahalanobisODIN(GradientDetector):
         self,
         encoder: Optional[Callable[[Tensor], Tensor]],
         eps: float = 0.002,
-        norm_std: Optional[List] = None,
+        norm_std: Optional[List[float]] = None,
     ):
         """
         :param encoder: feature encoder. Can be ``None`` when
             using ``fit_features(...)`` and ``predict_features(...)`` directly.
-        :param eps: magnitude for gradient based input preprocessing
-        :param norm_std: Standard deviations for input normalization
+        :param eps: step size :math:`\\varepsilon` of the gradient based input preprocessing, in units of the
+            input :math:`x`
+        :param norm_std: per-channel standard deviations of the input normalization; the sign of the gradient
+            of each channel is divided by the corresponding value
         """
         super(MahalanobisODIN, self).__init__()
         self._base = Mahalanobis(encoder)
         self.eps = eps
         self.norm_std = norm_std
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Fit the underlying Mahalanobis detector.
 
         :param data_loader: dataset to fit on.
+        :return: the fitted detector
         """
         self._base.fit(data_loader)
         return self
 
-    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+    def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
         Fit the underlying Mahalanobis detector on features.
 
-        :param z: features
-        :param y: class labels
+        :param z: features of shape :math:`N \\times D`
+        :param y: class labels of shape :math:`N`
+        :return: the fitted detector
         """
         self._base.fit_features(z, y)
         return self
@@ -224,6 +255,7 @@ class MahalanobisODIN(GradientDetector):
         Apply ODIN input perturbation and compute Mahalanobis distance.
 
         :param x: input tensor
+        :return: outlier scores of shape :math:`B`
         """
         x = self._odin_preprocess(x, x.device)
         return self._base.predict(x)

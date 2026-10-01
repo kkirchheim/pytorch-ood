@@ -7,6 +7,7 @@ from PIL import Image
 from torchvision.datasets import DatasetFolder
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -15,11 +16,24 @@ log = logging.getLogger(__name__)
 class ImageNetA(DatasetFolder):
     """
     From the paper *Natural Adversarial Examples*.
-    Contains images that classifiers should be able to classify
+    Contains 7,500 natural adversarial images of 200 ImageNet classes that a ResNet-50 misclassifies.
 
-    :see Website: `GitHub <https://github.com/hendrycks/natural-adv-examples>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1907.07174>`__
+    Images are returned as :class:`PIL.Image.Image`. Targets are the class indices of the folder
+    structure (sorted folder names), not ``-1``.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license=None,
+        paper=Paper(
+            title="Natural Adversarial Examples",
+            venue="CVPR",
+            year=2021,
+            url="https://arxiv.org/abs/1907.07174",
+        ),
+        homepage="https://github.com/hendrycks/natural-adv-examples",
+    )
 
     base_folder = "imagenet-a"
     url = "https://people.eecs.berkeley.edu/~hendrycks/imagenet-a.tar"
@@ -33,6 +47,12 @@ class ImageNetA(DatasetFolder):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ):
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target (the class index)
+        :param download: download the data to ``root`` if it is not found there
+        """
         self.root = root
 
         if download:
@@ -65,11 +85,25 @@ class ImageNetA(DatasetFolder):
 class ImageNetO(ImageNetA):
     """
     From the paper *Natural Adversarial Examples*.
-    Contains anomalies of unforeseen classes
+    Contains 2,000 images of classes that are not among the 200 ImageNet classes of ImageNet-A, and thus can be
+    used as OOD data for models trained on ImageNet.
 
-    :see Website: `GitHub <https://github.com/hendrycks/natural-adv-examples>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1907.07174>`__
+    Targets are the class indices of the folder structure, **not** ``-1``. When using this dataset as OOD data,
+    mark the samples as OOD with ``target_transform=ToUnknown()`` (see :class:`pytorch_ood.utils.ToUnknown`).
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Natural Adversarial Examples",
+            venue="CVPR",
+            year=2021,
+            url="https://arxiv.org/abs/1907.07174",
+        ),
+        homepage="https://github.com/hendrycks/natural-adv-examples",
+    )
 
     base_folder = "imagenet-o"
     url = "https://people.eecs.berkeley.edu/~hendrycks/imagenet-o.tar"
@@ -84,10 +118,22 @@ class ImageNetR(ImageNetA):
     graffiti, embroidery, graphics, origami, paintings, patterns, plastic objects,
     plush objects, sculptures, sketches, tattoos, toys, and video game renditions of ImageNet classes.
 
-
-    :see Website: `GitHub <https://github.com/hendrycks/imagenet-r>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/2006.16241>`__
+    Images are returned as :class:`PIL.Image.Image`. Targets are the class indices of the folder
+    structure (sorted folder names), not ``-1``.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license=None,
+        paper=Paper(
+            title="The Many Faces of Robustness: A Critical Analysis of Out-of-Distribution Generalization",
+            venue="ICCV",
+            year=2021,
+            url="https://arxiv.org/abs/2006.16241",
+        ),
+        homepage="https://github.com/hendrycks/imagenet-r",
+    )
 
     base_folder = "imagenet-r"
     url = "https://people.eecs.berkeley.edu/~hendrycks/imagenet-r.tar"
@@ -108,8 +154,20 @@ class ImageNetC(ImageDatasetBase):
     * ``digital`` (7GB): contrast, elastic_transform, pixelate, and jpeg_compression.
     * ``extra`` (15GB): speckle_noise, spatter, gaussian_blur, and saturate.
 
-    :see Paper: `ArXiv <https://arxiv.org/abs/1903.12261v1>`__
+    Each subset has to be downloaded and loaded separately.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="Benchmarking Neural Network Robustness to Common Corruptions and Perturbations",
+            venue="ICLR",
+            year=2019,
+            url="https://arxiv.org/abs/1903.12261",
+        ),
+    )
 
     subset_list = ["blur", "digital", "extra", "noise", "weather"]
 
@@ -144,6 +202,14 @@ class ImageNetC(ImageDatasetBase):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param subset: one of ``blur``, ``digital``, ``extra``, ``noise`` and ``weather``
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        :raises ValueError: if ``subset`` is invalid
+        """
         if subset not in self.subset_list:
             raise ValueError(f"Invalid subset: {subset}")
 

@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.EnergyBased
     :members:
     :inherited-members:
@@ -12,35 +7,39 @@
     :exclude-members: fit, fit_logits
 """
 
-from typing import Optional, TypeVar
+from typing import Optional
 
 from torch import Tensor, logsumexp
 from torch.nn import Module
+from typing_extensions import Self
 
-from ..api import LogitsDetector
-
-Self = TypeVar("Self")
+from ..api import DetectorInfo, LogitsDetector, Paper, Task
 
 
 class EnergyBased(LogitsDetector):
     """
-    Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.
+    Implements the Energy Score of *Energy-based Out-of-distribution Detection*.
 
-    This methods calculates the negative energy for a vector of logits.
-    This value can be used as outlier score.
+    This method calculates the energy :math:`E(x)` for a vector of logits.
+    The paper uses the negative energy as in-distribution score; the energy itself is used as outlier score,
+    so larger values indicate OOD.
 
     .. math::
         E(x) = -T \\log{\\sum_i e^{f_i(x)/T}}
 
     where :math:`f_i(x)` indicates the :math:`i^{th}` logit value predicted by :math:`f`.
-
-    :see Paper:
-        `NeurIPS <https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf>`__
-
-    :see Implementation:
-        `GitHub <https://github.com/wetliu/energy_ood>`__
-
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Energy-based Out-of-distribution Detection",
+            venue="NeurIPS",
+            year=2020,
+            url="https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf",
+            code="https://github.com/weitliu/energy_ood",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+    )
 
     def __init__(self, model: Optional[Module], t: Optional[float] = 1.0):
         """
@@ -54,14 +53,18 @@ class EnergyBased(LogitsDetector):
 
     def predict_logits(self, logits: Tensor) -> Tensor:
         """
-        :param logits: logits given by the model
+        :param logits: logits given by the model, shape :math:`B \\times C`
+            (or :math:`B \\times C \\times H \\times W` for segmentation)
+        :return: outlier scores of shape :math:`B` (or :math:`B \\times H \\times W`)
         """
         return EnergyBased.score(logits, t=self.t)
 
     @staticmethod
     def score(logits: Tensor, t: Optional[float] = 1.0) -> Tensor:
         """
-        :param logits: logits of input
-        :param t: temperature value
+        :param logits: logits of input, shape :math:`B \\times C`
+            (or :math:`B \\times C \\times H \\times W` for segmentation)
+        :param t: temperature :math:`T`
+        :return: energy, shape :math:`B` (or :math:`B \\times H \\times W`)
         """
         return -t * logsumexp(logits / t, dim=1)

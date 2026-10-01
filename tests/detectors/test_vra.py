@@ -74,8 +74,8 @@ class TestVRA(unittest.TestCase):
         detector = VRA(
             backbone=self.model.features,
             head=self.model.classifier,
-            lower_percentile=5.0,
-            upper_percentile=95.0,
+            lower_percentile=0.05,
+            upper_percentile=0.95,
         )
         loader = DataLoader(self.dataset, batch_size=16)
         detector.fit(loader)

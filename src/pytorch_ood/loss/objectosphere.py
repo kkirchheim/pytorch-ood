@@ -4,6 +4,7 @@ from typing import Optional
 import torch
 from torch import Tensor, nn
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import (
     apply_reduction,
     contains_known,
@@ -19,6 +20,8 @@ log = logging.getLogger(__name__)
 class ObjectosphereLoss(nn.Module):
     """
     From the paper *Reducing Network Agnostophobia*.
+    Extends the :class:`EntropicOpenSetLoss <pytorch_ood.loss.EntropicOpenSetLoss>` with a term that pushes the
+    feature magnitude of ID samples above :math:`\\xi` and the magnitude of OOD samples towards zero.
 
     .. math::
        \\mathcal{L}(x, y) = \\mathcal{L}_E(x,y)  + \\alpha
@@ -31,18 +34,26 @@ class ObjectosphereLoss(nn.Module):
 
     where :math:`F(x)` are deep features in some layer of the model, and
     :math:`\\mathcal{L}_E` is the Entropic Open-Set Loss.
-
-
-    :see Paper:
-        `NeurIPS <https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf>`__
-
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Reducing Network Agnostophobia",
+            venue="NeurIPS",
+            year=2018,
+            url="https://proceedings.neurips.cc/paper/2018/file/48db71587df6c7c442e5b76cc723169a-Paper.pdf",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.LOGITS, Representation.FEATURES},
+        supervised=True,
+    )
 
     def __init__(self, alpha: float = 1.0, xi: float = 1.0, reduction: Optional[str] = "mean"):
         """
-
-        :param alpha: weight coefficient
+        :param alpha: weight :math:`\\alpha` of the objectosphere term
         :param xi: minimum feature magnitude :math:`\\xi`
+        :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
         """
         super(ObjectosphereLoss, self).__init__()
         self.alpha = alpha
@@ -52,11 +63,10 @@ class ObjectosphereLoss(nn.Module):
 
     def forward(self, logits: Tensor, features: Tensor, target: Tensor) -> Tensor:
         """
-
-        :param logits: class logits :math:`f(x)`
-        :param features: deep features :math:`F(x)`
-        :param target: target labels :math:`y`
-        :return: the loss
+        :param logits: class logits :math:`f(x)` of shape :math:`B \\times C`
+        :param features: deep features :math:`F(x)` of shape :math:`B \\times D`
+        :param target: target labels :math:`y` of shape :math:`B`; labels :math:`< 0` are OOD
+        :return: the loss; of shape :math:`B` if the reduction is ``none``
         """
         entropic_loss = self.entropic(logits, target)
         losses = torch.zeros(size=(logits.shape[0],)).to(logits.device)
@@ -82,8 +92,9 @@ class ObjectosphereLoss(nn.Module):
         """
         Outlier score used by the objectosphere loss.
 
-        :param logits: instance logits
-        :return: outlier scores
+        :param logits: instance logits of shape :math:`B \\times C`
+        :return: outlier scores of shape :math:`B`.
+            Computes :math:`-\\max_c \\sigma_c(f(x)) \\cdot \\lVert f(x) \\rVert_2`
         """
         softmax_scores = -logits.softmax(dim=1).max(dim=1).values
         magn = torch.linalg.norm(logits, ord=2, dim=1)

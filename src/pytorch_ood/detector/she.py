@@ -1,8 +1,4 @@
 """
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
 
 ..  autoclass:: pytorch_ood.detector.SHE
     :members:
@@ -11,18 +7,17 @@
 """
 
 import logging
-from typing import Callable, TypeVar
+from typing import Callable
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.utils import TensorBuffer, extract_features, is_known
 
-from ..api import FeaturesDetector, ModelNotSetException
-
-Self = TypeVar("Self")
+from ..api import DetectorInfo, FeaturesDetector, ModelNotSetException, Paper, Task
 
 log = logging.getLogger(__name__)
 
@@ -34,10 +29,20 @@ class SHE(FeaturesDetector):
 
     For each class, SHE estimates the mean feature vector :math:`S_i` of correctly classified instances.
     For some new instances with predicted class :math:`\\hat{y}`, SHE then
-    uses the inner product :math:`f(x)^{\\top} S_{\\hat{y}}` as outlier score.
-
-    :see Paper: `OpenReview <https://openreview.net/pdf?id=KkazG4lgKL>`__
+    uses the inner product :math:`f(x)^{\\top} S_{\\hat{y}}` as outlier score, where :math:`f(x)` are the
+    features ``z`` and :math:`S_i` is stored in ``patterns``.
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Out-of-Distribution Detection based on In-Distribution Data Patterns Memorization with Modern Hopfield Energy",
+            venue="ICLR",
+            year=2023,
+            url="https://openreview.net/pdf?id=KkazG4lgKL",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 
@@ -55,6 +60,7 @@ class SHE(FeaturesDetector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x:  model inputs
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -64,7 +70,8 @@ class SHE(FeaturesDetector):
 
     def predict_features(self, z: Tensor) -> Tensor:
         """
-        :param z: features as given by the model
+        :param z: features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
         if self.head is None:
             raise ModelNotSetException(msg="When using predict_features(), head must not be None")
@@ -78,11 +85,12 @@ class SHE(FeaturesDetector):
         scores = torch.sum(torch.mul(z, self.patterns[y_hat]), dim=1)
         return -scores
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Extracts features and calculates mean patterns.
 
         :param data_loader: data to fit
+        :return: self
         """
         device = self.device
         if device is None:
@@ -117,13 +125,16 @@ class SHE(FeaturesDetector):
 
         return buffer["z"], buffer["y"]
 
-    def fit_features(self: Self, z: Tensor, y: Tensor, batch_size: int = 1024) -> Self:
+    def fit_features(self, z: Tensor, y: Tensor, batch_size: int = 1024) -> Self:
         """
         Calculates mean patterns per class.
 
-        :param z: features to fit
-        :param y: labels
+        :param z: features to fit, of shape :math:`N \\times D`
+        :param y: labels of shape :math:`N`; OOD samples (label below zero) are ignored. The remaining
+            labels have to cover the classes :math:`0, ..., K-1`.
         :param batch_size: how many samples we process at a time
+        :return: self
+        :raise ValueError: if there are no ID samples, or a class has no correctly classified sample
         """
         device = self.device or z.device
 

@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..loss.crossentropy import cross_entropy
 from ..utils import apply_reduction, is_known, is_unknown
 
@@ -22,20 +23,16 @@ class VOSRegLoss(nn.Module):
     The regularization term is defined as:
 
     .. math::
-        \\mathcal{L} = \\mathbb{E}_{v \\sim V} \\left[ -\\text {log}\\frac{1}{1+\\text{exp}^{-\\phi(E(v))}}
-        \\right] +  \\mathbb{E}_{x \\sim D} \\left[ -\\text {log} \\frac{\\text{exp}^{-\\phi(E(x))}}{1+
-        \\text{exp}^{-\\phi(E(x))}}\\right]
+        \\mathcal{L}_{reg} = \\mathbb{E}_{v \\sim V} \\left[ -\\text {log}\\frac{1}{1+\\exp(-\\phi(E(v)))}
+        \\right] +  \\mathbb{E}_{x \\sim D} \\left[ -\\text {log} \\frac{\\exp(-\\phi(E(x)))}{1+
+        \\exp(-\\phi(E(x)))}\\right]
 
 
     where :math:`\\phi` is a possibly non-linear function, :math:`E` is the weighted energy
     and :math:`V` and :math:`D` are the distributions of the (possibly virtual) outliers and the ID data respectively.
-
-
-    :see Paper:
-        `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
-
-    :see Implementation:
-        `GitHub <https://github.com/deeplearning-wisc/vos/>`__
+    The weighted energy is :math:`E(x) = -\\log \\sum_i w_i e^{f_i(x)}` with
+    :math:`w_i = \\mathrm{ReLU}(\\text{weights\\_energy.weight}_i)`, and the total loss is
+    :math:`\\mathcal{L}_{CE} + \\alpha \\mathcal{L}_{reg}`.
 
     For initialisation of :math:`\\phi` and the weights for weighted energy:
 
@@ -48,8 +45,20 @@ class VOSRegLoss(nn.Module):
 
     .. note ::
         This implementation does not generate synthetic outliers. For this feature, see  :class:`pytorch_ood.loss.vos.VirtualOutlierSynthesizingRegLoss`.
-
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="VOS: Learning What You Don't Know by Virtual Outlier Synthesis",
+            venue="ICLR",
+            year=2022,
+            url="https://arxiv.org/pdf/2202.01197.pdf",
+            code="https://github.com/deeplearning-wisc/vos/",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+        inputs={Representation.LOGITS},
+        supervised=True,
+    )
 
     def __init__(
         self,
@@ -60,8 +69,10 @@ class VOSRegLoss(nn.Module):
         reduction: str = "mean",
     ):
         """
-        :param logistic_regression: :math:`\\phi` function. Can be for example a linear layer.
-        :param weights_energy: neural network layer with weights for the energy
+        :param logistic_regression: :math:`\\phi` function, mapping energies of shape :math:`N \\times 1` to
+            :math:`N \\times 2` logits (ID and OOD). Can be for example a linear layer.
+        :param weights_energy: ``torch.nn.Linear(num_classes, 1)`` whose (ReLU-ed) weight rescales the
+            exponentiated logits in the weighted energy
         :param alpha: weighting parameter :math:`\\alpha`.
         :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
         :param device: For example ``cpu`` or ``cuda:0``
@@ -76,8 +87,10 @@ class VOSRegLoss(nn.Module):
 
     def forward(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
-        :param logits: logits
-        :param y: labels
+        :param logits: logits of shape :math:`B \\times C` or :math:`B \\times C \\times H \\times W`
+        :param y: labels of shape :math:`B` or :math:`B \\times H \\times W`; labels :math:`< 0` are OOD
+        :return: loss; if the reduction is ``none``, the cross-entropy is per sample (or per pixel) and the
+            regularizer is added as a scalar
         """
 
         regularization = self._regularization(logits, y)
@@ -152,17 +165,24 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
     """
     Implements the loss function of *VOS: Learning what you don’t know by virtual outlier synthesis* with additional
     sampling of virtual outliers. These outliers are synthesized by fitting a gaussian to the latent features and
-    sampling from low-likelihood regions. This alleviates the need for real outliers during training.
+    sampling from low-likelihood regions. This alleviates the need for real outliers during training; samples
+    with targets :math:`< 0` are ignored.
 
     For more information see :class:`VOS Energy-Based Loss<pytorch_ood.loss.vos.VOSRegLoss>`.
-
-    :see Paper:
-        `ArXiv <https://arxiv.org/pdf/2202.01197.pdf>`__
-
-    :see Implementation:
-        `GitHub <https://github.com/deeplearning-wisc/vos/>`__
-
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="VOS: Learning What You Don't Know by Virtual Outlier Synthesis",
+            venue="ICLR",
+            year=2022,
+            url="https://arxiv.org/pdf/2202.01197.pdf",
+            code="https://github.com/deeplearning-wisc/vos/",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.LOGITS, Representation.FEATURES},
+        supervised=False,
+    )
 
     def __init__(
         self,
@@ -185,11 +205,13 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         :param num_classes: number of classes
         :param num_input_last_layer: number of inputs in the last layer of the network
         :param fc: fully connected last layer of the network
-        :param alpha: weighting parameter
+        :param alpha: weight :math:`\\alpha` of the regularization
         :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
-        :param sample_number: number of samples that are used for virtual outlier synthesis
-        :param select: number of highest density samples that are used for virtual outlier synthesis
-        :param sample_from: number of samples that are used for sampling the probability distribution
+        :param sample_number: number of ID feature vectors stored per class (queue length); virtual outliers are
+            only generated once all queues are full
+        :param select: number of lowest-likelihood samples per class that are kept as virtual outliers
+        :param sample_from: number of samples drawn from each class-conditional Gaussian, from which the
+            ``select`` lowest-likelihood ones are chosen
         """
         super(VirtualOutlierSynthesizingRegLoss, self).__init__(
             logistic_regression,
@@ -215,15 +237,15 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
 
     def forward(self, logits: torch.Tensor, features: torch.Tensor, y: torch.Tensor):
         """
-        :param logits: logits
-        :param features: features
-        :param y: labels
+        Until ``sample_number`` features have been stored for every class, no virtual outliers are
+        synthesized and the regularization is zero.
+
+        :param logits: logits of shape :math:`B \\times C`
+        :param features: penultimate features of shape :math:`B \\times D`
+        :param y: labels of shape :math:`B`; samples with labels :math:`< 0` are ignored
+        :return: loss
+        :raises NotImplementedError: for segmentation inputs
         """
-        # check for outlier targets (negative values)
-        if torch.any(y < 0):
-            raise ValueError(
-                "Outlier targets in VirtualOutlierSynthesizingRegLoss. This loss function only supports inlier targets."
-            )
         regularization = self._regularization(logits, features, y)
         loss = self.nll(logits, y, reduction=self.reduction)
         return apply_reduction(loss, self.reduction) + apply_reduction(
@@ -245,28 +267,33 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         """
         :param prediction: logits
         :param features: features
-        :param target: labels
+        :param target: labels; samples with targets :math:`< 0` are ignored
         """
-        # energy regularization.
-        sum_temp = 0
-        for index in range(self.num_classes):
-            sum_temp += self.number_dict[index]
-        lr_reg_loss = torch.zeros(1).to(self.device)[0]
-        # case not enough samples are collected --> fill data_dict
-        if sum_temp != self.num_classes * self.sample_number:
+        known = is_known(target)
+        queues_were_full = self._queues_full()
+        self._update_queues(features[known], target[known])
+        # virtual outliers are only synthesized once the queues were full before this step
+        virtual = self._sample_virtual_outliers() if queues_were_full else None
+        return self._energy_regularization(prediction, known, virtual)
+
+    def _queues_full(self) -> bool:
+        return sum(self.number_dict.values()) == self.num_classes * self.sample_number
+
+    def _update_queues(self, features, target):
+        """
+        Store the features of ID samples in the per-class queues: fill them up first,
+        then replace the oldest entries.
+        """
+        if not self._queues_full():
             target_numpy = target.cpu().data.numpy()
             for index in range(len(target)):
                 dict_key = target_numpy[index]  # get class id
                 if self.number_dict[dict_key] < self.sample_number:
                     self.data_dict[dict_key][self.number_dict[dict_key]] = features[index].detach()
                     self.number_dict[dict_key] += 1
-        # case enough samples collected
         else:
-            # update queue with new data
             for index in range(len(target)):
-                # get class id
                 dict_key = target[index]
-                # update queue
                 self.data_dict[dict_key] = torch.cat(
                     (
                         self.data_dict[dict_key][1:],
@@ -274,46 +301,51 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
                     ),
                     0,
                 )
-            # the covariance finder needs the data to be centered.
-            for index in range(self.num_classes):
-                if index == 0:
-                    X = self.data_dict[index] - self.data_dict[index].mean(0)
-                    mean_embed_id = self.data_dict[index].mean(0).view(1, -1)
-                else:
-                    X = torch.cat((X, self.data_dict[index] - self.data_dict[index].mean(0)), 0)
-                    mean_embed_id = torch.cat(
-                        (mean_embed_id, self.data_dict[index].mean(0).view(1, -1)), 0
-                    )
 
-            # add the variance.
-            temp_precision = torch.mm(X.t(), X) / len(X)
-            temp_precision += 0.0001 * self.eye_matrix
-
-            # create distributions for each class
-            for index in range(self.num_classes):
-                new_dis = torch.distributions.multivariate_normal.MultivariateNormal(
-                    mean_embed_id[index], covariance_matrix=temp_precision
+    def _sample_virtual_outliers(self):
+        """
+        Fit class-conditional Gaussians with a shared covariance to the queues and keep the
+        ``select`` lowest-likelihood of ``sample_from`` samples per class.
+        """
+        # the covariance finder needs the data to be centered.
+        for index in range(self.num_classes):
+            if index == 0:
+                X = self.data_dict[index] - self.data_dict[index].mean(0)
+                mean_embed_id = self.data_dict[index].mean(0).view(1, -1)
+            else:
+                X = torch.cat((X, self.data_dict[index] - self.data_dict[index].mean(0)), 0)
+                mean_embed_id = torch.cat(
+                    (mean_embed_id, self.data_dict[index].mean(0).view(1, -1)), 0
                 )
-                negative_samples = new_dis.rsample((self.sample_from,))
-                prob_density = new_dis.log_prob(negative_samples)
-                # breakpoint()
-                # index_prob = (prob_density < - self.threshold).nonzero().view(-1)
-                # keep the data in the low density area.
-                cur_samples, index_prob = torch.topk(-prob_density, self.select)
-                if index == 0:
-                    ood_samples = negative_samples[index_prob]
-                else:
-                    ood_samples = torch.cat((ood_samples, negative_samples[index_prob]), 0)
-            if len(ood_samples) != 0:
-                # add some gaussian noise
-                energy_score_for_fg = self._energy(prediction, 1)
-                predictions_ood = self.fc(ood_samples)
 
-                energy_score_for_bg = self._energy(predictions_ood, 1)
+        # add the variance.
+        temp_precision = torch.mm(X.t(), X) / len(X)
+        temp_precision += 0.0001 * self.eye_matrix
 
-                lr_reg_loss = self._calculate_reg_loss(energy_score_for_fg, energy_score_for_bg)
+        # create distributions for each class
+        for index in range(self.num_classes):
+            new_dis = torch.distributions.multivariate_normal.MultivariateNormal(
+                mean_embed_id[index], covariance_matrix=temp_precision
+            )
+            negative_samples = new_dis.rsample((self.sample_from,))
+            prob_density = new_dis.log_prob(negative_samples)
+            # keep the data in the low density area.
+            cur_samples, index_prob = torch.topk(-prob_density, self.select)
+            if index == 0:
+                ood_samples = negative_samples[index_prob]
+            else:
+                ood_samples = torch.cat((ood_samples, negative_samples[index_prob]), 0)
+        return ood_samples
 
-        return lr_reg_loss
+    def _energy_regularization(self, prediction, known, virtual):
+        """
+        Energy regularization between the ID samples of the batch and the virtual outliers;
+        samples with targets :math:`< 0` are ignored.
+        """
+        if virtual is None or len(virtual) == 0 or not known.any():
+            return torch.zeros(1).to(self.device)[0]
+        energy_out = self._energy(self.fc(virtual), 1)
+        return self._calculate_reg_loss(self._energy(prediction[known], 1), energy_out)
 
     def _regularization_segmentation(self, prediction, features, target):
         """

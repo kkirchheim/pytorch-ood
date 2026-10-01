@@ -1,7 +1,7 @@
 """
 Datasets used for testing in ODIN
 
-First used in:the `ODIN paper<https://github.com/facebookresearch/odin>`__.
+First used in the `ODIN paper <https://arxiv.org/abs/1706.02690>`__.
 """
 
 import logging
@@ -12,15 +12,28 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
 class TinyImageNetCrop(VisionDataset):
     """
-    Cropped version of the TinyImageNet, often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    Cropped version of the TinyImageNet, often used as OOD data. Contains 10,000 images of size :math:`32 \\times 32`,
+    returned as :class:`PIL.Image.Image`. All targets are ``-1`` (the label of OOD samples) by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+        ),
+    )
 
     base_folder = "Imagenet/test/"
     url = "https://www.dropbox.com/s/raw/avgm2u562itwpkl/Imagenet.tar.gz"
@@ -34,6 +47,12 @@ class TinyImageNetCrop(VisionDataset):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(TinyImageNetCrop, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
@@ -53,7 +72,7 @@ class TinyImageNetCrop(VisionDataset):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is ``-1`` (the label of OOD samples).
         """
         file, target = self.files[index], -1
         # doing this so that it is consistent with all other datasets
@@ -85,10 +104,21 @@ class TinyImageNetCrop(VisionDataset):
 
 class TinyImageNetResize(TinyImageNetCrop):
     """
-    Resized version of the TinyImageNet, often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    Resized version of the TinyImageNet, often used as OOD data. Contains 10,000 images of size :math:`32 \\times 32`,
+    returned as :class:`PIL.Image.Image`. All targets are ``-1`` (the label of OOD samples) by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+        ),
+    )
 
     base_folder = "Imagenet_resize/Imagenet_resize/"
     url = "https://www.dropbox.com/s/raw/kp3my3412u5k9rl/Imagenet_resize.tar.gz"
@@ -102,6 +132,12 @@ class TinyImageNetResize(TinyImageNetCrop):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(TinyImageNetResize, self).__init__(
             root,
             transform=transform,
@@ -112,10 +148,21 @@ class TinyImageNetResize(TinyImageNetCrop):
 
 class LSUNCrop(TinyImageNetCrop):
     """
-    Cropped version of the LSUN, often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    Cropped version of the LSUN, often used as OOD data. Contains 10,000 images of size :math:`32 \\times 32`,
+    returned as :class:`PIL.Image.Image`. All targets are ``-1`` (the label of OOD samples) by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+        ),
+    )
 
     base_folder = "LSUN/test/"
     url = "https://www.dropbox.com/s/raw/fhtsw1m3qxlwj6h/LSUN.tar.gz"
@@ -129,6 +176,12 @@ class LSUNCrop(TinyImageNetCrop):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(LSUNCrop, self).__init__(
             root,
             transform=transform,
@@ -139,10 +192,21 @@ class LSUNCrop(TinyImageNetCrop):
 
 class LSUNResize(TinyImageNetCrop):
     """
-    Resized version of the LSUN dataset, often used as OOD data.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1706.02690>`__
+    Resized version of the LSUN dataset, often used as OOD data. Contains 10,000 images of size :math:`32 \\times 32`,
+    returned as :class:`PIL.Image.Image`. All targets are ``-1`` (the label of OOD samples) by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Enhancing The Reliability of Out-of-distribution Image Detection in Neural Networks",
+            venue="ICLR",
+            year=2018,
+            url="https://arxiv.org/abs/1706.02690",
+        ),
+    )
 
     base_folder = "LSUN_resize/LSUN_resize"
     url = "https://www.dropbox.com/s/raw/moqh2wh8696c3yl/LSUN_resize.tar.gz"
@@ -156,6 +220,12 @@ class LSUNResize(TinyImageNetCrop):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(LSUNResize, self).__init__(
             root,
             transform=transform,

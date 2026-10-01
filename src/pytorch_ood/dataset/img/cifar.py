@@ -5,6 +5,7 @@ from typing import Any, Callable, Optional, Tuple
 import numpy as np
 from PIL import Image
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -12,12 +13,29 @@ log = logging.getLogger(__name__)
 
 class CIFAR10C(ImageDatasetBase):
     """
-    Corrupted version of the CIFAR10 from the paper *Benchmarking Neural
+    Corrupted version of the CIFAR10 test set from the paper *Benchmarking Neural
     Network Robustness to Common Corruptions and Perturbations.*
 
-    :see Website: `Zenodo <https://zenodo.org/record/2535967>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1903.12261>`__
+    Images are returned as :class:`PIL.Image.Image` of size :math:`32 \\times 32`. Targets are the original class
+    labels, **not** ``-1``. Each corruption is available at 5 severity levels, which are concatenated in
+    the order of the severity (10,000 images each). The corruptions are ``brightness``, ``contrast``,
+    ``defocus_blur``, ``elastic_transform``, ``fog``, ``frost``, ``gaussian_blur``, ``gaussian_noise``,
+    ``glass_blur``, ``impulse_noise``, ``jpeg_compression``, ``motion_blur``, ``pixelate``, ``saturate``,
+    ``shot_noise``, ``snow``, ``spatter``, ``speckle_noise`` and ``zoom_blur``.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="Benchmarking Neural Network Robustness to Common Corruptions and Perturbations",
+            venue="ICLR",
+            year=2019,
+            url="https://arxiv.org/abs/1903.12261",
+        ),
+        homepage="https://zenodo.org/record/2535967",
+    )
 
     subsets = [
         "brightness",
@@ -54,6 +72,15 @@ class CIFAR10C(ImageDatasetBase):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ):
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param subset: corruption to load, see above, or ``all`` to concatenate all corruptions (the labels are
+            repeated accordingly)
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        :raises ValueError: if ``subset`` is unknown
+        """
         super(CIFAR10C, self).__init__(root, transform, target_transform, download)
 
         self.subset = subset
@@ -94,12 +121,23 @@ class CIFAR10C(ImageDatasetBase):
 
 class CIFAR100C(CIFAR10C):
     """
-    Corrupted version of the CIFAR100 from the paper *Benchmarking Neural Network
-    Robustness to Common Corruptions and Perturbations.*
-
-    :see Website: `Zenodo <https://zenodo.org/record/3555552>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1903.12261>`__
+    Corrupted version of the CIFAR100 test set from the paper *Benchmarking Neural Network
+    Robustness to Common Corruptions and Perturbations.* Same format and corruptions as :class:`CIFAR10C`,
+    with the CIFAR100 class labels as targets.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.DISTRIBUTION_SHIFT},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="Benchmarking Neural Network Robustness to Common Corruptions and Perturbations",
+            venue="ICLR",
+            year=2019,
+            url="https://arxiv.org/abs/1903.12261",
+        ),
+        homepage="https://zenodo.org/record/3555552",
+    )
 
     base_folder = "CIFAR-100-C/"
     url = "https://zenodo.org/record/3555552/files/CIFAR-100-C.tar"

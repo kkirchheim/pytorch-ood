@@ -8,16 +8,26 @@ from scipy.io import wavfile
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_and_extract_archive
 
+from ...api import DatasetInfo, Task
+
 log = logging.getLogger(__name__)
 
 
 class FSDD(Dataset):
     """
     Free Spoken Digit Dataset, a simple audio/speech dataset consisting of recordings of spoken
-    digits in `wav` format at 8kHz.
+    digits in ``wav`` format at 8kHz.
 
-    :see Website: `GitHub <https://github.com/Jakobovski/free-spoken-digit-dataset>`__
+    Each item is a tuple ``(waveform, label)`` of the recording as a :class:`numpy.ndarray` of shape
+    :math:`T` (int16 samples; the sample rate is not returned) and the spoken digit as an integer in
+    :math:`0, \\dots, 9`.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license="CC-BY-SA-4.0",
+        homepage="https://github.com/Jakobovski/free-spoken-digit-dataset",
+    )
 
     metadata = {
         "jackson": {"gender": "male", "accent": "USA/neutral", "language": "english"},
@@ -30,7 +40,7 @@ class FSDD(Dataset):
     filename = "free-spoken-digit-dataset-v1.0.8.zip"
     base_folder = "Jakobovski-free-spoken-digit-dataset-e9e1155/recordings"
 
-    def __init__(self, root, transform=None, target_transform=None, download=True):
+    def __init__(self, root, transform=None, target_transform=None, download=False):
         """
         :param root: root folder for the dataset
         :param transform: transform that will be applied to the instance

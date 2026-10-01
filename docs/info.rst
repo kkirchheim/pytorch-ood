@@ -15,7 +15,7 @@ Consequently, some of the terms may be used interchangeably.
 The survey paper `Generalized Out-of-Distribution Detection: A Survey <https://arxiv.org/abs/2110.11334>`__
 presents a possible nomenclature.
 
-PyTorch-OOD aims to provide well tested implementation of methods for Out-of-Distribution Detection.
+PyTorch-OOD aims to provide well-tested implementations of methods for Out-of-Distribution Detection.
 However, it may also cover approaches from closely related fields,
 such as Anomaly Detection or Novelty Detection.
 
@@ -29,6 +29,8 @@ OOD Detection Experiments usually involve the following steps:
 2. Creating an OOD detector, which is optionally fitted on some training data.
 3. Evaluating the OOD detector on some benchmark dataset.
 
+
+.. _design-choices:
 
 Design Choices
 -----------------
@@ -54,26 +56,27 @@ such as classification or segmentation.
 ===================================
 PyTorch-OOD assumes that each OOD detector produces outlier scores,
 which are numerical values that indicate the degree of outlierness of a
-given sample, i.e., higher scores means higher certainty that it is OOD.
+given sample, i.e., higher scores mean that the sample is more likely OOD.
 
-While this assumption may not be applicable to some detectors,
-such as OpenMax, we believe that most methods can be modified
-to produce outlier scores.
+While this assumption may not be applicable to some methods, we believe that most
+methods can be modified to produce outlier scores. For example, the
+:class:`OpenMax <pytorch_ood.detector.OpenMax>` detector is exposed through this interface
+by using the probability of the unknown class as outlier score.
 
 
 3) OOD Points have Negative Labels
 ===================================
 
 PyTorch-OOD follows a labeling convention in which in-distribution data
-samples are assigned target class labels greater
+samples (also called *known* data) are assigned target class labels greater
 than or equal to zero (:math:`>= 0`). Out-of-distribution
-data samples, whether known or unknown during training, are
+data samples (also called *unknown* data), whether available during training or not, are
 assigned target values less than zero (:math:`< 0`).
 
 
 Other design features
 ========================
-We aim to make usage user friendly.
+We aim to make usage user-friendly.
 Sometimes, this comes at the price of performance.
 
 In some cases, we might, for example, move tensors from one device to another so that computations

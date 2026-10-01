@@ -172,7 +172,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         encoder=model.features,
                         w=model.classifier.weight,
                         b=model.classifier.bias,
-                        p=65.0,
+                        p=0.65,
                     )
                 )(ClassificationModel()),
             ),

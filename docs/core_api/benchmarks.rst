@@ -1,5 +1,5 @@
-Benchmark API
-=============
+Benchmark Interface
+===================
 
 .. The module target lives on docs/benchmark.rst (py:module), hence :no-index: here.
 

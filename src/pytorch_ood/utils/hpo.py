@@ -64,17 +64,17 @@ class GridSearch:
         the comparison across candidates. For segmentation, pass a metric such as
         ``OODMetrics(mode="segmentation")``.
 
-    .. code :: python
+    .. code-block:: python
 
-        detector = ASH(backbone=..., head=...)
-        search = GridSearch(detector, fit_loader=train_loader, val_loader=val_loader)
+        detector = ASH(backbone=..., head=...)  # ASH does not require fitting
+        search = GridSearch(detector, fit_loader=None, val_loader=val_loader, device="cuda:0")
         best = search.run()             # also leaves `detector` set to the best params
         print(best, search.best_score_)
 
     :param detector: detector to tune; must define a non-empty ``hyperparameter_space``
         unless one is passed explicitly
-    :param fit_loader: data used to (re-)fit the detector per candidate. Only required
-        if the detector requires fitting.
+    :param fit_loader: data used to (re-)fit the detector per candidate. Only used if the
+        detector requires fitting; otherwise pass ``None`` (the argument itself is not optional).
     :param val_loader: validation data containing both ID and OOD samples
     :param hyperparameter_space: overrides the detector's ``hyperparameter_space``
     :param metric: metric object with ``update(scores, y)`` / ``compute() -> dict``
@@ -82,6 +82,8 @@ class GridSearch:
     :param metric_name: key to read from the metric's ``compute()`` dict. Default ``"AUROC"``.
     :param higher_is_better: whether the metric should be maximized. Default ``True``.
     :param device: device used for extraction and scoring
+    :raises ValueError: if the search space is empty (or contains a hyperparameter without
+        candidate values)
     """
 
     def __init__(
@@ -139,9 +141,13 @@ class GridSearch:
         """
         Run the grid search.
 
+        The detector's ``hyperparameter_space`` is overwritten with the resolved search space.
+        The attributes ``best_params_``, ``best_score_`` and ``results_`` are not reset when
+        ``run()`` is called again, so create a new :class:`GridSearch` for a fresh search.
+
         :return: the best hyperparameter combination. As a side effect, ``detector``
             is left fitted (if required) and configured with these values.
-        :raise ValueError: if a detector that requires fitting is given no
+        :raises ValueError: if a detector that requires fitting is given no
             ``fit_loader``, or if no candidate produced a finite score.
         """
         self.detector.to(self.device)

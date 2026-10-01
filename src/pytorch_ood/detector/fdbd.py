@@ -1,12 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-.. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-   :alt: slop-badge
-
 ..  autoclass:: pytorch_ood.detector.fDBD
     :members:
     :inherited-members:
@@ -15,18 +8,24 @@
 """
 
 import logging
-from typing import TypeVar
 
 import torch
 from torch import Tensor
 from torch.nn import Linear, Module
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from ..utils import extract_features
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class fDBD(FeaturesDetector):
@@ -45,12 +44,27 @@ class fDBD(FeaturesDetector):
         \\frac{| \\text{logit}_{\\hat{y}} - \\text{logit}_c |}
         {\\lVert w_{\\hat{y}} - w_c \\rVert_2 \\cdot \\lVert z - \\mu \\rVert_2}
 
-    where :math:`w_k` are the weight vectors of the classification head and :math:`\\mu`
-    is the mean of training features. This method is hyperparameter-free.
+    where :math:`C` is the set of classes, :math:`\\text{logit}_c = w_c^\\top z + b_c` is the logit of class
+    :math:`c` computed by the classification head with weight vectors :math:`w_c`, and :math:`\\mu`
+    is the mean of the training features. The distance is negated so that larger scores indicate OOD.
+    This method is hyperparameter-free.
 
-    :see Paper: `ArXiv <https://arxiv.org/abs/2312.11536>`__
-    :see Implementation: `GitHub <https://github.com/litianliu/fDBD-OOD>`__
+    The detector has to be fitted on in-distribution data: the labels given to :meth:`fit` are ignored, so only
+    in-distribution samples should be passed. The pairwise weight differences are computed at fit time and are
+    not updated if the weights of the head change afterwards.
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Fast Decision Boundary based Out-of-Distribution Detector",
+            venue="ICML",
+            year=2024,
+            url="https://arxiv.org/abs/2312.11536",
+            code="https://github.com/litianliu/fDBD-OOD",
+        ),
+        tasks={Task.CLASSIFICATION},
+        ai_coded=True,
+    )
 
     requires_fit = True
 
@@ -79,11 +93,12 @@ class fDBD(FeaturesDetector):
         denom[torch.arange(n_classes), torch.arange(n_classes)] = 1.0
         self._denom_matrix = denom
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Compute the training feature mean :math:`\\mu`.
 
-        :param data_loader: data loader with training data
+        :param data_loader: data loader with in-distribution training data. Labels are ignored.
+        :return: the fitted detector
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -97,11 +112,12 @@ class fDBD(FeaturesDetector):
         z, y = extract_features(data_loader, self.encoder, device)
         return self.fit_features(z)
 
-    def fit_features(self: Self, z: Tensor, *args, **kwargs) -> Self:
+    def fit_features(self, z: Tensor, *args, **kwargs) -> Self:
         """
         Compute the training feature mean directly from features.
 
-        :param z: training features
+        :param z: in-distribution training features of shape :math:`N \\times D`
+        :return: the fitted detector
         """
         device = self.device or z.device
         z = z.detach().to(device).float()
@@ -112,6 +128,7 @@ class fDBD(FeaturesDetector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input tensor, will be passed through the encoder
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -124,8 +141,8 @@ class fDBD(FeaturesDetector):
         """
         Compute outlier scores from features.
 
-        :param z: penultimate-layer features
-        :return: outlier scores (higher = more OOD)
+        :param z: penultimate-layer features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
         if self.train_mean is None:
             raise RequiresFittingException()

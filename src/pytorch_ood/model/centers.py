@@ -12,15 +12,16 @@ class ClassCenters(nn.Module):
     """
     Several methods for OOD Detection propose to model a center :math:`\\mu_y` for each class.
     These centers are either static, or learned via gradient descent.
+    The centers :math:`\\mu_y` are stored in :attr:`params` as a matrix of shape
+    :math:`K \\times D`, and are initialized randomly from a standard normal distribution.
 
     The centers are also known as class proxy, class prototype or class anchor.
     """
 
     def __init__(self, n_classes: int, n_features: int, fixed: bool = False):
         """
-
-        :param n_classes: number of classes vectors
-        :param n_features: dimensionality of the space in which the centers live
+        :param n_classes: number of classes :math:`K`
+        :param n_features: dimensionality :math:`D` of the space in which the centers live
         :param fixed: False if the centers should be learnable parameters, True if they should be fixed at their
             initial position
         """
@@ -33,23 +34,30 @@ class ClassCenters(nn.Module):
 
     @property
     def num_classes(self) -> int:
+        """
+        Number of centers :math:`K`
+        """
         return self.params.shape[0]
 
     @property
     def n_features(self) -> int:
+        """
+        Dimensionality :math:`D` of the space in which the centers live
+        """
         return self.params.shape[1]
 
     @property
     def params(self) -> nn.Parameter:
         """
-        Class centers :math:`\\mu`
+        Class centers :math:`\\mu_y`, of shape :math:`K \\times D`
         """
         return self._params
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param x: samples
-        :returns: pairwise squared distance of samples to each center
+        :param x: samples of shape :math:`N \\times D`
+        :return: pairwise squared distances of the samples to each center, of shape
+            :math:`N \\times K`
         """
         assert x.shape[1] == self.n_features
         return utils.pairwise_distances(x, self.params)
@@ -58,8 +66,9 @@ class ClassCenters(nn.Module):
         """
         Make class membership predictions based on the softmin of the distances to each center.
 
-        :param x: embeddings of samples
-        :returns: normalized pairwise distance of samples to each center
+        :param x: embeddings of samples of shape :math:`N \\times D`
+        :return: class membership probabilities (softmin over the squared distances to the
+            centers), of shape :math:`N \\times K`
         """
         distances = utils.pairwise_distances(x, self.params)
         return nn.functional.softmin(distances, dim=1)
@@ -72,8 +81,8 @@ class RunningCenters(nn.Module):
 
     def __init__(self, n_classes: int, n_embedding: int):
         """
-        :param n_classes: number of centers
-        :param n_embedding: dimensionality of embedding space
+        :param n_classes: number of centers :math:`K`
+        :param n_embedding: dimensionality :math:`D` of embedding space
         """
         super(RunningCenters, self).__init__()
         self.num_classes = n_classes
@@ -90,7 +99,7 @@ class RunningCenters(nn.Module):
     @property
     def centers(self) -> torch.Tensor:
         """
-        :return: current class center estimates
+        :return: current class center estimates of shape :math:`K \\times D`
         """
         return self.running_centers
 
@@ -103,6 +112,14 @@ class RunningCenters(nn.Module):
         nn.init.zeros_(self.num_batches_tracked)
 
     def calculate_centers(self, embeddings, target) -> torch.Tensor:
+        """
+        Calculates the empirical class centers of a batch.
+
+        :param embeddings: embeddings of shape :math:`N \\times D`
+        :param target: class labels of shape :math:`N`
+        :return: centers of shape :math:`K \\times D`; rows of classes that do not occur in
+            ``target`` are NaN
+        """
         mu = torch.full(
             size=(self.num_classes, self.n_embedding),
             fill_value=float("NaN"),
@@ -114,11 +131,13 @@ class RunningCenters(nn.Module):
 
     def update(self, x: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
-        Update running centers
+        Update running centers. The buffers are updated in place. Labels must be
+        :math:`\\geq 0`.
 
-        :param x: inputs
-        :param target: class labels
-        :return: per class mean of inputs
+        :param x: embeddings of shape :math:`N \\times D`
+        :param target: class labels of shape :math:`N`
+        :return: per class mean of the inputs, of shape :math:`K \\times D`; rows of classes that
+            do not occur in ``target`` are NaN
         """
         batch_classes = torch.unique(target, sorted=False)
         n_instances = x.shape[0]
@@ -132,9 +151,11 @@ class RunningCenters(nn.Module):
 
     def forward(self, x: torch.Tensor):
         """
-        Calculates distances to centers
+        Calculates distances to centers. Note that, other than for :class:`ClassCenters`, the
+        centers come first.
 
-        :param x:
-        :return:  distance matrix
+        :param x: embeddings of shape :math:`N \\times D`
+        :return: squared Euclidean distances between the centers and the embeddings, of shape
+            :math:`K \\times N`
         """
         return utils.pairwise_distances(self.centers, x)

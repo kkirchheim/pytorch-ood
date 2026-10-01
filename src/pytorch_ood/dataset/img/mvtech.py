@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from PIL import Image
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -16,17 +17,27 @@ log = logging.getLogger(__name__)
 class MVTechAD(ImageDatasetBase):
     """
     MVTec AD is a dataset for benchmarking anomaly detection methods with a focus on industrial inspection.
-    The dataset provides segmentation masks for anomalies.
+    The dataset provides segmentation masks for anomalies. The official name of the dataset is *MVTec AD*;
+    this spelling of the class name is kept for backwards compatibility.
 
-    :see Paper: https://link.springer.com/content/pdf/10.1007/s11263-020-01400-4.pdf
-    :see Download: https://www.mvtec.com/company/research/datasets/mvtec-ad/
+    Images are :class:`PIL.Image.Image`. The target is a mask tensor with the size of the image, in which
+    non-zero (negative) entries mark anomalous pixels. Images without anomalies get a mask of zeros.
 
-    Split must be one of ``train`` or ``test``.
-
-    Subset classes can be one of ``bottle``, ``cable``, ``capsule``, ``carpet``,
-    ``grid``, ``hazelnut``, ``leather``, ``metal_nut``, ``pill``, ``screw``, ``tile``,
-    ``toothbrush``, ``transistor``, ``wood`` and ``zipper``.
+    :see Download: `MVTec AD website <https://www.mvtec.com/company/research/datasets/mvtec-ad/>`__
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license="CC-BY-NC-SA-4.0",
+        paper=Paper(
+            title="The MVTec Anomaly Detection Dataset: A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection",
+            venue="IJCV",
+            year=2021,
+            url="https://link.springer.com/article/10.1007/s11263-020-01400-4",
+        ),
+        homepage="https://www.mvtec.com/company/research/datasets/mvtec-ad/",
+    )
 
     splits = ["train", "test"]
     subsets = [
@@ -63,12 +74,15 @@ class MVTechAD(ImageDatasetBase):
         download: bool = False,
     ) -> None:
         """
-        :param root: root directory
-        :param split: split directory
-        :param subset: subset class to use
-        :param transform: transformations to apply to image
-        :param target_transform: transformation to apply to target masks
-        :param download: set to true to automatically download the dataset
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param split: one of ``train`` or ``test``
+        :param subset: object class to use. One of ``bottle``, ``cable``, ``capsule``, ``carpet``, ``grid``,
+            ``hazelnut``, ``leather``, ``metal_nut``, ``pill``, ``screw``, ``tile``, ``toothbrush``,
+            ``transistor``, ``wood`` and ``zipper``. If ``None``, all classes are used.
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target mask
+        :param download: download the data to ``root`` if it is not found there
+        :raises ValueError: if ``split`` or ``subset`` is invalid
         """
         super(ImageDatasetBase, self).__init__(
             join(root, "mvtech-ad"),
@@ -150,7 +164,7 @@ class MVTechAD(ImageDatasetBase):
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
         :param index: index
-        :returns: (image, target) where target is the segmentation mask
+        :return: tuple of the image and the segmentation mask, in which non-zero entries mark anomalous pixels
         """
         img_path = self.files[index]
         target = self.labels[index]

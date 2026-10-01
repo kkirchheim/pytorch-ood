@@ -4,11 +4,12 @@
 
 """
 
-from typing import Dict, Optional, TypeVar
+from typing import Dict, Optional
 
 import numpy as np
 import torch
 from torch import Tensor
+from typing_extensions import Self
 
 __all__ = [
     "OODMetrics",
@@ -27,19 +28,22 @@ from torchmetrics.utilities.compute import auc
 
 from .utils import TensorBuffer, is_unknown
 
-Self = TypeVar("Self")
-
 
 def calibration_error(
     confidence: torch.Tensor, correct: torch.Tensor, p: str = "2", beta: int = 100
 ) -> float:
     """
-    :see Implementation: `GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
+    Calibration error of predicted confidences: the samples are sorted by confidence and
+    grouped into bins of (about) ``beta`` samples; the error is the :math:`p`-norm of the
+    differences between the mean confidence and the accuracy of the bins, weighted by bin size.
+    Requires CPU tensors that do not require gradients.
 
-    :param confidence: predicted confidence
-    :param correct: ground truth
-    :param p: p for norm. Can be one of ``1``, ``2``, or ``infty``
-    :param beta: target bin size
+    :see Implementation: `Natural adversarial examples (Hendrycks et al.) on GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
+
+    :param confidence: predicted confidence per sample, of shape :math:`N`
+    :param correct: 1 where the prediction was correct, else 0, of shape :math:`N`
+    :param p: norm; one of ``"1"``, ``"2"``, or ``"infty"``
+    :param beta: target bin size (number of samples per bin)
     :return: calculated calibration error
     """
 
@@ -79,10 +83,14 @@ def calibration_error(
 
 def aurra(confidence: torch.Tensor, correct: torch.Tensor) -> float:
     """
-    :see Implementation: `GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
+    Area under the risk-response-rate curve (AURRA): the mean accuracy over all response rates,
+    when samples are answered in order of decreasing confidence.
+    Requires CPU tensors that do not require gradients.
 
-    :param confidence: predicted confidence values
-    :param correct: ground truth
+    :see Implementation: `Natural adversarial examples (Hendrycks et al.) on GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
+
+    :param confidence: predicted confidence values, of shape :math:`N`
+    :param correct: 1 where the prediction was correct, else 0, of shape :math:`N`
 
     :return: score
     """
@@ -96,10 +104,10 @@ def fpr_at_tpr(pred, target, k=0.95):
     """
     Calculate the False Positive Rate at a certain True Positive Rate
 
-    :param pred: outlier scores
-    :param target: target label
-    :param k: cutoff value
-    :return:
+    :param pred: outlier scores of shape :math:`N`
+    :param target: binary labels of shape :math:`N`, 1 for OOD and 0 for ID
+    :param k: target true positive rate, as a fraction in :math:`[0, 1]`
+    :return: false positive rate at the first threshold with a true positive rate :math:`\\geq k`
     """
     # results will be sorted in reverse order
     fpr, tpr, _ = binary_roc(pred, target)
@@ -127,12 +135,18 @@ def autc_score(labels: Tensor, scores: Tensor, pos_label: int = 1) -> Tensor:
     the score is computed in closed form in :math:`O(N)`, which is exact and avoids
     materializing a threshold curve.
 
+    Here, :math:`s_i` is the min-max normalized score of sample :math:`i`, :math:`y_i = 1` for
+    positive (OOD) and :math:`y_i = 0` for negative (ID) samples, and :math:`N_+` and :math:`N_-`
+    are the numbers of positive and negative samples. Note that, other than most functions in
+    this library, this function expects binary labels and not the labels :math:`< 0` for OOD.
+    The scores must not be constant.
+
     :param labels: ground truth labels, where ``pos_label`` denotes the positive (OOD) class
     :param scores: predicted outlier scores for each sample (higher = more likely positive)
     :param pos_label: value in ``labels`` that denotes the positive class
-    :return: AUTC score
+    :return: AUTC score, lower is better
 
-    :see Paper: `ArXiv <https://arxiv.org/pdf/2306.14658>`__
+    :see Paper: `Paper introducing the AUTC (arXiv 2306.14658) <https://arxiv.org/pdf/2306.14658>`__
     """
     labels = labels == pos_label
 
@@ -147,30 +161,46 @@ def autc_score(labels: Tensor, scores: Tensor, pos_label: int = 1) -> Tensor:
 
 class OODMetrics(object):
     """
-    Calculates various metrics used in OOD detection experiments.
+    Calculates various metrics used in OOD detection experiments. OOD samples have labels
+    :math:`< 0`; they are the positive class, and larger outlier scores mean more likely OOD.
+    :meth:`compute` returns a dictionary with the keys
 
-    - AUROC (see `ArXiv <https://arxiv.org/pdf/1610.02136>`__ or `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
-    - AUTC (see `ArXiv <https://arxiv.org/pdf/2306.14658>`__ for more information)
-    - AUPR ID (see `ArXiv <https://arxiv.org/pdf/1610.02136>`__ or `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
-    - AUPR OUT (see `ArXiv <https://arxiv.org/pdf/1610.02136>`__ or `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
-    - FPR\\@95TPR (see `ArXiv <https://arxiv.org/pdf/1706.02690>`__ for more information)
-    - ACC: closed-set classification accuracy on the known (in-distribution) samples,
+    - ``AUROC``: area under the ROC curve (see the
+      `Baseline for Detecting Misclassified and Out-of-Distribution Examples <https://arxiv.org/pdf/1610.02136>`__
+      or the `ODIN paper <https://arxiv.org/pdf/1706.02690>`__ for more information)
+    - ``AUTC``: area under the threshold curve, lower is better (see :func:`~pytorch_ood.utils.metrics.autc_score` and the
+      `AUTC paper <https://arxiv.org/pdf/2306.14658>`__)
+    - ``AUPR-IN``: area under the precision-recall curve with ID samples as the positive class
+      (see the `Baseline <https://arxiv.org/pdf/1610.02136>`__ or the
+      `ODIN paper <https://arxiv.org/pdf/1706.02690>`__)
+    - ``AUPR-OUT``: area under the precision-recall curve with OOD samples as the positive class
+      (see the `Baseline <https://arxiv.org/pdf/1610.02136>`__ or the
+      `ODIN paper <https://arxiv.org/pdf/1706.02690>`__)
+    - ``FPR95TPR``: false positive rate at a true positive rate of 95% (see the
+      `ODIN paper <https://arxiv.org/pdf/1706.02690>`__)
+    - ``ACC``: closed-set classification accuracy on the known (in-distribution) samples,
       included automatically whenever predicted class indices are passed to
       :meth:`update`.
 
     The interface is similar to ``torchmetrics``.
 
-    .. code :: python
+    .. code-block:: python
+
+        import torch
+
+        from pytorch_ood.utils import OODMetrics
 
         metrics = OODMetrics()
-        outlier_scores = torch.Tensor([0.5, 1.0, -10])
-        labels = torch.Tensor([1,2,-1])
+        outlier_scores = torch.tensor([0.5, 1.0, -10.0])
+        labels = torch.tensor([1, 2, -1])
         metrics.update(outlier_scores, labels)
         metric_dict = metrics.compute()
 
-    Passing predicted class indices additionally reports closed-set accuracy:
+    Passing predicted class indices additionally reports closed-set accuracy
+    (``model``, ``detector``, ``x`` and ``labels`` are a classifier, a detector, a batch of
+    inputs and its labels):
 
-    .. code :: python
+    .. code-block:: python
 
         metrics = OODMetrics()
         logits = model(x)
@@ -181,10 +211,10 @@ class OODMetrics(object):
     In ``classification`` mode, the inputs will be flattened, so we treat each value as an individual example.
     Using this mode for segmentation tasks can require a lot of memory and compute.
 
-    In ``segmentation`` mode, the inputs will be flattened along the first (batch) dimension so that the shape is
-    :math:`B \\times D` afterwards.
-    The scores will then be calculated for each sample in the batch (i.e., over :math:`D` values each), and the final
-    score will be the mean over all :math:`B` samples.
+    In ``segmentation`` mode, scores and labels must have the shape :math:`B \\times H \\times W`.
+    The metrics are calculated for each of the :math:`B` samples in the batch separately (over its
+    :math:`H \\cdot W` pixels), and the final result is the mean over all samples. Each sample must
+    therefore contain both ID and OOD pixels.
     """
 
     def __init__(self, device: str = "cpu", mode: str = "classification", void_label: int = None):
@@ -192,6 +222,7 @@ class OODMetrics(object):
         :param device: where tensors should be stored
         :param mode: either ``classification`` or ``segmentation``.
         :param void_label: label that will be ignored during score calculation
+        :raises ValueError: if ``mode`` is invalid
         """
         super(OODMetrics, self).__init__()
         self.device = device
@@ -203,17 +234,19 @@ class OODMetrics(object):
 
         self.mode = mode
 
-    def update(
-        self: Self, scores: Tensor, y: Tensor, predictions: Optional[Tensor] = None
-    ) -> Self:
+    def update(self, scores: Tensor, y: Tensor, predictions: Optional[Tensor] = None) -> Self:
         """
         Add batch of results to collection.
 
-        :param scores: outlier score
-        :param y: target label
-        :param predictions: predicted class indices, classification mode only. When
-            given (on every call to this instance), :meth:`compute` additionally
+        :param scores: outlier scores, of shape :math:`B` (``classification``) or
+            :math:`B \\times H \\times W` (``segmentation``). Larger means more likely OOD.
+        :param y: target labels of the same shape as ``scores``; values :math:`< 0` denote OOD
+        :param predictions: predicted class indices of the same shape as ``y``, classification
+            mode only. When given (on every call to this instance), :meth:`compute` additionally
             reports closed-set accuracy ("ACC") on the known (in-distribution) samples.
+        :return: self
+        :raises ValueError: if the shapes of the inputs do not match
+        :raises NotImplementedError: if ``predictions`` are given in segmentation mode
         """
         scores = scores.detach()
         y = y.detach()
@@ -301,8 +334,9 @@ class OODMetrics(object):
         """
         Calculate metrics
 
-        :return: dictionary with different metrics
-        :raise: ValueError if data does not contain ID and OOD points or buffer is empty
+        :return: dictionary with the keys ``AUROC``, ``AUTC``, ``AUPR-IN``, ``AUPR-OUT`` and
+            ``FPR95TPR`` (and ``ACC``, if predictions were given)
+        :raises ValueError: if the buffer is empty or the data does not contain both ID and OOD points
         """
         if self.buffer.is_empty():
             raise ValueError("Must be given data to calculate metrics.")
@@ -332,7 +366,7 @@ class OODMetrics(object):
         metrics = {k: v.item() for k, v in metrics.items()}
         return metrics
 
-    def reset(self: Self) -> Self:
+    def reset(self) -> Self:
         """
         Resets collected metrics
         """
@@ -352,7 +386,7 @@ def oscr_score(outlier_scores: Tensor, predictions: Tensor, labels: Tensor) -> f
     A perfect detector that also classifies all known samples correctly returns 1.0.
     A random detector returns roughly equal to the closed-set accuracy.
 
-    .. code :: python
+    .. code-block:: python
 
         scores = detector(x)                    # higher = more OOD
         preds  = model(x).argmax(dim=1)
@@ -361,7 +395,8 @@ def oscr_score(outlier_scores: Tensor, predictions: Tensor, labels: Tensor) -> f
     :param outlier_scores: 1-D tensor of outlier scores (higher = more likely OOD)
     :param predictions: 1-D tensor of predicted class indices
     :param labels: 1-D tensor of true labels; ``>= 0`` for known, ``< 0`` for unknown
-    :returns: OSCR score in ``[0, 1]``
+    :return: OSCR score in ``[0, 1]``
+    :raises ValueError: if ``labels`` contain no known or no unknown samples
 
     :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
     """

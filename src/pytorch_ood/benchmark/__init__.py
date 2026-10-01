@@ -9,32 +9,44 @@ Each benchmark implements a common interface.
 .. note :: This is currently a draft and likely subject to change in the
     future.
 
-.. code:: python
+.. code-block:: python
 
-    benchmark = Benchmark(root)
-    detector = Detector(model)
-    detector.fit(benchmark.train_set())
+    from torch.utils.data import DataLoader
 
-    results1 = benchmark.evaluate(detector1)
-    results2 = benchmark.evaluate(detector2)
+    from pytorch_ood.benchmark import CIFAR10_OpenOOD
+    from pytorch_ood.detector import EnergyBased, Mahalanobis
+
+    benchmark = CIFAR10_OpenOOD(root, transform)
+    detector1 = EnergyBased(model)
+    detector2 = Mahalanobis(model.features)  # requires fitting
+
+    detector2.fit(DataLoader(benchmark.train_set(), batch_size=128))
+
+    results1 = benchmark.evaluate(detector1, loader_kwargs={"batch_size": 128})
+    results2 = benchmark.evaluate(detector2, loader_kwargs={"batch_size": 128})
+
+``results1`` and ``results2`` are lists with one dictionary per OOD dataset (see
+:meth:`Benchmark.evaluate <pytorch_ood.benchmark.Benchmark.evaluate>`).
 
 Several detectors can also be evaluated together. Benchmark caching can reuse
 intermediate logits or pooled features when evaluating multiple compatible detectors:
 
-.. code:: python
+.. code-block:: python
 
     results = benchmark.evaluate(
         [detector1, detector2],
+        loader_kwargs={"batch_size": 128},
         cache=True,
         cache_dir="cache/",
         cache_key="wrn-cifar10-v1",
     )
 
 When possible, benchmarks reuse cached logits or pooled features for
-``LogitsDetector`` and ``FeaturesDetector`` instances. With ``cache=True``,
-those cached representations are kept on the benchmark object and can be
-reused across later ``evaluate(...)`` calls. With ``cache_dir=...``, they
-can also be written to disk.
+``LogitsDetector`` and ``FeaturesDetector`` instances. With ``cache=True`` or
+``cache_dir=...``, those cached representations are kept on the benchmark object and
+can be reused across later ``evaluate(...)`` calls. With ``cache_dir=...`` and a
+``cache_key``, they are also written to disk. Detectors of other kinds
+(feature-map, structured, and gradient detectors) always run the full pipeline.
 
 .. warning::
 

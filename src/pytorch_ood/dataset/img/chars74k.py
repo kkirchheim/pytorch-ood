@@ -9,6 +9,7 @@ import numpy as np
 from PIL import Image
 from torchvision.datasets.utils import check_integrity, download_url
 
+from pytorch_ood.api import DatasetInfo, Paper, Role, Task
 from pytorch_ood.dataset.img.base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -33,14 +34,28 @@ class Chars74k(ImageDatasetBase):
     """
     Dataset from the paper *Character Recognition in Natural Images*. Can be used as example OOD data.
 
+    Images are returned as :class:`PIL.Image.Image`. Targets are the character class indices
+    (remapped to :math:`0, \\dots, n-1`), **not** ``-1``. When using this dataset as OOD data, mark the samples as
+    OOD with ``target_transform=ToUnknown()`` (see :class:`pytorch_ood.utils.ToUnknown`).
+
     .. image:: https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/Samples/confusing_english.png
         :width: 800px
-        :alt: Chars47k Dataset Example
+        :alt: Chars74k Dataset Example
         :align: center
-
-    :see Website: `Link <https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/>`__
-    :see Paper: `Link <http://personal.ee.surrey.ac.uk/Personal/T.Decampos/papers/decampos_etal_visapp2009.pdf>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license="No explicit license; cite the paper and notify the authors of use",
+        paper=Paper(
+            title="Character Recognition in Natural Images",
+            venue="VISAPP",
+            year=2009,
+            url="https://teodecampos.github.io/chars74k/decampos_etal_visapp2009.pdf",
+        ),
+        homepage="https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/",
+    )
 
     base_folder = "chars74k"
     url_dataset = "https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/EnglishImg.tgz"
@@ -59,7 +74,7 @@ class Chars74k(ImageDatasetBase):
         download: bool = False,
     ):
         """
-        :param root: root directory of dataset
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
         :param transform: transformation to apply to the images
         :param target_transform: transformation to apply to the labels
         :param download: set to true to automatically download the dataset

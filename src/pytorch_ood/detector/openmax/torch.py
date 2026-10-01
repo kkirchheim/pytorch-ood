@@ -3,17 +3,17 @@ Torch wrapper for a numpy implementation of openmax.
 """
 
 import logging
-from typing import Optional, TypeVar
+from typing import Optional
 
 import torch
 from torch import Tensor
 from torch.nn import Module
+from typing_extensions import Self
 
-from ...api import LogitsDetector, ModelNotSetException
+from ...api import DetectorInfo, LogitsDetector, ModelNotSetException, Paper, Task
 from .numpy import OpenMax as NumpyOpenMax
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class OpenMax(LogitsDetector):
@@ -21,22 +21,30 @@ class OpenMax(LogitsDetector):
     Implementation of the OpenMax Layer as proposed in the paper *Towards Open Set Deep Networks*.
 
     The method determines a center :math:`\\mu_y` for each class in the logits space of a model, and then
-    creates a statistical model of the distances of correct classified inputs.
+    creates a statistical model of the distances of the training inputs of each class.
     It uses extreme value theory to detect outliers by fitting a weibull function to the tail of the distance
     distribution.
 
-    We use the pseudo-activation of the *unknown* class as outlier score.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1511.06233>`__
-    :see Implementation: `GitHub <https://github.com/abhijitbendale/OSDN>`__
+    We use the (softmax) probability of the *unknown* class as outlier score.
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Towards Open Set Deep Networks",
+            venue="CVPR",
+            year=2016,
+            url="https://arxiv.org/abs/1511.06233",
+            code="https://github.com/abhijitbendale/OSDN",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 
-    #: grid explored by :class:`pytorch_ood.utils.GridSearch`. ``alpha``/``euclid_weight``
-    #: anchored around the fixed values used by the OpenOOD reference implementation
-    #: (weibull_alpha=3, eu_weight=0.5); ``tailsize`` around the paper/OpenOOD default of
-    #: 20-25, since OpenOOD itself does not sweep any of these three.
+    #: grid explored by :class:`pytorch_ood.utils.GridSearch`.
+    # ``alpha``/``euclid_weight`` are anchored around the fixed values used by the OpenOOD reference
+    # implementation (weibull_alpha=3, eu_weight=0.5); ``tailsize`` around the paper/OpenOOD default of
+    # 20-25, since OpenOOD itself does not sweep any of these three.
     hyperparameter_space = {
         "tailsize": [10, 20, 30, 40, 50],
         "alpha": [1, 3, 5, 10, 15, 20],
@@ -55,20 +63,21 @@ class OpenMax(LogitsDetector):
             ``fit_logits(...)`` and ``predict_logits(...)`` directly.
         :param tailsize: length of the tail to fit the distribution to
         :param alpha: number of class activations to revise
-        :param euclid_weight: weight for the Euclidean distance.
+        :param euclid_weight: weight in :math:`[0, 1]` of the Euclidean distance; the cosine distance
+            gets weight ``1 - euclid_weight``.
         """
         self.model = model
         self.tailsize = tailsize
         self.alpha = alpha
         self.euclid_weight = euclid_weight
 
-    def fit_logits(self: Self, logits: Tensor, y: Tensor) -> Self:
+    def fit_logits(self, logits: Tensor, y: Tensor) -> Self:
         """
         Determines parameters of the weibull functions for each class.
 
-        :param logits: logits given by the model
-        :param y: class labels
-        :return:
+        :param logits: logits of shape :math:`N \\times C`
+        :param y: class labels of shape :math:`N`
+        :return: self
         """
         # Built here (not in __init__) so that GridSearch.set_hyperparameters -- which
         # only assigns self.tailsize/alpha/euclid_weight, per hyperparameter_space --
@@ -83,7 +92,8 @@ class OpenMax(LogitsDetector):
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: input, will be passed through the model to get logits
+        :param x: input batch, will be passed through the model to get logits
+        :return: outlier scores of shape :math:`B`
         """
         if self.model is None:
             raise ModelNotSetException
@@ -99,7 +109,8 @@ class OpenMax(LogitsDetector):
 
     def predict_logits(self, logits: Tensor) -> Tensor:
         """
-        :param logits: logits given by model
+        :param logits: logits of shape :math:`B \\times C`
+        :return: probability of the unknown class, shape :math:`B`
         """
         device = self.device or logits.device
         logits = logits.detach().cpu().numpy()

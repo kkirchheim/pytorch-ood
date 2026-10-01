@@ -62,10 +62,13 @@ To build the documentation, run
 
     pip install -r docs/requirements.txt
     cd docs
-    make html
+    make clean html
+
+The documentation is generated from the docstrings, so use ``make clean html`` (and not
+``make html``) after changing a docstring; otherwise Sphinx may reuse stale pages.
 
 
 Quick Start
 -----------------------------------------
 
-You can find a lot of minimal examples :doc:`here <auto_examples/benchmarks/index>`.
+You can find a lot of minimal examples in the :doc:`benchmark examples <auto_examples/benchmarks/index>`.

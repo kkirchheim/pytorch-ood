@@ -5,6 +5,7 @@ from torch import nn
 
 from pytorch_ood.model import ClassCenters
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import apply_reduction, is_unknown
 from .center import CenterLoss
 from .crossentropy import CrossEntropyLoss
@@ -31,10 +32,20 @@ class MCHADLoss(nn.Module):
     The third term makes sure that OOD samples have at least a distance :math:`m` to the surface of each hypersphere.
 
     The loss can be used in a supervised, as well as in an unsupervised manner.
-
-    :see Implementation: `GitLab <https://gitlab.com/kkirchheim/mchad>`__
-    :see Paper: `ICPR <https://ieeexplore.ieee.org/document/9956337>`__
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Multi-Class Hypersphere Anomaly Detection",
+            venue="ICPR",
+            year=2022,
+            url="https://ieeexplore.ieee.org/document/9956337",
+            code="https://gitlab.com/kkirchheim/mchad",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.DISTANCES},
+        supervised=True,
+    )
 
     def __init__(
         self,
@@ -49,8 +60,8 @@ class MCHADLoss(nn.Module):
         """
         :param n_classes: number of classes  :math:`C`
         :param n_dim: dimensionality of the output space :math:`D`
-        :param radius: radius of the hyperspheres
-        :param margin: margin around hyperspheres
+        :param radius: radius :math:`r` of the hyperspheres
+        :param margin: margin :math:`m` around the hyperspheres
         :param weight_center: weight :math:`\\lambda_{\\Lambda}` for the center loss term
         :param weight_nll: weight  :math:`\\lambda_{\\Delta}` for the maximum likelihood term
         :param weight_oe: weight  :math:`\\lambda_{\\Theta}` for the outlier exposure term
@@ -87,8 +98,9 @@ class MCHADLoss(nn.Module):
     def forward(self, distmat: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
         :param distmat: distance matrix  shape :math:`B \\times C`.
-        :param y: labels
-        :returns: loss values
+        :param y: labels of shape :math:`B`; labels :math:`< 0` are OOD (without OOD samples, the third term
+            is zero)
+        :return: scalar loss
         """
         loss_center = self.center_loss(distmat, y)
         # cross-entropy with integrated softmax becomes softmin with e^-x
@@ -106,12 +118,14 @@ class MCHADLoss(nn.Module):
 
 class CenterRegularizationLoss(nn.Module):
     """
-    Regularization Term, uses sum reduction
+    Regularization term of the :class:`MCHADLoss <pytorch_ood.loss.MCHADLoss>` that acts on OOD samples
+    (the third term, :math:`\\mathcal{L}_{\\Theta}`).
     """
 
     def __init__(self, margin: float, reduction="sum"):
         """
         :param margin: Margin around centers of the spheres (i.e. including the original radius)
+        :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
         """
         super(CenterRegularizationLoss, self).__init__()
         self.margin = torch.nn.Parameter(torch.tensor([margin]).float())

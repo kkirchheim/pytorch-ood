@@ -6,6 +6,7 @@ from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.transforms.functional import to_tensor
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -17,14 +18,27 @@ class StreetHazards(ImageDatasetBase):
 
     From the paper *Scaling Out-of-Distribution Detection for Real-World Settings*
 
+    Images are :class:`PIL.Image.Image` of size :math:`1280 \\times 720`. The target is a long tensor of shape
+    :math:`H \\times W` with the class index (see ``classes``) of each pixel, and ``-1`` for anomalous pixels.
+
     .. image:: https://github.com/hendrycks/anomaly-seg/raw/master/streethazards.gif
         :width: 800px
         :alt: Street Hazards Dataset Example
         :align: center
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1911.11132>`__
-    :see Website: `GitHub <https://github.com/hendrycks/anomaly-seg>`__
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license=None,
+        paper=Paper(
+            title="Scaling Out-of-Distribution Detection for Real-World Settings",
+            venue="ICML",
+            year=2022,
+            url="https://arxiv.org/abs/1911.11132",
+        ),
+        homepage="https://github.com/hendrycks/anomaly-seg",
+    )
 
     classes: List[str] = [
         "unlabeled",
@@ -68,14 +82,16 @@ class StreetHazards(ImageDatasetBase):
         self,
         root: str,
         subset: str,
-        transform: Optional[Callable[[Tuple], Tuple]] = None,
+        transform: Optional[Callable[[Any, Any], Tuple[Any, Any]]] = None,
         download: bool = False,
     ) -> None:
         """
-        :param root: root path for dataset
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
         :param subset: one of ``train``, ``test``, ``validation``
-        :param transform: transformations to apply to images and masks, will get tuple as argument
-        :param download: if dataset should be downloaded automatically
+        :param transform: called as ``transform(image, mask)`` with the PIL image and the target mask,
+            and must return the transformed ``(image, mask)`` tuple
+        :param download: download the data to ``root`` if it is not found there
+        :raises ValueError: if ``subset`` is invalid
         """
         root = join(root, self.root_dir_name)
         super(ImageDatasetBase, self).__init__(root, transform=transform)
@@ -119,7 +135,7 @@ class StreetHazards(ImageDatasetBase):
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
         :param index: index
-        :returns: (image, target) where target is the annotation of the image.
+        :return: tuple of the image and the target mask of shape :math:`H \\times W`, ``-1`` marks anomalies
         """
         file, target = self.files[index], self.files[index].replace("images", "annotations")
 

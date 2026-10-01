@@ -1,11 +1,4 @@
-"""
-CACLoss
-----------------------------------------------
-
-..  automodule:: pytorch_ood.nn.loss.cac
-    :members: cac_rejection_score, CACLoss
-
-"""
+"""Class Anchor Clustering loss."""
 
 import torch as torch
 import torch.nn as nn
@@ -13,6 +6,7 @@ import torch.nn as nn
 #
 from torch.nn import functional as F
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..model.centers import ClassCenters
 from ..utils import is_known
 
@@ -20,21 +14,39 @@ from ..utils import is_known
 class CACLoss(nn.Module):
     """
     Class Anchor Clustering Loss from the paper
-    *Class Anchor Clustering: a Distance-based Loss for Training Open Set Classifiers*.
+    *Class Anchor Clustering: a Loss for Distance-based Open Set Recognition*.
 
     They place a class conditional center (called anchor) in the output space of the model and pull representations of
     points of a class :math:`y` towards the corresponding center :math:`\\mu_y` during training.
     The centers are initialized as unit vectors scaled by a magnitude and not trainable.
 
+    With the squared distances :math:`d_c(x) = \\lVert f(x) - \\mu_c \\rVert_2^2` to the centers, the loss is
+
+    .. math::
+        \\mathcal{L}(x, y) = \\alpha \\, d_y(x) + \\log\\Bigl(1 + \\sum_{c \\neq y} e^{d_y(x) - d_c(x)}\\Bigr)
+
+    where :math:`\\alpha` weights the anchor term.
+    Samples with labels :math:`< 0` are ignored.
+
     They also propose an outlier score based on the distance which is implemented in the :meth:`CACLoss.score` method.
 
-    Example code is provided :doc:`here </auto_examples/loss/unsupervised/cac>`
+    .. rubric:: Examples
 
-
-    :see Paper: `WACV 2022 <https://arxiv.org/abs/2004.02434>`_
-    :see Implementation: `GitHub <https://github.com/dimitymiller/cac-openset/>`_
-
+    See the :doc:`gallery example </auto_examples/loss/unsupervised/cac>`.
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Class Anchor Clustering: a Loss for Distance-based Open Set Recognition",
+            venue="WACV",
+            year=2021,
+            url="https://arxiv.org/abs/2004.02434",
+            code="https://github.com/dimitymiller/cac-openset/",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.DISTANCES},
+        supervised=False,
+    )
 
     def __init__(self, n_classes: int, magnitude: float = 1.0, alpha: float = 1.0):
         """
@@ -70,7 +82,8 @@ class CACLoss(nn.Module):
         OOD inputs will be ignored.
 
         :param distances:  matrix of distances of each point to each center with shape :math:`B \\times C`.
-        :param target: labels for samples
+        :param target: labels of shape :math:`B`; labels :math:`< 0` are ignored
+        :return: scalar loss
         """
         assert distances.shape[1] == self.n_classes
 
@@ -104,8 +117,8 @@ class CACLoss(nn.Module):
 
     def distance(self, x: torch.Tensor) -> torch.Tensor:
         """
-
-        :param x: input points
+        :param x: embeddings of shape :math:`B \\times C` (the dimensionality of the center space is the
+            number of classes)
         :return: matrix with squared distances from each point to each center with shape :math:`B \\times C`.
         """
         return self.centers(x)
@@ -115,8 +128,10 @@ class CACLoss(nn.Module):
         """
         Rejection score proposed in the paper.
 
-        :param distance: distance of instances to class centers
-        :return: outlier scores
+        :param distance: squared distances to the class centers, shape :math:`B \\times C`
+        :return: outlier scores of shape :math:`B`.
+            Computes :math:`-\\max_c d_c (1 - \\mathrm{softmin}(d)_c)`; the sign is flipped relative to the
+            paper's rejection score
         """
         scores = distance * (1 - F.softmin(distance, dim=1))
         return -scores.max(dim=1).values
