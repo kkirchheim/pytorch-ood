@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..api import LossInfo, Paper, Representation, Task
-from ..utils import is_known
+from ..utils import drop_unknown
 
 
 class ConfidenceLoss(nn.Module):
@@ -20,12 +20,13 @@ class ConfidenceLoss(nn.Module):
 
     Here, :math:`M` is the number of classes, :math:`y` the one-hot label, :math:`p` the softmax output
     and :math:`c \\in [0,1]` the predicted confidence.
-    Samples with labels :math:`< 0` are ignored in the negative log-likelihood term.
+    Both terms are averaged over the batch. Samples with labels :math:`< 0` are discarded, with a warning.
 
     .. note::
         * We implemented clipping for numerical stability.
-        * This implementation uses mean reduction for batches.
-        * The authors additionally used ODIN preprocessing
+        * The authors additionally used ODIN preprocessing, and, during training, gave the label as a
+          hint to a random half of the batch and adapted :math:`\\alpha` to a confidence budget. These
+          are part of the training procedure and not implemented here.
     """
 
     info = LossInfo(
@@ -56,24 +57,18 @@ class ConfidenceLoss(nn.Module):
         """
         :param logits: class logits of shape :math:`B \\times C`
         :param confidence: predicted confidence :math:`c \\in [0, 1]`, shape :math:`B \\times 1`
-        :param target: labels of shape :math:`B` (not one-hot encoded); labels :math:`< 0` are ignored
+        :param target: labels of shape :math:`B` (not one-hot encoded); labels :math:`< 0` are discarded
         :return: scalar loss
         """
-        known = is_known(target)
+        target, logits, confidence = drop_unknown(target, logits, confidence)
+        if len(target) == 0:
+            return logits.sum() * 0.0 + confidence.sum() * 0.0
 
-        if known.any():
-            target_prob_dist = F.one_hot(target[known], num_classes=logits.size(1))
-            prediction = F.softmax(logits[known], dim=1)
-            adjusted_prediction = (
-                prediction * confidence[known] + (1 - confidence[known]) * target_prob_dist
-            )
-            # calculate negative log likelihood
-            adjusted_prediction = adjusted_prediction.clamp(self.eps, 1.0)
-            loss_nll = -torch.sum(torch.log(adjusted_prediction) * target_prob_dist)
-            confidence = confidence.clamp(self.eps, 1.0)
-            loss_conf = -torch.log(confidence)
-            # NOTE: we use mean as reduction for batches
-            loss_conf = loss_conf.mean()
-            return loss_nll + self.alpha * loss_conf
-        else:
-            return torch.zeros(size=(1,))
+        target_prob_dist = F.one_hot(target, num_classes=logits.size(1))
+        prediction = F.softmax(logits, dim=1)
+        adjusted_prediction = prediction * confidence + (1 - confidence) * target_prob_dist
+        adjusted_prediction = adjusted_prediction.clamp(self.eps, 1.0)
+        # mean over the batch for both terms, as in the reference implementation
+        loss_nll = -(torch.log(adjusted_prediction) * target_prob_dist).sum(dim=1).mean()
+        loss_conf = -torch.log(confidence.clamp(self.eps, 1.0)).mean()
+        return loss_nll + self.alpha * loss_conf

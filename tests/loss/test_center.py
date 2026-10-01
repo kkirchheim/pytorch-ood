@@ -44,7 +44,7 @@ class TestCenterLoss(unittest.TestCase):
         self.assertGreaterEqual(loss, 0)
 
     def test_all_ood(self):
-        target = torch.ones(0, 128).long() * -1
+        target = torch.ones(128).long() * -1
 
         criterion = CenterLoss(n_classes=10, n_dim=8)
         z = torch.randn(size=(128, 8))

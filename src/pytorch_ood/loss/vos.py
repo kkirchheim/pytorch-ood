@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from ..api import LossInfo, Paper, Representation, Task
 from ..loss.crossentropy import cross_entropy
-from ..utils import apply_reduction, is_known, is_unknown
+from ..utils import apply_reduction, drop_unknown, is_known, is_unknown
 
 
 class VOSRegLoss(nn.Module):
@@ -242,10 +242,17 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
 
         :param logits: logits of shape :math:`B \\times C`
         :param features: penultimate features of shape :math:`B \\times D`
-        :param y: labels of shape :math:`B`; samples with labels :math:`< 0` are ignored
+        :param y: labels of shape :math:`B`; samples with labels :math:`< 0` are discarded
         :return: loss
         :raises NotImplementedError: for segmentation inputs
         """
+        if y.dim() != 1:
+            raise NotImplementedError("Segmentation not implemented yet")
+        y, logits, features = drop_unknown(y, logits, features)
+        if len(y) == 0:
+            zero = (logits.sum(dim=1) + features.sum(dim=1)) * 0.0
+            return zero if self.reduction in (None, "none") else zero.sum()
+
         regularization = self._regularization(logits, features, y)
         loss = self.nll(logits, y, reduction=self.reduction)
         return apply_reduction(loss, self.reduction) + apply_reduction(

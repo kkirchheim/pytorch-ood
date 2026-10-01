@@ -6,7 +6,7 @@ from torch import nn
 from pytorch_ood.model import ClassCenters
 
 from ..api import LossInfo, Paper, Representation, Task
-from ..utils import apply_reduction, is_unknown
+from ..utils import apply_reduction, is_known, is_unknown
 from .center import CenterLoss
 from .crossentropy import CrossEntropyLoss
 
@@ -102,9 +102,11 @@ class MCHADLoss(nn.Module):
             is zero)
         :return: scalar loss
         """
-        loss_center = self.center_loss(distmat, y)
+        # the center and cross-entropy terms only use ID samples
+        known = is_known(y)
+        loss_center = self.center_loss(distmat[known], y[known])
         # cross-entropy with integrated softmax becomes softmin with e^-x
-        loss_nll = self.nll_loss(-distmat, y)
+        loss_nll = self.nll_loss(-distmat[known], y[known])
         loss_out = self.regu_loss(distmat, y)
 
         loss = (

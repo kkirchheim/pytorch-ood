@@ -3,6 +3,7 @@
 import logging
 import math
 import random
+import warnings
 from collections import defaultdict
 from typing import Any, Callable, Dict, KeysView, Optional, Tuple, Union
 
@@ -114,6 +115,30 @@ def is_unknown(labels) -> Union[bool, Tensor]:
     :return: boolean mask of the shape of ``labels``, True where the label is :math:`< 0`
     """
     return labels < 0
+
+
+def drop_unknown(target: Tensor, *tensors: Tensor) -> Tuple[Tensor, ...]:
+    """
+    Discards the OOD samples (targets :math:`< 0`) of a batch, with a warning. Losses that do not use
+    OOD samples call this at the start of ``forward``, so that they compute the same loss as on a
+    batch without these samples.
+
+    :param target: labels of shape :math:`B`
+    :param tensors: tensors of the batch, each with first dimension :math:`B`
+    :return: tuple ``(target, *tensors)``, restricted to the samples with targets :math:`\\geq 0`
+    :raises ValueError: if ``target`` is not one-dimensional
+    """
+    if target.dim() != 1:
+        raise ValueError(f"Expected targets of shape B, got {tuple(target.shape)}")
+
+    known = is_known(target)
+    if known.all():
+        return (target, *tensors)
+
+    warnings.warn(
+        "Discarding samples with targets < 0 (OOD), which this loss does not use.", stacklevel=2
+    )
+    return (target[known], *(t[known] for t in tensors))
 
 
 def contains_known_and_unknown(labels) -> Union[bool, Tensor]:

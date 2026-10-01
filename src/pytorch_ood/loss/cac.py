@@ -8,7 +8,7 @@ from torch.nn import functional as F
 
 from ..api import LossInfo, Paper, Representation, Task
 from ..model.centers import ClassCenters
-from ..utils import is_known
+from ..utils import drop_unknown
 
 
 class CACLoss(nn.Module):
@@ -87,32 +87,23 @@ class CACLoss(nn.Module):
         """
         assert distances.shape[1] == self.n_classes
 
-        known = is_known(target)
-        if known.any():
-            target_known = target[known]
-            d_known = distances[known]
+        target, distances = drop_unknown(target, distances)
+        if len(target) == 0:
+            return distances.sum() * 0.0
 
-            d_true = torch.gather(input=d_known, dim=1, index=target_known.view(-1, 1)).view(-1)
-            anchor_loss = d_true.mean()
-
-            non_target = torch.arange(
-                0, self.n_classes - 1, dtype=torch.long, device=distances.device
-            ).expand(d_known.shape[0], self.n_classes - 1)
-
-            # required in newer versions of torch, before advances indexing
-            non_target = non_target.clone()
-
-            is_last_class = target_known == self.n_classes
-            non_target[is_last_class, target_known[is_last_class]] = self.n_classes - 1
-
-            d_other = torch.gather(d_known, dim=1, index=non_target)
-            # for numerical stability, we clamp the distance values
-            tuplet_loss = (-d_other + d_true.unsqueeze(1)).clamp(max=50).exp()
-            tuplet_loss = torch.log(1 + tuplet_loss.sum(dim=1)).mean()
-        else:
-            anchor_loss = torch.tensor(0.0, device=distances.device)
-            tuplet_loss = torch.tensor(0.0, device=distances.device)
-
+        d_true = torch.gather(input=distances, dim=1, index=target.view(-1, 1)).view(-1)
+        anchor_loss = d_true.mean()
+        non_target = torch.arange(
+            0, self.n_classes - 1, dtype=torch.long, device=distances.device
+        ).expand(distances.shape[0], self.n_classes - 1)
+        # required in newer versions of torch, before advances indexing
+        non_target = non_target.clone()
+        is_last_class = target == self.n_classes
+        non_target[is_last_class, target[is_last_class]] = self.n_classes - 1
+        d_other = torch.gather(distances, dim=1, index=non_target)
+        # for numerical stability, we clamp the distance values
+        tuplet_loss = (-d_other + d_true.unsqueeze(1)).clamp(max=50).exp()
+        tuplet_loss = torch.log(1 + tuplet_loss.sum(dim=1)).mean()
         return self.alpha * anchor_loss + tuplet_loss
 
     def distance(self, x: torch.Tensor) -> torch.Tensor:

@@ -4,7 +4,7 @@ from torch.nn import Module
 from torch.nn.functional import cross_entropy
 
 from pytorch_ood.api import LossInfo, Paper, Representation, Task
-from pytorch_ood.utils import is_known
+from pytorch_ood.utils import drop_unknown
 
 
 def logit_norm_loss(
@@ -12,7 +12,7 @@ def logit_norm_loss(
 ) -> torch.Tensor:
     """
     Cross-entropy of the logits normalized to unit L2-norm and scaled by :math:`1/\\tau`.
-    OOD samples (labels :math:`< 0`) are dropped.
+    OOD samples (labels :math:`< 0`) are discarded, see :func:`~pytorch_ood.utils.drop_unknown`.
 
     :param logits: logits as predicted by the model, shape :math:`B \\times K`
     :param target: labels of shape :math:`B`
@@ -20,9 +20,9 @@ def logit_norm_loss(
     :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
     :return: the loss
     """
-    known = is_known(target)
-    logits = logits[known]
-    target = target[known]
+    target, logits = drop_unknown(target, logits)
+    if len(target) == 0 and reduction == "mean":
+        return logits.sum() * 0.0
 
     norm = torch.norm(logits, p=2, dim=1, keepdim=True) + 1e-7
     adjusted = logits / (t * norm)

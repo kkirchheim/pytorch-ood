@@ -6,7 +6,7 @@ from torch.nn.functional import softmin
 
 from ..api import LossInfo, Paper, Representation, Task
 from ..model.centers import RunningCenters
-from ..utils import is_known, pairwise_distances
+from ..utils import drop_unknown, pairwise_distances
 
 log = logging.getLogger(__name__)
 
@@ -122,28 +122,22 @@ class IILoss(nn.Module):
         :param target: labels of shape :math:`B`; labels :math:`< 0` are ignored
         :return: scalar loss
         """
-        known = is_known(target)
+        target, x = drop_unknown(target, x)
+        if len(target) == 0:
+            return x.sum() * 0.0
 
-        if known.any():
-            batch_classes = torch.unique(target[known], sorted=False)
-            if self.training:
-                # calculate empirical centers
-                mu = self.running_centers.update(
-                    x[known], target[known]
-                )  # self._calculate_centers(x, target)
-            else:
-                # when testing, use the running empirical class centers
-                mu = self.running_centers.centers
-
-            # calculate sum of class spreads and divide by the number of instances
-            intra_spread = (
-                self._calculate_spreads(mu, x[known], target[known]).sum() / x[known].shape[0]
-            )
-            # calculate distance between all (present) class centers
-            dists = _get_center_distances(mu[batch_classes])
-            # the minimum distance between all class centers is the inter separation
-            inter_separation = -torch.min(dists)
-            # intra_spread should be minimized, inter_separation maximized
-            return intra_spread + self.alpha * inter_separation
+        batch_classes = torch.unique(target, sorted=False)
+        if self.training:
+            # calculate empirical centers
+            mu = self.running_centers.update(x, target)
         else:
-            return torch.zeros(size=(1,))
+            # when testing, use the running empirical class centers
+            mu = self.running_centers.centers
+        # calculate sum of class spreads and divide by the number of instances
+        intra_spread = self._calculate_spreads(mu, x, target).sum() / x.shape[0]
+        # calculate distance between all (present) class centers
+        dists = _get_center_distances(mu[batch_classes])
+        # the minimum distance between all class centers is the inter separation
+        inter_separation = -torch.min(dists)
+        # intra_spread should be minimized, inter_separation maximized
+        return intra_spread + self.alpha * inter_separation
