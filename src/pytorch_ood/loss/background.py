@@ -37,8 +37,9 @@ class BackgroundClassLoss(torch.nn.Module):
         if (targets >= self.num_classes).any():
             raise ValueError(f"Target label to large: {targets.max()}")
 
-        unknown = is_unknown(targets)
-        if unknown.any():
-            targets[unknown] = self.num_classes
+        # remap outliers to the background class, without changing the caller's tensor
+        targets = torch.where(
+            is_unknown(targets), torch.full_like(targets, self.num_classes), targets
+        )
 
         return F.cross_entropy(logits, targets, reduction=self.reduction)
