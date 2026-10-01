@@ -55,7 +55,7 @@ class GradNorm(GradientDetector):
     .. note:: OpenOOD uses only the gradients of the final classification head, which
      makes this computationally cheaper. You can achieve something similar by setting ``param_filter``. Still, this
      method will compute gradients for all parameters unless you explicitly deactivate
-     gradient calculation for parameters. For an example, see :doc:`here <auto_examples/detectors/gradnorm>`
+     gradient calculation for parameters. For an example, see :doc:`here </auto_examples/detectors/gradnorm>`
 
     .. note:: On PyTorch ≥ 2.0, per-sample gradients are computed with ``torch.func.vmap`` +
         ``torch.func.grad`` in a single batched forward+backward pass. On PyTorch 1.x the

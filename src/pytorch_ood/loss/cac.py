@@ -28,7 +28,7 @@ class CACLoss(nn.Module):
 
     They also propose an outlier score based on the distance which is implemented in the :meth:`CACLoss.score` method.
 
-    Example code is provided :doc:`here <auto_examples/loss/unsupervised/cac>`
+    Example code is provided :doc:`here </auto_examples/loss/unsupervised/cac>`
 
 
     :see Paper: `WACV 2022 <https://arxiv.org/abs/2004.02434>`_

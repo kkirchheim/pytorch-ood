@@ -18,7 +18,7 @@ PyTorch Out-of-Distribution Detection
 
    .. container:: landing-actions
 
-      .. button-ref:: info
+      .. button-ref:: getting_started
          :ref-type: doc
          :color: primary
          :class: landing-button
@@ -228,6 +228,7 @@ If you use PyTorch-OOD in your research, please cite
    :hidden:
 
    info
+   getting_started
    support
 
 .. toctree::

@@ -1,13 +1,8 @@
 """
-Benchmarks
-******************
+Benchmarks that recreate the OOD detection evaluations used in the literature.
 
-Benchmark objects aim to provide a higher level interface to recreate the
-OOD detection benchmarks used in the literature.
-
-
-API
-==================
+Common Interface
+----------------
 
 Each benchmark implements a common interface.
 
@@ -50,118 +45,6 @@ can also be written to disk.
 
 ..  autoclass:: pytorch_ood.benchmark.Benchmark
     :members:
-
-
-Image
-==================
-
-Examples can be found :doc:`here <auto_examples/benchmarks/index>`
-
-
-ODIN
-^^^^^^
-
-CIFAR-10
----------
-
-.. autoclass:: pytorch_ood.benchmark.CIFAR10_ODIN
-    :members:
-
-
-CIFAR-100
----------
-
-.. autoclass:: pytorch_ood.benchmark.CIFAR100_ODIN
-    :members:
-
-
-OpenOOD
-^^^^^^^
-
-CIFAR-10
----------
-
-.. autoclass:: pytorch_ood.benchmark.CIFAR10_OpenOOD
-    :members:
-
-
-CIFAR-100
----------
-
-.. autoclass:: pytorch_ood.benchmark.CIFAR100_OpenOOD
-    :members:
-
-
-ImageNet
----------
-
-.. autoclass:: pytorch_ood.benchmark.ImageNet_OpenOOD
-    :members:
-
-
-ImageNet-200
----------
-
-.. autoclass:: pytorch_ood.benchmark.ImageNet200_OpenOOD
-    :members:
-
-
-SSB (Semantic Split Benchmark)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-CUB-200
----------
-
-.. autoclass:: pytorch_ood.benchmark.CUB_SSB
-    :members:
-
-
-Stanford Cars
----------
-
-.. autoclass:: pytorch_ood.benchmark.StanfordCars_SSB
-    :members:
-
-
-FGVC Aircraft
----------
-
-.. autoclass:: pytorch_ood.benchmark.Aircraft_SSB
-    :members:
-
-
-OpenMIBOOD
-^^^^^^^^^^
-
-The benchmarks proposed in
-*OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection*
-(`arXiv:2503.16247 <https://arxiv.org/abs/2503.16247>`_, CVPR 2025).
-Each benchmark uses a 4-way split (ID, covariate-shifted ID, near-OOD, far-OOD).
-Data must be prepared first following the
-`OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`_.
-
-.. image:: https://raw.githubusercontent.com/remic-othr/OpenMIBOOD/main/Datasets_Summary.jpg
-   :alt: OpenMIBOOD datasets overview
-
-MIDOG (microscopy / mitosis)
------------------------------
-
-.. autoclass:: pytorch_ood.benchmark.MIDOG_OpenMIBOOD
-    :members:
-
-PhaKIR (surgical video)
------------------------------
-
-.. autoclass:: pytorch_ood.benchmark.PhaKIR_OpenMIBOOD
-    :members:
-
-OASIS-3 (brain MRI)
------------------------------
-
-.. autoclass:: pytorch_ood.benchmark.OASIS3_OpenMIBOOD
-    :members:
-
-
 """
 
 from .base import Benchmark

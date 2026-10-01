@@ -1,39 +1,5 @@
 """
-Newsgroups
-----------------------------------------------
-.. autoclass:: pytorch_ood.dataset.txt.NewsGroup20
-   :members:
-
-Reuters 8
-----------------------------------------------
-.. autoclass:: pytorch_ood.dataset.txt.Reuters8
-   :members:
-
-Reuters 52
-----------------------------------------------
-.. autoclass:: pytorch_ood.dataset.txt.Reuters52
-   :members:
-
-Multi30k
-----------------------------------------------
-.. autoclass:: pytorch_ood.dataset.txt.Multi30k
-   :members:
-
-WMT16 Sentences
-----------------------------------------------
-.. autoclass:: pytorch_ood.dataset.txt.WMT16Sentences
-   :members:
-
-WikiText 2
-----------------------------------------------
-.. autoclass:: pytorch_ood.dataset.txt.WikiText2
-   :members:
-
-WikiText 103
-----------------------------------------------
-.. autoclass:: pytorch_ood.dataset.txt.WikiText103
-   :members:
-
+Text datasets for OOD detection.
 """
 
 from .multi30k import Multi30k

@@ -40,7 +40,7 @@ class MultiMahalanobis(StructuredDetector):
 
     The final outlier score is the sum of all scores, weighted by :math:`\\alpha`.
 
-    Example code is provided :doc:`here <auto_examples/detectors/mmahalanobis>`
+    Example code is provided :doc:`here </auto_examples/detectors/mmahalanobis>`
 
     .. note ::
         This does not yet support ODIN preprocessing. Also, the :math:`\\alpha` values have to be determined manually.
