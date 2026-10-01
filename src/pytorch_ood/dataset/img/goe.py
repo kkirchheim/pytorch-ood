@@ -21,7 +21,8 @@ class CIFAR100GAN(Dataset):
     Can be used as auxiliary outliers, e.g. for :class:`OutlierExposure <pytorch_ood.loss.OutlierExposureLoss>` or
     any of the supervised training objectives in general.
 
-    Default sample :math:`\\sigma` is 50.0. Contains 50,000 samples. Label is `-1` by default.
+    Default sample :math:`\\sigma` is 50.0. Contains 50,000 RGB images of size :math:`32 \\times 32`, returned as
+    :class:`PIL.Image.Image`. The label is ``-1`` (the label of OOD samples) by default.
 
     .. figure:: /_static/datasets/cifar100gan.webp
         :width: 100%
@@ -61,7 +62,9 @@ class CIFAR100GAN(Dataset):
         :param transform: transform to apply to the data
         :param target_transform: transform to apply to the target
         :param download: whether to download the dataset if it is not found in root
-        :param sigma: sample :math:`\\sigma` used to generate dataset. Can be ``50.0`` or ``2.0``.
+        :param sigma: sample :math:`\\sigma` used to generate dataset. Can be ``50.0`` or ``2.0``;
+            other values raise a :class:`KeyError`
+        :raises FileNotFoundError: if the data is not found in ``root`` and ``download`` is false
         """
         self.datafile = join(root, self.filename[sigma])
         if not exists(self.datafile):

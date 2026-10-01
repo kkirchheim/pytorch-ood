@@ -87,7 +87,7 @@ class NetworkBlock(nn.Module):
 
 class WideResNet(nn.Module):
     """
-    Resnet Architecture with large number of channels and variable depth, which has been used in a number of
+    ResNet architecture with large number of channels and variable depth, which has been used in a number of
     publications.
 
     Pre-trained weights, e.g. for models trained with
@@ -95,8 +95,12 @@ class WideResNet(nn.Module):
     :class:`Energy Regularization <pytorch_ood.loss.EnergyRegularizedLoss>`, are available
     through the model registry, see :func:`load_model <pytorch_ood.model.load_model>`.
 
-    :see Paper: `BMVC <https://arxiv.org/pdf/1605.07146v4.pdf>`__
-    :see Implementation: `GitHub <https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py>`__
+    The pooling is hard-coded for :math:`32 \\times 32` inputs (as in CIFAR), for which the
+    feature maps have a spatial size of :math:`8 \\times 8`. For the default WRN-40-2, the
+    feature dimension is :math:`D = 128`.
+
+    :see Paper: `Wide Residual Networks (BMVC 2016) <https://arxiv.org/pdf/1605.07146v4.pdf>`__
+    :see Implementation: `Energy-based OOD detection WRN on GitHub <https://github.com/wetliu/energy_ood/blob/master/CIFAR/models/wrn.py>`__
     """
 
     def __init__(
@@ -108,9 +112,8 @@ class WideResNet(nn.Module):
         in_channels=3,
     ):
         """
-
-        :param depth: depth of the network
-        :param num_classes: number of classes
+        :param num_classes: number of classes :math:`K`
+        :param depth: depth of the network; must satisfy ``(depth - 4) % 6 == 0``
         :param widen_factor: factor used for channel increase per block
         :param drop_rate: dropout probability
         :param in_channels: number of input planes
@@ -149,8 +152,8 @@ class WideResNet(nn.Module):
         """
         Forward propagate
 
-        :param x: input images
-        :return: class logits
+        :param x: input images of shape :math:`B \\times C_{in} \\times 32 \\times 32`
+        :return: class logits of shape :math:`B \\times K`
         """
         out = self.conv1(x)
         out = self.block1(out)
@@ -162,6 +165,12 @@ class WideResNet(nn.Module):
         return self.fc(out)
 
     def feature_maps(self, x: Tensor) -> Tensor:
+        """
+        Spatial feature maps before global average pooling.
+
+        :param x: input images of shape :math:`B \\times C_{in} \\times 32 \\times 32`
+        :return: feature maps of shape :math:`B \\times D \\times 8 \\times 8`
+        """
         out = self.conv1(x)
         out = self.block1(out)
         out = self.block2(out)
@@ -170,6 +179,12 @@ class WideResNet(nn.Module):
         return out
 
     def forward_feature_maps(self, x: Tensor) -> Tensor:
+        """
+        Maps spatial feature maps (as returned by :meth:`feature_maps`) to logits.
+
+        :param x: feature maps of shape :math:`B \\times D \\times 8 \\times 8`
+        :return: class logits of shape :math:`B \\times K`
+        """
         out = F.avg_pool2d(x, 8)
         out = out.view(-1, self.nChannels)
         return self.fc(out)
@@ -177,6 +192,9 @@ class WideResNet(nn.Module):
     def features(self, x: Tensor) -> Tensor:
         """
         Extracts (flattened) features before the last fully connected layer.
+
+        :param x: input images of shape :math:`B \\times C_{in} \\times 32 \\times 32`
+        :return: features of shape :math:`B \\times D`
         """
         out = self.conv1(x)
         out = self.block1(out)
@@ -189,7 +207,11 @@ class WideResNet(nn.Module):
 
     def feature_list(self, x: Tensor) -> List[Tensor]:
         """
-        Extracts features after encoder, pooling, and fully connected layer
+        Extracts features at three stages of the network.
+
+        :param x: input images of shape :math:`B \\times C_{in} \\times 32 \\times 32`
+        :return: list with the feature maps (:math:`B \\times D \\times 8 \\times 8`), the pooled
+            features (:math:`B \\times D \\times 1 \\times 1`) and the logits (:math:`B \\times K`)
         """
         out_list = []
         out = self.conv1(x)

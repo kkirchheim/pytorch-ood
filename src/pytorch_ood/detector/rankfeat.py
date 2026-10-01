@@ -8,7 +8,7 @@
 """
 
 import logging
-from typing import Callable
+from typing import Callable, Optional
 
 import torch
 from torch import Tensor
@@ -40,7 +40,7 @@ def _remove_rank1(x: Tensor) -> Tensor:
 
 class RankFeat(FeatureMapsDetector):
     """
-    Implements RankFeat from *Rankfeat: Rank-1 Feature Removal for Out-of-Distribution Detection*.
+    Implements RankFeat from *RankFeat: Rank-1 Feature Removal for Out-of-Distribution Detection*.
 
     RankFeat removes the dominant rank-1 component from intermediate feature maps
     via SVD before forwarding through the remainder of the network. The intuition is
@@ -49,13 +49,16 @@ class RankFeat(FeatureMapsDetector):
     that the energy score can exploit for better discrimination.
 
     Concretely, given a feature map :math:`\\mathbf{X} \\in \\mathbb{R}^{C \\times HW}`,
-    the method computes its (economy) SVD and subtracts the rank-1 approximation:
+    the method computes its (economy) SVD and subtracts the rank-1 approximation, where
+    :math:`\\sigma_1, \\mathbf{u}_1, \\mathbf{v}_1` are the largest singular value and the corresponding left and
+    right singular vectors:
 
     .. math::
         \\mathbf{X}' = \\mathbf{X} - \\sigma_1 \\, \\mathbf{u}_1 \\, \\mathbf{v}_1^\\top
 
     The modified features :math:`\\mathbf{X}'` are then forwarded through the classification
-    head, and the resulting logits are scored with the energy function.
+    head, and the resulting logits are mapped to outlier scores by ``detector``, by default
+    :meth:`EnergyBased.score <pytorch_ood.detector.EnergyBased.score>`.
 
     Like :class:`~pytorch_ood.detector.ASH` and :class:`~pytorch_ood.detector.ReAct`,
     the model must be split into a ``backbone`` (up to and including the target
@@ -63,7 +66,7 @@ class RankFeat(FeatureMapsDetector):
 
     .. rubric:: Examples
 
-    .. code :: python
+    .. code-block:: python
 
         model = WideResNet()
         detector = RankFeat(
@@ -89,13 +92,13 @@ class RankFeat(FeatureMapsDetector):
         self,
         backbone: Callable[[Tensor], Tensor],
         head: Callable[[Tensor], Tensor],
-        detector: Callable[[Tensor], Tensor] = None,
+        detector: Optional[Callable[[Tensor], Tensor]] = None,
     ):
         """
-        :param backbone: first part of the model, should output 4-D feature maps ``(B, C, H, W)``
+        :param backbone: first part of the model, should output 4-D feature maps of shape :math:`B \\times C \\times H \\times W`
         :param head: second part of the model applied after rank-1 removal, should output logits
-        :param detector: scoring function mapping logits to outlier scores.
-            Default is :func:`~pytorch_ood.detector.EnergyBased.score`.
+        :param detector: scoring function mapping logits of shape :math:`B \\times C` to outlier scores
+            of shape :math:`B`. Defaults to :meth:`EnergyBased.score <pytorch_ood.detector.EnergyBased.score>`.
         """
         self.backbone = backbone
         self.head = head
@@ -103,8 +106,9 @@ class RankFeat(FeatureMapsDetector):
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: input, will be passed through network
-        :return: outlier scores
+        :param x: input batch, will be passed through the backbone and head. Must yield 4-D feature maps
+            of shape :math:`B \\times C \\times H \\times W`.
+        :return: outlier scores of shape :math:`B`
         """
         device = self.device
         if device is not None:
@@ -113,7 +117,13 @@ class RankFeat(FeatureMapsDetector):
         return self.predict_feature_maps(x)
 
     @torch.no_grad()
-    def predict_feature_maps(self, x: Tensor) -> Tensor:
-        x = _remove_rank1(x)
+    def predict_feature_maps(self, feature_maps: Tensor) -> Tensor:
+        """
+        Removes the rank-1 component of each sample's feature map and scores the resulting logits.
+
+        :param feature_maps: feature maps of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B`
+        """
+        x = _remove_rank1(feature_maps)
         x = self.head(x)
         return self.detector(x)

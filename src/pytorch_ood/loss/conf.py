@@ -9,14 +9,18 @@ from ..utils import is_known
 class ConfidenceLoss(nn.Module):
     """
     Loss proposed in *Learning Confidence for Out-of-Distribution Detection in Neural Networks*.
-    The models learns to predict a confidence :math:`c` in addition to the class membership.
+    The model learns to predict a confidence :math:`c` in addition to the class membership.
 
-    The loss minimized the Negative Log Likelihood for class membership prediction.
+    The loss minimizes the negative log-likelihood for class membership prediction.
 
     .. math::
         \\mathcal{L}_{NLL} + \\alpha \\mathcal{L}_c = - \\sum_{i=1}^{M} \\log(p'_{i}) y_i - \\alpha \\log(c)
 
         \\text{where} \\quad p_i' = c \\cdot p_i + (1-c) y_i
+
+    Here, :math:`M` is the number of classes, :math:`y` the one-hot label, :math:`p` the softmax output
+    and :math:`c \\in [0,1]` the predicted confidence.
+    Samples with labels :math:`< 0` are ignored in the negative log-likelihood term.
 
     .. note::
         * We implemented clipping for numerical stability.
@@ -39,7 +43,6 @@ class ConfidenceLoss(nn.Module):
 
     def __init__(self, alpha: float = 1.0, eps: float = 1e-24):
         """
-
         :param alpha: :math:`\\alpha` used to balance terms
         :param eps: Clipping value :math:`\\epsilon` used for numerical stability
         """
@@ -51,9 +54,10 @@ class ConfidenceLoss(nn.Module):
         self, logits: torch.Tensor, confidence: torch.Tensor, target: torch.Tensor
     ) -> torch.Tensor:
         """
-        :param logits: class logits for samples
-        :param confidence: predicted confidence for samples
-        :param target: labels for samples (not one-hot encoded)
+        :param logits: class logits of shape :math:`B \\times C`
+        :param confidence: predicted confidence :math:`c \\in [0, 1]`, shape :math:`B \\times 1`
+        :param target: labels of shape :math:`B` (not one-hot encoded); labels :math:`< 0` are ignored
+        :return: scalar loss
         """
         known = is_known(target)
 

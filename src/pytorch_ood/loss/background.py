@@ -15,7 +15,7 @@ class BackgroundClassLoss(torch.nn.Module):
     Thus, when the target labels are :math:`\\lbrace 0, 1, 2, ..., N - 1 \\rbrace`
     we will remap all entries with target label :math:`<0` to :math:`N`.
 
-    The networks output layer has to include :math:`N+1` outputs, so logits are
+    The network's output layer has to include :math:`N+1` outputs, so logits are
     in the shape  :math:`B \\times (N + 1)`.
     """
 
@@ -43,10 +43,12 @@ class BackgroundClassLoss(torch.nn.Module):
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """
-        :param logits: class logits
-        :param targets: target labels
-
-        :return: Cross-Entropy for remapped samples
+        :param logits: class logits of shape :math:`B \\times (N + 1)` or
+            :math:`B \\times (N + 1) \\times H \\times W`
+        :param targets: target labels of shape :math:`B` or :math:`B \\times H \\times W`;
+            labels :math:`< 0` are remapped to the background class :math:`N`
+        :return: Cross-Entropy for remapped samples; per sample if the reduction is ``none``
+        :raises ValueError: if a target label is :math:`\\geq N`
         """
         if (targets >= self.num_classes).any():
             raise ValueError(f"Target label to large: {targets.max()}")

@@ -18,7 +18,7 @@ from .crossentropy import cross_entropy
 class EntropicOpenSetLoss(nn.Module):
     """
     From the paper *Reducing Network Agnostophobia*.
-    The loss aims to maximizes the entropy for OOD inputs.
+    The loss aims to maximize the entropy of the softmax output for OOD inputs.
 
     A variant for segmentation was proposed in
     *Entropy Maximization and Meta Classification for Out-Of-Distribution Detection in Semantic Segmentation*.
@@ -32,12 +32,12 @@ class EntropicOpenSetLoss(nn.Module):
        {
        -\\log \\sigma_y(f(x)) \\quad \\text{if } y \\geq 0
         \\atop
-       \\frac{1}{C} \\sum_{c=1}^C \\log \\sigma_c(f(x)) \\quad \\text{ otherwise }
+       -\\frac{1}{C} \\sum_{c=1}^C \\log \\sigma_c(f(x)) \\quad \\text{ otherwise }
        }
 
     where :math:`\\sigma` is the softmax function and :math:`C` is the number of classes.
 
-    :see Segmentation Paper: `ArXiv <https://arxiv.org/pdf/2012.06575.pdf>`__
+    :see Segmentation Paper: `Entropy Maximization and Meta Classification for Out-Of-Distribution Detection in Semantic Segmentation <https://arxiv.org/pdf/2012.06575.pdf>`__
     """
 
     info = LossInfo(
@@ -62,10 +62,11 @@ class EntropicOpenSetLoss(nn.Module):
 
     def forward(self, logits: Tensor, target: Tensor) -> Tensor:
         """
-
-        :param logits: class logits
-        :param target: target labels
-        :return: the loss
+        :param logits: class logits of shape :math:`B \\times C` or :math:`B \\times C \\times H \\times W`
+        :param target: target labels of shape :math:`B` or :math:`B \\times H \\times W`;
+            labels :math:`< 0` are OOD
+        :return: the loss; if the reduction is ``none``, one value per sample (or per pixel)
+        :raises ValueError: if ``logits`` are neither two- nor four-dimensional
         """
         if len(logits.shape) == 2:
             losses = torch.zeros(size=(logits.shape[0],)).to(logits.device)

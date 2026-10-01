@@ -1,5 +1,5 @@
 """
-All objective functions are implemented as ``torch.nn.Modules``.
+All objective functions are implemented as :class:`torch.nn.Module` subclasses.
 Some of them have a set of trainable parameters and must be moved to the appropriate device.
 """
 

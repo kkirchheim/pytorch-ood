@@ -29,7 +29,8 @@ class SHE(FeaturesDetector):
 
     For each class, SHE estimates the mean feature vector :math:`S_i` of correctly classified instances.
     For some new instances with predicted class :math:`\\hat{y}`, SHE then
-    uses the inner product :math:`f(x)^{\\top} S_{\\hat{y}}` as outlier score.
+    uses the inner product :math:`f(x)^{\\top} S_{\\hat{y}}` as outlier score, where :math:`f(x)` are the
+    features ``z`` and :math:`S_i` is stored in ``patterns``.
     """
 
     info = DetectorInfo(
@@ -59,6 +60,7 @@ class SHE(FeaturesDetector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x:  model inputs
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -68,7 +70,8 @@ class SHE(FeaturesDetector):
 
     def predict_features(self, z: Tensor) -> Tensor:
         """
-        :param z: features as given by the model
+        :param z: features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
         if self.head is None:
             raise ModelNotSetException(msg="When using predict_features(), head must not be None")
@@ -87,6 +90,7 @@ class SHE(FeaturesDetector):
         Extracts features and calculates mean patterns.
 
         :param data_loader: data to fit
+        :return: self
         """
         device = self.device
         if device is None:
@@ -125,9 +129,12 @@ class SHE(FeaturesDetector):
         """
         Calculates mean patterns per class.
 
-        :param z: features to fit
-        :param y: labels
+        :param z: features to fit, of shape :math:`N \\times D`
+        :param y: labels of shape :math:`N`; OOD samples (label below zero) are ignored. The remaining
+            labels have to cover the classes :math:`0, ..., K-1`.
         :param batch_size: how many samples we process at a time
+        :return: self
+        :raise ValueError: if there are no ID samples, or a class has no correctly classified sample
         """
         device = self.device or z.device
 

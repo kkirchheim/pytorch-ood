@@ -28,16 +28,19 @@ def temperature_calibration(
     Implements confidence calibration from the paper
     *On Calibration of Modern Neural Networks*.
 
-    Implementation uses binary search to find the optimal temperature value.
+    Finds the temperature :math:`T` that minimizes the cross-entropy of the scaled logits
+    :math:`z / T`, using binary search.
 
-    :see Paper: `PLMR <http://proceedings.mlr.press/v70/guo17a.html>`__
-    :see Implementation: `Here <https://github.com/andyzoujm/pixmix/blob/main/calibration_tools.py>`__
+    :see Paper: `On Calibration of Modern Neural Networks (ICML 2017) <http://proceedings.mlr.press/v70/guo17a.html>`__
+    :see Implementation: `PixMix calibration_tools.py <https://github.com/andyzoujm/pixmix/blob/main/calibration_tools.py>`__
 
-    :param logits: the logits predicted by the model
-    :param labels: ground truth labels
+    :param logits: the logits predicted by the model, of shape :math:`N \\times C`
+    :param labels: ground truth class labels of shape :math:`N`
     :param lower: lower bound for the search
     :param upper: upper bound for the search
     :param eps: minimum change necessary to continue optimization
+    :return: temperature :math:`T` in ``[lower, upper]`` that minimizes the cross-entropy of
+        ``logits / T``
     """
     logits = torch.FloatTensor(logits)
     labels = torch.LongTensor(labels)
@@ -79,40 +82,60 @@ def calc_openness(n_train, n_test, n_target):
     return 1 - math.sqrt(frac)
 
 
+def _check_fraction(name: str, value: float) -> float:
+    """
+    Percentiles and fractions are given in :math:`[0, 1]` throughout the library;
+    raise for values outside, with a hint for values given in percent.
+    """
+    if not 0.0 <= value <= 1.0:
+        hint = f"; use {value / 100:g} instead of {value:g}" if 1.0 < value <= 100.0 else ""
+        raise ValueError(f"{name} must be a fraction in [0, 1], got {value}{hint}")
+    return value
+
+
 #######################################
 # Helpers for labels
 #######################################
 def is_known(labels) -> Union[bool, Tensor]:
     """
-    :returns: True, if label :math:`\\geq 0`
+    Checks which labels belong to *ID* samples.
+
+    :param labels: tensor of labels
+    :return: boolean mask of the shape of ``labels``, True where the label is :math:`\\geq 0`
     """
     return labels >= 0
 
 
 def is_unknown(labels) -> Union[bool, Tensor]:
     """
-    :returns: True, if label :math:`< 0`
+    Checks which labels belong to *OOD* samples.
+
+    :param labels: tensor of labels
+    :return: boolean mask of the shape of ``labels``, True where the label is :math:`< 0`
     """
     return labels < 0
 
 
 def contains_known_and_unknown(labels) -> Union[bool, Tensor]:
     """
-    :return: True if the labels contain *ID* and *OOD* classes
+    :param labels: tensor of labels
+    :return: True if the labels contain *ID* and *OOD* classes (as a 0-d boolean tensor)
     """
     return contains_known(labels) and contains_unknown(labels)
 
 
 def contains_known(labels) -> Union[bool, Tensor]:
     """
-    :return: True if the labels contains any *ID* labels
+    :param labels: tensor of labels
+    :return: True if the labels contain any *ID* labels (as a 0-d boolean tensor)
     """
     return is_known(labels).any()
 
 
 def contains_unknown(labels) -> Union[bool, Tensor]:
     """
-    :return: True if the labels contains any *OOD* labels
+    :param labels: tensor of labels
+    :return: True if the labels contain any *OOD* labels (as a 0-d boolean tensor)
     """
     return is_unknown(labels).any()
 
@@ -124,8 +147,15 @@ def estimate_class_centers(embedding: Tensor, target: Tensor, num_centers: int =
     """
     Estimates class centers from the given embeddings and labels, using mean as estimator.
 
-    TODO: the loop can prob. be replaced
+    Labels must be :math:`\\geq 0`; OOD samples have to be removed beforehand.
+
+    :param embedding: embeddings of shape :math:`N \\times D`
+    :param target: class labels of shape :math:`N`
+    :param num_centers: number of classes :math:`K`; defaults to ``max(target) + 1``
+    :return: class centers of shape :math:`K \\times D`. Rows of classes that do not occur in
+        ``target`` are zero.
     """
+    # TODO: the loop can prob. be replaced
     batch_classes = torch.unique(target).long().to(embedding.device)
     if num_centers is None:
         num_centers = torch.max(target) + 1
@@ -171,12 +201,12 @@ def pairwise_distances(x: Tensor, y: Tensor = None) -> Tensor:
 
 class TensorBuffer(object):
     """
-    Used to buffer tensors
+    Collects tensors (e.g., batches) under keys and returns them concatenated along the first
+    dimension. Tensors are detached and stored on ``device``.
     """
 
     def __init__(self, device="cpu"):
         """
-
         :param device: device used to store buffers. Default is *cpu*.
         """
         self._buffer: Dict[Any, Tensor] = defaultdict(list)
@@ -194,6 +224,8 @@ class TensorBuffer(object):
 
         :param key: tensor identifier
         :param value: tensor
+        :return: self
+        :raises ValueError: if ``value`` is not a tensor
         """
         if not isinstance(value, Tensor):
             raise ValueError(f"Can not handle value type {type(value)}")
@@ -210,7 +242,8 @@ class TensorBuffer(object):
 
     def sample(self, key) -> Tensor:
         """
-        Samples a random tensor from the buffer
+        Samples a random tensor from the buffer, i.e., one of the tensors (batches) that were
+        appended under ``key``, not a single row.
 
         :param key: tensor identifier
         :return: random tensor
@@ -219,6 +252,9 @@ class TensorBuffer(object):
         return self._buffer[key][index]
 
     def keys(self) -> KeysView:
+        """
+        :return: the identifiers of the stored tensors
+        """
         return self._buffer.keys()
 
     def get(self, key) -> Tensor:
@@ -227,6 +263,7 @@ class TensorBuffer(object):
 
         :param key: tensor identifier
         :return: concatenated tensor
+        :raises KeyError: if no tensor was appended under ``key``
         """
         if key not in self._buffer:
             raise KeyError(key)
@@ -244,8 +281,9 @@ class TensorBuffer(object):
 
     def save(self, path) -> Self:
         """
-        Save buffer to disk
+        Save buffer to disk, as a dictionary mapping the identifiers to the concatenated tensors
 
+        :param path: file to write to
         :return: self
         """
         d = {k: self.get(k).cpu() for k in self._buffer.keys()}
@@ -269,7 +307,8 @@ def apply_reduction(tensor: Tensor, reduction: str) -> Tensor:
 
 def fix_random_seed(seed: int = 12345) -> None:
     """
-    Set all random seeds.
+    Seeds torch (CPU and all CUDA devices), :mod:`random` and numpy. This does not make cuDNN
+    kernels deterministic.
 
     :param seed: seed to set
     """
@@ -284,11 +323,15 @@ def extract_feature_avg(
 ) -> Tuple[Tensor, Tensor]:
     """
     Helper to extract features from model. Will compute mean over feature maps. Ignores OOD inputs.
+    The model is not switched to evaluation mode.
 
-    :param data_loader: dataset to extract from
-    :param model: neural network to pass inputs to
-    :param device: device used for calculations
-    :return: Tuple with outputs and labels
+    :param data_loader: loader yielding batches ``(x, y)`` to extract from
+    :param model: callable mapping inputs to feature maps of shape
+        :math:`B \\times C \\times H \\times W`
+    :param device: device used for calculations. If ``None``, inputs are not moved.
+    :return: tuple ``(z, y)`` with the :math:`N \\times C` spatially averaged features and the
+        :math:`N` labels of the ID samples
+    :raises ValueError: if the loader contains no ID samples (labels :math:`\\geq 0`)
     """
     # TODO: add option to buffer to GPU
     buffer = TensorBuffer()
@@ -320,11 +363,14 @@ def extract_features(
 ) -> Tuple[Tensor, Tensor]:
     """
     Helper to extract outputs from model. Ignores OOD inputs.
+    The model is not switched to evaluation mode.
 
-    :param data_loader: dataset to extract from
-    :param model: neural network to pass inputs to
-    :param device: device used for calculations
-    :return: Tuple with outputs and labels
+    :param data_loader: loader yielding batches ``(x, y)`` to extract from
+    :param model: callable mapping inputs to outputs, which are flattened per sample
+    :param device: device used for calculations. If ``None``, inputs are not moved.
+    :return: tuple ``(z, y)`` with the :math:`N \\times D` outputs and the :math:`N` labels of the
+        ID samples
+    :raises ValueError: if the loader contains no ID samples (labels :math:`\\geq 0`)
     """
     # TODO: add option to buffer to GPU
     buffer = TensorBuffer()

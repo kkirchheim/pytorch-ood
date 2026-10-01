@@ -34,9 +34,13 @@ class Chars74k(ImageDatasetBase):
     """
     Dataset from the paper *Character Recognition in Natural Images*. Can be used as example OOD data.
 
+    Images are returned as :class:`PIL.Image.Image`. Targets are the character class indices
+    (remapped to :math:`0, \\dots, n-1`), **not** ``-1``. When using this dataset as OOD data, mark the samples as
+    OOD with ``target_transform=ToUnknown()`` (see :class:`pytorch_ood.utils.ToUnknown`).
+
     .. image:: https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/Samples/confusing_english.png
         :width: 800px
-        :alt: Chars47k Dataset Example
+        :alt: Chars74k Dataset Example
         :align: center
     """
 
@@ -70,7 +74,7 @@ class Chars74k(ImageDatasetBase):
         download: bool = False,
     ):
         """
-        :param root: root directory of dataset
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
         :param transform: transformation to apply to the images
         :param target_transform: transformation to apply to the labels
         :param download: set to true to automatically download the dataset

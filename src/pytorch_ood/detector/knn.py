@@ -32,17 +32,13 @@ class KNN(FeaturesDetector):
     Implements the detector from the paper
     *Out-of-Distribution Detection with Deep Nearest Neighbors*.
 
-    .. note::
-        This detector requires ``scikit-learn``. Install it manually if you want to use
-        ``pytorch_ood.detector.KNN``.
-
     Fits a nearest neighbor model to the ID samples and uses the distance
     to the :math:`k`-th nearest neighbor as outlier score:
 
     .. math:: \\lVert f(x) - f(z_{(k)}) \\rVert_2
 
-    where :math:`z_{(k)}` is the :math:`k`-th nearest neighbor of :math:`x` in the
-    dataset used to train the nearest neighbor model.
+    where :math:`f` is the ``encoder`` and :math:`z_{(k)}` is the :math:`k`-th nearest neighbor of :math:`x` in the
+    dataset used to train the nearest neighbor model (:math:`k` is the parameter ``k``). Distances are computed on the CPU and returned with dtype ``float64``.
 
     The original paper found that using contrastive pre-training could increase the performance.
     """
@@ -60,8 +56,8 @@ class KNN(FeaturesDetector):
 
     requires_fit = True
 
-    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
-    #: ``K`` sweep used by OpenOOD.
+    # matches the ``K`` sweep used by OpenOOD
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`.
     hyperparameter_space = {"k": [50, 100, 200, 500, 1000]}
 
     def __init__(self, encoder: Optional[Callable[[Tensor], Tensor]], k: int = 1, **knn_kwargs):
@@ -69,9 +65,11 @@ class KNN(FeaturesDetector):
         :param encoder: feature encoder. Can be ``None`` when using
             ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param k: number of neighbors; the score is the distance to the ``k``-th
-            nearest neighbor. The paper recommends larger values (e.g. ``50``).
-        :param knn_kwargs: dict with keyword arguments that will be passed to the scikit learns k-NN
+            nearest neighbor. Default is 1. Larger values (e.g. ``50``) are often better.
+        :param knn_kwargs: keyword arguments for :class:`sklearn.neighbors.NearestNeighbors`
+            (``n_jobs`` is fixed to -1)
         """
+        # the paper recommends larger values of k (e.g. 50), see also hyperparameter_space
         self.encoder = encoder
         self.k = k
         self._is_fitted = False
@@ -85,7 +83,8 @@ class KNN(FeaturesDetector):
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: inputs, will be passed through model
+        :param x: inputs, will be passed through ``encoder``
+        :return: outlier scores of shape :math:`B`
         """
         if not self.encoder:
             raise ModelNotSetException()
@@ -99,7 +98,9 @@ class KNN(FeaturesDetector):
 
     def predict_features(self, z: Tensor) -> Tensor:
         """
-        :param z: features
+        :param z: features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B` (dtype ``float64``)
+        :raises RequiresFittingException: if the detector was not fitted
         """
 
         if not self._is_fitted:
@@ -117,8 +118,10 @@ class KNN(FeaturesDetector):
         """
         Fits nearest neighbor model. Ignores OOD inputs.
 
-        :param z: features
-        :param labels: labels for features
+        :param z: features of shape :math:`N \\times D`, on the CPU and without gradient
+        :param labels: labels for features, shape :math:`N`
+        :return: the fitted detector
+        :raises ValueError: if ``labels`` contains no in-distribution samples
         """
         known = is_known(labels)
 
@@ -135,7 +138,8 @@ class KNN(FeaturesDetector):
         """
         Extracts features and fits the kNN-Model
 
-        :param data_loader: data loader
+        :param data_loader: data loader. OOD inputs will be ignored.
+        :return: the fitted detector
         """
         device = self.device
         if device is None:

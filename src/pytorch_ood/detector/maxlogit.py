@@ -24,6 +24,7 @@ class MaxLogit(LogitsDetector):
     .. math:: - \\max_y f_y(x)
 
     where :math:`f_y(x)` indicates the :math:`y^{th}` logits value predicted by :math:`f`.
+    The negative maximum logit is used so that larger scores indicate OOD.
     """
 
     info = DetectorInfo(
@@ -47,13 +48,17 @@ class MaxLogit(LogitsDetector):
 
     def predict_logits(self, logits: Tensor) -> Tensor:
         """
-        :param logits: logits as given by the model
+        :param logits: logits as given by the model, shape :math:`B \\times C`
+            (or :math:`B \\times C \\times H \\times W` for segmentation)
+        :return: outlier scores of shape :math:`B` (or :math:`B \\times H \\times W`)
         """
         return MaxLogit.score(logits)
 
     @staticmethod
     def score(logits: Tensor) -> Tensor:
         """
-        :param logits: logits for samples
+        :param logits: logits for samples, shape :math:`B \\times C`
+            (or :math:`B \\times C \\times H \\times W` for segmentation)
+        :return: negative maximum logit, shape :math:`B` (or :math:`B \\times H \\times W`)
         """
         return -logits.max(dim=1).values

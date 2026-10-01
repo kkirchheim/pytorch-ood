@@ -51,8 +51,8 @@ class EnergyRegularizedLoss(nn.Module):
         reduction: str = "mean",
     ):
         """
-        :param alpha: weighting parameter
-        :param margin_in:  margin energy :math:`m_{in}` for ID data
+        :param alpha: weight :math:`\\alpha` of the energy regularization term
+        :param margin_in: margin energy :math:`m_{in}` for ID data
         :param margin_out: margin energy :math:`m_{out}` for OOD data
         :param reduction: ``mean`` gives the loss above; ``none`` the per-sample (per-pixel)
             terms :math:`\\mathcal{L}_{CE} + \\alpha \\max(\\dots)^2`, ``sum`` their sum
@@ -67,8 +67,10 @@ class EnergyRegularizedLoss(nn.Module):
         """
         Calculates weighted sum of cross-entropy and the energy regularization term.
 
-        :param logits: logits, shape :math:`B \times C` or :math:`B \times C \times H \times W`
-        :param targets: labels, shape :math:`B` or :math:`B \times H \times W`
+        :param logits: logits, shape :math:`B \\times C` or :math:`B \\times C \\times H \\times W`
+        :param targets: labels, shape :math:`B` or :math:`B \\times H \\times W`; labels :math:`< 0` are OOD
+        :return: scalar loss, or per-sample losses of shape :math:`B` (:math:`B \\times H \\times W` for
+            segmentation) if the reduction is ``none``
         """
         if logits.dim() not in (2, 4):
             raise ValueError(f"Unsupported input shape: {logits.shape}")

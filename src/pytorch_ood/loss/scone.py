@@ -5,7 +5,6 @@ from typing import Callable, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from numpy import floating
 from torch.utils.data import DataLoader
 
 from ..api import LossInfo, Paper, Representation, Task
@@ -15,8 +14,28 @@ from ..utils import apply_reduction, evaluate_energy_logistic_loss, is_known, is
 class EnergyMarginLoss(nn.Module):
     """
     Loss from the paper *Feed Two Birds with One Scone*.
-    Introducing a margin to further improve performance Energy-based OOD detection method,
-    specifically for handling covariate shifted data.
+    Trains a classifier with an energy-based OOD objective that introduces a margin to better handle
+    covariate-shifted data.
+
+    A logistic-regression function :math:`\\phi` is applied to the free energy score
+    :math:`\\log \\sum_{i} e^{f_i(x)}` (the log-sum-exp of the logits) to separate ID from OOD samples.
+    Samples with targets :math:`< 0` are treated as OOD; their score is shifted by the margin :math:`\\eta`,
+    so that covariate-shifted data should end up in between ID and OOD data.
+    The loss minimizes the OOD term :math:`\\mathcal{L}_{out}` (the mean of
+    :math:`\\sigma(-\\phi(\\cdot))` over the OOD samples) subject to two constraints:
+
+    * the mean of :math:`\\sigma(\\phi(\\cdot))` over the ID samples, i.e. the (soft) fraction of ID samples that
+      is flagged as OOD, must not exceed ``false_alarm_cutoff``, and
+    * the ID cross-entropy must not exceed ``ce_tol`` times ``full_train_loss``, the loss of the pre-trained model.
+
+    The constrained problem is solved with the augmented Lagrangian method: the Lagrange multipliers
+    :math:`\\lambda` (ID constraint) and :math:`\\lambda_2` (cross-entropy constraint) start at zero and,
+    together with the penalty weights, are updated by
+    :meth:`update_hyperparameters <pytorch_ood.loss.EnergyMarginLoss.update_hyperparameters>`, which should be called
+    periodically, for example once per epoch.
+
+    Every batch has to contain both ID and OOD samples, otherwise the loss is not defined.
+    Only classification is supported.
 
     :see Derivation: `ArXiv <https://arxiv.org/pdf/2202.03299>`__
     """
@@ -36,32 +55,34 @@ class EnergyMarginLoss(nn.Module):
 
     def __init__(
         self,
-        full_train_loss: floating,
-        eta=1.00,
-        false_alarm_cutoff=0.05,
-        in_constraint_weight=1.00,
-        ce_tol=2.00,
-        ce_constraint_weight=1.00,
-        out_constraint_weight=1.00,
-        lr_lam=1.00,
-        penalty_mult=1.50,
-        constraint_tol=0.00,
+        full_train_loss: float,
+        eta: float = 1.0,
+        false_alarm_cutoff: float = 0.05,
+        in_constraint_weight: float = 1.0,
+        ce_tol: float = 2.0,
+        ce_constraint_weight: float = 1.0,
+        out_constraint_weight: float = 1.0,
+        lr_lam: float = 1.0,
+        penalty_mult: float = 1.5,
+        constraint_tol: float = 0.0,
     ):
         """
         Constructor of EnergyMarginLoss
 
-        :param full_train_loss: average classification loss of pre-trained model
-        :param eta: margin between ID and OOD; Covariate-shifted data should reside in-between
-        :param false_alarm_cutoff: false alarm cutoff
-        :param in_constraint_weight: penalty parameter for in-distribution constraint
-        :param lam: lagrangian multiplier for in-distribution constraint
-        :param lam2: lagrangian multiplier for multi-class model constraint
-        :param ce_tol: error threshold for the multi-class model
-        :param ce_constraint_weight: penalty parameter for multi-class model constraint
-        :param out_constraint_weight:
-        :param lr_lam: learning rate of lagrangian multipliers
-        :param penalty_mult: penalty multiplier
-        :param constraint_tol: constraint tolerance
+        :param full_train_loss: average classification (cross-entropy) loss of the pre-trained model
+        :param eta: margin :math:`\\eta` between ID and OOD; covariate-shifted data should reside in-between
+        :param false_alarm_cutoff: maximum tolerated fraction of ID samples that are flagged as OOD,
+            a fraction in :math:`[0, 1]`
+        :param in_constraint_weight: penalty weight of the ID constraint
+        :param ce_tol: factor on ``full_train_loss``; the ID cross-entropy is constrained to be at most
+            ``ce_tol * full_train_loss``
+        :param ce_constraint_weight: penalty weight of the cross-entropy constraint
+        :param out_constraint_weight: weight of the OOD term of the objective
+        :param lr_lam: learning rate of the Lagrange multipliers :math:`\\lambda`, :math:`\\lambda_2`
+        :param penalty_mult: factor by which a penalty weight is multiplied in
+            :meth:`update_hyperparameters <pytorch_ood.loss.EnergyMarginLoss.update_hyperparameters>`
+            if its constraint is violated by more than ``constraint_tol``
+        :param constraint_tol: violation tolerance of both constraints, see ``penalty_mult``
         """
         super(EnergyMarginLoss, self).__init__()
         self.full_train_loss = torch.tensor(full_train_loss).float()
@@ -86,9 +107,12 @@ class EnergyMarginLoss(nn.Module):
         """
         Calculates weighted sum of cross-entropy and the energy regularization term a.k.a classical Augmented Lagrangian function
 
-        :param logits: logits
-        :param targets: labels
-        :param logistic_regression: logistic regression layer
+        :param logits: logits of shape :math:`B \\times C`
+        :param targets: labels of shape :math:`B`; labels :math:`< 0` are OOD
+        :param logistic_regression: function :math:`\\phi` mapping the energy score of shape
+            :math:`B \\times 1` to a logit of shape :math:`B \\times 1`, for example ``torch.nn.Linear(1, 1)``
+        :return: scalar loss
+        :raises ValueError: if ``logits`` are not two-dimensional
         """
         # for classification
         if len(logits.shape) == 2:
@@ -161,11 +185,14 @@ class EnergyMarginLoss(nn.Module):
         logistic_regression: Callable[[torch.Tensor], torch.Tensor],
     ) -> None:
         """
-        Update hyperparameters of the Augmented Lagrangian function
+        Update the Lagrange multipliers :math:`\\lambda`, :math:`\\lambda_2` and the penalty weights of the
+        augmented Lagrangian function, in place.
+        Call this periodically, for example once per epoch after the optimization steps.
+        The constraint violations are evaluated on ``train_loader_in``; ``model`` is put into evaluation mode.
 
-        :param model: pytorch model
-        :param train_loader_in: loader of in-distribution data
-        :param logistic_regression: logistic regression layer
+        :param model: model that maps inputs to logits
+        :param train_loader_in: loader of in-distribution data, has to yield ``(input, label)`` batches
+        :param logistic_regression: function :math:`\\phi`, see :meth:`forward <pytorch_ood.loss.EnergyMarginLoss.forward>`
         """
 
         avg_sigmoid_energy_losses, _, avg_ce_loss = evaluate_energy_logistic_loss(

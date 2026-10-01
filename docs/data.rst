@@ -5,7 +5,38 @@ There are many datasets used in experiments with OOD methods. Finding, downloadi
 these datasets can be tedious.
 
 This package provides access to some of the most used datasets in the OOD literature. Most of these
-implementations support auto-downloading.
+implementations support auto-downloading with ``download=True``, which is off by default. Some data has to be
+obtained manually: :class:`ImageNet200 <pytorch_ood.dataset.img.ImageNet200>` and
+:class:`ImageNet800 <pytorch_ood.dataset.img.ImageNet800>` need an existing ImageNet directory,
+:class:`TinyImages <pytorch_ood.dataset.img.TinyImages>` needs a local copy of the data file,
+and :class:`FishyScapes <pytorch_ood.dataset.img.FishyScapes>` needs the CityScapes validation images.
+
+Image datasets return :class:`PIL.Image.Image` objects (exceptions are noted on the respective pages), and text datasets
+return :class:`str`.
+
+.. _dataset-label-convention:
+
+Labels
+====================================================
+
+Datasets follow the library's :ref:`labeling convention <design-choices>`: OOD samples have targets below zero.
+Datasets that contain only OOD data, such as :class:`Textures <pytorch_ood.dataset.img.Textures>` or
+:class:`WikiText2 <pytorch_ood.dataset.txt.WikiText2>`, return the target ``-1`` for every sample.
+Some datasets, like :class:`ImageNetO <pytorch_ood.dataset.img.ImageNetO>` and
+:class:`Chars74k <pytorch_ood.dataset.img.Chars74k>`, are used as OOD data but return their real class indices.
+To use them as OOD data, map their targets with :class:`~pytorch_ood.utils.ToUnknown`:
+
+.. code-block:: python
+
+    from pytorch_ood.dataset.img import ImageNetO
+    from pytorch_ood.utils import ToUnknown
+
+    dataset = ImageNetO(root="data", target_transform=ToUnknown(), download=True)
+    image, target = dataset[0]  # target is -1
+
+In the segmentation datasets, the target is a mask in which ``-1`` marks anomalous pixels, ``0`` marks in-distribution
+pixels and the ``VOID_LABEL`` (``1``) marks pixels that should be ignored. The ``transform`` of these datasets is
+called with both the image and the mask, i.e. as ``transform(image, mask)``.
 
 .. py:module:: pytorch_ood.dataset.img
 .. py:module:: pytorch_ood.dataset.txt

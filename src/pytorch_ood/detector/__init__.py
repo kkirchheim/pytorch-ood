@@ -5,13 +5,19 @@ Common Interface
 ----------------
 
 Each detector implements a common API which contains a ``predict`` and a ``fit`` method, where ``fit`` is optional.
-The objects ``__call__`` methods is delegated to the ``predict`` function, so you can use
+The ``__call__`` method of a detector delegates to ``predict``, so you can use
 
-.. code:: python
+.. code-block:: python
 
-    detector = Detector(model)
+    from pytorch_ood.detector import OpenMax
+
+    detector = OpenMax(model)
     detector.fit(data_loader)
     scores = detector(x)
+
+Outlier scores and labels follow the library's :ref:`design choices <design-choices>`. Logits have shape :math:`B \\times C`, features :math:`B \\times D` and feature maps
+:math:`B \\times C \\times H \\times W`. Detectors return a tensor of shape :math:`B`, or
+:math:`B \\times H \\times W` for grid-like input.
 
 
 ..  autoclass:: pytorch_ood.api.Detector
@@ -19,8 +25,9 @@ The objects ``__call__`` methods is delegated to the ``predict`` function, so yo
 
 
 
-Some of the detectors support grid-like input, so that they can be used for anomaly segmentation
-without further adjustment.
+Some of the detectors support grid-like input, i.e. logits of shape
+:math:`B \\times C \\times H \\times W` (see :attr:`Task.SEGMENTATION <pytorch_ood.api.Task.SEGMENTATION>`),
+so that they can be used for anomaly segmentation without further adjustment.
 
 
 Representation Interface
@@ -36,9 +43,11 @@ through the full model again. The available methods will depend on the base clas
 - structured detectors: ``predict_structured(...)`` and optionally
   ``fit_structured(...)``
 
-.. code:: python
+.. code-block:: python
 
-    detector = LogitsDetector(model=None)
+    from pytorch_ood.detector import OpenMax
+
+    detector = OpenMax(model=None)
     detector.fit_logits(train_logits, train_labels)
     scores = detector.predict_logits(test_logits)
 
@@ -46,22 +55,27 @@ through the full model again. The available methods will depend on the base clas
 ..  autoclass:: pytorch_ood.api.LogitsDetector
     :members:
     :show-inheritance:
+    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.FeaturesDetector
     :members:
     :show-inheritance:
+    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.FeatureMapsDetector
     :members:
     :show-inheritance:
+    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.StructuredDetector
     :members:
     :show-inheritance:
+    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.GradientDetector
     :members:
     :show-inheritance:
+    :exclude-members: fit, predict
 
 """
 

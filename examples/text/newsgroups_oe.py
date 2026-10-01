@@ -88,8 +88,8 @@ def prep(x):
 
 
 # %%
-train_dataset_in = NewsGroup20(root, train=True, transform=prep)
-dataset_in_test = NewsGroup20(root, train=False, transform=prep)
+train_dataset_in = NewsGroup20(root, train=True, transform=prep, download=True)
+dataset_in_test = NewsGroup20(root, train=False, transform=prep, download=True)
 train_ood_dataset = WikiText2(
     root, split="train", download=True, transform=prep, target_transform=ToUnknown()
 )

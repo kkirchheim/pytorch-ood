@@ -20,10 +20,12 @@ class ImageNet800(VisionDataset):
     """
     ImageNet-800 comprises the 800 ImageNet-1K classes that are *not* part of
     :class:`ImageNet200`, i.e. the two class sets are disjoint and together cover all of
-    ImageNet-1K. Samples are intended to
-    be used as auxiliary/outlier data during training (e.g. with
-    :class:`pytorch_ood.loss.OutlierExposureLoss`), not as a standalone classification task,
-    so ``__getitem__`` always returns a target of ``-1``.
+    ImageNet-1K. It uses all training images of these 800 classes (the ImageNet validation split is not used).
+
+    Samples are intended to be used as auxiliary/outlier data during training
+    (e.g. with :class:`pytorch_ood.loss.OutlierExposureLoss`), not as a standalone classification task,
+    so ``__getitem__`` always returns a target of ``-1`` (the label of OOD samples).
+    Images are returned as :class:`PIL.Image.Image`.
     """
 
     info = DatasetInfo(

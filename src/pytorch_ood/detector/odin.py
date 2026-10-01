@@ -37,21 +37,23 @@ def odin_preprocessing(
     y: Optional[Tensor] = None,
     criterion: Optional[Callable[[Tensor], Tensor]] = None,
     eps: float = 0.05,
-    temperature: float = 1000,
+    temperature: float = 1000.0,
     norm_std: Optional[List[float]] = None,
 ):
     """
     Functional version of ODIN.
 
     :param model: module to backpropagate through
-    :param x: sample to preprocess
+    :param x: batch to preprocess, of shape :math:`B \\times C \\times H \\times W`
     :param y: the label :math:`\\hat{y}` which is used to evaluate the loss. If none is given, the models
         prediction will be used
     :param criterion: loss function :math:`\\mathcal{L}` to use. If none is given, we will use negative log
             likelihood
-    :param eps: step size :math:`\\epsilon` of the gradient ascend step
+    :param eps: step size :math:`\\epsilon` of the gradient descent step on the loss
     :param temperature: temperature :math:`T` to use for scaling
-    :param norm_std: standard deviations used during preprocessing
+    :param norm_std: per-channel standard deviations (one per channel :math:`C`). The sign gradient of
+        channel :math:`c` is divided by ``norm_std[c]``, so that ``eps`` refers to the unnormalized input scale.
+    :return: perturbed inputs :math:`\\hat{x}`, of the same shape as ``x``
     """
     if model is None:
         raise ModelNotSetException
@@ -104,7 +106,9 @@ class ODIN(GradientDetector):
     .. math::
         \\hat{x} = x - \\epsilon \\ \\text{sign}(\\nabla_x \\mathcal{L}(f(x) / T, \\hat{y}))
 
-    where :math:`\\hat{y}` is the predicted class of the network.
+    where :math:`f` is ``model``, :math:`\\mathcal{L}` is ``criterion``, :math:`\\epsilon` is ``eps``,
+    :math:`T` is ``temperature`` and :math:`\\hat{y}` is the predicted class of the network.
+    The outlier score is the negative maximum softmax probability of :math:`\\hat{x}`.
     """
 
     info = DetectorInfo(
@@ -118,9 +122,9 @@ class ODIN(GradientDetector):
         tasks={Task.CLASSIFICATION},
     )
 
-    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
-    #: temperature and input-noise (``eps``) sweep used by OpenOOD. The noise values
-    #: assume normalized inputs (pass ``norm_std``).
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`. The ``eps`` values
+    #: assume inputs normalized by ``norm_std``.
+    # The temperature and eps sweep matches the one used by OpenOOD.
     hyperparameter_space = {
         "temperature": [1, 10, 100, 1000],
         "eps": [0.0014, 0.0028],
@@ -140,7 +144,8 @@ class ODIN(GradientDetector):
             likelihood
         :param eps: step size :math:`\\epsilon` of the gradient descent step
         :param temperature: temperature :math:`T` to use for scaling
-        :param norm_std: standard deviations used for normalization
+        :param norm_std: per-channel standard deviations used for preprocessing, see
+            :func:`~pytorch_ood.detector.odin_preprocessing`
         """
         super(ODIN, self).__init__()
         self.model = model
@@ -156,10 +161,11 @@ class ODIN(GradientDetector):
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        Calculates softmax outlier scores on ODIN pre-processed inputs.
+        Calculates softmax outlier scores on ODIN pre-processed inputs. Needs gradients with respect
+        to the inputs, so it must not be wrapped in ``torch.no_grad``.
 
-        :param x: input tensor
-        :return: outlier scores for each sample
+        :param x: input batch of shape :math:`B \\times C \\times H \\times W`
+        :return: negative maximum softmax probability of the perturbed inputs, shape :math:`B`
         """
         device = self.device
         if device is not None:

@@ -37,34 +37,41 @@ class GradNorm(GradientDetector):
     """
     Detector from the paper *Gradients as a Measure of Uncertainty in Neural Networks*.
 
-    For each input sample, computes the binary cross-entropy loss between logits and a "confounding label",
-    which is a vector of all ones. Then, for each set of parameters in the model (as given
-    by ``model.named_parameters()``), computes up the squared :math:`\\ell_2`-norm of the
+    For each input sample, computes the binary cross-entropy loss between the softmax output and a "confounding
+    label", which is a vector of all ones. Then, for each set of parameters in the model (as given
+    by ``model.named_parameters()``), computes the squared :math:`\\ell_2`-norm of the
     gradients of the loss w.r.t. that parameter. The outlier score is the sum of these squared norms.
 
     The idea is that higher gradient norms indicates that the model would require large
     parameter updates to accommodate the input, i.e., for such data, it is less familiar or
     more uncertain, and hence more likely to be OOD.
 
-    .. note:: OpenOOD uses only the gradients of the final classification head, which
-     makes this computationally cheaper. You can achieve something similar by setting ``param_filter``. Still, this
+    .. note:: Using only the gradients of the final classification head makes this computationally cheaper.
+     You can achieve this by setting ``param_filter``. Still, this
      method will compute gradients for all parameters unless you explicitly deactivate
-     gradient calculation for parameters. For an example, see :doc:`here </auto_examples/detectors/gradnorm>`
+     gradient calculation for parameters. For an example, see the
+     :doc:`GradNorm example </auto_examples/detectors/gradnorm>`.
+
+    The model is not switched to evaluation mode, so layers such as batch normalization and dropout behave
+    according to ``model.training``; you should usually call ``model.eval()`` first. Gradients are computed per
+    sample, and :meth:`predict` must not be wrapped in ``torch.no_grad()``.
 
     .. note:: On PyTorch ≥ 2.0, per-sample gradients are computed with ``torch.func.vmap`` +
         ``torch.func.grad`` in a single batched forward+backward pass. On PyTorch 1.x the
         original sequential loop over individual samples is used as a fallback.
 
     .. warning::
-        The paper's actual experiments (Section 4) concatenate the per-layer squared L2 norms into a
-        feature vector and then **train a 2-layer FC binary classifier** on labeled ID and OOD
-        gradient representations. The current implementation is a significant simplification: it
-        sums all norms into a single scalar and uses it as a direct outlier score without any
-        training. This simplification requires no OOD data but tends to perform poorly (AUROC ≈ 0.5)
-        when ID and OOD datasets are of similar complexity, because the scalar sum loses the
-        per-layer discriminative structure the classifier exploits. For an unsupervised
+        This implementation sums the norms of all (selected) parameters into a single scalar and uses it directly
+        as an outlier score, without any training. This requires no OOD data, but may perform poorly when ID and
+        OOD datasets are of similar complexity. For an unsupervised
         gradient-based alternative see :class:`~pytorch_ood.detector.GradNormKL`.
     """
+
+    # The paper's actual experiments (Section 4) concatenate the per-layer squared L2 norms into a feature vector
+    # and then train a 2-layer FC binary classifier on labeled ID and OOD gradient representations. This class
+    # is a significant simplification (empirical AUROC of about 0.5 when ID and OOD are of similar complexity,
+    # because the scalar sum loses the per-layer structure the classifier exploits).
+    # OpenOOD uses only the gradients of the final classification head.
 
     info = DetectorInfo(
         paper=Paper(
@@ -80,8 +87,9 @@ class GradNorm(GradientDetector):
     def __init__(self, model: torch.nn.Module, param_filter: Callable[[str], bool] = None):
         """
         :param model: A pre-trained classification model
-        :param param_filter: Function which indicates whether a named parameter should be included in the scoring. If none
-            give, all parameters will be used.
+        :param param_filter: Function which indicates whether a named parameter should be included in the scoring.
+            If ``None``, all parameters are used.
+        :raises ModelNotSetException: if ``model`` is ``None``
         """
         if model is None:
             raise ModelNotSetException("Model must be provided.")
@@ -100,18 +108,13 @@ class GradNorm(GradientDetector):
         """
         Compute outlier scores from input batch.
 
-        We will use the device of the model parameters for computations.
-        On PyTorch ≥ 2.0, per-sample gradients are batched via ``torch.func``; on older
-        versions a sequential loop is used.
-
-        :param x: input, will be passed through network
-        :return: vector of outlier scores
+        :param x: input of shape :math:`B \\times \\ldots`, will be passed through the network
+        :return: outlier scores of shape :math:`B`
         """
         if self.model is None:
             raise ModelNotSetException()
 
-        device = next(self.model.parameters()).device
-        x = x.to(device)
+        x = x.to(self.device)
 
         if _TORCH_FUNC_AVAILABLE:
             return self._predict_batched(x)

@@ -20,7 +20,7 @@ class Entropy(LogitsDetector):
     """
     Implements Entropy-based OOD detection.
 
-    This methods calculates the entropy based on the logits of a classifier.
+    This method calculates the entropy based on the logits of a classifier.
     Higher entropy means more uniformly distributed posteriors, indicating larger uncertainty.
     Entropy is calculated as
 
@@ -51,14 +51,20 @@ class Entropy(LogitsDetector):
 
     def predict_logits(self, logits: Tensor) -> Tensor:
         """
-        :param logits: logits given by your model
+        :param logits: logits given by your model, shape :math:`B \\times C`
+            (or :math:`B \\times C \\times H \\times W` for segmentation)
+        :return: entropy of the softmax distribution, shape :math:`B` (or :math:`B \\times H \\times W`)
         """
         return self.score(logits)
 
     @staticmethod
     def score(logits: Tensor) -> Tensor:
         """
-        :param logits: logits of input
+        :param logits: logits of input, shape :math:`B \\times C`
+            (or :math:`B \\times C \\times H \\times W` for segmentation)
+        :return: entropy of the softmax distribution, shape :math:`B` (or :math:`B \\times H \\times W`).
+            Probabilities are clipped to :math:`[10^{-7}, 1]` before taking the
+            logarithm for numerical stability.
         """
         p = logits.softmax(dim=1).clip(1e-7, 1)
         return -(p.log() * p).sum(dim=1)

@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import ClassVar, Dict, FrozenSet, Iterable, List, Optional
+from typing import ClassVar, Dict, FrozenSet, Iterable, List, Optional, Union
 
 import torch
 from torch import Tensor
@@ -24,7 +24,7 @@ class RequiresFittingException(Exception):
 
 class ModelNotSetException(ValueError):
     """
-    Raised when predict() is called but no model was given.
+    Raised when predict() or fit() needs a model but none was given.
     """
 
     def __init__(self, msg="When using predict(), model must not be None"):
@@ -317,7 +317,7 @@ class Detector(ABC):
 
         return getattr(self, "_device", None)
 
-    def to(self, device) -> Self:
+    def to(self, device: Union[str, torch.device]) -> Self:
         """
         Move detector-owned modules and tensor state to ``device``.
 
@@ -325,7 +325,7 @@ class Detector(ABC):
         modules, tensors, and common container-valued state stored on the
         detector itself.
 
-        :param device: target torch device
+        :param device: target device, e.g. ``"cuda:0"`` or a :class:`torch.device`
         :return: self
         """
         device = torch.device(device)
@@ -362,7 +362,8 @@ class Detector(ABC):
 
         :param kwargs: hyperparameter values to set; keys must be in
             :attr:`hyperparameter_space`
-        :raise ValueError: if a key is not a known hyperparameter
+        :return: self
+        :raises ValueError: if a key is not a known hyperparameter
         """
         for name, value in kwargs.items():
             if name not in self.hyperparameter_space:
@@ -384,9 +385,13 @@ class Detector(ABC):
         """
         Fit the detector to a dataset. Some methods require this.
 
-        :param data_loader: dataset to fit on. This is usually the training dataset.
+        The base implementation does nothing and returns ``self`` for detectors
+        with ``requires_fit = False``. Detectors that require fitting override it.
 
-        :raise ModelNotSetException: if model was not set
+        :param data_loader: data loader to fit on. This is usually the training set,
+            yielding batches ``(x, y)``.
+        :return: the fitted detector
+        :raises NotImplementedError: if the detector requires fitting but does not override ``fit()``
         """
         if self.requires_fit:
             raise NotImplementedError(
@@ -400,11 +405,13 @@ class Detector(ABC):
         """
         Calculates outlier scores. Inputs will be passed through the model.
 
-        :param x: batch of data
-        :return: outlier scores for points
+        :param x: batch of inputs, e.g. images of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B` (:math:`B \\times H \\times W` for grid-like
+            input, e.g. in anomaly segmentation). Larger values indicate that the input is more
+            likely to be out-of-distribution.
 
-        :raise RequiresFittingException: if detector has to be fitted to some data
-        :raise ModelNotSetException: if model was not set
+        :raises RequiresFittingException: if detector has to be fitted to some data
+        :raises ModelNotSetException: if model was not set
         """
         raise NotImplementedError
 
@@ -442,8 +449,13 @@ class LogitsDetector(Detector):
         """
         Apply the model and forward its logits to ``predict_logits(...)``.
 
-        :param x: input batch
-        :return: outlier scores
+        ``x`` is moved to the detector's device (if one is set). The model is called as
+        is; it is not switched to evaluation mode.
+
+        :param x: input batch, e.g. images of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B` (:math:`B \\times H \\times W` for grid-like
+            input), larger values indicate that the input is more likely to be out-of-distribution
+        :raises ModelNotSetException: if the detector has no model
         """
         if not hasattr(self, "model") or self.model is None:
             raise ModelNotSetException
@@ -456,9 +468,12 @@ class LogitsDetector(Detector):
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
-        Extract logits from a loader and forward them to ``fit_logits(...)``.
+        Extract logits from a loader with the detector's model and forward them to
+        ``fit_logits(...)``.
 
-        :param data_loader: loader to extract logits from
+        :param data_loader: loader yielding batches ``(x, y)`` to extract logits from
+        :return: the fitted detector
+        :raises ModelNotSetException: if the detector has no model
         """
         if not self.requires_fit:
             return self
@@ -481,8 +496,9 @@ class LogitsDetector(Detector):
         """
         Fit the detector directly on logits.
 
-        :param logits: training logits to use for fitting.
-        :param y: corresponding class labels.
+        :param logits: training logits of shape :math:`N \\times C`
+        :param y: corresponding class labels of shape :math:`N`
+        :return: the fitted detector
         """
         if not self.requires_fit:
             return self
@@ -494,8 +510,10 @@ class LogitsDetector(Detector):
         """
         Calculates outlier scores directly from logits.
 
-        :param logits: batch of logits
-        :return: outlier scores for points
+        :param logits: logits of shape :math:`B \\times C` (or :math:`B \\times C \\times H \\times W`
+            for grid-like input)
+        :return: outlier scores of shape :math:`B` (:math:`B \\times H \\times W` for grid-like
+            input), larger values indicate that the input is more likely to be out-of-distribution
         """
         raise NotImplementedError
 
@@ -509,7 +527,7 @@ class FeaturesDetector(Detector):
 
     **Parameter naming convention**: Subclasses that accept a feature extractor should use
     the parameter name ``encoder`` to receive a callable that produces pooled feature vectors
-    of shape :math:`(B, D)`, where :math:`B` is batch size and :math:`D` is feature dimension.
+    of shape :math:`B \\times D`, where :math:`B` is batch size and :math:`D` is feature dimension.
     """
 
     def __init_subclass__(cls, **kwargs):
@@ -536,8 +554,9 @@ class FeaturesDetector(Detector):
         """
         Fit the detector directly on feature tensors.
 
-        :param x: training features to use for fitting
-        :param y: corresponding class labels
+        :param x: training features of shape :math:`N \\times D`
+        :param y: corresponding class labels of shape :math:`N`
+        :return: the fitted detector
         """
         if not self.requires_fit:
             return self
@@ -549,8 +568,9 @@ class FeaturesDetector(Detector):
         """
         Calculate outlier scores directly from feature tensors.
 
-        :param x: batch of features
-        :return: outlier scores for points
+        :param x: pooled features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`, larger values indicate that the input is more
+            likely to be out-of-distribution
         """
         raise NotImplementedError
 
@@ -564,7 +584,7 @@ class FeatureMapsDetector(Detector):
 
     **Parameter naming convention**: Subclasses that accept a feature extractor should use
     the parameter name ``backbone`` to receive a callable that produces spatial feature maps
-    of shape :math:`(B, C, H, W)`, where :math:`B` is batch size, :math:`C` is number of
+    of shape :math:`B \\times C \\times H \\times W`, where :math:`B` is batch size, :math:`C` is number of
     channels, and :math:`H, W` are spatial dimensions.
     """
 
@@ -592,8 +612,9 @@ class FeatureMapsDetector(Detector):
         """
         Fit the detector directly on feature maps.
 
-        :param feature_maps: training feature maps to use for fitting.
-        :param y: corresponding class labels.
+        :param feature_maps: training feature maps of shape :math:`N \\times C \\times H \\times W`
+        :param y: corresponding class labels of shape :math:`N`
+        :return: the fitted detector
         """
         if not self.requires_fit:
             return self
@@ -605,8 +626,9 @@ class FeatureMapsDetector(Detector):
         """
         Calculates outlier scores directly from feature maps.
 
-        :param feature_maps: batch of feature maps
-        :return: outlier scores for points
+        :param feature_maps: feature maps of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B`, larger values indicate that the input is more
+            likely to be out-of-distribution
         """
         raise NotImplementedError
 
@@ -623,6 +645,10 @@ class StructuredDetector(Detector):
     def fit_structured(self, *args, **kwargs) -> Self:
         """
         Fit the detector directly on structured intermediate representations.
+
+        The expected arguments depend on the detector, see its documentation.
+
+        :return: the fitted detector
         """
         if not self.requires_fit:
             return self
@@ -633,6 +659,11 @@ class StructuredDetector(Detector):
     def predict_structured(self, *args, **kwargs) -> Tensor:
         """
         Calculates outlier scores directly from structured intermediate representations.
+
+        The expected arguments depend on the detector, see its documentation.
+
+        :return: outlier scores with one entry per input, larger values indicate that the input is
+            more likely to be out-of-distribution
         """
         raise NotImplementedError
 

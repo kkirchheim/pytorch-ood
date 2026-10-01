@@ -1,7 +1,7 @@
 """
 Medical imaging OOD benchmarks from OpenMIBOOD (CVPR 2025).
 
-:see Setup: https://github.com/remic-othr/OpenMIBOOD
+See the `OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`__.
 """
 
 import os
@@ -45,7 +45,8 @@ class _OpenMIBOODBase(Benchmark):
         :param root: directory containing the prepared OpenMIBOOD data for this benchmark
         :param transform: transform applied to each loaded image (after :class:`~pytorch_ood.utils.ToRGB`)
         :param loader: callable mapping a file path to an image; defaults to :func:`PIL.Image.open`.
-            Required for benchmarks whose image format is not handled by PIL (e.g. NIfTI).
+            Required for benchmarks whose image format is not handled by PIL (e.g. NIfTI);
+            :class:`OASIS3_OpenMIBOOD` cannot load its images without it.
         :param download: if ``True``, download missing imglist files to ``root/imglists/<bench>/``.
             If ``False``, raise an error if any required file is missing. Defaults to ``True``.
         """
@@ -112,8 +113,15 @@ class MIDOG_OpenMIBOOD(_OpenMIBOODBase):
     classification on Domain 1a.
 
     Requires data prepared following the OpenMIBOOD setup guide. ``root`` should
-    point at the directory whose subfolders match the bundled imglist paths
-    (e.g. ``1a/017/017_342_0.tiff``).
+    point at the directory whose subfolders match the paths in the OpenMIBOOD imglists
+    (e.g. ``1a/017/017_342_0.tiff``). With ``download=True``, the imglists are downloaded to
+    ``<root>/imglists/<benchmark>/``.
+
+    The covariate-shifted ID datasets are loaded with
+    :class:`~pytorch_ood.utils.ToUnknown`, i.e., they are labelled as OOD (``-1``) in
+    :meth:`~pytorch_ood.benchmark.Benchmark.test_sets` and evaluated like the near- and far-OOD datasets. ``ood_names`` lists
+    the covariate-shifted, near-OOD and far-OOD datasets in this order (also available as the
+    class attributes ``cs_id_names``, ``near_ood_names`` and ``far_ood_names``).
 
     Covariate-shifted ID datasets:
 
@@ -129,7 +137,7 @@ class MIDOG_OpenMIBOOD(_OpenMIBOODBase):
     * midog_ccagt — cervical cells (CCAgT)
     * midog_fnac2019 — fine-needle aspirate cytology (FNAC 2019)
 
-    :see Setup: https://github.com/remic-othr/OpenMIBOOD
+    See the `OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`__.
     """
 
     info = BenchmarkInfo(
@@ -181,8 +189,12 @@ class PhaKIR_OpenMIBOOD(_OpenMIBOODBase):
     classification on PhaKIR videos 02-04 and 07 (Video 01 is held out for testing).
 
     Requires data prepared following the OpenMIBOOD setup guide. ``root`` should
-    point at the directory whose subfolders match the bundled imglist paths
-    (e.g. ``Video_02/Video_02_Frames/frame_0_19_0.png``).
+    point at the directory whose subfolders match the paths in the OpenMIBOOD imglists
+    (e.g. ``Video_02/Video_02_Frames/frame_0_19_0.png``). With ``download=True``, the imglists
+    are downloaded to ``<root>/imglists/<benchmark>/``.
+
+    The covariate-shifted ID datasets are labelled as OOD (``-1``) in :meth:`~pytorch_ood.benchmark.Benchmark.test_sets` and
+    evaluated like the near- and far-OOD datasets; ``ood_names`` lists them first.
 
     Covariate-shifted ID datasets:
 
@@ -200,7 +212,7 @@ class PhaKIR_OpenMIBOOD(_OpenMIBOODBase):
     * phakir_kvasir — Kvasir-SEG (gastrointestinal endoscopy)
     * phakir_cataracts — CATARACTS (ophthalmic surgery)
 
-    :see Setup: https://github.com/remic-othr/OpenMIBOOD
+    See the `OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`__.
     """
 
     info = BenchmarkInfo(
@@ -240,8 +252,12 @@ class OASIS3_OpenMIBOOD(_OpenMIBOODBase):
     in-distribution task is 2-class classification on T1w scans.
 
     Requires data prepared following the OpenMIBOOD setup guide. ``root`` should
-    point at the directory whose subfolders match the bundled imglist paths
-    (e.g. ``OASIS3/OAS30704/.../sub-OAS30704_..._T1w_resampled_skull_stripped.nii.gz``).
+    point at the directory whose subfolders match the paths in the OpenMIBOOD imglists
+    (e.g. ``OASIS3/OAS30704/.../sub-OAS30704_..._T1w_resampled_skull_stripped.nii.gz``). With
+    ``download=True``, the imglists are downloaded to ``<root>/imglists/<benchmark>/``.
+
+    The covariate-shifted ID datasets are labelled as OOD (``-1``) in :meth:`~pytorch_ood.benchmark.Benchmark.test_sets` and
+    evaluated like the near- and far-OOD datasets; ``ood_names`` lists them first.
 
     .. note::
 
@@ -276,7 +292,7 @@ class OASIS3_OpenMIBOOD(_OpenMIBOODBase):
     * oasis3_heart — MSD Task02 Heart
     * oasis3_chaos_inPhase — CHAOS abdominal MRI (in-phase)
 
-    :see Setup: https://github.com/remic-othr/OpenMIBOOD
+    See the `OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`__.
     """
 
     info = BenchmarkInfo(

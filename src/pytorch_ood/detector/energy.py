@@ -18,10 +18,11 @@ from ..api import DetectorInfo, LogitsDetector, Paper, Task
 
 class EnergyBased(LogitsDetector):
     """
-    Implements the Energy Score of  *Energy-based Out-of-distribution Detection*.
+    Implements the Energy Score of *Energy-based Out-of-distribution Detection*.
 
-    This methods calculates the negative energy for a vector of logits.
-    This value can be used as outlier score.
+    This method calculates the energy :math:`E(x)` for a vector of logits.
+    The paper uses the negative energy as in-distribution score; the energy itself is used as outlier score,
+    so larger values indicate OOD.
 
     .. math::
         E(x) = -T \\log{\\sum_i e^{f_i(x)/T}}
@@ -52,14 +53,18 @@ class EnergyBased(LogitsDetector):
 
     def predict_logits(self, logits: Tensor) -> Tensor:
         """
-        :param logits: logits given by the model
+        :param logits: logits given by the model, shape :math:`B \\times C`
+            (or :math:`B \\times C \\times H \\times W` for segmentation)
+        :return: outlier scores of shape :math:`B` (or :math:`B \\times H \\times W`)
         """
         return EnergyBased.score(logits, t=self.t)
 
     @staticmethod
     def score(logits: Tensor, t: Optional[float] = 1.0) -> Tensor:
         """
-        :param logits: logits of input
-        :param t: temperature value
+        :param logits: logits of input, shape :math:`B \\times C`
+            (or :math:`B \\times C \\times H \\times W` for segmentation)
+        :param t: temperature :math:`T`
+        :return: energy, shape :math:`B` (or :math:`B \\times H \\times W`)
         """
         return -t * logsumexp(logits / t, dim=1)

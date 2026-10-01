@@ -11,6 +11,9 @@ from .base import ImageDatasetBase
 class FoolingImages(ImageDatasetBase):
     """
     From the paper *Deep neural networks are easily fooled: High confidence predictions for unrecognizable images*.
+    Contains images evolved with compositional pattern-producing networks (CPPNs) that a classifier
+    labels with high confidence although they are unrecognizable to humans (10 runs with 1000 images each).
+    Images are returned as :class:`PIL.Image.Image`; all targets are ``-1`` (the label of OOD samples) by default.
 
     .. image::  https://i.stack.imgur.com/pBm48.png
         :width: 800px
@@ -45,6 +48,12 @@ class FoolingImages(ImageDatasetBase):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ):
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(FoolingImages, self).__init__(root, transform, target_transform, download)
 
     def _load_files(self):

@@ -36,9 +36,9 @@ class PNML(FeaturesDetector):
     Uses normalized penultimate-layer features together with the classifier probabilities
     to compute the pNML regret. Higher regret indicates a more likely OOD sample.
 
-    For normalized training features :math:`X`, their Moore-Penrose pseudoinverse
+    For L2-normalized training features :math:`X` (one row per sample, shape :math:`N \\times D`), their Moore-Penrose pseudoinverse
     :math:`X^+`, normalized test feature :math:`z`, classifier probabilities
-    :math:`p_i(z)`, and
+    :math:`p_i(z)`, the number of classes :math:`C`, and
     :math:`\\kappa(z) = \\frac{z^\\top X^+ X^{+\\top} z}{1 + z^\\top X^+ X^{+\\top} z}`,
     the detector scores a sample by
 
@@ -73,7 +73,9 @@ class PNML(FeaturesDetector):
     ):
         """
         :param encoder: feature encoder mapping inputs to penultimate-layer features
-        :param head: classification head mapping normalized features to logits
+        :param head: classification head mapping L2-normalized features to logits. It does not receive
+            the raw features, so a head with a bias yields different logits than on raw features.
+            ``None`` is only allowed if :meth:`predict_features` is not used.
         :param eps: numerical stability constant for probability clamping
         """
         self.encoder = encoder
@@ -87,6 +89,7 @@ class PNML(FeaturesDetector):
         Extract features and fit the pNML detector.
 
         :param data_loader: data loader with training data
+        :return: self
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -106,8 +109,10 @@ class PNML(FeaturesDetector):
 
         Labels are only used to filter out OOD-marked samples when present.
 
-        :param z: training features
-        :param labels: class labels
+        :param z: training features of shape :math:`N \\times D`
+        :param labels: class labels of shape :math:`N`
+        :return: self
+        :raise ValueError: if the labels contain no ID samples
         """
         known = is_known(labels)
         if not known.any():
@@ -131,6 +136,7 @@ class PNML(FeaturesDetector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input tensor, will be passed through the backbone
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -143,8 +149,8 @@ class PNML(FeaturesDetector):
         """
         Calculate outlier scores using the normalized pNML regret.
 
-        :param z: penultimate-layer features
-        :return: outlier scores (higher = more OOD)
+        :param z: penultimate-layer features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
         if self.head is None:
             raise ModelNotSetException(msg="When using predict_features(), head must not be None")

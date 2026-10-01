@@ -22,18 +22,23 @@ class InsertCOCO(Callable):
     This was proposed in the paper  *Entropy Maximization and Meta Classification for
     Out-Of-Distribution Detection in Semantic Segmentation*.
 
-    .. code :: python
+    The COCO train2017 images and annotations have to exist in ``coco_dir``; pass
+    ``download=True`` to download them on construction (this is a large download).
+
+    .. code-block:: python
 
         insert_coco = InsertCOCO(
             coco_dir="data/coco",
             exclude_classes=["train", "bicycle"],
-            p=0.1
+            p=0.1,
+            download=True,
         )
 
+        # img is a PIL image, mask a segmentation mask of shape H x W
         img, mask = insert_coco(img, mask)
 
 
-    :see Paper:  `ArXiv <https://arxiv.org/abs/2012.06575>`__
+    :see Paper: `Entropy Maximization and Meta Classification for Out-Of-Distribution Detection in Semantic Segmentation <https://arxiv.org/abs/2012.06575>`__
     """
 
     _class_exclusion = {
@@ -66,19 +71,20 @@ class InsertCOCO(Callable):
         download: bool = False,
     ):
         """
-
         :param coco_dir: Directory to store the coco dataset
-        :param p: Probability of inserting an OOD object to the image
+        :param p: Probability of inserting an OOD object to the image, in :math:`[0, 1]`
         :param n: Number of inserted OOD objects per image
         :param exclude_classes: List of classes that should not be used for the OOD generation. Can also be
             one of ``bddAnomaly`` or ``Streethazards``.
-        :param annotation_per_image: Number of different annotation that are used for the ood object per coco image.
+        :param annotation_per_image: Number of different annotations that are used for the ood object per coco image.
             (E.g. if there are 2 elephants on a COCO image, if this parameter is 1, only 1 elephant is inserted)
         :param ood_mask_value: Value of the OOD segmentation mask pixels
-        :param upscale: Upscale factor for the OOD object
-        :param year: Year of the coco dataset
+        :param upscale: factor applied to the default relative size range of the inserted
+            object, which is 20% to 50% of the size of the COCO crop
+        :param year: Year of the coco dataset; only ``2017`` is supported
         :param min_img_size: Minimum size of the used coco image
         :param download: Set ``True`` to automatically download the COCO dataset
+        :raises AssertionError: if ``n``, ``p`` or ``year`` are invalid
         """
         assert n > 0
         assert 0 <= p <= 1
@@ -131,9 +137,11 @@ class InsertCOCO(Callable):
         """
         Check if OOD should be added and add it with the given probability
 
-        :param img: input image
-        :param target: segmentation mask for image
-        :return: Tuple with image and target tensor with inserted object(s)
+        :param img: input image. It is modified in place if an object is inserted.
+        :param target: segmentation mask of shape :math:`H \\times W` with integer labels below 256
+            (it is cast to ``uint8``)
+        :return: tuple ``(img, target)``; the target is an ``int64`` tensor of shape
+            :math:`H \\times W` in which the pixels of inserted objects are set to ``ood_mask_value``
         """
         if random.random() <= self.ood_rate:
             target = Image.fromarray(np.array(target, dtype=np.uint8))
@@ -541,7 +549,7 @@ class COCO(object):
         Convert annotation data to a binary mask.
 
         :param ann: Annotation data. (dict)
-        :param img_size: Size of the image as (width, height). (tuple of int)
+        :param img_size: Size of the image as (height, width). (tuple of int)
         :return: Binary mask as a numpy array. (np.ndarray)
         """
         return create_mask_from_segmentation(ann["segmentation"], (img_size[1], img_size[0]))

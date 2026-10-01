@@ -42,11 +42,12 @@ def load_ssb_splits(dataset: str, root: str) -> dict:
     """
     Download (once) and return the SSB class splits for a given dataset.
 
-    Files are cached under ``<root>/ssb_splits/``.
+    Files are cached under ``<root>/ssb_splits/``. The split file is a pickle that is
+    downloaded and loaded with :func:`pickle.load`.
 
     :param dataset: one of ``"cub"``, ``"aircraft"``, ``"scars"``
     :param root: directory used for caching the split file
-    :returns: dict with keys:
+    :return: dict with keys:
 
         - ``known_classes`` — list of 0-indexed class IDs for the ID split
         - ``unknown_classes`` — dict with keys ``"Easy"``, ``"Medium"``, ``"Hard"``
@@ -324,9 +325,20 @@ class _SSBBase(Benchmark):
     """Shared structure for SSB benchmarks."""
 
     def train_set(self):
+        """
+        In-distribution training dataset (the known classes).
+        """
         return self._train
 
     def test_sets(self, known=True, unknown=True):
+        """
+        Test datasets for the ``Easy`` and ``Hard`` OOD splits, in this order (see ``ood_names``).
+        The ``Hard`` split also contains the classes of the ``Medium`` split.
+
+        :param known: include ID
+        :param unknown: include OOD
+        :return: the two test datasets
+        """
         if known and unknown:
             return [self._test_id + self._test_easy, self._test_id + self._test_hard]
         if known and not unknown:
@@ -341,7 +353,7 @@ class _SSBBase(Benchmark):
 
 class CUB_SSB(_SSBBase):
     """
-    The benchmark partitions CUB-200-2011 into 100 ID classes and 100 OOD classes.
+    Semantic Split Benchmark (SSB) on CUB-200-2011. The benchmark partitions CUB-200-2011 into 100 ID classes and 100 OOD classes.
     OOD classes are split by semantic similarity to the ID classes:
 
     - **Easy** (32 classes) — far-OOD; most dissimilar to ID classes
@@ -398,7 +410,7 @@ class CUB_SSB(_SSBBase):
 
 class StanfordCars_SSB(_SSBBase):
     """
-    The benchmark partitions Stanford Cars into 98 ID classes and 98 OOD classes.
+    Semantic Split Benchmark (SSB) on Stanford Cars. The benchmark partitions Stanford Cars into 98 ID classes and 98 OOD classes.
     OOD classes are split by semantic similarity to the ID classes:
 
     - **Easy** (76 classes) — far-OOD; most dissimilar to ID classes
@@ -410,8 +422,8 @@ class StanfordCars_SSB(_SSBBase):
     .. note::
 
         Stanford Cars cannot be downloaded automatically, because the original Stanford host is
-        no longer available. Download the dataset manually from
-        https://www.kaggle.com/datasets/jessicali9530/stanford-cars-dataset
+        no longer available. Download the dataset manually from the
+        `Stanford Cars dataset on Kaggle <https://www.kaggle.com/datasets/jessicali9530/stanford-cars-dataset>`__
         and extract it so that ``<root>/stanford_cars/`` contains
         ``cars_train/``, ``cars_test/``, and ``devkit/``.
     """
@@ -459,7 +471,7 @@ class StanfordCars_SSB(_SSBBase):
 
 class Aircraft_SSB(_SSBBase):
     """
-    The benchmark partitions FGVC-Aircraft (variant level, 100 classes) into
+    Semantic Split Benchmark (SSB) on FGVC-Aircraft. The benchmark partitions FGVC-Aircraft (variant level, 100 classes) into
     50 ID classes and 50 OOD classes.
     OOD classes are split by semantic similarity to the ID classes:
 

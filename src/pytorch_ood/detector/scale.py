@@ -8,7 +8,7 @@
 """
 
 import logging
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 import torch.nn
@@ -16,6 +16,7 @@ from torch import Tensor
 from typing_extensions import Self
 
 from ..api import DetectorInfo, FeatureMapsDetector, Paper, Task
+from ..utils.utils import _check_fraction
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -32,9 +33,11 @@ def scale(x: Tensor, percentile: float = 0.65) -> Tensor:
     selection is used only to derive the scaling factor, which is then applied
     to the original, full activation tensor.
 
-    :param x: feature maps of shape :math:`(B, C, H, W)`
-    :param percentile: fraction of activations to consider as pruned when
-        computing the scaling factor (expressed in ``[0, 1]``)
+    :param x: feature maps of shape :math:`B \\times C \\times H \\times W`
+    :param percentile: fraction in :math:`[0, 1]` of activations to consider as pruned when
+        computing the scaling factor. Values close to ``1`` leave few activations for
+        :math:`s_2`; ``1.0`` itself is degenerate (empty top-k, infinite factor).
+    :return: scaled feature maps, same shape as ``x``
     """
     assert x.dim() == 4
     assert 0.0 <= percentile <= 1.0
@@ -63,7 +66,8 @@ class SCALE(FeatureMapsDetector):
 
     SCALE scales the activations in some layer of the network (backbone) by a
     per-sample factor and propagates the result through the remainder (head) of
-    the network. Then uses the energy based outlier score.
+    the network. The resulting logits are then mapped to outlier scores by ``detector``, by default
+    :meth:`EnergyBased.score <pytorch_ood.detector.EnergyBased.score>`. The feature maps have to be 4-dimensional.
 
     The scaling factor :math:`\\exp(s_1 / s_2)` is derived from the ratio between the
     sum over all activations (:math:`s_1`) and the sum over the largest
@@ -76,7 +80,7 @@ class SCALE(FeatureMapsDetector):
 
     .. rubric:: Examples
 
-    .. code :: python
+    .. code-block:: python
 
         model = WideResNet()
         detector = SCALE(
@@ -99,8 +103,8 @@ class SCALE(FeatureMapsDetector):
         ai_coded=True,
     )
 
-    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, matching the
-    #: percentile sweep used by OpenOOD (expressed here as fractions in ``[0, 1]``).
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`, with fractions in :math:`[0, 1]`.
+    # This matches the percentile sweep used by OpenOOD.
     hyperparameter_space = {
         "percentile": [0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95],
     }
@@ -110,22 +114,26 @@ class SCALE(FeatureMapsDetector):
         backbone: Callable[[Tensor], Tensor],
         head: Callable[[Tensor], Tensor],
         percentile: float = 0.65,
-        detector: Callable[[Tensor], Tensor] = None,
+        detector: Optional[Callable[[Tensor], Tensor]] = None,
     ):
         """
-        :param backbone: first part of model to use, should output feature maps
+        :param backbone: first part of model to use, should output feature maps of shape
+            :math:`B \\times C \\times H \\times W`
         :param head: second part of model used after applying scaling, should output logits
-        :param percentile: fraction of activations treated as pruned when computing the scaling factor
-        :param detector: detector that maps model outputs to outlier scores. Default is Energy based.
+        :param percentile: fraction in :math:`[0, 1]` of activations treated as pruned when computing the
+            scaling factor
+        :param detector: callable that maps logits of shape :math:`B \\times C` to outlier scores of
+            shape :math:`B`. Defaults to :meth:`EnergyBased.score <pytorch_ood.detector.EnergyBased.score>`.
         """
         self.backbone = backbone
         self.head = head
-        self.percentile = percentile
+        self.percentile = _check_fraction("percentile", percentile)
         self.detector = detector or EnergyBased.score
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: input, will be passed through network
+        :param x: input batch, will be passed through the backbone and head
+        :return: outlier scores of shape :math:`B`
         """
         device = self.device
         if device is not None:
@@ -134,7 +142,13 @@ class SCALE(FeatureMapsDetector):
         return self.predict_feature_maps(x)
 
     @torch.no_grad()
-    def predict_feature_maps(self, x: Tensor) -> Tensor:
-        x = scale(x, self.percentile)
+    def predict_feature_maps(self, feature_maps: Tensor) -> Tensor:
+        """
+        Scales the feature maps and scores the resulting logits.
+
+        :param feature_maps: feature maps of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B`
+        """
+        x = scale(feature_maps, self.percentile)
         x = self.head(x)
         return self.detector(x)

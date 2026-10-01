@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Tuple
+from typing import Any, Tuple
 
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_and_extract_archive
@@ -14,13 +14,13 @@ log = logging.getLogger(__name__)
 
 class WikiText2(Dataset):
     """
-    Contains collection of over 100 million tokens extracted from the set of verified Good and
+    Contains a collection of about 2 million tokens extracted from the set of verified Good and
     Featured articles on Wikipedia.
 
-    Usually used os OOD (training) data, for example, for
+    Usually used as OOD (training) data, for example, for
     :class:`Outlier Exposure <pytorch_ood.loss.OutlierExposureLoss>`. Labels are -1 by default.
-
-    Split can be one of ``train``, ``test`` and ``val``.
+    Each item is a tuple ``(text, -1)``, where ``text`` is one line of the token file as a :class:`str`
+    (including empty lines and headings).
     """
 
     info = DatasetInfo(
@@ -43,7 +43,14 @@ class WikiText2(Dataset):
         "val": "wiki.valid.tokens",
     }
 
-    def __init__(self, root, split, transform=None, target_transform=None, download=True):
+    def __init__(self, root, split, transform=None, target_transform=None, download=False):
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param split: one of ``train``, ``test`` and ``val``
+        :param transform: function applied to the text (a :class:`str`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         if split not in list(self.filenames.keys()):
             raise ValueError(f"Invalid split: {split}")
 
@@ -89,7 +96,12 @@ class WikiText2(Dataset):
 
         return True
 
-    def __getitem__(self, index) -> Tuple:
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        :param index: index of the sample
+        :return: tuple ``(text, target)`` of the text as :class:`str` (or the output of ``transform``)
+            and the target ``-1`` (or the output of ``target_transform``)
+        """
         x = self._data[index]
         y = -1
 
@@ -105,13 +117,13 @@ class WikiText2(Dataset):
 
 class WikiText103(WikiText2):
     """
-    Contains collection of over 100 million tokens extracted from the set of verified Good and Featured
+    Contains a collection of over 100 million tokens extracted from the set of verified Good and Featured
     articles on Wikipedia.
 
-    Usually used os OOD (training) data, for example, for
+    Usually used as OOD (training) data, for example, for
     :class:`Outlier Exposure <pytorch_ood.loss.OutlierExposureLoss>`. Labels are -1 by default.
-
-    Split can be one of ``train``, ``test`` and ``val``.
+    Each item is a tuple ``(text, -1)``, where ``text`` is one line of the token file as a :class:`str`
+    (including empty lines and headings).
     """
 
     info = DatasetInfo(

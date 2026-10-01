@@ -28,8 +28,10 @@ class CIFAR10_ODIN(Benchmark):
     * TinyImageNetResize
     * LSUNResize
     * LSUNCrop
-    * Uniform
-    * Gaussian
+    * Uniform noise
+    * Gaussian noise
+
+    The entries of ``ood_names`` are ``TinyImageNetCrop``, ``TinyImageNetResize``, ``LSUNResize``, ``LSUNCrop``, ``UniformNoise``, ``GaussianNoise``.
     """
 
     info = BenchmarkInfo(

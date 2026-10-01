@@ -17,6 +17,9 @@ class TinyImageNet(VisionDataset):
     Stanford. Each class has 500 images for training.
 
     This dataset is often used for training, but not included in Torchvision.
+    Images are returned as :class:`PIL.Image.Image`. The ``train`` and ``val`` subsets return the class index
+    :math:`0, \\dots, 199` as target; the ``test`` subset has no annotations, so all its targets are ``-1``
+    (the label of OOD samples).
     """
 
     info = DatasetInfo(
@@ -41,7 +44,12 @@ class TinyImageNet(VisionDataset):
         target_transform=None,
     ):
         """
-        :para subset: can be one of ``train``, ``val`` and ``test``
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param subset: can be one of ``train``, ``val`` and ``test``
+        :param download: download the data to ``root`` if it is not found there
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :raises ValueError: if ``subset`` is invalid
         """
         if subset not in self.subsets:
             raise ValueError(f"Invalid subset: {subset}. Possible values are {self.subsets}")
@@ -103,7 +111,8 @@ class TinyImageNet(VisionDataset):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is the class index in :math:`[0, 199]` for the ``train`` and ``val``
+            subsets and ``-1`` for the unlabeled ``test`` subset.
         """
         img, target = self.paths[index], self.labels[index]
 

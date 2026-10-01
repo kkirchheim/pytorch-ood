@@ -39,7 +39,8 @@ class NCI(FeaturesDetector):
         - \\frac{z \\cdot w_c}{\\lVert z \\rVert_2} - \\alpha \\lVert h \\rVert_1
 
     where :math:`w_c` is the weight vector for the class that the model predicted for the input, and :math:`\\alpha`
-    is a hyper parameter that has to be determined manually.
+    is a hyperparameter that has to be tuned (see ``hyperparameter_space``).
+    The score is the negated NCI, so that larger values indicate outliers.
 
     The first term will penalize inputs whose representation does not align with the class vectors,
     while the second term penalizes inputs whose representation resides close to the origin.
@@ -65,7 +66,8 @@ class NCI(FeaturesDetector):
     def __init__(self, encoder: Module, head: Linear, alpha: float = 0.0) -> None:
         """
         :param encoder: model mapping inputs to features
-        :param head: the classification head of the model
+        :param head: linear classification head of the model. A copy is stored; it is used to determine
+            the predicted class and the weight vectors :math:`w_c`.
         :param alpha: weight for feature norm penalty. Will be ignored if :math:`\\leq 0`
         """
         import copy
@@ -78,7 +80,9 @@ class NCI(FeaturesDetector):
 
     def fit(self, data_loader) -> Self:
         """
-        :param data_loader: data loader used to compute :math:`\\mu_g`
+        :param data_loader: data loader used to compute :math:`\\mu_g`. Labels are ignored, so it must
+            only contain ID data.
+        :return: self
         """
         if self.encoder is None:
             raise ModelNotSetException
@@ -95,7 +99,9 @@ class NCI(FeaturesDetector):
 
     def fit_features(self, z: torch.Tensor, *args, **kwargs) -> Self:
         """
-        :param z: input features used to compute :math:`\\mu_g`
+        :param z: features :math:`h` of the fitting set, of shape :math:`N \\times D`, used to compute :math:`\\mu_g`.
+            Additional arguments (e.g. labels) are ignored.
+        :return: self
         """
         device = self.device or z.device
         z = z.detach().to(device).float()
@@ -108,7 +114,7 @@ class NCI(FeaturesDetector):
 
         :param x: input tensor, will be passed through model
 
-        :return: outlier score
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException
@@ -128,7 +134,8 @@ class NCI(FeaturesDetector):
         """
         Compute outlier scores based on features (without passing through encoder).
 
-        :param features: features given by the model
+        :param features: features :math:`h` of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
 
         if self.global_mean is None:

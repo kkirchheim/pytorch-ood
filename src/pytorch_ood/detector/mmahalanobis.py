@@ -7,7 +7,7 @@
 """
 
 import logging
-from typing import List
+from typing import List, Optional
 
 import torch
 from torch import Tensor
@@ -39,7 +39,9 @@ class MultiMahalanobis(StructuredDetector):
 
     .. math :: M_i(x) = - \\max_k \\lbrace (f_i(x) - \\mu_{ik})^{\\top} \\Sigma_i^{-1} (f_i(x) - \\mu_{ik}) \\rbrace
 
-    The final outlier score is the sum of all scores, weighted by :math:`\\alpha`.
+    Here, :math:`f_i(x)` is the spatial mean of the output of the first :math:`i` layers.
+    The final outlier score is the sum of all per-layer scores, :math:`\\sum_i \\alpha_i M_i(x)`,
+    where :math:`\\alpha_i` is ``alpha[i]``.
 
     .. note ::
         This does not yet support ODIN preprocessing. Also, the :math:`\\alpha` values have to be determined manually.
@@ -62,9 +64,10 @@ class MultiMahalanobis(StructuredDetector):
 
     requires_fit = True
 
-    def __init__(self, model: List[Module], alpha: List[float] = None):
+    def __init__(self, model: List[Module], alpha: Optional[List[float]] = None):
         """
-        :param model: the neural network layers :math:`f_1(\\cdot),...,f_n(\\cdot)`, output of one will be used as input to the next.
+        :param model: list of consecutive neural network layers :math:`f_1(\\cdot),...,f_n(\\cdot)`;
+            layer :math:`i` is evaluated on the output of all previous layers.
         :param alpha: weighting of the individual layers. Defaults to uniform weighting.
         """
         super(MultiMahalanobis, self).__init__()
@@ -90,7 +93,7 @@ class MultiMahalanobis(StructuredDetector):
         Fit one gaussian to the features of each layer. Will average over feature maps.
 
         :param data_loader: dataset to fit on.
-        :return:
+        :return: self
         """
         device = self.device
         if device is None:
@@ -113,11 +116,14 @@ class MultiMahalanobis(StructuredDetector):
 
     def fit_structured(self, zs: List[Tensor], y: Tensor) -> Self:
         """
-        Fit parameters of the multi variate gaussians.
+        Fit parameters of the multivariate Gaussians.
 
-        :param zs: list of features for each layer
-        :param y: class labels
-        :return:
+        :param zs: list with one tensor per layer, each of shape :math:`N \\times D_i` or
+            :math:`N \\times C_i \\times H \\times W` (the spatial mean is taken)
+        :param y: class labels of shape :math:`N`, must contain all classes :math:`0, ..., K-1`
+            and no OOD labels (below zero); OOD samples are not ignored and an ``AssertionError``
+            is raised otherwise
+        :return: self
         """
         device = self.device or zs[0].device
 
@@ -184,11 +190,14 @@ class MultiMahalanobis(StructuredDetector):
     @torch.no_grad()
     def predict_structured(self, zs: List[Tensor], device=None) -> Tensor:
         """
-        Calculates mahalanobis distance directly on features.
+        Calculates the weighted sum of the per-layer Mahalanobis scores directly on features.
         ODIN preprocessing will not be applied.
 
-        :param zs: list of per-layer features
-        :param device: device to use for computations
+        :param zs: per-layer features, each of shape :math:`B \\times D_i` or
+            :math:`B \\times C_i \\times H \\times W`
+        :param device: device to use for computations. Defaults to the detector device,
+            or the device of ``zs[0]``.
+        :return: outlier scores of shape :math:`B`
         """
         if not self.mu:
             raise RequiresFittingException
@@ -213,7 +222,9 @@ class MultiMahalanobis(StructuredDetector):
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: input tensor
+        :param x: input batch of shape :math:`B \\times C \\times H \\times W`.
+            Every layer must output 4-dimensional feature maps.
+        :return: outlier scores of shape :math:`B`
         """
         if not self.model:
             raise ModelNotSetException

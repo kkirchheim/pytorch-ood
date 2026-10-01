@@ -30,8 +30,10 @@ class TemperatureScaling(MaxSoftmax):
     Implements temperature scaling from the paper
     *On Calibration of Modern Neural Networks*.
 
-    The method uses an additional set of validation samples to determine the optimal temperature
-    value :math:`T` to calibrate the softmax output.
+    The method uses an additional set of held-out ID validation samples to determine the optimal temperature
+    value :math:`T` to calibrate the softmax output. :math:`T` is initialized to 1 and estimated by ``fit``;
+    samples with a label below zero are ignored. Calling ``predict`` before fitting raises a
+    :class:`~pytorch_ood.api.RequiresFittingException`.
 
     The score is calculated as:
 
@@ -64,9 +66,19 @@ class TemperatureScaling(MaxSoftmax):
         self._is_fitted = False
 
     def predict(self, x: Tensor) -> Tensor:
+        """
+        :param x: input batch, will be passed through the model
+        :return: outlier scores of shape :math:`B`
+        :raise RequiresFittingException: if the detector was not fitted
+        """
         return super().predict(x)
 
     def predict_logits(self, logits: Tensor) -> Tensor:
+        """
+        :param logits: logits of shape :math:`B \\times C`
+        :return: outlier scores of shape :math:`B`
+        :raise RequiresFittingException: if the detector was not fitted
+        """
         if not self._is_fitted:
             raise RequiresFittingException()
 
@@ -74,10 +86,13 @@ class TemperatureScaling(MaxSoftmax):
 
     def fit_logits(self, logits: Tensor, labels: Tensor) -> Self:
         """
-        Optimize temperature using L-BFGS. Ignores OOD inputs.
+        Optimize the temperature by minimizing the negative log-likelihood using L-BFGS
+        (50 iterations, so the optimum is only approximately reached). Ignores OOD inputs.
 
-        :param logits: logits
-        :param labels: labels for logits
+        :param logits: logits of shape :math:`N \\times C`
+        :param labels: labels of shape :math:`N`
+        :return: self
+        :raise ValueError: if there are no ID samples
         """
         known = is_known(labels)
 

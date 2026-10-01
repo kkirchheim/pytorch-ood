@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 class OpenOOD(ImageDatasetBase):
     """
-    Abstract Base Class for OpenOOD datasets.
+    Abstract Base Class for OpenOOD datasets. The data is downloaded from Google Drive, which requires ``gdown``.
     """
 
     def __init__(
@@ -30,6 +30,13 @@ class OpenOOD(ImageDatasetBase):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+            (raises a :class:`RuntimeError` if ``gdown`` is not installed)
+        """
         self.archive_file = join(root, self.filename)
 
         super(OpenOOD, self).__init__(
@@ -62,9 +69,9 @@ class iNaturalist(OpenOOD):
     Subset of the iNaturalist dataset used as OOD data for ImageNet, proposed in
     *MOS: Towards Scaling Out-of-distribution Detection for Large Semantic Space*.
 
-    All labels are -1 by default.
+    Images are returned as :class:`PIL.Image.Image`. All labels are -1 by default.
 
-    :see Paper: `iNaturalist <https://openaccess.thecvf.com/content_cvpr_2018/html/Van_Horn_The_INaturalist_Species_CVPR_2018_paper.html>`__
+    :see Paper: `The iNaturalist Species Classification and Detection Dataset <https://openaccess.thecvf.com/content_cvpr_2018/html/Van_Horn_The_INaturalist_Species_CVPR_2018_paper.html>`__
     """
 
     info = DatasetInfo(
@@ -91,6 +98,12 @@ class iNaturalist(OpenOOD):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(iNaturalist, self).__init__(
             root=root,
             transform=transform,
@@ -105,7 +118,7 @@ class OpenImagesO(OpenOOD):
     *OpenOOD: Benchmarking Generalized Out-of-Distribution Detection*.
     All labels are -1 by default.
 
-    The test set contains 15869 , the validation set 1763 images.
+    The test set contains 15,869 images, the validation set 1,763 images.
     """
 
     info = DatasetInfo(
@@ -140,7 +153,12 @@ class OpenImagesO(OpenOOD):
         download: bool = False,
     ) -> None:
         """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
         :param subset: can be either ``val`` or ``test``
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        :raises AssertionError: if ``subset`` is invalid
         """
         assert subset in list(self.inclusion_json.keys())
         super(OpenImagesO, self).__init__(
@@ -162,7 +180,7 @@ class Places365(OpenOOD):
     Images sourced from the Places365 dataset used as OOD data, usually for CIFAR 10 and 100.
     All labels are -1 by default.
 
-    Dataset set contains 36500 images.
+    The dataset contains 36,500 images.
     """
 
     info = DatasetInfo(
@@ -184,6 +202,12 @@ class Places365(OpenOOD):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(Places365, self).__init__(
             root=root,
             transform=transform,
@@ -206,6 +230,7 @@ class ImageNetV2(OpenOOD):
     While it contains no OOD data, it is utilized for evaluating OOD detection methods.
 
     The test set consists of 10000 images across 1000 classes, with 10 images per class.
+    Images are returned as :class:`PIL.Image.Image`. Targets are the ImageNet class indices, not ``-1``.
     """
 
     info = DatasetInfo(
@@ -232,6 +257,10 @@ class ImageNetV2(OpenOOD):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(ImageNetV2, self).__init__(
             root=root,
             transform=transform,
@@ -273,6 +302,7 @@ class ImageNetES(OpenOOD):
     The provided data here is similar to that in the OpenOOD benchmark, making it only a subset of the original dataset.
 
     The test set consists of 64000 images across 200 different classes.
+    Images are returned as :class:`PIL.Image.Image`. Targets are class indices, not ``-1``.
     """
 
     info = DatasetInfo(
@@ -301,6 +331,10 @@ class ImageNetES(OpenOOD):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(ImageNetES, self).__init__(
             root=root,
             transform=transform,
@@ -348,7 +382,8 @@ class SSBHard(OpenOOD):
     The SSB-hard is the hard split of the Semantic Shift Benchmark (SSB), introduced in *Open-set recognition: A good closed-set classifier is all you need*.
     This dataset only provides OOD data and is used for open-set recognition for models trained on ImageNet1K.
 
-    The test set consists of 49000 images.
+    The test set consists of 49000 images. Images are returned as :class:`PIL.Image.Image`;
+    all labels are -1 by default.
     """
 
     info = DatasetInfo(
@@ -375,6 +410,12 @@ class SSBHard(OpenOOD):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(SSBHard, self).__init__(
             root=root,
             transform=transform,

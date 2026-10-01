@@ -70,8 +70,7 @@ Feature-based
 Gradient-based
 -------------------------------
 
-Gradient-based detectors are based on the observation that the gradients (w.r.t. the model parameters or
-the inputs) for ID and OOD data behave differently. All gradient-based detectors inherit from
+Gradient-based detectors are based on the observation that the gradients (w.r.t. the model parameters, the inputs or intermediate activations) for ID and OOD data behave differently. All gradient-based detectors inherit from
 :class:`pytorch_ood.api.GradientDetector`.
 
 .. toctree::

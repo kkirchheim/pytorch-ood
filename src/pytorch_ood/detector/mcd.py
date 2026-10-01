@@ -34,14 +34,18 @@ class MCD(Detector):
 
     .. math::  \\frac{1}{C} \\sum_y^C \\frac{1}{N} \\sum_n^N  ( \\sigma_y(f_n(x)) - \\mu_y )^2
 
-    where :math:`C` is the number of classes and :math:`\\mu_y` is the class mean. This is the mean over the
-    per class variance, which was used in *Bayesian SegNet: Model Uncertainty in Deep Convolutional
+    where :math:`C` is the number of classes and :math:`\\mu_y = \\frac{1}{N} \\sum_n^N \\sigma_y(f_n(x))` is the
+    mean softmax probability of class :math:`y`. This is the mean over the
+    per class variance (computed with Bessel's correction, i.e., dividing by :math:`N-1`), which was used in *Bayesian SegNet: Model Uncertainty in Deep Convolutional
     Encoder-Decoder Architectures for Scene Understanding*.
 
     :see Bayesian SegNet: `ArXiv <https://arxiv.org/abs/1511.02680>`__
 
-    .. warning:: This implementations puts the model into evaluation mode (except for variants of the BatchNorm Layers).
-        This could also affect other modules.
+    .. warning:: If the model is in evaluation mode, it is temporarily put into training mode so that dropout is
+        active (BatchNorm layers stay in evaluation mode if ``batch_norm=True``), and it is set back to
+        evaluation mode afterwards. This could also affect other modules. If the model is already in training mode,
+        it is left unchanged, so BatchNorm layers also stay in training mode and update their running statistics,
+        regardless of ``batch_norm``.
     """
 
     info = DetectorInfo(
@@ -65,8 +69,8 @@ class MCD(Detector):
         """
 
         :param model: the module to use for the forward pass. Should output logits.
-        :param samples: number of iterations
-        :param mode: can be one of ``var`` or ``mean``
+        :param samples: number :math:`N` of stochastic forward passes
+        :param mode: can be one of ``var`` or ``mean``. Default is ``var``.
         :param batch_norm: keep batch norm layers in evaluation mode
         """
         assert mode in ["mean", "var"]
@@ -88,7 +92,7 @@ class MCD(Detector):
         Puts the model into training mode, except for variants of the batch-norm layer.
 
         :param batch_norm: set to False if batch-norm should also be in training mode
-        :returns: true if model was switched, false otherwise
+        :return: true if model was switched, false otherwise
         """
         mode_switch = False
 
@@ -115,7 +119,9 @@ class MCD(Detector):
         :param x: input
         :param samples: number of rounds
         :param batch_norm: keep batch norm layers in evaluation mode
-        :return: mean and  variance of softmax normalized model outputs
+        :return: tuple of the maximum mean softmax probability, shape :math:`B`, and the variance averaged
+            over classes, shape :math:`B` (spatial dimensions, if any, are kept), on the device of ``x``
+        :raises ModelNotSetException: if ``model`` is ``None``
         """
         if model is None:
             raise ModelNotSetException
@@ -159,7 +165,9 @@ class MCD(Detector):
         :param x: input
         :param samples: number of rounds
         :param batch_norm: keep batch norm layers in evaluation mode
-        :return: mean softmax output of the model
+        :return: mean softmax output of the model, shape :math:`B \\times C`
+            (or :math:`B \\times C \\times H \\times W` for segmentation)
+        :raises ModelNotSetException: if ``model`` is ``None``
         """
         if model is None:
             raise ModelNotSetException
@@ -185,7 +193,9 @@ class MCD(Detector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input
-        :return: outlier score
+        :return: outlier scores of shape :math:`B` (or :math:`B \\times H \\times W` for segmentation).
+            In ``mean`` mode, this is the negative maximum mean softmax
+            probability, in ``var`` mode the variance averaged over classes.
         """
         device = self.device
         if device is not None:

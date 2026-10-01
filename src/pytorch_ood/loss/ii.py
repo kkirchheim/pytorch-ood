@@ -30,6 +30,16 @@ class IILoss(nn.Module):
     """
     II Loss function from *Learning a neural network based representation for open set recognition*.
 
+    The loss consists of the intra-class spread, the mean squared distance of the (ID) embeddings to their class
+    center, and the inter-class separation, the minimum distance between the centers of the classes
+    present in the batch:
+
+    .. math::
+        \\mathcal{L} = \\frac{1}{N}\\sum_i \\lVert z_i - \\mu_{y_i} \\rVert^2
+        - \\alpha \\min_{j \\neq k} \\lVert \\mu_j - \\mu_k \\rVert^2
+
+    Samples with labels :math:`< 0` are ignored.
+    In evaluation mode, the stored running centers are used instead of updating them.
 
     .. warning::
          * We added running centers for online class center estimation. This is only an approximation and results
@@ -55,7 +65,7 @@ class IILoss(nn.Module):
         """
         :param n_classes: number of classes
         :param n_embedding: embedding dimensionality
-        :param alpha: weight for both loss terms
+        :param alpha: weight :math:`\\alpha` of the inter-class separation term
         """
         super(IILoss, self).__init__()
         self.num_classes = n_classes
@@ -88,8 +98,8 @@ class IILoss(nn.Module):
 
     def distance(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param x: embeddings
-        :return: distances matrix with distances to class centers in output space
+        :param x: embeddings of shape :math:`B \\times D`
+        :return: distances matrix of shape :math:`B \\times C` with distances to class centers in output space
         """
         return pairwise_distances(x, self.centers.centers)
 
@@ -97,17 +107,20 @@ class IILoss(nn.Module):
         """
         Predict class membership probability
 
-        :param x: embeddings
-        :return: class membership probabilities
+        :param x: embeddings of shape :math:`B \\times D`
+        :return: class membership probabilities of shape :math:`B \\times C`
         """
         return softmin(self.distance(x), dim=1)
 
     def forward(self, x: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
-        Updates running centers
+        Updates running centers (in training mode) and calculates the loss.
+        Each batch needs samples of at least two different classes, otherwise the inter-class separation is
+        not defined.
 
-        :param x: embeddings of samples
-        :param target: label of samples
+        :param x: embeddings of shape :math:`B \\times D`
+        :param target: labels of shape :math:`B`; labels :math:`< 0` are ignored
+        :return: scalar loss
         """
         known = is_known(target)
 

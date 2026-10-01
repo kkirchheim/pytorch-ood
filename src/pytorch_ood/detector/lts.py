@@ -15,6 +15,7 @@ from torch import Tensor
 from torch.nn import Module
 
 from ..api import DetectorInfo, FeaturesDetector, ModelNotSetException, Paper, Task
+from ..utils.utils import _check_fraction
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -27,16 +28,17 @@ class LTS(FeaturesDetector):
 
     LTS computes a per-sample temperature from the penultimate-layer features
     based on the ratio of total activation mass to the mass concentrated in the
-    top :math:`p\\%` of activations. The logits are then divided by this temperature
+    top fraction :math:`p` of activations. The logits are then divided by this temperature
     before computing an energy-based OOD score:
 
     .. math::
-        T(z) = \\left( \\frac{\\sum_i z_i}{\\sum_{j \\in \\text{top-}p\\%} z_j} \\right)^2
+        T(z) = \\left( \\frac{\\sum_i z_i}{\\sum_{j \\in \\text{top-}k} z_j} \\right)^2
 
     .. math::
         E(x) = -\\log \\sum_{c=1}^{C} e^{f_c(x) / T(z)}
 
-    where :math:`z` are the penultimate-layer features and :math:`f_c(x)` is the
+    where :math:`k = \\max(1, \\lfloor pD \\rceil)` for :math:`D`-dimensional features, :math:`z` are the
+    penultimate-layer features (assumed to be non-negative, e.g. after a ReLU) and :math:`f_c(x)` is the
     :math:`c`-th logit. The temperature :math:`T(z)` is adaptively determined from
     the feature distribution, enabling feature-aware temperature scaling.
 
@@ -44,14 +46,17 @@ class LTS(FeaturesDetector):
 
     .. rubric:: Examples
 
-    .. code :: python
+    .. code-block:: python
+
+        from pytorch_ood.detector import LTS
+        from pytorch_ood.model import load_model
 
         model = load_model("wrn-40-2/cifar10/crossentropy")
         detector = LTS(
             encoder=model.features,
             head=model.fc,
         )
-        scores = detector(images)  # (batch_size,)
+        scores = detector(images)  # images: batch of inputs, scores have shape (B,)
     """
 
     info = DetectorInfo(
@@ -77,17 +82,17 @@ class LTS(FeaturesDetector):
     ):
         """
         :param encoder: feature extractor that produces pooled features :math:`z` of shape
-            :math:`(B, D)`. Can be ``None`` when using ``predict_features(...)`` directly.
+            :math:`B \\times D`. Can be ``None`` when using ``predict_features(...)`` directly.
         :param head: maps features to logits, e.g. the final linear layer.
         :param p: fraction of top activations used in the temperature computation.
             Default is 0.05 (top 5%).
-        :param detector: scoring function applied to the scaled logits.
-            Default is the energy score.
+        :param detector: scoring function applied to the scaled logits. Default is
+            :meth:`EnergyBased.score <pytorch_ood.detector.EnergyBased.score>`.
         """
         super().__init__()
         self.encoder = encoder
         self.head = head
-        self.p: float = p
+        self.p: float = _check_fraction("p", p)
         self.detector = detector or EnergyBased.score
 
     @staticmethod
@@ -95,9 +100,9 @@ class LTS(FeaturesDetector):
         """
         Compute the per-sample temperature from features.
 
-        :param z: features of shape :math:`(B, D)` or :math:`(B, C, H, W)`.
+        :param z: features of shape :math:`B \\times D` or :math:`B \\times C \\times H \\times W`.
         :param p: fraction of top activations to use.
-        :return: temperatures of shape :math:`(B,)`.
+        :return: temperatures of shape :math:`B`.
         """
         b = z.shape[0]
         z_flat = z.reshape(b, -1)
@@ -111,8 +116,8 @@ class LTS(FeaturesDetector):
         """
         Compute LTS scores from pre-extracted features.
 
-        :param z: penultimate-layer features of shape :math:`(B, D)`.
-        :return: outlier scores of shape :math:`(B,)`.
+        :param z: penultimate-layer features of shape :math:`B \\times D`.
+        :return: outlier scores of shape :math:`B`.
         """
         t = self.temperature(z, self.p)
         logits = self.head(z)
@@ -134,6 +139,7 @@ class LTS(FeaturesDetector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input tensor, passed through the encoder and head.
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException

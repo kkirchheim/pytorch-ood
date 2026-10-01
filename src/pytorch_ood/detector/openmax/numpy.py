@@ -13,7 +13,7 @@ class OpenMax(object):
     Implementation of the OpenMax Layer as proposed in *Towards Open Set Deep Networks*.
 
     The methods determines a center :math:`\\mu_y` for each class in the logits space of a model, and then
-    creates a statistical model of the distances of correct classified inputs.
+    creates a statistical model of the distances of the training inputs of each class.
     It uses extreme value theory to detect outliers.
 
     :param tailsize: length of the tail to fit the distribution to

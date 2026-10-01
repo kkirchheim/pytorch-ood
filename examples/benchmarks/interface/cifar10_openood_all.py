@@ -90,7 +90,7 @@ def build_detectors(model, norm_std):
     detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
     detectors["NCI"] = NCI(encoder=model.features, head=model.fc, alpha=0.0)
     detectors["SHE"] = SHE(model.features, model.fc)
-    detectors["DICE"] = DICE(encoder=model.features, w=model.fc.weight, b=model.fc.bias, p=65.0)
+    detectors["DICE"] = DICE(encoder=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
     detectors["LTS"] = LTS(encoder=model.features, head=model.fc)
     # threshold is estimated from the training activations during fit()
     detectors["ReAct"] = ReAct(model.features, model.fc)

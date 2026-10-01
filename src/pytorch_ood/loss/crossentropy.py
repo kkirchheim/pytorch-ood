@@ -13,6 +13,12 @@ def cross_entropy(
 ) -> torch.Tensor:
     """
     Standard cross-entropy, but ignores OOD inputs.
+
+    :param logits: logits of shape :math:`B \\times C` or :math:`B \\times C \\times H \\times W`
+    :param targets: labels of shape :math:`B` or :math:`B \\times H \\times W`; labels :math:`< 0` mark OOD
+        samples, which contribute zero loss
+    :param reduction: one of ``mean``, ``sum``, ``none``; ``None`` is the same as ``none``
+    :return: the loss
     """
     masked_targets = torch.where(targets < 0, -100, targets)
     loss = F.cross_entropy(logits, masked_targets, reduction="none", ignore_index=-100)
@@ -21,7 +27,9 @@ def cross_entropy(
 
 class CrossEntropyLoss(nn.Module):
     """
-    Standard Cross-entropy, but ignores OOD inputs.
+    Standard Cross-entropy, but ignores OOD inputs: samples with targets :math:`< 0` contribute zero loss.
+    Note that with ``reduction="mean"`` the sum is divided by the total number of samples,
+    including the OOD samples.
     """
 
     # the standard objective; no OOD paper introduced it
@@ -42,7 +50,8 @@ class CrossEntropyLoss(nn.Module):
         """
         Calculates cross-entropy.
 
-        :param logits: logits
-        :param targets: labels
+        :param logits: logits of shape :math:`B \\times C` or :math:`B \\times C \\times H \\times W`
+        :param targets: labels of shape :math:`B` or :math:`B \\times H \\times W`; labels :math:`< 0` are ignored
+        :return: the loss
         """
         return cross_entropy(logits, targets, reduction=self.reduction)

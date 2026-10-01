@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 class OpenSetSimulation(object):
     """
-    Base Class for Open Set Simulations.
+    Base Class for Open Set Simulations, see :mod:`pytorch_ood.dataset.ossim`.
     """
 
     @property
@@ -22,48 +22,51 @@ class OpenSetSimulation(object):
     @property
     def kkc(self) -> Set:
         """
-        Known Known Classes
+        Known known classes (KKC), the in-distribution classes
         """
         pass
 
     @property
     def kuc(self) -> Set:
         """
-        Known Unknown Classes
+        Known unknown classes (KUC), OOD classes that are available as outliers during training
         """
         pass
 
     @property
     def uuc(self) -> Set:
         """
-        Unknown Unknown Classes
+        Unknown unknown classes (UUC), OOD classes that are only seen during validation or testing
         """
         pass
 
     def train_dataset(self, in_dist=True, out_dist=False) -> Dataset:
         """
+        Creates the dataset of this split.
 
         :param in_dist: include ID data
         :param out_dist: include OOD data
-        :return:
+        :return: :class:`torch.utils.data.Dataset` with the ID and/or OOD samples of the split
         """
         pass
 
     def val_dataset(self, in_dist=True, out_dist=True) -> Dataset:
         """
+        Creates the dataset of this split.
 
         :param in_dist: include ID data
         :param out_dist: include OOD data
-        :return:
+        :return: :class:`torch.utils.data.Dataset` with the ID and/or OOD samples of the split
         """
         pass
 
     def test_dataset(self, in_dist=True, out_dist=True) -> Dataset:
         """
+        Creates the dataset of this split.
 
         :param in_dist: include ID data
         :param out_dist: include OOD data
-        :return:
+        :return: :class:`torch.utils.data.Dataset` with the ID and/or OOD samples of the split
         """
         pass
 
@@ -72,13 +75,15 @@ class DynamicOSS(OpenSetSimulation):
     """
     Dynamically samples an Open Set Simulation from a dataset.
 
+    :param dataset: dataset with a ``targets`` attribute, or a dataset that yields ``(x, target)`` pairs
+        (which is then iterated once to obtain the targets)
     :param train_size: ratio of test samples
     :param val_size: ratio of validation samples
     :param test_size: ratio of test samples
     :param kuc: number of out-of-distribution classes in training set (known unknowns)
     :param uuc_val: number of out-of-distribution classes in validation set (unknown unknowns)
     :param uuc_test: number of out-of-distribution classes in test set (unknown unknowns + test)
-    :param seed: seed to use for splits
+    :param seed: seed to use for splits. If ``None``, a random seed is drawn.
     """
 
     def __init__(

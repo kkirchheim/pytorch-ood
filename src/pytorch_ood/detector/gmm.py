@@ -38,7 +38,7 @@ class GMM(FeaturesDetector):
     .. math::
         -\\log \\sum_{k=1}^{K} \\pi_k \\, \\mathcal{N}(z \\mid \\mu_k, \\Sigma_k)
 
-    This extends :class:`Mahalanobis` by allowing **per-class covariance matrices** and
+    This extends :class:`~pytorch_ood.detector.Mahalanobis` by allowing **per-class covariance matrices** and
     using the full mixture likelihood (logsumexp) instead of the max over classes.
     """
 
@@ -68,7 +68,8 @@ class GMM(FeaturesDetector):
         """
         Extract features and fit the GMM.
 
-        :param data_loader: data loader with training data
+        :param data_loader: data loader with training data. OOD samples are ignored.
+        :return: the fitted detector
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -86,8 +87,10 @@ class GMM(FeaturesDetector):
         """
         Fit one Gaussian per class directly on features. OOD-labeled samples are ignored.
 
-        :param z: features
-        :param labels: class labels
+        :param z: features of shape :math:`N \\times D`
+        :param labels: class labels of shape :math:`N`
+        :return: the fitted detector
+        :raises ValueError: if no in-distribution sample is present
         """
         known = is_known(labels)
         if not known.any():
@@ -131,6 +134,7 @@ class GMM(FeaturesDetector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input tensor, will be passed through the encoder
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -142,8 +146,8 @@ class GMM(FeaturesDetector):
         """
         Calculate outlier scores from features using the negative GMM log-likelihood.
 
-        :param z: features
-        :return: outlier scores (higher = more OOD)
+        :param z: features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
         if self._mu is None:
             raise RequiresFittingException()

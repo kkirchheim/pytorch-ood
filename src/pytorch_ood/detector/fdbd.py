@@ -44,8 +44,14 @@ class fDBD(FeaturesDetector):
         \\frac{| \\text{logit}_{\\hat{y}} - \\text{logit}_c |}
         {\\lVert w_{\\hat{y}} - w_c \\rVert_2 \\cdot \\lVert z - \\mu \\rVert_2}
 
-    where :math:`w_k` are the weight vectors of the classification head and :math:`\\mu`
-    is the mean of training features. This method is hyperparameter-free.
+    where :math:`C` is the set of classes, :math:`\\text{logit}_c = w_c^\\top z + b_c` is the logit of class
+    :math:`c` computed by the classification head with weight vectors :math:`w_c`, and :math:`\\mu`
+    is the mean of the training features. The distance is negated so that larger scores indicate OOD.
+    This method is hyperparameter-free.
+
+    The detector has to be fitted on in-distribution data: the labels given to :meth:`fit` are ignored, so only
+    in-distribution samples should be passed. The pairwise weight differences are computed at fit time and are
+    not updated if the weights of the head change afterwards.
     """
 
     info = DetectorInfo(
@@ -91,7 +97,8 @@ class fDBD(FeaturesDetector):
         """
         Compute the training feature mean :math:`\\mu`.
 
-        :param data_loader: data loader with training data
+        :param data_loader: data loader with in-distribution training data. Labels are ignored.
+        :return: the fitted detector
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -109,7 +116,8 @@ class fDBD(FeaturesDetector):
         """
         Compute the training feature mean directly from features.
 
-        :param z: training features
+        :param z: in-distribution training features of shape :math:`N \\times D`
+        :return: the fitted detector
         """
         device = self.device or z.device
         z = z.detach().to(device).float()
@@ -120,6 +128,7 @@ class fDBD(FeaturesDetector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: input tensor, will be passed through the encoder
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -132,8 +141,8 @@ class fDBD(FeaturesDetector):
         """
         Compute outlier scores from features.
 
-        :param z: penultimate-layer features
-        :return: outlier scores (higher = more OOD)
+        :param z: penultimate-layer features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
         if self.train_mean is None:
             raise RequiresFittingException()

@@ -7,7 +7,6 @@ and losses really support the tasks their ``info`` claims.
 import inspect
 import unittest
 
-import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, TensorDataset
@@ -93,7 +92,7 @@ LOSS_INPUTS = {
         (_outputs(s, D), _targets(s, False)),
     ),
     loss.EnergyMarginLoss: lambda s: (
-        loss.EnergyMarginLoss(full_train_loss=np.float32(1.0)),
+        loss.EnergyMarginLoss(full_train_loss=1.0),
         (_outputs(s, C), _targets(s), nn.Linear(1, 2)),
     ),
     loss.EnergyRegularizedLoss: lambda s: (
@@ -140,7 +139,7 @@ LOSS_INPUTS = {
             sample_number=4,
             sample_from=20,
         ),
-        (_outputs(s, C), _outputs(s, D), _targets(s, False)),
+        (_outputs(s, C), _outputs(s, D), _targets(s)),
     ),
 }
 

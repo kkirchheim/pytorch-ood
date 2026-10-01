@@ -31,14 +31,15 @@ class KLMatching(LogitsDetector):
     """
     Implements KL-Matching from the paper *Scaling Out-of-Distribution Detection for Real-World Settings*.
 
-    For each class, an typical posterior distribution
-    :math:`d_y = \\mathbb{E}_{x \\sim \\mathcal{X}_{val}}[p(y \\vert x)]` is
-    estimated, where :math:`y` is the class with the maximum posterior  :math:`y = \\arg\\max_y p(y \\vert x)`,
-    as predicted by the model. Note that the method does not require class labels for the validation set.
-    During evaluation, the KL-Divergence between the observed and the typical posterior
-    :math:`D_{KL}[p(y \\vert x) \\Vert d_y]` is used as outlier score.
-
-    This method can also be applied to multi-class settings.
+    For each class :math:`k`, a typical posterior distribution
+    :math:`d_k = \\mathbb{E}_{x \\sim \\mathcal{X}_{val}}[p(y \\vert x)]` is
+    estimated as the mean posterior of the fitted data (the validation set :math:`\\mathcal{X}_{val}`) of class
+    :math:`k`. In this implementation, the samples are grouped by the class labels passed to
+    :meth:`fit_logits`.
+    During evaluation, the KL-Divergence between the observed posterior and the typical posterior
+    :math:`D_{KL}[p(y \\vert x) \\Vert d_{\\hat{y}}]` of the predicted class
+    :math:`\\hat{y} = \\arg\\max_y p(y \\vert x)` is used as outlier score.
+    Posteriors can only be scored for classes that were fitted.
     """
 
     info = DetectorInfo(
@@ -68,8 +69,9 @@ class KLMatching(LogitsDetector):
         Estimates typical distributions for each class.
         Ignores OOD samples.
 
-        :param logits: logits
-        :param labels: class labels
+        :param logits: logits of shape :math:`N \\times C`
+        :param labels: class labels of shape :math:`N`
+        :return: the fitted detector
         """
         device = self.device or logits.device
         logits = logits.to(device)
@@ -85,7 +87,9 @@ class KLMatching(LogitsDetector):
 
     def predict_logits(self, logits: Tensor) -> Tensor:
         """
-        :param logits: logits predicted by the model
+        :param logits: logits predicted by the model, shape :math:`B \\times C`
+        :return: outlier scores of shape :math:`B`
+        :raises ValueError: if a predicted class was not fitted
         """
         p = logits.softmax(dim=1)
         return self._score_probabilities(p)
@@ -94,7 +98,8 @@ class KLMatching(LogitsDetector):
         """
         Score already-computed posterior probabilities.
 
-        :param p: probabilities predicted by the model
+        :param p: probabilities predicted by the model, shape :math:`B \\times C`
+        :return: outlier scores of shape :math:`B`
         """
         device = p.device
         predictions = p.argmax(dim=1)
@@ -117,7 +122,7 @@ class KLMatching(LogitsDetector):
         Calculates KL-Divergence between predicted posteriors and typical posteriors.
 
         :param x: input tensor, will be passed through model
-        :return: Outlier scores
+        :return: outlier scores of shape :math:`B`
         """
         if len(self.dists) == 0:
             raise RequiresFittingException("KL-Matching has to be fitted on validation data.")

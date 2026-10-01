@@ -40,13 +40,13 @@ class MCM(FeaturesDetector):
     probabilities. The negative maximum probability is used as the OOD score:
 
     .. math::
-        s(x) = -\\max_k \\left[ \\text{softmax}\\left(
-            \\hat{z}(x) \\cdot \\hat{T}^T \\cdot \\tau
+        -\\max_k \\left[ \\text{softmax}\\left(
+            \\hat{z}(x) \\cdot \\hat{T}^T / \\tau
         \\right) \\right]_k
 
     where :math:`\\hat{z}(x)` is the L2-normalized image embedding, :math:`\\hat{T}` is
     the matrix of L2-normalized class text embeddings, :math:`\\tau` is the temperature
-    scaling factor, and higher scores indicate more likely OOD samples.
+    the cosine similarities are divided by.
     """
 
     info = DetectorInfo(
@@ -67,14 +67,16 @@ class MCM(FeaturesDetector):
         self,
         encoder: Optional[Callable[[Tensor], Tensor]],
         text_embeddings: Tensor,
-        temperature: float = 100.0,
+        # default: the paper's tau = 1 (it reports similar results for tau in [0.5, 100])
+        temperature: float = 1.0,
     ):
         """
         :param encoder: image feature encoder (e.g. CLIP's encode_image). Can be
             ``None`` when using ``predict_features(...)`` directly.
-        :param text_embeddings: pre-computed class text embeddings, shape (C, D).
+        :param text_embeddings: pre-computed class text embeddings, shape :math:`C \\times D`.
             Should be L2-normalized; if not, normalization is applied internally.
-        :param temperature: cosine similarity scale factor (CLIP's default is ~100)
+        :param temperature: temperature :math:`\\tau`; the cosine similarities are divided by
+            it before the softmax
         """
         super().__init__()
         self.encoder = encoder
@@ -85,20 +87,22 @@ class MCM(FeaturesDetector):
         """
         Compute MCM scores directly from image features.
 
-        :param z: image embeddings, shape (B, D)
+        :param z: image embeddings, shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
         if self.text_embeddings is None:
             raise RequiresFittingException
 
         z_norm = F.normalize(z.float(), dim=-1)
         t_norm = F.normalize(self.text_embeddings.to(z.device).float(), dim=-1)
-        similarities = z_norm @ t_norm.T * self.temperature
+        similarities = z_norm @ t_norm.T / self.temperature
         return -similarities.softmax(dim=-1).max(dim=-1).values
 
     @torch.no_grad()
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: input tensor
+        :param x: input tensor, will be passed through ``encoder``
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException

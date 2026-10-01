@@ -19,9 +19,18 @@ class SuMNIST(Dataset):
     However, the test set with 10,000 images, there are 8,500 normal instances and 1,500 anomalous
     instances for which the numbers do not sum to 20. The challenge is to detect these anomalies.
 
-    Returns a tuple with ``(img, dict)``  where dict contains bounding boxes, labels, etc.
+    Returns a tuple ``(img, target)``. The image is a tensor of shape :math:`3 \\times 56 \\times 56` (not a PIL image),
+    and ``target`` is a dictionary with the keys
 
-    :see Examples: `GitHub <https://github.com/kkirchheim/sumnist>`__
+    * ``boxes``: bounding boxes of the digits as a float32 tensor of shape :math:`4 \\times 4`, in
+      ``(x_min, y_min, x_max, y_max)`` format
+    * ``labels``: the digit of each box as a int64 tensor of shape :math:`4`
+    * ``image_id``: the index of the image
+    * ``area``: area of each box
+    * ``iscrowd``: zeros
+    * ``anomaly``: ``-1`` if the digits do not sum to 20, else ``0``
+
+    :see Examples: `SuMNIST repository <https://github.com/kkirchheim/sumnist>`__
 
     .. figure:: /_static/datasets/sumnist.webp
         :width: 100%
@@ -58,11 +67,11 @@ class SuMNIST(Dataset):
 
     def __init__(self, root, train=True, transforms=None, download=False):
         """
-
-        :param root: where to store dataset
-        :param train: set to `False` to use test set
-        :param transforms: callable to apply to image and target dictionary
-        :param download: set to `True` to download automatically
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param train: set to ``False`` to use the test set
+        :param transforms: called as ``transforms(image, target)`` with the image tensor and the target
+            dictionary, and must return the transformed ``(image, target)`` tuple
+        :param download: download the data to ``root`` if it is not found there
         """
         self.root = join(root, SuMNIST.base_dir)
         self.transforms = transforms

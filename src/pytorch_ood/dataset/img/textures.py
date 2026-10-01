@@ -15,7 +15,8 @@ log = logging.getLogger(__name__)
 class Textures(VisionDataset):
     """
     Textures dataset from the paper *Describing Textures in the Wild*, also known as DTD.
-    Often used as OOD data.
+    Often used as OOD data. Images are returned as :class:`PIL.Image.Image`; all targets are ``-1``
+    (the label of OOD samples) by default, use ``target_transform`` to change them.
     """
 
     info = DatasetInfo(
@@ -43,6 +44,12 @@ class Textures(VisionDataset):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(Textures, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
@@ -69,7 +76,7 @@ class Textures(VisionDataset):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is ``-1`` (the label of OOD samples).
         """
         file, target = self.files[index], -1
         # doing this so that it is consistent with all other datasets
