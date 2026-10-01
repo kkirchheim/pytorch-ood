@@ -45,7 +45,8 @@ class ToRGB(object):
 class TargetMapping(object):
     """
     Maps ID (a.k.a. known) classes to labels :math:`\\{0, \\dots, n-1\\}` for :math:`n` known
-    classes, and OOD (a.k.a. unknown) classes to negative integer labels.
+    classes, in ascending order of the class ids, and OOD (a.k.a. unknown) classes :math:`c` to
+    :math:`-(c+1)`.
     This is required for open set simulations.
 
     Classes that are in neither set are mapped to ``-1``.
@@ -59,13 +60,20 @@ class TargetMapping(object):
 
     def __init__(self, known: Set, unknown: Set):
         """
-        :param known: set of integer class ids that are in-distribution
-        :param unknown: set of integer class ids that are out-of-distribution
+        :param known: set of integer class ids that are in-distribution; mapped to their rank, i.e.
+            the smallest to ``0``
+        :param unknown: set of non-negative integer class ids that are out-of-distribution; class
+            :math:`c` is mapped to :math:`-(c+1)`
+        :raises ValueError: if a class is in both sets
         """
+        overlap = set(known) & set(unknown)
+        if overlap:
+            raise ValueError(f"Classes in both known and unknown: {sorted(overlap)}")
+
         self._map = dict()
-        self._map.update({clazz: index for index, clazz in enumerate(set(known))})
-        # mapping train_out classes to < 0
-        self._map.update({clazz: (-clazz) for index, clazz in enumerate(set(unknown))})
+        self._map.update({clazz: index for index, clazz in enumerate(sorted(set(known)))})
+        # shifted by one, so that class 0 is mapped to a negative label as well
+        self._map.update({clazz: -(clazz + 1) for clazz in set(unknown)})
 
     def __call__(self, target):
         if isinstance(target, torch.Tensor):
