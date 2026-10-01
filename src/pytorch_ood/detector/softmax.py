@@ -13,15 +13,15 @@
 """
 
 import logging
-from typing import Optional, TypeVar
+from typing import Optional
 
 from torch import Tensor, tensor
 from torch.nn import Module
+from typing_extensions import Self
 
 from ..api import LogitsDetector
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class MaxSoftmax(LogitsDetector):

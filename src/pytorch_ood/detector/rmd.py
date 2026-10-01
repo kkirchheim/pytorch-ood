@@ -13,11 +13,12 @@
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from pytorch_ood.detector.mahalanobis import Mahalanobis
 
@@ -28,8 +29,6 @@ from ..utils import (
 )
 
 log = logging.getLogger(__name__)
-
-Self = TypeVar("Self")
 
 
 class RMD(Mahalanobis):
@@ -81,7 +80,7 @@ class RMD(Mahalanobis):
         z, y = extract_features(data_loader, self.encoder, device=device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+    def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
         Fit parameters of the multi variate gaussian. Ignores OOD inputs.
 

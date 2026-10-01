@@ -12,19 +12,18 @@
 """
 
 import logging
-from typing import List, TypeVar
+from typing import List
 
 import torch
 from torch import Tensor
 from torch.nn import Module, Sequential
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from ..api import ModelNotSetException, RequiresFittingException, StructuredDetector
 from ..utils import contains_unknown, extract_feature_avg
 
 log = logging.getLogger(__name__)
-
-Self = TypeVar("Self")
 
 
 class MultiMahalanobis(StructuredDetector):
@@ -74,7 +73,7 @@ class MultiMahalanobis(StructuredDetector):
 
         self.alpha = alpha  #: Per-layer weighting factors
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Fit one gaussian to the features of each layer. Will average over feature maps.
 
@@ -100,7 +99,7 @@ class MultiMahalanobis(StructuredDetector):
 
         return self.fit_structured(zs, y)
 
-    def fit_structured(self: Self, zs: List[Tensor], y: Tensor) -> Self:
+    def fit_structured(self, zs: List[Tensor], y: Tensor) -> Self:
         """
         Fit parameters of the multi variate gaussians.
 

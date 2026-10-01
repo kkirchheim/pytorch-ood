@@ -1,13 +1,13 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List, TypeVar
+from typing import Dict, List
 
 import torch
 from torch import Tensor
 from torch.nn import Module, Parameter
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
-Self = TypeVar("Self")
 log = logging.getLogger(__name__)
 
 
@@ -144,7 +144,7 @@ class Detector(ABC):
 
         return getattr(self, "_device", None)
 
-    def to(self: Self, device) -> Self:
+    def to(self, device) -> Self:
         """
         Move detector-owned modules and tensor state to ``device``.
 
@@ -178,7 +178,7 @@ class Detector(ABC):
         """
         return {name: getattr(self, name) for name in self.hyperparameter_space}
 
-    def set_hyperparameters(self: Self, **kwargs) -> Self:
+    def set_hyperparameters(self, **kwargs) -> Self:
         """
         Set tunable hyperparameters by name.
 
@@ -207,7 +207,7 @@ class Detector(ABC):
         """
         return self.predict(*args, **kwargs)
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Fit the detector to a dataset. Some methods require this.
 
@@ -281,7 +281,7 @@ class LogitsDetector(Detector):
 
         return self.predict_logits(self.model(x))
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Extract logits from a loader and forward them to ``fit_logits(...)``.
 
@@ -304,7 +304,7 @@ class LogitsDetector(Detector):
         z, y = extract_features(data_loader=data_loader, model=self.model, device=device)
         return self.fit_logits(z, y)
 
-    def fit_logits(self: Self, logits: Tensor, y: Tensor) -> Self:
+    def fit_logits(self, logits: Tensor, y: Tensor) -> Self:
         """
         Fit the detector directly on logits.
 
@@ -359,7 +359,7 @@ class FeaturesDetector(Detector):
         wrapped.__qualname__ = method.__qualname__
         return wrapped
 
-    def fit_features(self: Self, x: Tensor, y: Tensor) -> Self:
+    def fit_features(self, x: Tensor, y: Tensor) -> Self:
         """
         Fit the detector directly on feature tensors.
 
@@ -415,7 +415,7 @@ class FeatureMapsDetector(Detector):
         wrapped.__qualname__ = method.__qualname__
         return wrapped
 
-    def fit_feature_maps(self: Self, feature_maps: Tensor, y: Tensor) -> Self:
+    def fit_feature_maps(self, feature_maps: Tensor, y: Tensor) -> Self:
         """
         Fit the detector directly on feature maps.
 
@@ -447,7 +447,7 @@ class StructuredDetector(Detector):
     inputs such as logits plus feature maps.
     """
 
-    def fit_structured(self: Self, *args, **kwargs) -> Self:
+    def fit_structured(self, *args, **kwargs) -> Self:
         """
         Fit the detector directly on structured intermediate representations.
         """

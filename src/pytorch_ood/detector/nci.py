@@ -13,16 +13,15 @@
 """
 
 import logging
-from typing import TypeVar
 
 import torch
 from torch import Tensor
 from torch.nn import Linear, Module
+from typing_extensions import Self
 
 from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import extract_features
 
-Self = TypeVar("Self")
 log = logging.getLogger(__name__)
 
 
@@ -71,7 +70,7 @@ class NCI(FeaturesDetector):
         self.alpha = alpha
         self.global_mean = None
 
-    def fit(self: Self, data_loader) -> Self:
+    def fit(self, data_loader) -> Self:
         """
         :param data_loader: data loader used to compute :math:`\\mu_g`
         """
@@ -88,7 +87,7 @@ class NCI(FeaturesDetector):
 
         return self.fit_features(z)
 
-    def fit_features(self: Self, z: torch.Tensor, *args, **kwargs) -> Self:
+    def fit_features(self, z: torch.Tensor, *args, **kwargs) -> Self:
         """
         :param z: input features used to compute :math:`\\mu_g`
         """

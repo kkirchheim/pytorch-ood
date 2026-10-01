@@ -15,16 +15,16 @@
 """
 
 import logging
-from typing import Callable, TypeVar
+from typing import Callable
 
 import torch
 from torch import Tensor
+from typing_extensions import Self
 
 from ..api import FeatureMapsDetector
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 def _remove_rank1(x: Tensor) -> Tensor:

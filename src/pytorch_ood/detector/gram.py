@@ -13,19 +13,18 @@
 """
 
 import logging
-from typing import List, Optional, Tuple, TypeVar
+from typing import List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from ..api import ModelNotSetException, RequiresFittingException, StructuredDetector
 
 log = logging.getLogger(__name__)
-
-Self = TypeVar("Self")
 
 
 class Gram(StructuredDetector):
@@ -137,7 +136,7 @@ class Gram(StructuredDetector):
         dev = dev + (F.relu(g - maxs) / torch.abs(maxs + 1e-6)).sum(dim=1)
         return dev
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Calculate the per-entry minimum and maximum bounds of the Gram matrix statistics of
         the training data, as well as the expected deviation per layer. Ignores OOD inputs.

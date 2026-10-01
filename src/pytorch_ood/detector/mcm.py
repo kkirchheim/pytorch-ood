@@ -13,16 +13,16 @@
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor
+from typing_extensions import Self
 
 from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class MCM(FeaturesDetector):

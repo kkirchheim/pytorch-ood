@@ -4,11 +4,12 @@
 
 """
 
-from typing import Dict, Optional, TypeVar
+from typing import Dict, Optional
 
 import numpy as np
 import torch
 from torch import Tensor
+from typing_extensions import Self
 
 __all__ = [
     "OODMetrics",
@@ -26,8 +27,6 @@ from torchmetrics.functional.classification import (
 from torchmetrics.utilities.compute import auc
 
 from .utils import TensorBuffer, is_unknown
-
-Self = TypeVar("Self")
 
 
 def calibration_error(
@@ -203,9 +202,7 @@ class OODMetrics(object):
 
         self.mode = mode
 
-    def update(
-        self: Self, scores: Tensor, y: Tensor, predictions: Optional[Tensor] = None
-    ) -> Self:
+    def update(self, scores: Tensor, y: Tensor, predictions: Optional[Tensor] = None) -> Self:
         """
         Add batch of results to collection.
 
@@ -332,7 +329,7 @@ class OODMetrics(object):
         metrics = {k: v.item() for k, v in metrics.items()}
         return metrics
 
-    def reset(self: Self) -> Self:
+    def reset(self) -> Self:
         """
         Resets collected metrics
         """

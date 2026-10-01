@@ -14,16 +14,16 @@
 """
 
 import logging
-from typing import Tuple, TypeVar
+from typing import Tuple
 
 import torch
 from torch import Tensor, nn
 from torch.nn import Module
+from typing_extensions import Self
 
 from ..api import Detector, ModelNotSetException
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class MCD(Detector):
@@ -72,7 +72,7 @@ class MCD(Detector):
         self.mode = mode
         self.batch_norm = batch_norm
 
-    def fit(self: Self, data_loader, **kwargs) -> Self:
+    def fit(self, data_loader, **kwargs) -> Self:
         """
         Not required
         """

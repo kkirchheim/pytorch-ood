@@ -13,17 +13,17 @@
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from pytorch_ood.api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from pytorch_ood.utils import extract_features, is_known
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class NNGuide(FeaturesDetector):
@@ -90,7 +90,7 @@ class NNGuide(FeaturesDetector):
 
         self._nbrs = NearestNeighbors(n_neighbors=k, metric="cosine", n_jobs=-1)
 
-    def fit(self: Self, data_loader: DataLoader, device=None) -> Self:
+    def fit(self, data_loader: DataLoader, device=None) -> Self:
         """
         Extract features from the data loader and build the energy-scaled feature bank.
 
@@ -113,7 +113,7 @@ class NNGuide(FeaturesDetector):
         z, y = extract_features(model=self.encoder, data_loader=data_loader, device=device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, labels: Tensor, batch_size: int = 4096) -> Self:
+    def fit_features(self, z: Tensor, labels: Tensor, batch_size: int = 4096) -> Self:
         """
         Build the energy-scaled feature bank from pre-extracted features.
 

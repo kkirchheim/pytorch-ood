@@ -13,20 +13,20 @@
 """
 
 import logging
-from typing import Optional, TypeVar
+from typing import Optional
 
 import torch.nn
 from torch import Tensor, tensor
 from torch.nn import Module
 from torch.nn.functional import log_softmax, nll_loss
 from torch.optim import LBFGS
+from typing_extensions import Self
 
 from pytorch_ood.detector.softmax import MaxSoftmax
 from pytorch_ood.utils import is_known
 
 from ..api import RequiresFittingException
 
-Self = TypeVar("Self")
 log = logging.getLogger(__name__)
 
 
@@ -68,7 +68,7 @@ class TemperatureScaling(MaxSoftmax):
 
         return super().predict_logits(logits)
 
-    def fit_logits(self: Self, logits: Tensor, labels: Tensor) -> Self:
+    def fit_logits(self, logits: Tensor, labels: Tensor) -> Self:
         """
         Optimize temperature using L-BFGS. Ignores OOD inputs.
 

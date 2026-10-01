@@ -12,12 +12,13 @@
     :exclude-members: fit
 """
 
-from typing import Callable, TypeVar
+from typing import Callable
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from ..api import GradientDetector, ModelNotSetException
 
@@ -35,8 +36,6 @@ try:
     _TORCH_FUNC_AVAILABLE = True
 except ImportError:
     _TORCH_FUNC_AVAILABLE = False
-
-Self = TypeVar("Self")
 
 
 class GradNorm(GradientDetector):

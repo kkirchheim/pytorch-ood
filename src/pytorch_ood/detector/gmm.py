@@ -15,17 +15,17 @@
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import contains_unknown, extract_features, is_known
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class GMM(FeaturesDetector):
@@ -62,7 +62,7 @@ class GMM(FeaturesDetector):
         self._log_det = None  # (K,)
         self._log_weights = None  # (K,)
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Extract features and fit the GMM.
 
@@ -80,7 +80,7 @@ class GMM(FeaturesDetector):
         z, y = extract_features(data_loader, self.encoder, device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, labels: Tensor) -> Self:
+    def fit_features(self, z: Tensor, labels: Tensor) -> Self:
         """
         Fit one Gaussian per class directly on features. OOD-labeled samples are ignored.
 

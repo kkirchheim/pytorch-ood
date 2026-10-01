@@ -13,11 +13,12 @@
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import torch.nn
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from pytorch_ood.utils import extract_features, is_known
 
@@ -25,7 +26,6 @@ from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingExcepti
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class DICE(FeaturesDetector):
@@ -93,7 +93,7 @@ class DICE(FeaturesDetector):
         score = self.detector(output)
         return score
 
-    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+    def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
         Calculates the masked weights. OOD Inputs will be ignored.
 
@@ -120,7 +120,7 @@ class DICE(FeaturesDetector):
         self._is_fitted = True
         return self
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         :param data_loader: data loader to extract features from. OOD inputs will be ignored.
         """

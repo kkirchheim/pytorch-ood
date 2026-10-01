@@ -1,11 +1,9 @@
 import logging
-from typing import TypeVar
 
 import numpy as np
+from typing_extensions import Self
 
 from .libnotmr import LibNotMR
-
-Self = TypeVar("Self")
 
 log = logging.getLogger(__name__)
 

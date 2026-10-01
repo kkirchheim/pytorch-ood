@@ -13,19 +13,19 @@
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import numpy as np
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from ..api import FeatureMapsDetector, ModelNotSetException, RequiresFittingException
 from ..utils import is_known
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class ReAct(FeatureMapsDetector):
@@ -93,7 +93,7 @@ class ReAct(FeatureMapsDetector):
         self.detector = detector or EnergyBased.score
 
     @torch.no_grad()
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Estimate the clipping threshold from the activations of in-distribution data.
 
@@ -119,7 +119,7 @@ class ReAct(FeatureMapsDetector):
         self._set_threshold_from_activations(torch.cat(activations))
         return self
 
-    def fit_feature_maps(self: Self, feature_maps: Tensor, y: Tensor) -> Self:
+    def fit_feature_maps(self, feature_maps: Tensor, y: Tensor) -> Self:
         """
         Estimate the clipping threshold directly from in-distribution feature maps.
 

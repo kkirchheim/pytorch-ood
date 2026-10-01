@@ -11,18 +11,17 @@
 """
 
 import logging
-from typing import Callable, TypeVar
+from typing import Callable
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.utils import TensorBuffer, extract_features, is_known
 
 from ..api import FeaturesDetector, ModelNotSetException
-
-Self = TypeVar("Self")
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +77,7 @@ class SHE(FeaturesDetector):
         scores = torch.sum(torch.mul(z, self.patterns[y_hat]), dim=1)
         return -scores
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Extracts features and calculates mean patterns.
 
@@ -117,7 +116,7 @@ class SHE(FeaturesDetector):
 
         return buffer["z"], buffer["y"]
 
-    def fit_features(self: Self, z: Tensor, y: Tensor, batch_size: int = 1024) -> Self:
+    def fit_features(self, z: Tensor, y: Tensor, batch_size: int = 1024) -> Self:
         """
         Calculates mean patterns per class.
 

@@ -15,12 +15,13 @@
 """
 
 import logging
-from typing import Callable, TypeVar
+from typing import Callable
 
 import numpy as np
 import torch.nn
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from pytorch_ood.utils import is_known
 
@@ -28,7 +29,6 @@ from ..api import FeatureMapsDetector, ModelNotSetException, RequiresFittingExce
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class VRA(FeatureMapsDetector):
@@ -121,7 +121,7 @@ class VRA(FeatureMapsDetector):
         x = self.head(x)
         return self.detector(x)
 
-    def fit_feature_maps(self: Self, z: Tensor, y: Tensor) -> Self:
+    def fit_feature_maps(self, z: Tensor, y: Tensor) -> Self:
         """
         Calculate per-dimension clipping thresholds from In-Distribution features.
         OOD inputs will be ignored.
@@ -151,7 +151,7 @@ class VRA(FeatureMapsDetector):
         )
         return self
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Extract features and calculate clipping thresholds. OOD inputs will be ignored.
 

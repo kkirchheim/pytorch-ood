@@ -13,16 +13,16 @@
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from pytorch_ood.api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from pytorch_ood.utils import extract_features, is_known
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class KNN(FeaturesDetector):
@@ -102,7 +102,7 @@ class KNN(FeaturesDetector):
         device = self.device or z.device
         return tensor(dist[:, -1], device=device)
 
-    def fit_features(self: Self, z: Tensor, labels: Tensor) -> Self:
+    def fit_features(self, z: Tensor, labels: Tensor) -> Self:
         """
         Fits nearest neighbor model. Ignores OOD inputs.
 
@@ -120,7 +120,7 @@ class KNN(FeaturesDetector):
 
         return self
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Extracts features and fits the kNN-Model
 

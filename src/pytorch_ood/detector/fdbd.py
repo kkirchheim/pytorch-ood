@@ -15,18 +15,17 @@
 """
 
 import logging
-from typing import TypeVar
 
 import torch
 from torch import Tensor
 from torch.nn import Linear, Module
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import extract_features
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class fDBD(FeaturesDetector):
@@ -79,7 +78,7 @@ class fDBD(FeaturesDetector):
         denom[torch.arange(n_classes), torch.arange(n_classes)] = 1.0
         self._denom_matrix = denom
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Compute the training feature mean :math:`\\mu`.
 
@@ -97,7 +96,7 @@ class fDBD(FeaturesDetector):
         z, y = extract_features(data_loader, self.encoder, device)
         return self.fit_features(z)
 
-    def fit_features(self: Self, z: Tensor, *args, **kwargs) -> Self:
+    def fit_features(self, z: Tensor, *args, **kwargs) -> Self:
         """
         Compute the training feature mean directly from features.
 

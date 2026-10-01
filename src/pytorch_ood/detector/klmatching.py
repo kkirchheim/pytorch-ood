@@ -13,17 +13,16 @@
 """
 
 import logging
-from typing import Optional, TypeVar
+from typing import Optional
 
 import torch
 from torch import Tensor
 from torch.nn import Module, Parameter, ParameterDict
+from typing_extensions import Self
 
 from ..api import LogitsDetector, ModelNotSetException, RequiresFittingException
 
 log = logging.getLogger()
-
-Self = TypeVar("Self")
 
 
 class KLMatching(LogitsDetector):
@@ -53,7 +52,7 @@ class KLMatching(LogitsDetector):
         self.model = model
         self.dists: ParameterDict = ParameterDict()  #: Typical posteriors per class
 
-    def fit_logits(self: Self, logits: Tensor, labels: Tensor) -> Self:
+    def fit_logits(self, logits: Tensor, labels: Tensor) -> Self:
         """
         Estimates typical distributions for each class.
         Ignores OOD samples.

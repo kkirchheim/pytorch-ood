@@ -13,12 +13,13 @@
 
 import logging
 import warnings
-from typing import Callable, List, Optional, TypeVar
+from typing import Callable, List, Optional
 
 import torch
 from torch import Tensor
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from ..api import (
     FeaturesDetector,
@@ -32,8 +33,6 @@ from ..utils import (
 )
 
 log = logging.getLogger(__name__)
-
-Self = TypeVar("Self")
 
 
 class Mahalanobis(FeaturesDetector):
@@ -67,7 +66,7 @@ class Mahalanobis(FeaturesDetector):
         self.cov: Tensor = None  #: Covariance Matrix
         self.precision: Tensor = None  #: Precision Matrix
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Fit parameters of the multi variate gaussian.
 
@@ -82,7 +81,7 @@ class Mahalanobis(FeaturesDetector):
         z, y = extract_features(data_loader, self.encoder, device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+    def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
         Fit parameters of the multi variate gaussian.
 
@@ -200,7 +199,7 @@ class MahalanobisODIN(GradientDetector):
         self.eps = eps
         self.norm_std = norm_std
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Fit the underlying Mahalanobis detector.
 
@@ -209,7 +208,7 @@ class MahalanobisODIN(GradientDetector):
         self._base.fit(data_loader)
         return self
 
-    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+    def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
         Fit the underlying Mahalanobis detector on features.
 

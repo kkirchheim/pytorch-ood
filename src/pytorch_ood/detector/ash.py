@@ -13,17 +13,17 @@
 """
 
 import logging
-from typing import Callable, TypeVar
+from typing import Callable
 
 import numpy as np
 import torch.nn
 from torch import Tensor
+from typing_extensions import Self
 
 from ..api import FeatureMapsDetector
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 def ash_b(x: Tensor, percentile: float = 0.65) -> Tensor:

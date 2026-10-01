@@ -15,14 +15,13 @@
     :exclude-members: fit, fit_logits
 """
 
-from typing import Optional, TypeVar
+from typing import Optional
 
 from torch import Tensor
 from torch.nn import Module
+from typing_extensions import Self
 
 from ..api import LogitsDetector
-
-Self = TypeVar("Self")
 
 
 class GEN(LogitsDetector):

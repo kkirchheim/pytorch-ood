@@ -4,7 +4,7 @@ import logging
 import math
 import random
 from collections import defaultdict
-from typing import Any, Callable, Dict, KeysView, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, KeysView, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -12,11 +12,9 @@ import torch.nn.functional as F
 from numpy import floating
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 log = logging.getLogger(__name__)
-
-
-Self = TypeVar("Self")
 
 
 def temperature_calibration(
@@ -190,7 +188,7 @@ class TensorBuffer(object):
         """
         return len(self._buffer) == 0
 
-    def append(self: Self, key, value: Tensor) -> Self:
+    def append(self, key, value: Tensor) -> Self:
         """
         Appends a tensor to the buffer.
 
@@ -236,7 +234,7 @@ class TensorBuffer(object):
         v = torch.cat(self._buffer[key])
         return v
 
-    def clear(self: Self) -> Self:
+    def clear(self) -> Self:
         """
         Clears the buffer
         """
@@ -244,7 +242,7 @@ class TensorBuffer(object):
         self._buffer.clear()
         return self
 
-    def save(self: Self, path) -> Self:
+    def save(self, path) -> Self:
         """
         Save buffer to disk
 

@@ -13,17 +13,17 @@
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
 from ..utils import extract_features
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class ViM(FeaturesDetector):
@@ -95,7 +95,7 @@ class ViM(FeaturesDetector):
     def __repr__(self):
         return f"ViM(d={self.d})"
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
 
@@ -134,7 +134,7 @@ class ViM(FeaturesDetector):
         score = -vlogit + energy
         return -score
 
-    def fit_features(self: Self, features: Tensor, labels: Tensor) -> Self:
+    def fit_features(self, features: Tensor, labels: Tensor) -> Self:
         """
         Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
 

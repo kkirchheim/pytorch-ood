@@ -17,19 +17,18 @@
 
 import logging
 import warnings
-from typing import Callable, List, Optional, TypeVar
+from typing import Callable, List, Optional
 
 import torch
 from torch import Tensor
 from torch.autograd import Variable
 from torch.nn import Module
 from torch.nn import functional as F
+from typing_extensions import Self
 
 from ..api import GradientDetector, ModelNotSetException
 
 log = logging.getLogger(__name__)
-
-Self = TypeVar("Self")
 
 
 def zero_grad(x):

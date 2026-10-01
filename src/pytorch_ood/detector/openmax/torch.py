@@ -3,17 +3,17 @@ Torch wrapper for a numpy implementation of openmax.
 """
 
 import logging
-from typing import Optional, TypeVar
+from typing import Optional
 
 import torch
 from torch import Tensor
 from torch.nn import Module
+from typing_extensions import Self
 
 from ...api import LogitsDetector, ModelNotSetException
 from .numpy import OpenMax as NumpyOpenMax
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class OpenMax(LogitsDetector):
@@ -62,7 +62,7 @@ class OpenMax(LogitsDetector):
         self.alpha = alpha
         self.euclid_weight = euclid_weight
 
-    def fit_logits(self: Self, logits: Tensor, y: Tensor) -> Self:
+    def fit_logits(self, logits: Tensor, y: Tensor) -> Self:
         """
         Determines parameters of the weibull functions for each class.
 
