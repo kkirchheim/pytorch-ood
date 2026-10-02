@@ -379,28 +379,41 @@ class OODMetrics(object):
 @torch.no_grad()
 def oscr_score(outlier_scores: Tensor, predictions: Tensor, labels: Tensor) -> float:
     """
-    Open-Set Classification Rate (OSCR).
+    Open-Set Classification Rate (OSCR): the area under the OSCR curve, which measures closed-set
+    classification and open-set detection jointly.
 
-    Measures joint closed-set classification accuracy and open-set detection by
-    plotting the Correct Classification Rate (CCR) against the False Positive Rate
-    (FPR) of accepting unknown samples as in-distribution, then returning the AUC.
+    A sample is accepted as known if its outlier score :math:`s(x)` is at most a threshold
+    :math:`\\tau`. The curve plots the Correct Classification Rate, the fraction of known samples
+    :math:`\\mathcal{D}_c` that are accepted and correctly classified,
 
-    A perfect detector that also classifies all known samples correctly returns 1.0.
-    A random detector returns roughly equal to the closed-set accuracy.
+    .. math::
+        \\mathrm{CCR}(\\tau) = \\frac{|\\{x \\in \\mathcal{D}_c : \\hat{y}(x) = y(x) \\wedge s(x) \\leq \\tau\\}|}
+        {|\\mathcal{D}_c|}
+
+    against the False Positive Rate, the fraction of unknown samples :math:`\\mathcal{D}_u` that are
+    accepted,
+
+    .. math::
+        \\mathrm{FPR}(\\tau) = \\frac{|\\{x \\in \\mathcal{D}_u : s(x) \\leq \\tau\\}|}{|\\mathcal{D}_u|}
+
+    for all thresholds :math:`\\tau`. The OSCR is at most the closed-set accuracy, which a perfect
+    detector reaches. A random detector gives about half of the closed-set accuracy.
+
+    .. rubric:: Examples
 
     .. code-block:: python
 
-        scores = detector(x)                    # higher = more OOD
-        preds  = model(x).argmax(dim=1)
+        scores = detector(x)
+        preds = model(x).argmax(dim=1)
         result = oscr_score(scores, preds, labels)
 
-    :param outlier_scores: 1-D tensor of outlier scores (higher = more likely OOD)
-    :param predictions: 1-D tensor of predicted class indices
-    :param labels: 1-D tensor of true labels; ``>= 0`` for known, ``< 0`` for unknown
-    :return: OSCR score in ``[0, 1]``
+    :param outlier_scores: outlier scores :math:`s(x)`, shape :math:`B`
+    :param predictions: predicted classes :math:`\\hat{y}(x)`, shape :math:`B`
+    :param labels: labels :math:`y(x)`, shape :math:`B`; labels :math:`< 0` mark unknown samples
+    :return: OSCR in :math:`[0, 1]`
     :raises ValueError: if ``labels`` contain no known or no unknown samples
 
-    :see Paper: `ArXiv <https://arxiv.org/abs/2408.16757>`__
+    :see Paper: `Reducing Network Agnostophobia <https://arxiv.org/abs/1811.04110>`__
     """
     known_mask = labels >= 0
 
@@ -414,22 +427,22 @@ def oscr_score(outlier_scores: Tensor, predictions: Tensor, labels: Tensor) -> f
     if n_id == 0 or n_ood == 0:
         raise ValueError("oscr_score requires both known and unknown samples.")
 
-    # Sort ID samples by ascending score; use their score values as thresholds.
-    # At threshold τ = s_id_sorted[i]:
-    #   CCR(τ) = fraction of ID samples with score ≤ τ that are also correct
-    #   FPR(τ) = fraction of OOD samples with score ≤ τ
-    sort_idx = torch.argsort(s_id)
-    s_id_sorted = s_id[sort_idx]
-    correct_sorted = correct[sort_idx]
+    # Every unique score is a threshold, so the curve is a step function. Where known and
+    # unknown samples tie, CCR and FPR change at the same threshold and the curve has a diagonal
+    # segment, as for the ROC curve. The paper counts CCR with s < tau and FPR with s <= tau
+    # instead, which makes ties pessimistic (constant scores would give 0, not accuracy / 2).
+    thresholds = torch.unique(torch.cat([s_id, s_ood]))
 
-    ccr = torch.cumsum(correct_sorted.float(), dim=0) / n_id
+    sort_idx = torch.argsort(s_id)
+    correct_counts = torch.cat([torch.zeros(1), torch.cumsum(correct[sort_idx].float(), dim=0)])
+    accepted_id = torch.searchsorted(s_id[sort_idx], thresholds, right=True)
+    ccr = correct_counts[accepted_id] / n_id
 
     s_ood_sorted, _ = torch.sort(s_ood)
-    fpr_counts = torch.searchsorted(s_ood_sorted, s_id_sorted, right=True)
-    fpr = fpr_counts.float() / n_ood
+    fpr = torch.searchsorted(s_ood_sorted, thresholds, right=True).float() / n_ood
 
-    # Full curve: (0, 0) → evaluated points → (1, ccr_max)
-    fpr = torch.cat([torch.zeros(1), fpr, torch.ones(1)])
-    ccr = torch.cat([torch.zeros(1), ccr, ccr[-1:]])
+    # starts at (0, 0); the largest threshold accepts everything, so the curve ends at (1, accuracy)
+    fpr = torch.cat([torch.zeros(1), fpr])
+    ccr = torch.cat([torch.zeros(1), ccr])
 
     return float(torch.trapezoid(ccr, fpr).item())
