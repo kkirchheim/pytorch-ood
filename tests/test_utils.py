@@ -1,3 +1,4 @@
+import math
 import unittest
 from os.path import dirname, join
 
@@ -24,7 +25,12 @@ class TestUtils(unittest.TestCase):
         utils.calibration_error(conf, y)
 
     def test_openness(self):
-        utils.calc_openness(n_train=6, n_test=10, n_target=6)
+        self.assertAlmostEqual(
+            utils.calc_openness(n_train=6, n_test=10, n_target=6), 1 - math.sqrt(12 / 16)
+        )
+
+    def test_openness_of_closed_set_is_zero(self):
+        self.assertEqual(utils.calc_openness(n_train=6, n_test=6, n_target=6), 0)
 
 
 class TestTargetMapping(unittest.TestCase):
