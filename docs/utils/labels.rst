@@ -12,5 +12,3 @@ Label Utilities
 .. autofunction:: pytorch_ood.utils.contains_unknown
 
 .. autofunction:: pytorch_ood.utils.contains_known_and_unknown
-
-.. autofunction:: pytorch_ood.utils.calc_openness

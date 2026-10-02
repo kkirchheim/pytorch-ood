@@ -64,18 +64,19 @@ def temperature_calibration(
 
 def calc_openness(n_train, n_test, n_target):
     """
-    In *Toward open set recognition* the Openness  :math:`\\mathcal{O}`  of a problem was defined as:
+    Openness of an open set recognition problem, as defined in *Toward Open Set Recognition*:
 
     .. math::
-        \\mathcal{O} = 1 - \\sqrt{ \\frac{2 \\times  n_{train}}{n_{test} \\times n_{target}} }
+        1 - \\sqrt{ \\frac{2 \\, n_{\\text{train}}}{n_{\\text{test}} + n_{\\text{target}}} }
 
-    where :math:`n` is the number of classes, respectively.
+    It is :math:`0` for a closed set problem, where all classes seen during testing are known from
+    training, and approaches :math:`1` as more unknown classes are added during testing.
 
-    :param n_train: number of classes for training
-    :param n_test: total number of classes used during testing
-    :param n_target: number of classes for classification during testing
+    :param n_train: number of classes seen during training :math:`n_{\\text{train}}`
+    :param n_test: total number of classes seen during testing :math:`n_{\\text{test}}`
+    :param n_target: number of classes to recognize during testing :math:`n_{\\text{target}}`
 
-    :return: Openness of the problem
+    :return: openness of the problem
 
     :see Paper: `IEEE Explore <https://ieeexplore.ieee.org/abstract/document/6365193>`__
     """
