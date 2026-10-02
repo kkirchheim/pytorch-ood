@@ -127,7 +127,7 @@ full_train_loss = evaluate_classification_loss_training(
     model=model, train_loader_in=train_loader_in
 )
 
-criterion = EnergyMarginLoss(full_train_loss=full_train_loss)
+criterion = EnergyMarginLoss(full_train_loss=full_train_loss).to(device)
 
 scheduler = torch.optim.lr_scheduler.MultiStepLR(
     optimizer=opti,

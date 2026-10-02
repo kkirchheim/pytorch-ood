@@ -132,7 +132,6 @@ LOSS_INPUTS = {
         loss.VirtualOutlierSynthesizingRegLoss(
             nn.Linear(1, 2),
             nn.Linear(C, 1),
-            device="cpu",
             num_classes=C,
             num_input_last_layer=D,
             fc=nn.Linear(D, C),

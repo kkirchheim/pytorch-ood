@@ -46,6 +46,9 @@ class IILoss(nn.Module):
            might be different if the centers are actually calculated as described in the paper.
            However, this enables better estimation of the performance during training, without having calculate
            the centers over the entire dataset. Empirically, we found that these centers work well.
+
+    .. note:: The running class centers are stored in this loss, so move it to the device of the model with
+        ``.to(device)``.
     """
 
     info = LossInfo(

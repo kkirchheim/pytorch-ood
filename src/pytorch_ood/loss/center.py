@@ -28,6 +28,9 @@ class CenterLoss(nn.Module):
 
     With radius :math:`r=0` and the squared euclidean distance as :math:`d(\\cdot,\\cdot)`, this is equivalent to
     the original center loss, which is also referred to as the *soft-margin loss* in some publications.
+
+    .. note:: The class centers are stored in this loss, so move it to the device of the model with
+        ``.to(device)``.
     """
 
     info = LossInfo(

@@ -85,18 +85,18 @@ class EnergyMarginLoss(nn.Module):
         :param constraint_tol: violation tolerance of both constraints, see ``penalty_mult``
         """
         super(EnergyMarginLoss, self).__init__()
-        self.full_train_loss = torch.tensor(full_train_loss).float()
-        self.eta = torch.tensor(eta).float()
-        self.false_alarm_cutoff = torch.tensor(false_alarm_cutoff).float()
-        self.in_constraint_weight = torch.tensor(in_constraint_weight).float()
-        self.lam = torch.tensor(0).float()
-        self.lam2 = torch.tensor(0).float()
-        self.ce_tol = torch.tensor(ce_tol).float()
-        self.ce_constraint_weight = torch.tensor(ce_constraint_weight).float()
-        self.out_constraint_weight = torch.tensor(out_constraint_weight).float()
-        self.lr_lam = torch.tensor(lr_lam).float()
-        self.penalty_mult = torch.tensor(penalty_mult).float()
-        self.constraint_tol = torch.tensor(constraint_tol).float()
+        self.register_buffer("full_train_loss", torch.tensor(full_train_loss).float())
+        self.register_buffer("eta", torch.tensor(eta).float())
+        self.register_buffer("false_alarm_cutoff", torch.tensor(false_alarm_cutoff).float())
+        self.register_buffer("in_constraint_weight", torch.tensor(in_constraint_weight).float())
+        self.register_buffer("lam", torch.tensor(0).float())
+        self.register_buffer("lam2", torch.tensor(0).float())
+        self.register_buffer("ce_tol", torch.tensor(ce_tol).float())
+        self.register_buffer("ce_constraint_weight", torch.tensor(ce_constraint_weight).float())
+        self.register_buffer("out_constraint_weight", torch.tensor(out_constraint_weight).float())
+        self.register_buffer("lr_lam", torch.tensor(lr_lam).float())
+        self.register_buffer("penalty_mult", torch.tensor(penalty_mult).float())
+        self.register_buffer("constraint_tol", torch.tensor(constraint_tol).float())
 
     def forward(
         self,
@@ -190,13 +190,16 @@ class EnergyMarginLoss(nn.Module):
         Call this periodically, for example once per epoch after the optimization steps.
         The constraint violations are evaluated on ``train_loader_in``; ``model`` is put into evaluation mode.
 
+        .. note:: The batches are moved to the device of this loss, so move it to the device of
+            ``model`` with ``.to(device)`` first.
+
         :param model: model that maps inputs to logits
         :param train_loader_in: loader of in-distribution data, has to yield ``(input, label)`` batches
         :param logistic_regression: function :math:`\\phi`, see :meth:`forward <pytorch_ood.loss.EnergyMarginLoss.forward>`
         """
 
         avg_sigmoid_energy_losses, _, avg_ce_loss = evaluate_energy_logistic_loss(
-            model, train_loader_in, logistic_regression
+            model, train_loader_in, logistic_regression, device=self.lam.device
         )
 
         # update lam

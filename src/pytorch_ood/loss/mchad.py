@@ -32,6 +32,9 @@ class MCHADLoss(nn.Module):
     The third term makes sure that OOD samples have at least a distance :math:`m` to the surface of each hypersphere.
 
     The loss can be used in a supervised, as well as in an unsupervised manner.
+
+    .. note:: The class centers and the margin are stored in this loss, so move it to the device of the model
+        with ``.to(device)``.
     """
 
     info = LossInfo(

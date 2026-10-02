@@ -19,7 +19,7 @@ class TestVOSRegularization(unittest.TestCase):
         weights_energy = torch.nn.Linear(num_classes, 1).cpu()
         torch.nn.init.uniform_(weights_energy.weight)
         phi = torch.nn.Linear(1, 2).cpu()
-        criterion = VOSRegLoss(phi, weights_energy, alpha=alpha, device="cpu", reduction=reduction)
+        criterion = VOSRegLoss(phi, weights_energy, alpha=alpha, reduction=reduction)
         return criterion
 
     def test_forward(self):
@@ -89,7 +89,6 @@ class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
             phi,
             weights_energy,
             alpha=alpha,
-            device="cpu",
             reduction=reduction,
             num_classes=num_classes,
             num_input_last_layer=10,
@@ -98,6 +97,12 @@ class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
             sample_from=8,
         )
         return criterion, model
+
+    def test_queues_not_in_state_dict(self):
+        # the fill levels are not saved either, so restoring only the queues would be inconsistent
+        criterion, _ = self.init_loss(num_classes=3)
+        self.assertNotIn("data_dict", criterion.state_dict())
+        self.assertNotIn("eye_matrix", criterion.state_dict())
 
     def test_forward_only_positive(self):
         criterion, model = self.init_loss(10)

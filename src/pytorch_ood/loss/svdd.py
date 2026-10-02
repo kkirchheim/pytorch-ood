@@ -27,7 +27,8 @@ class DeepSVDDLoss(torch.nn.Module):
 
     In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before training.
 
-    .. note:: This module should be moved to the correct device before using ``forward()``
+    .. note:: The center :math:`\\mu` is stored in this loss, so move it to the device of the model with
+        ``.to(device)``.
     """
 
     info = LossInfo(
@@ -59,9 +60,8 @@ class DeepSVDDLoss(torch.nn.Module):
         """
         super(DeepSVDDLoss, self).__init__()
         self._center = ClassCenters(1, n_dim, fixed=True)
-        self.radius = torch.tensor(
-            radius, requires_grad=False
-        )  #: radius :math:`r` of the hypersphere
+        # radius r of the hypersphere, a buffer so that .to() moves it
+        self.register_buffer("radius", torch.tensor(radius))
 
         # initialize center values, if given
         if center is not None:
@@ -154,6 +154,9 @@ class DeepSADLoss(torch.nn.Module):
 
     In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before training.
     This implementation has no ``center`` argument; to initialize it, set ``loss.center.params.data``.
+
+    .. note:: The center :math:`\\mu` is stored in this loss, so move it to the device of the model with
+        ``.to(device)``.
     """
 
     info = LossInfo(

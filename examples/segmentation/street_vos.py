@@ -90,7 +90,7 @@ phi = torch.nn.Linear(1, 2).to(device)
 weights_energy = torch.nn.Linear(num_classes, 1).to(device)
 torch.nn.init.uniform_(weights_energy.weight)
 
-criterion = VOSRegLoss(phi, weights_energy, device=device)
+criterion = VOSRegLoss(phi, weights_energy).to(device)
 
 
 # %%
