@@ -34,20 +34,33 @@ class VOSRegLoss(nn.Module):
     :math:`w_i = \\mathrm{ReLU}(\\text{weights\\_energy.weight}_i)`, and the total loss is
     :math:`\\mathcal{L}_{CE} + \\alpha \\mathcal{L}_{reg}`.
 
-    For initialisation of :math:`\\phi` and the weights for weighted energy:
-
-    .. code :: python
-
-        phi = torch.nn.Linear(1, 2)
-        weights = torch.nn.Linear(num_classes, 1)
-        torch.nn.init.uniform_(weights.weight)
-        criterion = VOSRegLoss(phi, weights)
-
     .. note ::
         This implementation does not generate synthetic outliers. For this feature, see  :class:`pytorch_ood.loss.vos.VirtualOutlierSynthesizingRegLoss`.
 
     .. note:: ``logistic_regression`` and ``weights_energy`` are stored in this loss, so move it to the device
         of the model with ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import VOSRegLoss
+
+        model = torch.nn.Linear(10, 3)
+        phi = torch.nn.Linear(1, 2)  # logistic regression on the weighted energy
+        weights_energy = torch.nn.Linear(3, 1)  # weights of the classes in the energy
+        # non-negative initial weights, since the energy zeroes negative ones with a ReLU
+        torch.nn.init.uniform_(weights_energy.weight)
+        criterion = VOSRegLoss(phi, weights_energy)
+        # phi and weights_energy are trained along with the model
+        optimizer = torch.optim.SGD([*model.parameters(), *criterion.parameters()], lr=0.01)
+
+        x, y = torch.randn(8, 10), torch.tensor([0, 1, 2, 0, 1, 2, -1, -1])  # -1: outliers
+        loss = criterion(model(x), y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
     """
 
     info = LossInfo(
@@ -172,6 +185,37 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
 
     .. note:: ``logistic_regression``, ``weights_energy``, ``fc`` and the queues of ID features are stored in
         this loss, so move it to the device of the model with ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss
+
+        encoder = torch.nn.Sequential(torch.nn.Linear(10, 16), torch.nn.ReLU())
+        fc = torch.nn.Linear(16, 3)  # last layer of the model
+        weights_energy = torch.nn.Linear(3, 1)  # weights of the classes in the energy
+        # non-negative initial weights, since the energy zeroes negative ones with a ReLU
+        torch.nn.init.uniform_(weights_energy.weight)
+        criterion = VirtualOutlierSynthesizingRegLoss(
+            logistic_regression=torch.nn.Linear(1, 2),
+            weights_energy=weights_energy,
+            fc=fc,
+            sample_number=4,  # features stored per class before outliers are synthesized
+            sample_from=100,
+        )
+        # the loss holds fc, the logistic regression and the energy weights
+        optimizer = torch.optim.SGD([*encoder.parameters(), *criterion.parameters()], lr=0.01)
+
+        for step in range(4):
+            x, y = torch.randn(8, 10), torch.arange(8) % 3
+            features = encoder(x)
+            # forward() takes the logits and the penultimate features
+            loss = criterion(fc(features), features, y)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
     """
 
     info = LossInfo(
@@ -191,8 +235,6 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         self,
         logistic_regression: torch.nn.Linear,
         weights_energy: torch.nn.Linear,
-        num_classes: int,
-        num_input_last_layer: int,
         fc: torch.nn.Linear,
         alpha: float = 0.1,
         reduction: str = "mean",
@@ -203,9 +245,8 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         """
         :param logistic_regression: :math:`\\phi` function. Can be for example a linear layer.
         :param weights_energy: neural network layer, with weights for the energy
-        :param num_classes: number of classes
-        :param num_input_last_layer: number of inputs in the last layer of the network
-        :param fc: fully connected last layer of the network
+        :param fc: last layer of the network, a linear layer that maps the penultimate features to the
+            logits; the number of classes and the feature dimension are taken from it
         :param alpha: weight :math:`\\alpha` of the regularization
         :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
         :param sample_number: number of ID feature vectors stored per class (queue length); virtual outliers are
@@ -220,21 +261,21 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
             alpha=alpha,
             reduction=reduction,
         )
-        self.num_classes = num_classes
-        self.num_input_last_layer = num_input_last_layer
+        self.num_classes = fc.out_features
+        self.num_input_last_layer = fc.in_features
         self.fc = fc
         self.sample_number = sample_number
         self.select = select
         self.sample_from = sample_from
 
         self.number_dict = {}
-        for i in range(num_classes):
+        for i in range(self.num_classes):
             self.number_dict[i] = 0
         # buffers, so that .to() moves them; not in the state_dict, since the fill levels in
         # number_dict are not either
         self.register_buffer(
             "data_dict",
-            torch.zeros(num_classes, self.sample_number, self.num_input_last_layer),
+            torch.zeros(self.num_classes, self.sample_number, self.num_input_last_layer),
             persistent=False,
         )
         self.register_buffer("eye_matrix", torch.eye(self.num_input_last_layer), persistent=False)

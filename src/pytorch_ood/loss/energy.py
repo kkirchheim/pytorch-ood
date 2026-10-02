@@ -15,18 +15,23 @@ def _energy(logits: torch.Tensor) -> torch.Tensor:
 class EnergyRegularizedLoss(nn.Module):
     """
     Augments the cross-entropy by a regularization term that aims to increase the energy
-    gap between ID and OOD samples:
+    gap between ID and OOD samples. The loss is
 
     .. math::
-       \\mathcal{L} = \\mathbb{E}_{x \\sim \\mathcal{D}_{in}} \\left[ \\mathcal{L}_{CE}(x, y) \\right]
-       + \\alpha \\Bigl(
-       \\mathbb{E}_{x \\sim \\mathcal{D}_{in}} \\left[ \\max(0, E(x) - m_{in})^2 \\right]
-       + \\mathbb{E}_{x \\sim \\mathcal{D}_{out}} \\left[ \\max(0, m_{out} - E(x))^2 \\right]
-       \\Bigr)
+        \\mathcal{L}_{CE} + \\alpha \\mathcal{L}_{reg}
 
-    where :math:`E(x) = - \\log(\\sum_i e^{f_i(x)} )` is the energy of :math:`x`, and samples
-    with targets :math:`< 0` are OOD. The expectations are means over the ID and over the OOD
-    samples of the batch (``reduction="mean"``). For segmentation, every pixel is a sample.
+    where :math:`\\mathcal{L}_{CE}` is the cross-entropy of the ID samples, and the regularization
+    term is
+
+    .. math::
+        \\begin{aligned}
+        \\mathcal{L}_{reg} = \\; & \\mathbb{E}_{x \\sim \\mathcal{D}_{in}} \\left[ \\max(0, E(x) - m_{in})^2 \\right] \\\\
+        + \\; & \\mathbb{E}_{x \\sim \\mathcal{D}_{out}} \\left[ \\max(0, m_{out} - E(x))^2 \\right]
+        \\end{aligned}
+
+    with the energy :math:`E(x) = - \\log \\sum_i e^{f_i(x)}`. Samples with targets :math:`< 0` are
+    OOD. The expectations are means over the ID and over the OOD samples of the batch
+    (``reduction="mean"``). For segmentation, every pixel is a sample.
     """
 
     info = LossInfo(

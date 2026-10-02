@@ -35,7 +35,26 @@ class CACLoss(nn.Module):
 
     .. rubric:: Examples
 
-    See the :doc:`gallery example </auto_examples/loss/unsupervised/cac>`.
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import CACLoss
+
+        encoder = torch.nn.Linear(10, 3)  # the space of the centers has one dimension per class
+        criterion = CACLoss(n_classes=3)
+        optimizer = torch.optim.SGD(encoder.parameters(), lr=0.01)
+
+        x, y = torch.randn(8, 10), torch.randint(0, 3, (8,))
+        # forward() takes the distances to the centers of this loss
+        distances = criterion.distance(encoder(x))
+        loss = criterion(distances, y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        scores = CACLoss.score(distances.detach())  # outlier scores
+
+    See also the :doc:`gallery example </auto_examples/loss/unsupervised/cac>`.
     """
 
     info = LossInfo(

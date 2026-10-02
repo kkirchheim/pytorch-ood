@@ -61,6 +61,37 @@ class EnergyMarginLoss(nn.Module):
     Every batch has to contain both ID and OOD samples.
 
     :see Constrained formulation: `Training OOD Detectors in their Natural Habitats (WOODS, Katz-Samuels et al., ICML 2022) <https://arxiv.org/abs/2202.03299>`__
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from torch.utils.data import DataLoader, TensorDataset
+        from pytorch_ood.loss import EnergyMarginLoss
+
+        model = torch.nn.Linear(10, 3)  # pre-trained classifier
+        phi = torch.nn.Linear(1, 1)  # logistic regression on the energy score
+        optimizer = torch.optim.SGD([*model.parameters(), *phi.parameters()], lr=0.01)
+        # full_train_loss: cross-entropy of the pre-trained model on the ID training data
+        criterion = EnergyMarginLoss(full_train_loss=1.0)
+
+        id_data = TensorDataset(torch.randn(16, 10), torch.randint(0, 3, (16,)))
+        ood_data = TensorDataset(torch.randn(16, 10), torch.full((16,), -1))  # -1: outliers
+        id_loader = DataLoader(id_data, batch_size=4)
+        ood_loader = DataLoader(ood_data, batch_size=4)
+
+        for epoch in range(2):
+            # every batch has to contain ID and OOD samples
+            for (x_in, y_in), (x_out, y_out) in zip(id_loader, ood_loader):
+                x, y = torch.cat([x_in, x_out]), torch.cat([y_in, y_out])
+                loss = criterion(model(x), y, phi)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+            # update the Lagrange multipliers; this puts the model into evaluation mode
+            criterion.update_hyperparameters(model, id_loader, phi)
+            model.train()
     """
 
     info = LossInfo(

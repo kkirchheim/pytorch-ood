@@ -71,8 +71,6 @@ torch.nn.init.uniform_(weights_energy.weight)
 criterion = VirtualOutlierSynthesizingRegLoss(
     phi,
     weights_energy,
-    num_classes=num_classes,
-    num_input_last_layer=128,
     fc=model.fc,
     sample_number=10000,
     select=1,
