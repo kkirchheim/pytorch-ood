@@ -15,7 +15,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 
 from ..api import Detector, FeaturesDetector, GradientDetector, LogitsDetector
-from .metrics import OODMetrics
+from ..metrics import OODMetrics
 from .utils import TensorBuffer, extract_features
 
 __all__ = ["GridSearch"]
@@ -61,8 +61,7 @@ class GridSearch:
         configured with the best hyperparameters. For detectors evaluated via the
         non-cached path (e.g. those operating on raw inputs), put the underlying
         model in ``eval()`` mode so that dropout/batch-norm noise does not confound
-        the comparison across candidates. For segmentation, pass a metric such as
-        ``OODMetrics(mode="segmentation")``.
+        the comparison across candidates. For segmentation, pass a segmentation metric.
 
     .. code-block:: python
 
@@ -78,7 +77,7 @@ class GridSearch:
     :param val_loader: validation data containing both ID and OOD samples
     :param hyperparameter_space: overrides the detector's ``hyperparameter_space``
     :param metric: metric object with ``update(scores, y)`` / ``compute() -> dict``
-        and ``reset()``. Defaults to :class:`pytorch_ood.utils.OODMetrics`.
+        and ``reset()``. Defaults to :class:`pytorch_ood.metrics.OODMetrics`.
     :param metric_name: key to read from the metric's ``compute()`` dict. Default ``"AUROC"``.
     :param higher_is_better: whether the metric should be maximized. Default ``True``.
     :param device: device used for extraction and scoring
@@ -234,8 +233,8 @@ class GridSearch:
         self.metric.reset()
         for x, y in self.val_loader:
             scores = self.detector.predict(x.to(self.device))
-            # Non-finite scores must not be scored: some metrics (e.g. AUROC via
-            # torchmetrics) map all-NaN scores to a spurious perfect value.
+            # Non-finite scores must not be scored: custom metrics may map them to a
+            # spurious perfect value.
             if not torch.isfinite(scores).all():
                 return float("nan")
             self.metric.update(scores, y.to(scores.device))

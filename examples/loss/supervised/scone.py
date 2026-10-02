@@ -30,8 +30,9 @@ from torchvision.datasets import CIFAR10
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.detector import EnergyBased
 from pytorch_ood.loss import EnergyMarginLoss
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model
-from pytorch_ood.utils import OODMetrics, ToUnknown, to_np
+from pytorch_ood.utils import ToUnknown, to_np
 
 torch.manual_seed(123)
 

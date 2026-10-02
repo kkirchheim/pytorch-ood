@@ -97,6 +97,7 @@ jobs:
               "pytorch_ood",
               "pytorch_ood.detector",
               "pytorch_ood.loss",
+              "pytorch_ood.metrics",
               "pytorch_ood.model",
               "pytorch_ood.utils",
               "pytorch_ood.dataset.img",

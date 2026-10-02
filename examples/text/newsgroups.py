@@ -50,8 +50,9 @@ from pytorch_ood.detector import (
     MaxSoftmax,
     ViM,
 )
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import GRUClassifier
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
+from pytorch_ood.utils import ToUnknown, fix_random_seed
 
 fix_random_seed(123)
 

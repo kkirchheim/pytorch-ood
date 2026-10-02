@@ -14,7 +14,8 @@ from pytorch_ood.api import (
     GradientDetector,
     LogitsDetector,
 )
-from pytorch_ood.utils import OODMetrics, TensorBuffer
+from pytorch_ood.metrics import OODMetrics
+from pytorch_ood.utils import TensorBuffer
 
 _CACHE_VERSION = 1
 
@@ -455,7 +456,7 @@ class Benchmark(ABC):
         ``encoder``) can reuse cached representations; all other detectors run the full
         pipeline. Detectors are not fitted by this method, call ``fit()`` beforehand. They are
         moved to ``device``. The metrics are those computed by
-        :class:`~pytorch_ood.utils.OODMetrics`. Each OOD dataset in ``ood_names`` is evaluated
+        :class:`~pytorch_ood.metrics.OODMetrics`. Each OOD dataset in ``ood_names`` is evaluated
         together with the ID test data.
 
         :param detector: detector instance or a sequence of detectors
@@ -467,7 +468,7 @@ class Benchmark(ABC):
             otherwise a warning is issued and only in-memory caching is used.
         :param cache_key: user-supplied cache key used for disk cache reuse
         :return: list with one dictionary per OOD dataset (and per detector, if a sequence was
-            given) containing the metrics of :class:`~pytorch_ood.utils.OODMetrics` and the
+            given) containing the metrics of :class:`~pytorch_ood.metrics.OODMetrics` and the
             field ``Dataset`` with the name of the OOD dataset. For a sequence of detectors, each
             result also includes a ``Detector`` field with the detector class name.
         """

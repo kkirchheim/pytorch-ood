@@ -1,19 +1,18 @@
 Utilities
 ************************************
 
-Helpers that the rest of the library builds on: evaluation metrics, the label conventions for
-in- and out-of-distribution samples, dataset transforms, and feature extraction.
+Helpers that the rest of the library builds on: hyperparameter optimization, the label
+conventions for in- and out-of-distribution samples, dataset transforms, and feature extraction.
 
 .. py:module:: pytorch_ood.utils
 
 
-Evaluation
+Hyperparameter Optimization
 ====================================
 
 .. toctree::
    :maxdepth: 1
 
-   utils/metrics
    utils/hpo
 
 

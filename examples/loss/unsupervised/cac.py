@@ -18,14 +18,14 @@ import torch
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
-from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10
 from tqdm import tqdm
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.loss import CACLoss
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model, load_transform
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed, is_known
+from pytorch_ood.utils import ToUnknown, fix_random_seed, is_known
 
 fix_random_seed(123)
 
@@ -66,7 +66,6 @@ scheduler = CosineAnnealingLR(opti, T_max=n_epochs * len(train_loader))
 
 def test():
     metrics = OODMetrics()
-    acc = Accuracy(num_classes=10, task="multiclass")
 
     model.eval()
 
@@ -78,13 +77,10 @@ def test():
             distances = criterion.distance(z).cpu()
             # the CAC Loss proposes its own method for score calculation.
             # We could, however, also use the minimum distance.
-            metrics.update(CACLoss.score(distances), y)
-            known = is_known(y)
-            if known.any():
-                acc.update(distances[known].min(dim=1).indices, y[known])
+            # the closest center is the predicted class, used for the accuracy ("ACC")
+            metrics.update(CACLoss.score(distances), y, distances.min(dim=1).indices)
 
     print(metrics.compute())
-    print(f"Accuracy: {acc.compute().item():.2%}")
     model.train()
 
 
@@ -113,6 +109,4 @@ for epoch in range(n_epochs):
         test()
 
 # %%
-# {'AUROC': 0.8958120346069336, 'AUPR-IN': 0.8456918001174927, 'AUPR-OUT': 0.8196930885314941, 'FPR95TPR': 0.5187000036239624}
-#
-# Accuracy: 93.80%
+# {'AUROC': 0.8958120346069336, 'AUPR-IN': 0.8456918001174927, 'AUPR-OUT': 0.8196930885314941, 'FPR95TPR': 0.5187000036239624, 'ACC': 0.938}

@@ -71,7 +71,7 @@ class TestSCALE(unittest.TestCase):
         Synthetic sanity check: ID and OOD features with different norms should
         be separable by the resulting energy score.
         """
-        from src.pytorch_ood.utils import OODMetrics
+        from src.pytorch_ood.metrics import OODMetrics
 
         torch.manual_seed(0)
         head = torch.nn.Linear(16, 10)

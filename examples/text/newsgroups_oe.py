@@ -57,8 +57,9 @@ from pytorch_ood.detector import (
     ViM,
 )
 from pytorch_ood.loss import OutlierExposureLoss
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import GRUClassifier
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed, is_known
+from pytorch_ood.utils import ToUnknown, fix_random_seed, is_known
 
 fix_random_seed(123)
 

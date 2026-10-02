@@ -5,7 +5,7 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader, TensorDataset, random_split
 
 from pytorch_ood.loss import CrossEntropyLoss
-from pytorch_ood.utils import OODMetrics
+from pytorch_ood.metrics import OODMetrics
 from src.pytorch_ood.detector import MaxSoftmax, ViM
 from tests.helpers import ClassificationModel, sample_dataset
 

@@ -11,14 +11,14 @@ Open Set Simulation on CIFAR 10
 import torch.nn
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
-from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10
 from tqdm import tqdm
 
 from pytorch_ood.dataset.ossim import DynamicOSS
 from pytorch_ood.detector import MaxSoftmax
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import get_model_info, load_model, load_transform
-from pytorch_ood.utils import OODMetrics, TargetMapping, fix_random_seed, is_known
+from pytorch_ood.utils import TargetMapping, fix_random_seed, is_known
 
 device = "cuda:0"
 num_epochs = 10
@@ -76,7 +76,6 @@ opti = torch.optim.Adam(model.parameters(), lr=0.001)
 @torch.no_grad()
 def test():
     metrics = OODMetrics()
-    acc = Accuracy(task="multiclass", num_classes=7).to(device)
     model.eval()
 
     for x, y in tqdm(test_loader):
@@ -88,14 +87,10 @@ def test():
 
         z = model(x)
 
-        metrics.update(MaxSoftmax.score(z), y)
-
-        known = is_known(y)
-        if known.any():
-            acc.update(z[known].argmax(dim=1), y[known])
+        # the predicted classes give the closed-set accuracy ("ACC")
+        metrics.update(MaxSoftmax.score(z), y, z.argmax(dim=1))
 
     print(metrics.compute())
-    print(acc.compute().item())
 
 
 # %%

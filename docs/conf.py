@@ -695,6 +695,12 @@ _SPLIT_SECTIONS = [
         },
     ),
     _SplitSection(
+        overview="metrics",
+        prefix="metrics/",
+        packages=("pytorch_ood.metrics",),
+        needs_page=_is_class_or_function,
+    ),
+    _SplitSection(
         overview="utils",
         prefix="utils/",
         packages=("pytorch_ood.utils",),
