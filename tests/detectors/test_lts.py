@@ -1,10 +1,28 @@
 import unittest
 
+import numpy as np
 import torch
+import torch.nn.functional as F
 
 from src.pytorch_ood.detector import LTS
 from src.pytorch_ood.detector.energy import EnergyBased
 from tests.helpers import ClassificationModel
+
+
+def _official_lts(x, percentile=65):
+    # verbatim from https://github.com/andrijazz/lts (lts.py), which returns the factor that
+    # multiplies the logits: ``get_score(logits * s, ...)`` in ood_eval.py
+    assert x.dim() == 2
+    assert 0 <= percentile <= 100
+
+    x = F.relu(x)
+    s1 = x.sum(dim=1)
+    n = x.shape[1:].numel()
+    k = n - int(np.round(n * percentile / 100.0))
+    v, i = torch.topk(x, k, dim=1)
+    s2 = v.sum(dim=1)
+    scale = s1 / s2
+    return scale[:, None] ** 2
 
 
 class TestLTS(unittest.TestCase):
@@ -33,43 +51,97 @@ class TestLTS(unittest.TestCase):
         with self.assertRaises(Exception):
             detector.predict(x)
 
-    def test_temperature_shape(self):
+    def test_scaling_factor_shape(self):
         z = torch.randn(8, 64)
-        t = LTS.temperature(z, p=0.05)
-        self.assertEqual(t.shape, (8,))
-        self.assertTrue(torch.isfinite(t).all())
+        s = LTS.scaling_factor(z, p=0.05)
+        self.assertEqual(s.shape, (8,))
+        self.assertTrue(torch.isfinite(s).all())
 
-    def test_temperature_uniform_activations(self):
-        """When all activations are equal, T1/T2 = n/k, temperature = (n/k)^2."""
+    def test_scaling_factor_uniform_activations(self):
+        """When all activations are equal, S1/S2 = n/k, so the factor is (n/k)^2."""
         z = torch.ones(4, 100)
-        t = LTS.temperature(z, p=0.05)
-        k = max(1, round(100 * 0.05))  # 5
-        expected = (100.0 / k) ** 2  # (100/5)^2 = 400
-        torch.testing.assert_close(t, torch.full((4,), expected))
+        s = LTS.scaling_factor(z, p=0.05)
+        torch.testing.assert_close(s, torch.full((4,), (100.0 / 5) ** 2))
 
-    def test_temperature_concentrated_activations(self):
-        """When all mass is in top p%, T1 ≈ T2, temperature ≈ 1."""
+    def test_scaling_factor_concentrated_activations(self):
+        """When all mass is in the top p%, S1 = S2, so the factor is 1."""
         z = torch.zeros(4, 100)
-        z[:, :5] = 100.0  # all mass in top 5%
-        t = LTS.temperature(z, p=0.05)
-        torch.testing.assert_close(t, torch.ones(4))
+        z[:, :5] = 100.0
+        s = LTS.scaling_factor(z, p=0.05)
+        torch.testing.assert_close(s, torch.ones(4))
 
     def test_p_equals_one_means_no_scaling(self):
-        """With p=1.0, top 100% = all activations, so T1/T2 = 1, temperature = 1."""
+        """With p=1.0, the top 100% are all activations, so the factor is 1."""
         z = torch.randn(4, 64).abs()
-        t = LTS.temperature(z, p=1.0)
-        torch.testing.assert_close(t, torch.ones(4))
+        s = LTS.scaling_factor(z, p=1.0)
+        torch.testing.assert_close(s, torch.ones(4))
+
+    def test_scaling_factor_ignores_negative_features(self):
+        z = torch.tensor([[1.0, 1.0, 1.0, 1.0, -3.0, -5.0]])
+        torch.testing.assert_close(
+            LTS.scaling_factor(z, p=0.5), LTS.scaling_factor(z.relu(), p=0.5)
+        )
+        # S1 = 4 and the top 3 activations sum to 3
+        torch.testing.assert_close(LTS.scaling_factor(z, p=0.5), torch.tensor([(4 / 3) ** 2]))
+
+    def test_scaling_factor_matches_official_code(self):
+        torch.manual_seed(0)
+        for p in (0.05, 0.1, 0.35):
+            for n in (8, 10, 64, 100, 512, 2048):
+                with self.subTest(p=p, n=n):
+                    z = torch.randn(16, n)
+                    expected = _official_lts(z, percentile=round(100 * (1 - p))).squeeze(1)
+                    if not torch.isfinite(expected).all():
+                        continue  # the official code selects k = 0 here, guarded in LTS
+                    torch.testing.assert_close(LTS.scaling_factor(z, p), expected)
+
+    def test_scaling_factor_at_least_one_activation(self):
+        # the official code would select k = 0 here (10 - round(9.5) = 0)
+        z = torch.rand(4, 10)
+        s = LTS.scaling_factor(z, p=0.05)
+        torch.testing.assert_close(s, (z.sum(dim=1) / z.max(dim=1).values) ** 2)
+
+    def test_scaling_factor_rejects_feature_maps(self):
+        with self.assertRaises(ValueError):
+            LTS.scaling_factor(torch.rand(4, 16, 8, 8), p=0.05)
+
+    def test_score_multiplies_logits(self):
+        """Energy of the logits multiplied by S, as in the paper and the official code."""
+        head = torch.nn.Linear(8, 3)
+        z = torch.tensor([[1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]])
+        # k = 8 - round(0.75 * 8) = 2, so S = (4 / 2)^2 = 4
+        detector = LTS(encoder=None, head=head, p=0.25)
+        with torch.no_grad():
+            expected = -torch.logsumexp(4.0 * head(z), dim=1)
+        torch.testing.assert_close(detector.predict_features(z), expected)
+
+    def test_matches_official_pipeline(self):
+        # wide enough that the official code selects k > 0 for p = 0.05
+        model = ClassificationModel(num_inputs=10, n_hidden=512, num_outputs=3).eval()
+        detector = LTS(encoder=model.features, head=model.classifier, p=0.05)
+        x = torch.randn(16, 10)
+        with torch.no_grad():
+            features = model.features(x)
+            logits = model.classifier(features)
+            s = _official_lts(features, percentile=95)
+            # the official energy score is larger for ID samples
+            expected = -torch.logsumexp(logits * s, dim=1)
+        torch.testing.assert_close(detector(x), expected)
 
     def test_custom_detector_callable(self):
         """LTS should accept any scoring function that maps logits -> scores."""
+        seen = []
         detector = LTS(
-            encoder=self.model.features,
-            head=self.model.classifier,
-            detector=lambda logits: -logits.max(dim=1).values,  # MaxLogit-style
+            encoder=None,
+            head=torch.nn.Identity(),
+            p=0.5,
+            detector=lambda logits: seen.append(logits) or -logits.max(dim=1).values,
         )
-        x = torch.randn(8, 10)
-        scores = detector(x)
-        self.assertEqual(scores.shape, (8,))
+        z = torch.tensor([[2.0, 2.0, 2.0, 2.0]])
+        scores = detector.predict_features(z)
+        # k = 2, so S = (8 / 4)^2 = 4, and the detector receives the scaled logits
+        torch.testing.assert_close(seen[0], 4 * z)
+        self.assertEqual(scores.shape, (1,))
 
     def test_does_not_require_fit(self):
         detector = LTS(encoder=self.model.features, head=self.model.classifier)
@@ -98,99 +170,6 @@ class TestLTS(unittest.TestCase):
     def test_default_p(self):
         detector = LTS(encoder=self.model.features, head=self.model.classifier)
         self.assertEqual(detector.p, 0.05)
-
-    def test_4d_feature_maps(self):
-        """Temperature should handle 4D feature maps by flattening."""
-        z = torch.randn(4, 16, 8, 8)
-        t = LTS.temperature(z, p=0.05)
-        self.assertEqual(t.shape, (4,))
-        self.assertTrue(torch.isfinite(t).all())
-
-    def test_segmentation_4d_features(self):
-        """LTS should work with spatial 4D feature maps (B, C, H, W)."""
-        features = torch.randn(4, 8, 16, 16)  # (B, C, H, W)
-        t = LTS.temperature(features, p=0.05)
-        self.assertEqual(t.shape, (4,))
-        self.assertTrue(torch.isfinite(t).all())
-
-    def test_segmentation_4d_logits_scoring(self):
-        """LTS should score 4D logits (segmentation output) correctly."""
-        # Simulate a conv head that outputs (B, K, H, W) logits
-        batch_size, num_classes, height, width = 4, 3, 16, 16
-        logits_4d = torch.randn(batch_size, num_classes, height, width)
-        features_4d = torch.randn(batch_size, 8, height, width)
-
-        # Create a simple conv head
-        class ConvHead(torch.nn.Module):
-            def forward(self, x):
-                # x is (B, C, H, W), return (B, K, H, W)
-                return torch.randn(x.shape[0], num_classes, x.shape[2], x.shape[3])
-
-        t = LTS.temperature(features_4d, p=0.05)  # (4,)
-
-        # Manually compute scaled logits
-        scaled_logits = logits_4d / t.view(batch_size, 1, 1, 1)
-        self.assertEqual(scaled_logits.shape, (batch_size, num_classes, height, width))
-
-        # Score should work on spatial logits
-        from src.pytorch_ood.detector.energy import EnergyBased
-
-        scores = EnergyBased.score(scaled_logits)
-        self.assertEqual(scores.shape, (batch_size, height, width))
-        self.assertTrue(torch.isfinite(scores).all())
-
-    def test_segmentation_predict_feature_maps(self):
-        """LTS.predict_features should work with 4D spatial feature maps."""
-        batch_size, num_channels, height, width = 4, 8, 16, 16
-        num_classes = 3
-        features_4d = torch.randn(batch_size, num_channels, height, width)
-
-        # Create a simple conv head that outputs (B, K, H, W)
-        class ConvHead(torch.nn.Module):
-            def forward(self, x):
-                return torch.randn(x.shape[0], num_classes, x.shape[2], x.shape[3])
-
-        detector = LTS(encoder=None, head=ConvHead(), p=0.05)
-        scores = detector.predict_features(features_4d)
-
-        # For 4D features, output should be (B, H, W)
-        self.assertEqual(scores.shape, (batch_size, height, width))
-        self.assertTrue(torch.isfinite(scores).all())
-
-    def test_segmentation_full_pipeline(self):
-        """LTS should work end-to-end with spatial encoder and conv head."""
-        batch_size = 2
-        height, width = 8, 8
-
-        # Simple spatial encoder (e.g., backbone)
-        class SpatialEncoder(torch.nn.Module):
-            def forward(self, x):
-                # x: (B, H, W) -> (B, 16, H, W)
-                return torch.randn(x.shape[0], 16, x.shape[1], x.shape[2])
-
-        # Simple conv head
-        class ConvHead(torch.nn.Module):
-            def forward(self, x):
-                # x: (B, 16, H, W) -> (B, 3, H, W)
-                return torch.randn(x.shape[0], 3, x.shape[2], x.shape[3])
-
-        detector = LTS(encoder=SpatialEncoder(), head=ConvHead(), p=0.05)
-
-        # Input: (B, H, W) spatial input
-        x = torch.randn(batch_size, height, width)
-        scores = detector(x)
-
-        # Output should be (B, H, W) scores per pixel
-        self.assertEqual(scores.shape, (batch_size, height, width))
-        self.assertTrue(torch.isfinite(scores).all())
-
-    def test_classification_backward_compatibility(self):
-        """LTS should still work with 2D pooled features (original use case)."""
-        detector = LTS(encoder=self.model.features, head=self.model.classifier, p=0.05)
-        x = torch.randn(8, 10)
-        scores = detector(x)
-        self.assertEqual(scores.shape, (8,))
-        self.assertTrue(torch.isfinite(scores).all())
 
 
 if __name__ == "__main__":
