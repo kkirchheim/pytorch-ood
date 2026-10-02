@@ -38,6 +38,8 @@ REQUIRES_TO = {
 
 # losses whose value depends on random draws, which differ between CPU and CUDA
 RANDOM = {loss.VirtualOutlierSynthesizingRegLoss}
+# losses that reject batches without ID samples
+NEEDS_ID = {loss.EnergyMarginLoss}
 
 
 def _move(arg, device, all_ood: bool):
@@ -76,7 +78,7 @@ def _tensor_state(module: nn.Module):
 def _cases(losses):
     for cls in losses:
         for task in sorted(cls.info.tasks):
-            for all_ood in (False, True):
+            for all_ood in (False,) if cls in NEEDS_ID else (False, True):
                 for reduction in REDUCTIONS if _has_reduction(cls, task) else (None,):
                     yield cls, task, all_ood, reduction
 

@@ -62,6 +62,14 @@ class TestEnergyMargin(unittest.TestCase):
         # introducing wider margin should minimize the loss further
         self.assertGreater(low_eta_loss, high_eta_loss)
 
+    def test_batch_without_id_or_ood_raises(self):
+        # otherwise the loss is NaN, or the constraints silently have no effect
+        criterion = EnergyMarginLoss(full_train_loss=1.0)
+        for target in (torch.zeros(8).long(), -torch.ones(8).long()):
+            with self.subTest(target=target[0].item()):
+                with self.assertRaises(ValueError):
+                    criterion(torch.randn(8, 10), target, logistic_regression)
+
 
 def _old_evaluate_energy_logistic_loss(model, train_loader_in, logistic_regression):
     # the implementation before the device fix, which only worked with the model on cuda:0
