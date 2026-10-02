@@ -946,18 +946,18 @@ _METHOD_TYPES = ("method", "classmethod", "staticmethod")
 
 def _group_class_members(app, doctree):
     """
-    Give class documentation a fixed structure, as in scikit-learn's API docs: the
-    description, its fields (parameters, paper, ...), "Examples", then the members
-    under "Attributes" and "Methods". autodoc lists all members in one sequence, and an
-    ``.. rubric:: Examples`` in a class docstring would otherwise end up before the
-    constructor's parameters. Members keep their order within a group. Runs before the
-    table of contents is collected, so "On this page" follows.
+    Give class and function documentation a fixed structure, as in scikit-learn's API docs:
+    the description, its fields (parameters, paper, ...), "Examples", then (for classes) the
+    members under "Attributes" and "Methods". autodoc lists all members in one sequence, and
+    an ``.. rubric:: Examples`` in a docstring would otherwise end up before the parameters.
+    Members keep their order within a group. Runs before the table of contents is collected,
+    so "On this page" follows.
     """
     from docutils import nodes
     from sphinx import addnodes
 
     for cls in list(doctree.findall(addnodes.desc)):
-        if cls.get("objtype") != "class":
+        if cls.get("objtype") not in ("class", "function"):
             continue
         content = next((c for c in cls.children if isinstance(c, addnodes.desc_content)), None)
         if content is None:
