@@ -7,7 +7,7 @@
     :exclude-members: fit
 """
 
-from typing import Callable
+from typing import Callable, Dict
 
 import torch
 from torch import Tensor
@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, Task
+from .gradnorm import _requires_grad
 
 try:
     from torch.func import (
@@ -63,9 +64,8 @@ class GradNormKL(GradientDetector):
     gradient norms, than OOD inputs.
 
     .. note:: The paper uses only the gradients of the weights of the final classification layer.
-        You can achieve this by setting ``param_filter``, e.g. ``lambda name: name == "fc.weight"``,
-        and disabling gradient computation for the backbone via
-        ``model.requires_grad_(False); model.fc.weight.requires_grad_(True)``.
+        You can achieve this by setting ``param_filter``, e.g. ``lambda name: name == "fc.weight"``.
+        Gradients are only computed for the selected parameters.
 
     .. note:: On PyTorch ≥ 2.0, per-sample gradients are computed with ``torch.func.vmap`` +
         ``torch.func.grad`` in a single batched forward+backward pass. On PyTorch 1.x the
@@ -94,7 +94,8 @@ class GradNormKL(GradientDetector):
         """
         :param model: A pre-trained classification model :math:`f`.
         :param param_filter: Function indicating whether a named parameter should be included in
-            the scoring, selecting the parameters :math:`w`. If ``None``, all parameters are used.
+            the scoring, selecting the parameters :math:`w`. Gradients are only computed for these.
+            If ``None``, all parameters are used.
         :param micro_batch_size: maximum number of samples whose per-sample gradients are computed at
             once. Smaller values reduce peak memory. Must be at least 1. Only used on PyTorch >= 2.0.
         :param temperature: temperature :math:`T` of the softmax
@@ -125,6 +126,7 @@ class GradNormKL(GradientDetector):
 
         :param x: input tensor of shape :math:`B \\times \\ldots`, will be passed through the network
         :return: outlier scores of shape :math:`B`
+        :raises ValueError: if ``param_filter`` selects no parameter
         """
         if self.model is None:
             raise ModelNotSetException()
@@ -135,17 +137,25 @@ class GradNormKL(GradientDetector):
             return self._predict_batched(x)
         return self._predict_sequential(x)
 
+    def _selected_params(self) -> Dict[str, Tensor]:
+        selected = {n: p for n, p in self.model.named_parameters() if self.param_filter(n)}
+        if not selected:
+            raise ValueError("param_filter selects none of the parameters of the model")
+        return selected
+
     def _predict_batched(self, x: Tensor) -> Tensor:
         """Vectorized per-sample gradients via torch.func (PyTorch ≥ 2.0), chunked to
         bound peak memory (see ``micro_batch_size``)."""
-        params = dict(self.model.named_parameters())
-        buffers = dict(self.model.named_buffers())
+        selected = self._selected_params()
+        # torch.func.grad differentiates w.r.t. everything it is given, regardless of
+        # requires_grad, so only the selected parameters are passed as its argument
+        constants = {n: p for n, p in self.model.named_parameters() if n not in selected}
+        constants.update(self.model.named_buffers())
         model = self.model
-        param_filter = self.param_filter
         temperature = self.temperature
 
         def loss_for_single(params, x_single):
-            logits = _functional_call(model, (params, buffers), (x_single.unsqueeze(0),))
+            logits = _functional_call(model, {**params, **constants}, (x_single.unsqueeze(0),))
             return _uniform_cross_entropy(logits, temperature)
 
         chunks = []
@@ -153,42 +163,27 @@ class GradNormKL(GradientDetector):
             for start in range(0, x.shape[0], self.micro_batch_size):
                 x_chunk = x[start : start + self.micro_batch_size]
                 per_sample_grads = _vmap(_func_grad(loss_for_single), in_dims=(None, 0))(
-                    params, x_chunk
+                    selected, x_chunk
+                )
+                chunks.append(
+                    sum(
+                        g.abs().sum(dim=tuple(range(1, g.ndim))) for g in per_sample_grads.values()
+                    )
                 )
 
-                chunk_norms = x_chunk.new_zeros(x_chunk.shape[0])
-                for name, g in per_sample_grads.items():
-                    if param_filter(name):
-                        chunk_norms = chunk_norms + g.abs().sum(dim=tuple(range(1, g.ndim)))
-                chunks.append(chunk_norms.detach().clone())
-
-                # per_sample_grads holds one gradient tensor per *unfiltered* model
-                # parameter too (vmap computes grad() w.r.t. every leaf in `params`,
-                # even ones param_filter then discards) -- drop the reference explicitly
-                # so the next chunk's allocation can reuse this memory instead of the
-                # CUDA caching allocator accumulating peak usage across chunks.
-                del per_sample_grads, chunk_norms, x_chunk
-                if x.is_cuda:
-                    torch.cuda.empty_cache()
-
-        return -torch.cat(chunks)
+        return -torch.cat(chunks).detach()
 
     def _predict_sequential(self, x: Tensor) -> Tensor:
         """Per-sample gradients via serial backward passes (PyTorch < 2.0 fallback)."""
-        device = x.device
+        selected = list(self._selected_params().values())
         scores = []
 
-        for xi in x:
-            with torch.enable_grad():
-                self.model.zero_grad()
-                loss = _uniform_cross_entropy(self.model(xi.unsqueeze(0)), self.temperature)
-                loss.backward()
+        with _requires_grad(selected):
+            for xi in x:
+                with torch.enable_grad():
+                    loss = _uniform_cross_entropy(self.model(xi.unsqueeze(0)), self.temperature)
+                    # only the selected parameters, without writing .grad into the model
+                    grads = torch.autograd.grad(loss, selected)
+                scores.append(-sum(g.abs().sum() for g in grads))
 
-                total_norm = torch.tensor(0.0, device=device)
-                for name, p in self.model.named_parameters():
-                    if self.param_filter(name) and p.grad is not None:
-                        total_norm = total_norm + p.grad.detach().abs().sum()
-
-                scores.append(-total_norm)
-
-        return torch.stack(scores)
+        return torch.stack(scores).detach()

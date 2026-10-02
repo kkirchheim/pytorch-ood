@@ -1,17 +1,17 @@
 """
 GradNormKL
-==============================
+==========
 
 Running :class:`GradNormKL <pytorch_ood.detector.GradNormKL>` on CIFAR 10.
 
-This method computes the :math:`\\ell_1`-norm of the gradient of the KL divergence between the
-softmax output and a uniform distribution, with respect to the weights of the final classification
-head. In-distribution inputs tend to produce more peaked predictions (larger divergence from
-uniform), yielding higher gradient norms. The score is negated so that higher values indicate OOD.
+The detector computes the :math:`\\ell_1`-norm of the gradient of the KL divergence between the
+uniform distribution and the softmax output, with respect to the weights of the final classification
+layer. This norm is the product of the :math:`\\ell_1`-norm of the penultimate features and the
+:math:`\\ell_1`-distance of the softmax output from the uniform distribution. In-distribution inputs
+tend to produce larger gradient norms, so the score is negated.
 
-Unlike :class:`GradNorm <pytorch_ood.detector.GradNorm>`, no labeled OOD data or additional
-classifier is required.
-
+The method was proposed for large-scale models (ImageNet). On CIFAR 10, the feature norms of the
+model used here are larger for the OOD data, so the detector performs poorly.
 """
 
 # sphinx_gallery_thumbnail_path = "_static/thumbs/detectors.png"
@@ -23,7 +23,7 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import GradNormKL
-from pytorch_ood.model import WideResNet, load_model, load_transform
+from pytorch_ood.model import load_model, load_transform
 from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
 
 logging.basicConfig(level=logging.INFO)
@@ -45,14 +45,11 @@ test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64, num_
 
 # %%
 # Stage 1: Load pre-trained WideResNet for CIFAR-10.
-# Disable gradients for the backbone; only the weights of the final FC layer need them.
 model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 
-model.requires_grad_(False)
-model.fc.weight.requires_grad_(True)
-
 # %%
-# Stage 2: Create detector — no fitting required.
+# Stage 2: Create the detector, which requires no fitting. Gradients are only computed for the
+# weights of the final layer.
 detector = GradNormKL(model, param_filter=lambda name: name == "fc.weight")
 
 # %%

@@ -43,10 +43,6 @@ test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=128, num
 # Stage 1: Create DNN pre-trained on CIFAR 10
 model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 
-model.requires_grad_(False)
-model.fc.requires_grad_(True)
-
-
 # %%
 
 # Stage 2: Create detector, fitting is not required

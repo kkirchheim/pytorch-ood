@@ -61,8 +61,6 @@ Example benchmark code for CIFAR10
 
 # sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
 
-from copy import deepcopy
-
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 from torch import nn
@@ -157,16 +155,8 @@ detectors["fDBD"] = fDBD(encoder=model.features, head=model.fc)
 detectors["ASH"] = ASH(backbone=model.feature_maps, head=model.forward_feature_maps)
 detectors["RankFeat"] = RankFeat(backbone=model.feature_maps, head=model.forward_feature_maps)
 
-# we make a copy of the model just so deactivating gradients does not influence other detectors
-model_gn = deepcopy(model)
-model_gn.requires_grad_(False)
-model_gn.fc.requires_grad_(True)
-detectors["GradNorm"] = GradNorm(model_gn, param_filter=lambda name: name.startswith("fc"))
-
-model_gnkl = deepcopy(model)
-model_gnkl.requires_grad_(False)
-model_gnkl.fc.weight.requires_grad_(True)
-detectors["GradNormKL"] = GradNormKL(model_gnkl, param_filter=lambda name: name == "fc.weight")
+detectors["GradNorm"] = GradNorm(model, param_filter=lambda name: name.startswith("fc"))
+detectors["GradNormKL"] = GradNormKL(model, param_filter=lambda name: name == "fc.weight")
 
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
