@@ -35,9 +35,11 @@ class MultiMahalanobis(StructuredDetector):
 
     For each of the given :math:`i` layers, the method calculates a class center :math:`\\mu_{iy}` for each class,
     and a shared covariance matrix :math:`\\Sigma_i` from the data.
-    The per-layer outlier scores are calculated as
+    The per-layer outlier score is half the squared Mahalanobis distance to the closest class center:
 
-    .. math :: M_i(x) = - \\max_k \\lbrace (f_i(x) - \\mu_{ik})^{\\top} \\Sigma_i^{-1} (f_i(x) - \\mu_{ik}) \\rbrace
+    .. math :: M_i(x) = \\frac{1}{2} \\min_k (f_i(x) - \\mu_{ik})^{\\top} \\Sigma_i^{-1} (f_i(x) - \\mu_{ik})
+
+    The paper uses the negated distance as a confidence score, so the sign is flipped.
 
     Here, :math:`f_i(x)` is the spatial mean of the output of the first :math:`i` layers.
     The final outlier score is the sum of all per-layer scores, :math:`\\sum_i \\alpha_i M_i(x)`,
@@ -179,6 +181,7 @@ class MultiMahalanobis(StructuredDetector):
         # calculate per class scores
         for clazz in range(self.n_classes):
             centered_z = features.data - self.mu[layer_idx][clazz]
+            # the factor -0.5 (Gaussian log-density term) is taken from the reference implementation
             term_gau = (
                 -0.5
                 * torch.mm(torch.mm(centered_z, self.precision[layer_idx]), centered_z.t()).diag()
