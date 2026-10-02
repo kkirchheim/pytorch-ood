@@ -40,9 +40,11 @@ class Mahalanobis(FeaturesDetector):
 
     This method calculates a class center :math:`\\mu_k` for each class :math:`k`,
     and a shared covariance matrix :math:`\\Sigma` from the data.
-    The outlier scores are then calculated as
+    The outlier score is half the squared Mahalanobis distance to the closest class center:
 
-    .. math :: - \\max_k \\lbrace (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k) \\rbrace
+    .. math :: \\frac{1}{2} \\min_k (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k)
+
+    The paper uses the negated distance as a confidence score, so the sign is flipped.
     """
 
     info = DetectorInfo(
@@ -63,8 +65,8 @@ class Mahalanobis(FeaturesDetector):
         encoder: Optional[Callable[[Tensor], Tensor]],
     ):
         """
-        :param encoder: feature encoder. Can be ``None`` when
-            using ``fit_features(...)`` and ``predict_features(...)`` directly.
+        :param encoder: feature encoder that maps inputs to features of shape :math:`B \\times D`. Can be
+            ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder
@@ -134,6 +136,7 @@ class Mahalanobis(FeaturesDetector):
         # calculate per class scores
         for clazz in range(self.n_classes):
             centered_z = features.data - self.mu[clazz]
+            # the factor -0.5 (Gaussian log-density term) is taken from the reference implementation
             term_gau = -0.5 * ((centered_z @ self.precision) * centered_z).sum(dim=1)
             md_k.append(term_gau.view(-1, 1))
 
@@ -145,8 +148,7 @@ class Mahalanobis(FeaturesDetector):
         Calculates mahalanobis distance directly on features.
         The input preprocessing of :class:`~pytorch_ood.detector.MahalanobisODIN` is not applied.
 
-        :param z: features, as given by the model, of shape :math:`B \\times D`. Feature maps of shape
-            :math:`B \\times C \\times H \\times W` are averaged over the spatial dimensions.
+        :param z: features, as given by the model, of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`
         :raises RequiresFittingException: if the detector was not fitted
         """
@@ -162,6 +164,8 @@ class Mahalanobis(FeaturesDetector):
         """
         :param x: input tensor, will be passed through ``encoder``
         :return: outlier scores of shape :math:`B`
+        :raises ModelNotSetException: if ``encoder`` is ``None``
+        :raises RequiresFittingException: if the detector was not fitted
         """
         if self.encoder is None:
             raise ModelNotSetException
@@ -192,8 +196,8 @@ class MahalanobisODIN(GradientDetector):
 
     .. math:: x' = x - \\varepsilon \\cdot \\text{sign}(\\nabla_x L(x))
 
-    where :math:`\\varepsilon` is ``eps`` and :math:`L` is the Mahalanobis distance of the features of :math:`x`
-    to the closest class center. The outlier score is the score of
+    where :math:`L` is half the squared Mahalanobis distance of the features of :math:`x` to the closest class
+    center. The outlier score is the score of
     :class:`Mahalanobis <pytorch_ood.detector.Mahalanobis>` for :math:`x'`.
     """
 
@@ -212,17 +216,19 @@ class MahalanobisODIN(GradientDetector):
 
     def __init__(
         self,
-        encoder: Optional[Callable[[Tensor], Tensor]],
+        encoder: Callable[[Tensor], Tensor],
         eps: float = 0.002,
         norm_std: Optional[List[float]] = None,
     ):
         """
-        :param encoder: feature encoder. Can be ``None`` when
-            using ``fit_features(...)`` and ``predict_features(...)`` directly.
+        :param encoder: feature encoder that maps inputs to features of shape :math:`B \\times D`; used to
+            perturb and score the inputs in :meth:`predict <pytorch_ood.detector.MahalanobisODIN.predict>`.
+            :meth:`fit_features <pytorch_ood.detector.MahalanobisODIN.fit_features>` fits on precomputed
+            features.
         :param eps: step size :math:`\\varepsilon` of the gradient based input preprocessing, in units of the
             input :math:`x`
-        :param norm_std: per-channel standard deviations of the input normalization; the sign of the gradient
-            of each channel is divided by the corresponding value
+        :param norm_std: per-channel standard deviations of the input normalization, for details see
+            :class:`ODIN <pytorch_ood.detector.ODIN>`
         """
         super(MahalanobisODIN, self).__init__()
         self._base = Mahalanobis(encoder)
@@ -256,6 +262,7 @@ class MahalanobisODIN(GradientDetector):
 
         :param x: input tensor
         :return: outlier scores of shape :math:`B`
+        :raises RequiresFittingException: if the detector was not fitted
         """
         x = self._odin_preprocess(x, x.device)
         return self._base.predict(x)
