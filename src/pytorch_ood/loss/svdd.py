@@ -22,12 +22,47 @@ class DeepSVDDLoss(torch.nn.Module):
 
     The distance of a point to the center can be used as outlier score.
 
-    This is an implementation of the *One-Class Deep SVDD objective*, which implies that **the radius is not
-    considered trainable and should usually be set to zero**.
+    With :math:`r = 0`, this is the *One-Class Deep SVDD* objective. With :math:`r > 0`, it is the
+    *soft-boundary Deep SVDD* objective with a fixed radius. In the paper, the soft-boundary objective also
+    optimizes the radius: after a few warm-up epochs, :math:`r` is periodically set to the
+    :math:`(1 - \\nu)`-quantile of the distances :math:`\\lVert f(x) - \\mu \\rVert_2` of the training data,
+    where :math:`\\nu \\in (0, 1]` bounds the fraction of training samples outside the hypersphere. To do the
+    same, update ``radius`` as in the example below.
 
-    In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before training.
+    In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before
+    training; pass it as ``center``.
 
-    .. note:: This module should be moved to the correct device before using ``forward()``
+    .. note:: The center :math:`\\mu` is stored in this loss, so move it to the device of the model with
+        ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import DeepSVDDLoss
+
+        # no bias terms, which would allow mapping every input to the center
+        encoder = torch.nn.Linear(10, 2, bias=False)
+        x = torch.randn(32, 10)
+        # initialize the center with the mean of the initial outputs
+        with torch.no_grad():
+            center = encoder(x).mean(dim=0)
+        criterion = DeepSVDDLoss(n_dim=2, center=center)
+        optimizer = torch.optim.SGD(encoder.parameters(), lr=0.01)
+
+        loss = criterion(encoder(x))  # without targets, all samples are ID
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        scores = criterion.distance(encoder(x)).detach()  # outlier scores
+
+        # soft-boundary objective: update the radius periodically, e.g. once per epoch after a warm-up
+        nu = 0.1  # bounds the fraction of training samples outside the hypersphere
+        with torch.no_grad():
+            distances = criterion.center(encoder(x)).squeeze(1).sqrt()
+        criterion.radius.fill_(distances.quantile(1 - nu))
     """
 
     info = LossInfo(
@@ -59,9 +94,8 @@ class DeepSVDDLoss(torch.nn.Module):
         """
         super(DeepSVDDLoss, self).__init__()
         self._center = ClassCenters(1, n_dim, fixed=True)
-        self.radius = torch.tensor(
-            radius, requires_grad=False
-        )  #: radius :math:`r` of the hypersphere
+        # radius r of the hypersphere, a buffer so that .to() moves it
+        self.register_buffer("radius", torch.tensor(radius))
 
         # initialize center values, if given
         if center is not None:
@@ -97,6 +131,8 @@ class DeepSVDDLoss(torch.nn.Module):
             y, x = drop_unknown(y, x)
         if len(x) == 0 and self.reduction == "mean":
             return x.sum() * 0.0
+        # the reference soft-boundary objective is R^2 + 1/nu * mean(max(0, d - R^2)); for a fixed R,
+        # R^2 is a constant and 1/nu only scales the loss, so both are omitted
         loss = DeepSVDDLoss.svdd_loss(x, self.center, radius=self.radius)
         return apply_reduction(loss, self.reduction)
 
@@ -152,8 +188,35 @@ class DeepSADLoss(torch.nn.Module):
         labeled samples with :math:`\\eta`. Here, all samples with targets :math:`\\geq 0` are treated
         as unlabeled normal data, so :math:`\\eta` weights only the labeled outliers.
 
-    In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before training.
-    This implementation has no ``center`` argument; to initialize it, set ``loss.center.params.data``.
+    In the original paper, the center is initialized with the mean of :math:`f(x)` over the dataset before
+    training; pass it as ``center``.
+
+    .. note:: The center :math:`\\mu` is stored in this loss, so move it to the device of the model with
+        ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import DeepSADLoss
+
+        # no bias terms, which would allow mapping every input to the center
+        encoder = torch.nn.Linear(10, 2, bias=False)
+        x, y = torch.randn(32, 10), torch.zeros(32, dtype=torch.long)
+        y[:4] = -1  # labeled outliers
+        # initialize the center with the mean of the initial outputs
+        with torch.no_grad():
+            center = encoder(x).mean(dim=0)
+        criterion = DeepSADLoss(n_dim=2, center=center)
+        optimizer = torch.optim.SGD(encoder.parameters(), lr=0.01)
+
+        loss = criterion(encoder(x), y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        scores = criterion.distance(encoder(x)).detach()  # outlier scores
     """
 
     info = LossInfo(
@@ -171,20 +234,26 @@ class DeepSADLoss(torch.nn.Module):
 
     def __init__(
         self,
-        n_features: int,
+        n_dim: int,
         eta: float = 1.0,
         eps: float = 1e-6,
         reduction: Optional[str] = "mean",
+        center: Optional[Tensor] = None,
     ):
         """
-        :param n_features: dimensionality :math:`D` of the output space
+        :param n_dim: dimensionality :math:`n` of the output space
         :param eta: weight :math:`\\eta` of the labeled outliers
         :param eps: added to the squared distance of labeled outliers before inverting it, so that
             outliers at the center give a finite loss
         :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
+        :param center: position of the center :math:`\\mu \\in \\mathbb{R}^n` where :math:`n` is the
+            dimensionality of the output space
         """
         super(DeepSADLoss, self).__init__()
-        self._center = ClassCenters(1, n_features, fixed=True)
+        self._center = ClassCenters(1, n_dim, fixed=True)
+        if center is not None:
+            assert center.shape == (n_dim,)
+            self._center.params.data = center.reshape(1, n_dim)
         self.eta = eta
         self.eps = eps
         self.reduction = reduction
@@ -196,6 +265,13 @@ class DeepSADLoss(torch.nn.Module):
         """
         return self._center
 
+    def distance(self, x: Tensor) -> Tensor:
+        """
+        :param x: features of shape :math:`B \\times D`
+        :return: :math:`\\lVert x - \\mu \\rVert^2`, shape :math:`B`
+        """
+        return self._center(x).squeeze(1)
+
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
         :param x: features of shape :math:`B \\times D`
@@ -203,8 +279,7 @@ class DeepSADLoss(torch.nn.Module):
         :return: the loss; of shape :math:`B` if the reduction is ``none``
         """
         known = is_known(y)
-        # squared distances to the center
-        d = self._center(x).squeeze(1)
+        d = self.distance(x)
         loss = torch.zeros_like(d)
         loss[known] = d[known]
         # eps as in the reference implementation

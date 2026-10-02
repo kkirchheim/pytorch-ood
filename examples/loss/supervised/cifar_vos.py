@@ -71,15 +71,12 @@ torch.nn.init.uniform_(weights_energy.weight)
 criterion = VirtualOutlierSynthesizingRegLoss(
     phi,
     weights_energy,
-    device=device,
-    num_classes=num_classes,
-    num_input_last_layer=128,
     fc=model.fc,
     sample_number=10000,
     select=1,
     sample_from=1000,
     alpha=0.1,
-)
+).to(device)
 
 # %%
 # Train model for some epochs

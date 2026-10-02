@@ -46,6 +46,31 @@ class IILoss(nn.Module):
            might be different if the centers are actually calculated as described in the paper.
            However, this enables better estimation of the performance during training, without having calculate
            the centers over the entire dataset. Empirically, we found that these centers work well.
+
+    .. note:: The running class centers are stored in this loss, so move it to the device of the model with
+        ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import IILoss
+
+        encoder = torch.nn.Linear(10, 2)  # maps inputs into a 2-dimensional embedding
+        criterion = IILoss(n_classes=3, n_embedding=2)
+        optimizer = torch.optim.SGD(encoder.parameters(), lr=0.01)
+
+        # in training mode, each batch updates the running class centers; it needs at least two classes
+        x, y = torch.randn(8, 10), torch.arange(8) % 3
+        loss = criterion(encoder(x), y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # in evaluation mode, the stored centers are used
+        criterion.eval()
+        scores = criterion.distance(encoder(x)).min(dim=1).values.detach()  # outlier scores
     """
 
     info = LossInfo(

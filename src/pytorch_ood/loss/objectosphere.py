@@ -34,6 +34,26 @@ class ObjectosphereLoss(nn.Module):
 
     where :math:`F(x)` are deep features in some layer of the model, and
     :math:`\\mathcal{L}_E` is the Entropic Open-Set Loss.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import ObjectosphereLoss
+
+        encoder = torch.nn.Linear(10, 16)  # deep features
+        classifier = torch.nn.Linear(16, 3)
+        criterion = ObjectosphereLoss()
+        optimizer = torch.optim.SGD([*encoder.parameters(), *classifier.parameters()], lr=0.01)
+
+        x, y = torch.randn(8, 10), torch.tensor([0, 1, 2, 0, 1, 2, -1, -1])  # -1: outliers
+        features = encoder(x)
+        # forward() takes the logits and the deep features
+        loss = criterion(classifier(features), features, y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
     """
 
     info = LossInfo(

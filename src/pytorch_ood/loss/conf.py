@@ -27,6 +27,40 @@ class ConfidenceLoss(nn.Module):
         * The authors additionally used ODIN preprocessing, and, during training, gave the label as a
           hint to a random half of the batch and adapted :math:`\\alpha` to a confidence budget. These
           are part of the training procedure and not implemented here.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import ConfidenceLoss
+
+
+        class Model(torch.nn.Module):
+            # predicts class logits and a confidence in [0, 1]
+            def __init__(self):
+                super().__init__()
+                self.features = torch.nn.Linear(10, 16)
+                self.classifier = torch.nn.Linear(16, 3)
+                self.confidence = torch.nn.Linear(16, 1)
+
+            def forward(self, x):
+                z = self.features(x).relu()
+                return self.classifier(z), self.confidence(z).sigmoid()
+
+
+        model = Model()
+        criterion = ConfidenceLoss()
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+        x, y = torch.randn(8, 10), torch.randint(0, 3, (8,))
+        logits, confidence = model(x)
+        loss = criterion(logits, confidence, y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        scores = 1 - confidence.detach().squeeze(1)  # outlier scores
     """
 
     info = LossInfo(

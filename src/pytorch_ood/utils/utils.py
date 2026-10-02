@@ -428,6 +428,7 @@ def evaluate_energy_logistic_loss(
     model: Callable[[Tensor], Tensor],
     train_loader_in: DataLoader,
     logistic_regression: Callable[[Tensor], Tensor],
+    device: Optional[Union[str, torch.device]] = None,
 ) -> Tuple[floating, floating, floating]:
     """
     Evaluate energy logistic loss on ID training dataset
@@ -435,46 +436,52 @@ def evaluate_energy_logistic_loss(
     :param model: neural network to pass inputs to
     :param train_loader_in: dataset to extract from
     :param logistic_regression: logistic regression layer
-    :return: ndarray with average loss
+    :param device: device of ``model``, to which the batches are moved; if not given, the batches stay
+        where the loader puts them
+    :return: average sigmoid energy loss, average logistic energy loss and average cross-entropy
     """
     model.eval()
     sigmoid_energy_losses = []
     logistic_energy_losses = []
     ce_losses = []
-    for in_set in train_loader_in:
-        data = in_set[0]
-        target = in_set[1]
+    with torch.no_grad():
+        for in_set in train_loader_in:
+            data = in_set[0]
+            target = in_set[1]
 
-        if torch.cuda.is_available():
-            data, target = data.cuda(), target.cuda()
+            if device is not None:
+                data, target = data.to(device), target.to(device)
 
-        # forward
-        y = model(data)
+            # forward
+            y = model(data)
 
-        # compute energies
-        Ec_in = torch.logsumexp(y, dim=1)
+            # compute energies
+            Ec_in = torch.logsumexp(y, dim=1)
 
-        # compute labels
-        binary_labels_1 = torch.ones(len(data)).cuda()
+            # compute labels
+            binary_labels_1 = torch.ones_like(Ec_in)
 
-        # compute in distribution logistic losses
-        logistic_loss_energy_in = F.binary_cross_entropy_with_logits(
-            logistic_regression(Ec_in.unsqueeze(1)).squeeze(),
-            binary_labels_1,
-            reduction="none",
-        )
+            # compute in distribution logistic losses
+            # squeeze(1), so that a batch of size one keeps its batch dimension
+            logistic_loss_energy_in = F.binary_cross_entropy_with_logits(
+                logistic_regression(Ec_in.unsqueeze(1)).squeeze(1),
+                binary_labels_1,
+                reduction="none",
+            )
 
-        logistic_energy_losses.extend(list(to_np(logistic_loss_energy_in)))
+            logistic_energy_losses.extend(list(to_np(logistic_loss_energy_in)))
 
-        # compute in distribution sigmoid losses
-        sigmoid_loss_energy_in = torch.sigmoid(logistic_regression(Ec_in.unsqueeze(1)).squeeze())
+            # compute in distribution sigmoid losses
+            sigmoid_loss_energy_in = torch.sigmoid(
+                logistic_regression(Ec_in.unsqueeze(1)).squeeze(1)
+            )
 
-        sigmoid_energy_losses.extend(list(to_np(sigmoid_loss_energy_in)))
+            sigmoid_energy_losses.extend(list(to_np(sigmoid_loss_energy_in)))
 
-        # in-distribution classification losses
-        loss_ce = F.cross_entropy(y, target, reduction="none")
+            # in-distribution classification losses
+            loss_ce = F.cross_entropy(y, target, reduction="none")
 
-        ce_losses.extend(list(to_np(loss_ce)))
+            ce_losses.extend(list(to_np(loss_ce)))
 
     avg_sigmoid_energy_losses = np.mean(np.array(sigmoid_energy_losses))
 

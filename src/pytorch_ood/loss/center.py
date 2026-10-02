@@ -28,6 +28,29 @@ class CenterLoss(nn.Module):
 
     With radius :math:`r=0` and the squared euclidean distance as :math:`d(\\cdot,\\cdot)`, this is equivalent to
     the original center loss, which is also referred to as the *soft-margin loss* in some publications.
+
+    .. note:: The class centers are stored in this loss, so move it to the device of the model with
+        ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import CenterLoss
+
+        encoder = torch.nn.Linear(10, 2)  # maps inputs into the 2-dimensional space of the centers
+        criterion = CenterLoss(n_classes=3, n_dim=2)
+        # the centers are learnable, so the optimizer also updates the loss
+        optimizer = torch.optim.SGD([*encoder.parameters(), *criterion.parameters()], lr=0.01)
+
+        x, y = torch.randn(8, 10), torch.randint(0, 3, (8,))
+        # forward() takes the distances to the centers of this loss
+        distances = criterion.distance(encoder(x))
+        loss = criterion(distances, y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
     """
 
     info = LossInfo(
@@ -74,6 +97,16 @@ class CenterLoss(nn.Module):
         :return: the :math:`\\mu` for all classes
         """
         return self._centers
+
+    def distance(self, z: torch.Tensor) -> torch.Tensor:
+        """
+        Calculates the squared distances of the embeddings to each center, the input of
+        :meth:`forward <pytorch_ood.loss.CenterLoss.forward>`.
+
+        :param z: embeddings of shape :math:`B \\times D`
+        :return: squared distances of shape :math:`B \\times C`
+        """
+        return self.centers(z)
 
     def _init_centers(self):
         # In the published code, Wen et al. initialize centers randomly.

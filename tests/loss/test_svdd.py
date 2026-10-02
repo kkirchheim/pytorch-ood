@@ -43,7 +43,7 @@ class TestDeepSVDD(unittest.TestCase):
 
 class TestDeepSAD(unittest.TestCase):
     def test_forward(self):
-        criterion = DeepSADLoss(n_features=10)
+        criterion = DeepSADLoss(n_dim=10)
         logits = torch.randn(size=(10, 10))
         target = torch.zeros(size=(10,)).long()
         target[5:] = -1
@@ -51,7 +51,7 @@ class TestDeepSAD(unittest.TestCase):
         self.assertIsNotNone(loss)
 
     def test_forward_2(self):
-        criterion = DeepSADLoss(n_features=10, reduction=None)
+        criterion = DeepSADLoss(n_dim=10, reduction=None)
         logits = torch.randn(size=(10, 10))
         target = -1 * torch.ones(size=(10,)).long()
         loss = criterion(logits, target)
@@ -67,7 +67,7 @@ class TestDeepSAD(unittest.TestCase):
 
 class TestDeepSADValues(unittest.TestCase):
     def _loss(self, **kwargs):
-        criterion = DeepSADLoss(n_features=2, reduction="none", **kwargs)
+        criterion = DeepSADLoss(n_dim=2, reduction="none", **kwargs)
         criterion.center.params.data.zero_()
         return criterion
 
@@ -91,3 +91,15 @@ class TestSVDDLossDefaultRadius(unittest.TestCase):
         criterion = DeepSVDDLoss(n_dim=2)
         loss = DeepSVDDLoss.svdd_loss(torch.randn(3, 2), criterion.center)
         self.assertEqual(loss.shape, (3,))
+
+
+class TestDeepSADCenterAndDistance(unittest.TestCase):
+    def test_center_argument(self):
+        center = torch.tensor([1.0, 2.0])
+        criterion = DeepSADLoss(n_dim=2, center=center)
+        torch.testing.assert_close(criterion.center.params, center.reshape(1, 2))
+
+    def test_distance_is_squared_distance_to_center(self):
+        criterion = DeepSADLoss(n_dim=2, center=torch.tensor([1.0, 0.0]))
+        x = torch.tensor([[1.0, 0.0], [3.0, 0.0], [1.0, -1.0]])
+        torch.testing.assert_close(criterion.distance(x), torch.tensor([0.0, 4.0, 1.0]))

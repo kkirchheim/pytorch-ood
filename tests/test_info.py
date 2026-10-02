@@ -121,7 +121,7 @@ LOSS_INPUTS = {
         (_outputs(s, C), _targets(s)),
     ),
     loss.DeepSADLoss: lambda s: (
-        loss.DeepSADLoss(n_features=D),
+        loss.DeepSADLoss(n_dim=D),
         (_outputs(s, D), _targets(s)),
     ),
     loss.VOSRegLoss: lambda s: (
@@ -132,9 +132,6 @@ LOSS_INPUTS = {
         loss.VirtualOutlierSynthesizingRegLoss(
             nn.Linear(1, 2),
             nn.Linear(C, 1),
-            device="cpu",
-            num_classes=C,
-            num_input_last_layer=D,
             fc=nn.Linear(D, C),
             sample_number=4,
             sample_from=20,

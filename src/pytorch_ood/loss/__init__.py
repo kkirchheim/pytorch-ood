@@ -1,6 +1,7 @@
 """
 All objective functions are implemented as :class:`torch.nn.Module` subclasses.
-Some of them have a set of trainable parameters and must be moved to the appropriate device.
+Losses compute on the device of their inputs. Losses that store tensors, such as class centers,
+say so in a note and must be moved to the device of the model with ``.to(device)``.
 """
 
 import warnings

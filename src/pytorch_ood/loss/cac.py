@@ -30,9 +30,31 @@ class CACLoss(nn.Module):
 
     They also propose an outlier score based on the distance which is implemented in the :meth:`CACLoss.score` method.
 
+    .. note:: The class centers are stored in this loss, so move it to the device of the model with
+        ``.to(device)`` before computing distances with :meth:`distance <pytorch_ood.loss.CACLoss.distance>`.
+
     .. rubric:: Examples
 
-    See the :doc:`gallery example </auto_examples/loss/unsupervised/cac>`.
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import CACLoss
+
+        encoder = torch.nn.Linear(10, 3)  # the space of the centers has one dimension per class
+        criterion = CACLoss(n_classes=3)
+        optimizer = torch.optim.SGD(encoder.parameters(), lr=0.01)
+
+        x, y = torch.randn(8, 10), torch.randint(0, 3, (8,))
+        # forward() takes the distances to the centers of this loss
+        distances = criterion.distance(encoder(x))
+        loss = criterion(distances, y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        scores = CACLoss.score(distances.detach())  # outlier scores
+
+    See also the :doc:`gallery example </auto_examples/loss/unsupervised/cac>`.
     """
 
     info = LossInfo(

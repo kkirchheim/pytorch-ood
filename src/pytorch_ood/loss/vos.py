@@ -34,17 +34,33 @@ class VOSRegLoss(nn.Module):
     :math:`w_i = \\mathrm{ReLU}(\\text{weights\\_energy.weight}_i)`, and the total loss is
     :math:`\\mathcal{L}_{CE} + \\alpha \\mathcal{L}_{reg}`.
 
-    For initialisation of :math:`\\phi` and the weights for weighted energy:
-
-    .. code :: python
-
-        phi = torch.nn.Linear(1, 2)
-        weights = torch.nn.Linear(num_classes, 1)
-        torch.nn.init.uniform_(weights.weight)
-        criterion = VOSRegLoss(phi, weights)
-
     .. note ::
         This implementation does not generate synthetic outliers. For this feature, see  :class:`pytorch_ood.loss.vos.VirtualOutlierSynthesizingRegLoss`.
+
+    .. note:: ``logistic_regression`` and ``weights_energy`` are stored in this loss, so move it to the device
+        of the model with ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import VOSRegLoss
+
+        model = torch.nn.Linear(10, 3)
+        phi = torch.nn.Linear(1, 2)  # logistic regression on the weighted energy
+        weights_energy = torch.nn.Linear(3, 1)  # weights of the classes in the energy
+        # non-negative initial weights, since the energy zeroes negative ones with a ReLU
+        torch.nn.init.uniform_(weights_energy.weight)
+        criterion = VOSRegLoss(phi, weights_energy)
+        # phi and weights_energy are trained along with the model
+        optimizer = torch.optim.SGD([*model.parameters(), *criterion.parameters()], lr=0.01)
+
+        x, y = torch.randn(8, 10), torch.tensor([0, 1, 2, 0, 1, 2, -1, -1])  # -1: outliers
+        loss = criterion(model(x), y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
     """
 
     info = LossInfo(
@@ -65,7 +81,6 @@ class VOSRegLoss(nn.Module):
         logistic_regression: torch.nn.Linear,
         weights_energy: torch.nn.Linear,
         alpha: float = 0.1,
-        device: str = "cpu",
         reduction: str = "mean",
     ):
         """
@@ -75,13 +90,11 @@ class VOSRegLoss(nn.Module):
             exponentiated logits in the weighted energy
         :param alpha: weighting parameter :math:`\\alpha`.
         :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
-        :param device: For example ``cpu`` or ``cuda:0``
         """
         super(VOSRegLoss, self).__init__()
         self.logistic_regression = logistic_regression
         self.weights_energy: torch.nn.Linear = weights_energy
         self.alpha = alpha
-        self.device = device
         self.reduction = reduction
         self.nll = cross_entropy
 
@@ -127,8 +140,8 @@ class VOSRegLoss(nn.Module):
         input_for_lr = torch.cat((energy_score_for_fg, energy_score_for_bg), -1)
         labels_for_lr = torch.cat(
             (
-                torch.ones(len(energy_score_for_fg)).to(self.device),
-                torch.zeros(len(energy_score_for_bg)).to(self.device),
+                torch.ones_like(energy_score_for_fg),
+                torch.zeros_like(energy_score_for_bg),
             ),
             -1,
         )
@@ -169,6 +182,40 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
     with targets :math:`< 0` are ignored.
 
     For more information see :class:`VOS Energy-Based Loss<pytorch_ood.loss.vos.VOSRegLoss>`.
+
+    .. note:: ``logistic_regression``, ``weights_energy``, ``fc`` and the queues of ID features are stored in
+        this loss, so move it to the device of the model with ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss
+
+        encoder = torch.nn.Sequential(torch.nn.Linear(10, 16), torch.nn.ReLU())
+        fc = torch.nn.Linear(16, 3)  # last layer of the model
+        weights_energy = torch.nn.Linear(3, 1)  # weights of the classes in the energy
+        # non-negative initial weights, since the energy zeroes negative ones with a ReLU
+        torch.nn.init.uniform_(weights_energy.weight)
+        criterion = VirtualOutlierSynthesizingRegLoss(
+            logistic_regression=torch.nn.Linear(1, 2),
+            weights_energy=weights_energy,
+            fc=fc,
+            sample_number=4,  # features stored per class before outliers are synthesized
+            sample_from=100,
+        )
+        # the loss holds fc, the logistic regression and the energy weights
+        optimizer = torch.optim.SGD([*encoder.parameters(), *criterion.parameters()], lr=0.01)
+
+        for step in range(4):
+            x, y = torch.randn(8, 10), torch.arange(8) % 3
+            features = encoder(x)
+            # forward() takes the logits and the penultimate features
+            loss = criterion(fc(features), features, y)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
     """
 
     info = LossInfo(
@@ -188,9 +235,6 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         self,
         logistic_regression: torch.nn.Linear,
         weights_energy: torch.nn.Linear,
-        device: str,
-        num_classes: int,
-        num_input_last_layer: int,
         fc: torch.nn.Linear,
         alpha: float = 0.1,
         reduction: str = "mean",
@@ -201,10 +245,8 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         """
         :param logistic_regression: :math:`\\phi` function. Can be for example a linear layer.
         :param weights_energy: neural network layer, with weights for the energy
-        :param device: For example ``cpu`` or ``cuda:0``
-        :param num_classes: number of classes
-        :param num_input_last_layer: number of inputs in the last layer of the network
-        :param fc: fully connected last layer of the network
+        :param fc: last layer of the network, a linear layer that maps the penultimate features to the
+            logits; the number of classes and the feature dimension are taken from it
         :param alpha: weight :math:`\\alpha` of the regularization
         :param reduction: reduction method to apply, one of ``mean``, ``sum`` or ``none``
         :param sample_number: number of ID feature vectors stored per class (queue length); virtual outliers are
@@ -216,24 +258,27 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         super(VirtualOutlierSynthesizingRegLoss, self).__init__(
             logistic_regression,
             weights_energy,
-            device=device,
             alpha=alpha,
             reduction=reduction,
         )
-        self.num_classes = num_classes
-        self.num_input_last_layer = num_input_last_layer
+        self.num_classes = fc.out_features
+        self.num_input_last_layer = fc.in_features
         self.fc = fc
         self.sample_number = sample_number
         self.select = select
         self.sample_from = sample_from
 
         self.number_dict = {}
-        for i in range(num_classes):
+        for i in range(self.num_classes):
             self.number_dict[i] = 0
-        self.data_dict = torch.zeros(
-            num_classes, self.sample_number, self.num_input_last_layer
-        ).to(self.device)
-        self.eye_matrix = torch.eye(self.num_input_last_layer, device=self.device)
+        # buffers, so that .to() moves them; not in the state_dict, since the fill levels in
+        # number_dict are not either
+        self.register_buffer(
+            "data_dict",
+            torch.zeros(self.num_classes, self.sample_number, self.num_input_last_layer),
+            persistent=False,
+        )
+        self.register_buffer("eye_matrix", torch.eye(self.num_input_last_layer), persistent=False)
 
     def forward(self, logits: torch.Tensor, features: torch.Tensor, y: torch.Tensor):
         """
@@ -350,7 +395,7 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         samples with targets :math:`< 0` are ignored.
         """
         if virtual is None or len(virtual) == 0 or not known.any():
-            return torch.zeros(1).to(self.device)[0]
+            return torch.zeros((), device=prediction.device)
         energy_out = self._energy(self.fc(virtual), 1)
         return self._calculate_reg_loss(self._energy(prediction[known], 1), energy_out)
 

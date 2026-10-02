@@ -32,6 +32,31 @@ class MCHADLoss(nn.Module):
     The third term makes sure that OOD samples have at least a distance :math:`m` to the surface of each hypersphere.
 
     The loss can be used in a supervised, as well as in an unsupervised manner.
+
+    .. note:: The class centers and the margin are stored in this loss, so move it to the device of the model
+        with ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import MCHADLoss
+
+        encoder = torch.nn.Linear(10, 2)  # maps inputs into the 2-dimensional space of the centers
+        criterion = MCHADLoss(n_classes=3, n_dim=2)
+        # the centers are learnable, so the optimizer also updates the loss
+        optimizer = torch.optim.SGD([*encoder.parameters(), *criterion.parameters()], lr=0.01)
+
+        x, y = torch.randn(8, 10), torch.tensor([0, 1, 2, 0, 1, 2, -1, -1])  # -1: outliers
+        # forward() takes the distances to the centers of this loss
+        distances = criterion.distance(encoder(x))
+        loss = criterion(distances, y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        scores = distances.min(dim=1).values  # outlier scores: distance to the closest center
     """
 
     info = LossInfo(
