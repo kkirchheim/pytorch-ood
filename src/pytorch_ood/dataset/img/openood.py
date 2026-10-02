@@ -217,11 +217,11 @@ class Places365(OpenOOD):
 
         self.files = []
 
-        for d in os.listdir(self.basedir):
+        for d in sorted(os.listdir(self.basedir)):
             p = join(self.basedir, d)
             if not os.path.isdir(join(p)):
                 continue
-            self.files += [join(p, f) for f in os.listdir(p)]
+            self.files += [join(p, f) for f in sorted(os.listdir(p))]
 
 
 class ImageNetV2(OpenOOD):
@@ -272,14 +272,14 @@ class ImageNetV2(OpenOOD):
         # iterate over folders in the base folder
         self.files = []
         self.labels = []
-        for class_folder in os.listdir(self.basedir):
+        for class_folder in sorted(os.listdir(self.basedir)):
             # folder name is the class id
             class_folder_path = join(self.basedir, class_folder)
             # skip if not a folder
             if not os.path.isdir(class_folder_path):
                 continue
             # add all images in the folder to files
-            for img in os.listdir(class_folder_path):
+            for img in sorted(os.listdir(class_folder_path)):
                 self.files.append(join(class_folder_path, img))
                 self.labels.append(int(class_folder))
 
@@ -355,14 +355,16 @@ class ImageNetES(OpenOOD):
         images = []
         labels = []
         basedir = join(self.root, self.base_folder)
-        for folder1 in os.listdir(basedir):
+        for folder1 in sorted(os.listdir(basedir)):
             # skip folder "sampled_tin_no_resize2"
             if folder1 == "sampled_tin_no_resize2":
                 continue
-            for folder2 in os.listdir(join(basedir, folder1)):
-                for folder3 in os.listdir(join(basedir, folder1, folder2)):
-                    for class_tag in os.listdir(join(basedir, folder1, folder2, folder3)):
-                        for img in os.listdir(join(basedir, folder1, folder2, folder3, class_tag)):
+            for folder2 in sorted(os.listdir(join(basedir, folder1))):
+                for folder3 in sorted(os.listdir(join(basedir, folder1, folder2))):
+                    for class_tag in sorted(os.listdir(join(basedir, folder1, folder2, folder3))):
+                        for img in sorted(
+                            os.listdir(join(basedir, folder1, folder2, folder3, class_tag))
+                        ):
                             images.append(join(basedir, folder1, folder2, folder3, class_tag, img))
                             labels.append(data[class_tag])
 
@@ -425,12 +427,12 @@ class SSBHard(OpenOOD):
         self.basedir = join(root, self.base_folder)
 
         self.files = []
-        for class_folder in os.listdir(self.basedir):
+        for class_folder in sorted(os.listdir(self.basedir)):
             # folder name is the class id
             class_folder_path = join(self.basedir, class_folder)
             # skip if not a folder
             if not os.path.isdir(class_folder_path):
                 continue
             # add all images in the folder to files
-            for img in os.listdir(class_folder_path):
+            for img in sorted(os.listdir(class_folder_path)):
                 self.files.append(join(class_folder_path, img))

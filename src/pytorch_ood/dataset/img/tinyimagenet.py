@@ -68,8 +68,7 @@ class TinyImageNet(VisionDataset):
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
-        classes = os.listdir(join(self.root, self.dir_name, "train"))
-        classes.sort()
+        classes = sorted(os.listdir(join(self.root, self.dir_name, "train")))
         self.class_map = {c: n for n, c in enumerate(classes)}  # : map class_names to integers
         self.basename = join(self.root, self.dir_name, self.subset)
         self.paths = []
@@ -78,7 +77,7 @@ class TinyImageNet(VisionDataset):
         if subset == "train":
             for d in classes:
                 p = join(self.basename, d, "images")
-                files = [join(p, img) for img in os.listdir(p)]
+                files = [join(p, img) for img in sorted(os.listdir(p))]
 
                 self.paths += files
                 self.labels += [self.class_map[d]] * len(files)
@@ -93,7 +92,7 @@ class TinyImageNet(VisionDataset):
 
         elif subset == "test":
             d = join(self.basename, "images")
-            self.paths = [join(d, img) for img in os.listdir(d)]
+            self.paths = [join(d, img) for img in sorted(os.listdir(d))]
             self.labels = [-1] * len(self.paths)
 
     def download(self):

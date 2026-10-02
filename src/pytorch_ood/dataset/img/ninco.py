@@ -68,7 +68,9 @@ class NINCO(ImageDatasetBase):
         files = []
         for d in self.base_folders:
             path = join(self.root, "NINCO", d)
-            for subdir in os.listdir(path):
-                files += [join(path, subdir, img) for img in os.listdir(join(path, subdir))]
+            for subdir in sorted(os.listdir(path)):
+                files += [
+                    join(path, subdir, img) for img in sorted(os.listdir(join(path, subdir)))
+                ]
 
         return files

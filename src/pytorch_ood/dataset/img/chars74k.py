@@ -16,14 +16,14 @@ log = logging.getLogger(__name__)
 
 
 def _get_file_list(dir_name):
-    file_list = os.listdir(dir_name)
+    file_list = sorted(os.listdir(dir_name))
     all_files = list()
     all_labels = list()
 
     for entry in file_list:
         full_path = os.path.join(dir_name, entry)
         label = int(str(Path(full_path).name).split("Sample")[1]) - 1
-        dir_files = os.listdir(full_path)
+        dir_files = sorted(os.listdir(full_path))
         for files in dir_files:
             all_files.append(os.path.join(full_path, files))
             all_labels.append(label)

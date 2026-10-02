@@ -56,7 +56,7 @@ class ImageDatasetBase(VisionDataset):
 
     def _load_files(self):
         self.basedir = os.path.join(self.root, self.base_folder)
-        return [join(self.basedir, img) for img in os.listdir(self.basedir)]
+        return [join(self.basedir, img) for img in sorted(os.listdir(self.basedir))]
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """

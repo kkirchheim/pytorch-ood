@@ -121,7 +121,7 @@ class StreetHazards(ImageDatasetBase):
 
         :param root: root directory for the search
         """
-        current_files = [os.path.join(root, entry) for entry in os.listdir(root)]
+        current_files = [os.path.join(root, entry) for entry in sorted(os.listdir(root))]
         all_files = []
 
         for path in current_files:

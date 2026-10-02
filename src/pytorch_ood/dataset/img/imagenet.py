@@ -231,4 +231,4 @@ class ImageNetC(ImageDatasetBase):
             )
 
         self.basedir = os.path.join(self.root, self.base_folder)
-        self.files = os.listdir(self.basedir)
+        self.files = sorted(os.listdir(self.basedir))
