@@ -7,7 +7,8 @@
     :exclude-members: fit
 """
 
-from typing import Callable
+from contextlib import contextmanager
+from typing import Callable, Dict, List
 
 import torch
 import torch.nn.functional as F
@@ -33,6 +34,19 @@ except ImportError:
     _TORCH_FUNC_AVAILABLE = False
 
 
+@contextmanager
+def _requires_grad(params: List[Tensor]):
+    """Temporarily enables gradients for ``params``, so that frozen parameters can be scored."""
+    flags = [p.requires_grad for p in params]
+    try:
+        for p in params:
+            p.requires_grad_(True)
+        yield
+    finally:
+        for p, flag in zip(params, flags):
+            p.requires_grad_(flag)
+
+
 class GradNorm(GradientDetector):
     """
     Detector from the paper *Gradients as a Measure of Uncertainty in Neural Networks*.
@@ -47,10 +61,8 @@ class GradNorm(GradientDetector):
     more uncertain, and hence more likely to be OOD.
 
     .. note:: Using only the gradients of the final classification head makes this computationally cheaper.
-     You can achieve this by setting ``param_filter``. Still, this
-     method will compute gradients for all parameters unless you explicitly deactivate
-     gradient calculation for parameters. For an example, see the
-     :doc:`GradNorm example </auto_examples/detectors/gradnorm>`.
+     You can achieve this by setting ``param_filter``; gradients are only computed for the selected
+     parameters. For an example, see the :doc:`GradNorm example </auto_examples/detectors/gradnorm>`.
 
     The model is not switched to evaluation mode, so layers such as batch normalization and dropout behave
     according to ``model.training``; you should usually call ``model.eval()`` first. Gradients are computed per
@@ -88,7 +100,7 @@ class GradNorm(GradientDetector):
         """
         :param model: A pre-trained classification model
         :param param_filter: Function which indicates whether a named parameter should be included in the scoring.
-            If ``None``, all parameters are used.
+            Gradients are only computed for these. If ``None``, all parameters are used.
         :raises ModelNotSetException: if ``model`` is ``None``
         """
         if model is None:
@@ -110,6 +122,7 @@ class GradNorm(GradientDetector):
 
         :param x: input of shape :math:`B \\times \\ldots`, will be passed through the network
         :return: outlier scores of shape :math:`B`
+        :raises ValueError: if ``param_filter`` selects no parameter
         """
         if self.model is None:
             raise ModelNotSetException()
@@ -120,46 +133,46 @@ class GradNorm(GradientDetector):
             return self._predict_batched(x)
         return self._predict_sequential(x)
 
+    def _selected_params(self) -> Dict[str, Tensor]:
+        selected = {n: p for n, p in self.model.named_parameters() if self.param_filter(n)}
+        if not selected:
+            raise ValueError("param_filter selects none of the parameters of the model")
+        return selected
+
     def _predict_batched(self, x: Tensor) -> Tensor:
         """Vectorized per-sample gradients via torch.func (PyTorch ≥ 2.0)."""
-        params = dict(self.model.named_parameters())
-        buffers = dict(self.model.named_buffers())
+        selected = self._selected_params()
+        # torch.func.grad differentiates w.r.t. everything it is given, regardless of
+        # requires_grad, so only the selected parameters are passed as its argument
+        constants = {n: p for n, p in self.model.named_parameters() if n not in selected}
+        constants.update(self.model.named_buffers())
         model = self.model
-        param_filter = self.param_filter
 
         def loss_for_single(params, x_single):
-            logits = _functional_call(model, (params, buffers), (x_single.unsqueeze(0),))
+            logits = _functional_call(model, {**params, **constants}, (x_single.unsqueeze(0),))
             y_conf = torch.ones_like(logits)
             return F.binary_cross_entropy(logits.softmax(dim=1), y_conf, reduction="sum")
 
         with torch.enable_grad():
-            per_sample_grads = _vmap(_func_grad(loss_for_single), in_dims=(None, 0))(params, x)
+            per_sample_grads = _vmap(_func_grad(loss_for_single), in_dims=(None, 0))(selected, x)
 
-        total_norms = x.new_zeros(x.shape[0])
-        for name, g in per_sample_grads.items():
-            if param_filter(name):
-                total_norms = total_norms + (g**2).sum(dim=tuple(range(1, g.ndim)))
-
-        return total_norms
+        return sum(
+            (g**2).sum(dim=tuple(range(1, g.ndim))) for g in per_sample_grads.values()
+        ).detach()
 
     def _predict_sequential(self, x: Tensor) -> Tensor:
         """Per-sample gradients via serial backward passes (PyTorch < 2.0 fallback)."""
-        device = x.device
+        selected = list(self._selected_params().values())
         scores = []
 
-        for xi in x:
-            with torch.enable_grad():
-                self.model.zero_grad()
-                logits = self.model(xi.unsqueeze(0))
-                y_conf = torch.ones_like(logits, device=device)
-                loss = F.binary_cross_entropy(logits.softmax(dim=1), y_conf, reduction="sum")
-                loss.backward()
+        with _requires_grad(selected):
+            for xi in x:
+                with torch.enable_grad():
+                    logits = self.model(xi.unsqueeze(0))
+                    y_conf = torch.ones_like(logits)
+                    loss = F.binary_cross_entropy(logits.softmax(dim=1), y_conf, reduction="sum")
+                    # only the selected parameters, without writing .grad into the model
+                    grads = torch.autograd.grad(loss, selected)
+                scores.append(sum((g**2).sum() for g in grads))
 
-                total_norm = torch.tensor(0.0, device=device)
-                for name, p in self.model.named_parameters():
-                    if self.param_filter(name) and p.grad is not None:
-                        total_norm = total_norm + torch.sum(p.grad.detach() ** 2)
-
-                scores.append(total_norm)
-
-        return torch.stack(scores)
+        return torch.stack(scores).detach()

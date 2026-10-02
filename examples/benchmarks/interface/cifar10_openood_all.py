@@ -14,7 +14,6 @@ WeightedEBO.
 # sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
 
 from collections import OrderedDict
-from copy import deepcopy
 
 import pandas as pd  # additional dependency, used here for convenience
 import torch
@@ -126,17 +125,8 @@ def build_detectors(model, norm_std):
         ],
     )
 
-    model_gn = deepcopy(model)
-    model_gn.requires_grad_(False)
-    model_gn.fc.requires_grad_(True)
-    detectors["GradNorm"] = GradNorm(model_gn, param_filter=lambda name: name.startswith("fc"))
-
-    model_gnkl = deepcopy(model)
-    model_gnkl.requires_grad_(False)
-    model_gnkl.fc.requires_grad_(True)
-    detectors["GradNormKL"] = GradNormKL(
-        model_gnkl, param_filter=lambda name: name.startswith("fc")
-    )
+    detectors["GradNorm"] = GradNorm(model, param_filter=lambda name: name.startswith("fc"))
+    detectors["GradNormKL"] = GradNormKL(model, param_filter=lambda name: name == "fc.weight")
 
     detectors["NAC-UE"] = NACUE(
         model=model,
