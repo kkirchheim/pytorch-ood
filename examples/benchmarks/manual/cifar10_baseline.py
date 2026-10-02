@@ -165,8 +165,8 @@ detectors["GradNorm"] = GradNorm(model_gn, param_filter=lambda name: name.starts
 
 model_gnkl = deepcopy(model)
 model_gnkl.requires_grad_(False)
-model_gnkl.fc.requires_grad_(True)
-detectors["GradNormKL"] = GradNormKL(model_gnkl, param_filter=lambda name: name.startswith("fc"))
+model_gnkl.fc.weight.requires_grad_(True)
+detectors["GradNormKL"] = GradNormKL(model_gnkl, param_filter=lambda name: name == "fc.weight")
 
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)

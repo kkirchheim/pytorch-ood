@@ -133,10 +133,8 @@ def build_detectors(model, norm_std):
 
     model_gnkl = deepcopy(model)
     model_gnkl.requires_grad_(False)
-    model_gnkl.fc.requires_grad_(True)
-    detectors["GradNormKL"] = GradNormKL(
-        model_gnkl, param_filter=lambda name: name.startswith("fc")
-    )
+    model_gnkl.fc.weight.requires_grad_(True)
+    detectors["GradNormKL"] = GradNormKL(model_gnkl, param_filter=lambda name: name == "fc.weight")
 
     detectors["NAC-UE"] = NACUE(
         model=model,

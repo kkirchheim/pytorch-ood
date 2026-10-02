@@ -45,15 +45,15 @@ test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64, num_
 
 # %%
 # Stage 1: Load pre-trained WideResNet for CIFAR-10.
-# Disable gradients for the backbone; only the final FC layer needs them.
+# Disable gradients for the backbone; only the weights of the final FC layer need them.
 model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 
 model.requires_grad_(False)
-model.fc.requires_grad_(True)
+model.fc.weight.requires_grad_(True)
 
 # %%
 # Stage 2: Create detector — no fitting required.
-detector = GradNormKL(model, param_filter=lambda name: name.startswith("fc"))
+detector = GradNormKL(model, param_filter=lambda name: name == "fc.weight")
 
 # %%
 # Stage 3: Evaluate
