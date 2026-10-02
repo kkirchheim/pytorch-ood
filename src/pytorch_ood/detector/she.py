@@ -7,7 +7,7 @@
 """
 
 import logging
-from typing import Callable
+from typing import Callable, Optional
 
 import torch
 from torch import Tensor
@@ -27,10 +27,15 @@ class SHE(FeaturesDetector):
     Implements Simplified Hopfield Energy from the paper
     *Out-of-Distribution Detection based on In-Distribution Data Patterns Memorization with modern Hopfield Energy*
 
-    For each class, SHE estimates the mean feature vector :math:`S_i` of correctly classified instances.
-    For some new instances with predicted class :math:`\\hat{y}`, SHE then
-    uses the inner product :math:`f(x)^{\\top} S_{\\hat{y}}` as outlier score, where :math:`f(x)` are the
-    features ``z`` and :math:`S_i` is stored in ``patterns``.
+    For each class :math:`i`, SHE estimates the mean feature vector :math:`S_i` of the correctly classified
+    training samples. For a new sample with predicted class :math:`\\hat{y}`, the outlier score is the negated
+    inner product
+
+    .. math :: -f(x)^{\\top} S_{\\hat{y}}
+
+    where :math:`f(x)` are the features ``z`` and :math:`S_i` is stored in
+    :attr:`patterns <pytorch_ood.detector.SHE.patterns>`. The paper uses the inner product as an
+    in-distribution score, so the sign is flipped.
     """
 
     info = DetectorInfo(
@@ -48,19 +53,22 @@ class SHE(FeaturesDetector):
 
     def __init__(self, encoder: Callable[[Tensor], Tensor], head: Callable[[Tensor], Tensor]):
         """
-        :param encoder: feature encoder
-        :param head: maps feature vectors to logits
+        :param encoder: feature encoder that maps inputs to features of shape :math:`B \\times D`
+        :param head: maps features to logits; determines the predicted class :math:`\\hat{y}`
         """
         super(SHE, self).__init__()
         self.encoder = encoder
         self.head = head
-        self.patterns = None
-        self.is_fitted = False
+        #: patterns :math:`S_i`, the mean features of the correctly classified training samples of each
+        #: class, of shape :math:`K \times D`; ``None`` before fitting
+        self.patterns: Optional[Tensor] = None
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x:  model inputs
+        :param x: model inputs, will be passed through ``encoder``
         :return: outlier scores of shape :math:`B`
+        :raises ModelNotSetException: if ``encoder`` or ``head`` is ``None``
+        :raises RequiresFittingException: if the detector was not fitted
         """
         if self.encoder is None:
             raise ModelNotSetException()
@@ -72,6 +80,8 @@ class SHE(FeaturesDetector):
         """
         :param z: features of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`
+        :raises ModelNotSetException: if ``head`` is ``None``
+        :raises RequiresFittingException: if the detector was not fitted
         """
         if self.head is None:
             raise ModelNotSetException(msg="When using predict_features(), head must not be None")
@@ -91,7 +101,13 @@ class SHE(FeaturesDetector):
 
         :param data_loader: data to fit
         :return: self
+        :raises ModelNotSetException: if ``encoder`` is ``None``
+        :raises ValueError: if there are no ID samples, or a class has no correctly classified sample
+        :raises AssertionError: if the labels of the ID samples do not cover the classes :math:`0, ..., K-1`
         """
+        if self.encoder is None:
+            raise ModelNotSetException()
+
         device = self.device
         if device is None:
             device = "cpu"
@@ -134,7 +150,8 @@ class SHE(FeaturesDetector):
             labels have to cover the classes :math:`0, ..., K-1`.
         :param batch_size: how many samples we process at a time
         :return: self
-        :raise ValueError: if there are no ID samples, or a class has no correctly classified sample
+        :raises ValueError: if there are no ID samples, or a class has no correctly classified sample
+        :raises AssertionError: if the labels of the ID samples do not cover the classes :math:`0, ..., K-1`
         """
         device = self.device or z.device
 
