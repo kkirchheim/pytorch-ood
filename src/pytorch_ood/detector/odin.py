@@ -16,7 +16,6 @@ from typing import Callable, List, Optional
 
 import torch
 from torch import Tensor
-from torch.autograd import Variable
 from torch.nn import Module
 from torch.nn import functional as F
 from typing_extensions import Self
@@ -26,29 +25,24 @@ from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, T
 log = logging.getLogger(__name__)
 
 
-def zero_grad(x):
-    if type(x) is Tensor():
-        torch.fill_(x, 0)
-
-
 def odin_preprocessing(
     model: torch.nn.Module,
     x: Tensor,
     y: Optional[Tensor] = None,
     criterion: Optional[Callable[[Tensor], Tensor]] = None,
-    eps: float = 0.05,
+    eps: float = 0.0014,
     temperature: float = 1000.0,
     norm_std: Optional[List[float]] = None,
 ):
     """
     Functional version of ODIN.
 
-    :param model: module to backpropagate through
+    :param model: module :math:`f` to backpropagate through
     :param x: batch to preprocess, of shape :math:`B \\times C \\times H \\times W`
     :param y: the label :math:`\\hat{y}` which is used to evaluate the loss. If none is given, the models
         prediction will be used
-    :param criterion: loss function :math:`\\mathcal{L}` to use. If none is given, we will use negative log
-            likelihood
+    :param criterion: loss function :math:`\\mathcal{L}` to use. If none is given, we will use the
+        cross-entropy
     :param eps: step size :math:`\\epsilon` of the gradient descent step on the loss
     :param temperature: temperature :math:`T` to use for scaling
     :param norm_std: per-channel standard deviations (one per channel :math:`C`). The sign gradient of
@@ -64,31 +58,26 @@ def odin_preprocessing(
 
     # we make this assignment here, because adding the default to the constructor messes with sphinx
     if criterion is None:
-        criterion = F.nll_loss
+        criterion = F.cross_entropy
 
     with torch.inference_mode(False):
         if torch.is_inference(x):
             x = x.clone()
 
         with torch.enable_grad():
-            x = Variable(x, requires_grad=True)
+            x = x.detach().requires_grad_()
             logits = model(x) / temperature
             if y is None:
                 y = logits.max(dim=1).indices
-            loss = criterion(logits, y)
-            loss.backward()
+            # only the input gradient, so that the parameters of the model collect no gradients
+            (gradient,) = torch.autograd.grad(criterion(logits, y), x)
 
-            gradient = torch.sign(x.grad.data)
+        gradient = gradient.sign()
+        if norm_std:
+            std = torch.tensor(norm_std, dtype=gradient.dtype, device=gradient.device)
+            gradient = gradient / std.view(1, -1, *([1] * (gradient.ndim - 2)))
 
-            if norm_std:
-                for i, std in enumerate(norm_std):
-                    gradient.index_copy_(
-                        1,
-                        torch.LongTensor([i]).to(gradient.device),
-                        gradient.index_select(1, torch.LongTensor([i]).to(gradient.device)) / std,
-                    )
-
-            x_hat = x - eps * gradient
+        x_hat = x.detach() - eps * gradient
 
     return x_hat
 
@@ -106,9 +95,13 @@ class ODIN(GradientDetector):
     .. math::
         \\hat{x} = x - \\epsilon \\ \\text{sign}(\\nabla_x \\mathcal{L}(f(x) / T, \\hat{y}))
 
-    where :math:`f` is ``model``, :math:`\\mathcal{L}` is ``criterion``, :math:`\\epsilon` is ``eps``,
-    :math:`T` is ``temperature`` and :math:`\\hat{y}` is the predicted class of the network.
-    The outlier score is the negative maximum softmax probability of :math:`\\hat{x}`.
+    where :math:`\\hat{y}` is the predicted class of the network. With the default cross-entropy,
+    :math:`\\mathcal{L}(f(x) / T, \\hat{y}) = -\\log S_{\\hat{y}}(x; T)` is the negative log softmax
+    probability of :math:`\\hat{y}` at temperature :math:`T`. The outlier score is the maximum softmax
+    probability at temperature :math:`T` of the perturbed input, negated relative to the paper:
+
+    .. math::
+        -\\max_c S_c(\\hat{x}; T) = -\\max_c \\frac{e^{f_c(\\hat{x}) / T}}{\\sum_{c'} e^{f_{c'}(\\hat{x}) / T}}
     """
 
     info = DetectorInfo(
@@ -134,14 +127,14 @@ class ODIN(GradientDetector):
         self,
         model: Module,
         criterion: Optional[Callable[[Tensor], Tensor]] = None,
-        eps: float = 0.05,
+        eps: float = 0.0014,
         temperature: float = 1000.0,
         norm_std: Optional[List[float]] = None,
     ):
         """
-        :param model: module to backpropagate through
-        :param criterion: loss function :math:`\\mathcal{L}` to use. If None is given, we will use negative log
-            likelihood
+        :param model: module :math:`f` to backpropagate through
+        :param criterion: loss function :math:`\\mathcal{L}` to use. If None is given, we will use the
+            cross-entropy
         :param eps: step size :math:`\\epsilon` of the gradient descent step
         :param temperature: temperature :math:`T` to use for scaling
         :param norm_std: per-channel standard deviations used for preprocessing, see
@@ -152,7 +145,7 @@ class ODIN(GradientDetector):
 
         # we make this assignment here, because adding the default to the constructor messes with sphinx
         if criterion is None:
-            criterion = F.nll_loss
+            criterion = F.cross_entropy
 
         self.criterion = criterion  #: criterion :math:`\mathcal{L}`
         self.eps = eps  #: size :math:`\epsilon` of the gradient step in the input space
@@ -165,7 +158,8 @@ class ODIN(GradientDetector):
         to the inputs, so it must not be wrapped in ``torch.no_grad``.
 
         :param x: input batch of shape :math:`B \\times C \\times H \\times W`
-        :return: negative maximum softmax probability of the perturbed inputs, shape :math:`B`
+        :return: negative maximum softmax probability at temperature :math:`T` of the perturbed
+            inputs, shape :math:`B`
         """
         device = self.device
         if device is not None:
@@ -179,5 +173,7 @@ class ODIN(GradientDetector):
             temperature=self.temperature,
             norm_std=self.norm_std,
         )
+        with torch.no_grad():
+            logits = self.model(x_hat) / self.temperature
         # returning negative values so higher values indicate greater outlierness
-        return -self.model(x_hat).softmax(dim=1).max(dim=1).values
+        return -logits.softmax(dim=1).max(dim=1).values
