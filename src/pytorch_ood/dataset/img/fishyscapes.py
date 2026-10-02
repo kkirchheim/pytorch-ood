@@ -98,7 +98,7 @@ class FishyScapes(Dataset):
             )
 
         self.files = [
-            f for f in os.listdir(join(self.root, self.dirname)) if f.endswith("_rgb.npz")
+            f for f in sorted(os.listdir(join(self.root, self.dirname))) if f.endswith("_rgb.npz")
         ]
 
     def _check_integrity(self):
@@ -228,8 +228,7 @@ class LostAndFound(Dataset):
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
-        self.ano_files = os.listdir(join(self.root, self.annotation_dir))
-        self.ano_files.sort()
+        self.ano_files = sorted(os.listdir(join(self.root, self.annotation_dir)))
 
     def _check_integrity(self):
         url, filename, md5hash = self.annotation_url

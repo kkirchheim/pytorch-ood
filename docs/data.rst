@@ -14,6 +14,13 @@ and :class:`FishyScapes <pytorch_ood.dataset.img.FishyScapes>` needs the CitySca
 Image datasets return :class:`PIL.Image.Image` objects (exceptions are noted on the respective pages), and text datasets
 return :class:`str`.
 
+.. warning::
+    Up to version 0.3.3, datasets that read their samples from a directory, such as
+    :class:`Places365 <pytorch_ood.dataset.img.Places365>`, kept the files in the order in which the file system
+    lists them, which differs between machines. With these versions, sample indices, and with them subsets, splits
+    and seeded sampling, are not reproducible across machines. Later versions sort the files, so the order of the
+    samples also differs from that of version 0.3.3 and earlier.
+
 .. _dataset-label-convention:
 
 Labels

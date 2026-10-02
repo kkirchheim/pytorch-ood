@@ -124,16 +124,14 @@ class MVTechAD(ImageDatasetBase):
         ls = []
         fs = []
 
-        defect_dirs = os.listdir(join(subset_dir, self.split))
+        defect_dirs = sorted(os.listdir(join(subset_dir, self.split)))
         for defect_dir in defect_dirs:
-            files = glb(join(subset_dir, self.split, defect_dir, "*.png"))
-            files.sort()  # sort, since glob does not guarantee ordering
+            files = sorted(glb(join(subset_dir, self.split, defect_dir, "*.png")))
 
             if defect_dir == "good":
                 labels = [None] * len(files)
             else:
-                labels = glb(join(subset_dir, "ground_truth", defect_dir, "*_mask.png"))
-                labels.sort()
+                labels = sorted(glb(join(subset_dir, "ground_truth", defect_dir, "*_mask.png")))
 
             ls += labels
             fs += files

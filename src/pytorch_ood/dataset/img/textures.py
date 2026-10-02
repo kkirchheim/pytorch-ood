@@ -64,9 +64,13 @@ class Textures(VisionDataset):
 
         self.basedir = join(self.root, self.base_folder)
         self.files = []
-        for d in os.listdir(self.basedir):
+        for d in sorted(os.listdir(self.basedir)):
             self.files.extend(
-                [join(d, f) for f in os.listdir(join(self.basedir, d)) if not f.startswith(".")]
+                [
+                    join(d, f)
+                    for f in sorted(os.listdir(join(self.basedir, d)))
+                    if not f.startswith(".")
+                ]
             )
         log.info(f"Found {len(self.files)} texture files.")
 

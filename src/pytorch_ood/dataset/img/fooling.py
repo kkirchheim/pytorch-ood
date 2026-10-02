@@ -61,6 +61,6 @@ class FoolingImages(ImageDatasetBase):
         files = []
         for d in self.dirs:
             p = join(self.basedir, d, "map_gen_5000")
-            files += [join(p, f) for f in os.listdir(p) if f.endswith(".png")]
+            files += [join(p, f) for f in sorted(os.listdir(p)) if f.endswith(".png")]
 
         return files

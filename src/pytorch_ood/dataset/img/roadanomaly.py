@@ -83,7 +83,7 @@ class RoadAnomaly(ImageDatasetBase):
 
         :param root: root directory for the search
         """
-        current_files = [entry for entry in os.listdir(join(root, "frames"))]
+        current_files = [entry for entry in sorted(os.listdir(join(root, "frames")))]
 
         all_images = []
         all_masks = []

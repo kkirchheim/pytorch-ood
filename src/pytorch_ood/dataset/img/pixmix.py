@@ -53,7 +53,7 @@ class PixMixExampleDatasets(VisionDataset):
             )
 
         self.basedir = join(self.root, self.base_folder, self.subdirs[subset])
-        self.files = os.listdir(self.basedir)
+        self.files = sorted(os.listdir(self.basedir))
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """

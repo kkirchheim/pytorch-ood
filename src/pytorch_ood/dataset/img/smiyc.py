@@ -114,7 +114,7 @@ class SegmentMeIfYouCan(ImageDatasetBase):
 
         :param root: root directory for the search
         """
-        current_files = [entry for entry in os.listdir(join(root, "labels_masks"))]
+        current_files = [entry for entry in sorted(os.listdir(join(root, "labels_masks")))]
 
         all_images = []
         all_masks = []

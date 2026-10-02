@@ -72,7 +72,7 @@ class FSDD(Dataset):
         )
 
     def _load_data(self):
-        return list(glob.glob(join(self.root, self.base_folder, "*.wav")))
+        return sorted(glob.glob(join(self.root, self.base_folder, "*.wav")))
 
     def _check_integrity(self) -> bool:
         try:
