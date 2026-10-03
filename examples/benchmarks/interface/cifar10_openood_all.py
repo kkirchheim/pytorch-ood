@@ -18,7 +18,7 @@ from collections import OrderedDict
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 
 from pytorch_ood.benchmark import CIFAR10_OpenOOD
 from pytorch_ood.detector import (
@@ -164,11 +164,9 @@ benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
 
 train_dataset = benchmark.train_set()
 train_loader = DataLoader(train_dataset, shuffle=True, **loader_kwargs)
-calibration_loader = DataLoader(
-    Subset(train_dataset, range(len(train_dataset) - 5000, len(train_dataset))),
-    shuffle=False,
-    **loader_kwargs,
-)
+# OpenOOD's held-out validation split covers every class; its OOD samples are ignored by the
+# calibration detectors
+calibration_loader = DataLoader(benchmark.validation_set(), shuffle=False, **loader_kwargs)
 
 print("STAGE 2: Creating and fitting detectors")
 detectors = build_detectors(model=model, norm_std=norm_std)

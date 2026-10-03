@@ -8,6 +8,7 @@
 """
 
 import logging
+import warnings
 from typing import Optional
 
 import torch
@@ -23,6 +24,7 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
+from ..utils import is_known
 
 log = logging.getLogger()
 
@@ -67,7 +69,8 @@ class KLMatching(LogitsDetector):
     def fit_logits(self, logits: Tensor, labels: Tensor) -> Self:
         """
         Estimates typical distributions for each class.
-        Ignores OOD samples.
+        Ignores OOD samples. Warns if not every class is present, since
+        :meth:`predict_logits` raises for posteriors whose predicted class was not fitted.
 
         :param logits: logits of shape :math:`N \\times C`
         :param labels: class labels of shape :math:`N`
@@ -76,12 +79,21 @@ class KLMatching(LogitsDetector):
         device = self.device or logits.device
         logits = logits.to(device)
         labels = labels.to(device)
-        probabilities = logits.softmax(dim=1)
+        known = is_known(labels)
+        probabilities = logits[known].softmax(dim=1)
+        labels = labels[known]
 
         for label in labels.unique():
             log.debug(f"Fitting class {label}")
-            d_k = probabilities[labels == label].to(device).mean(dim=0)
+            d_k = probabilities[labels == label].mean(dim=0)
             self.dists[str(label.item())] = Parameter(d_k)
+
+        missing = [c for c in range(logits.shape[1]) if str(c) not in self.dists]
+        if missing:
+            warnings.warn(
+                f"No samples for classes {missing} of {logits.shape[1]}. Predicting one of them "
+                f"will raise. Fit on data that covers every class, e.g. a shuffled subset."
+            )
 
         return self
 

@@ -1,4 +1,5 @@
 import unittest
+import warnings
 
 import torch
 from torch.optim import SGD
@@ -21,7 +22,7 @@ class TestKLMatching(unittest.TestCase):
         detector = KLMatching(model)
 
         x = torch.zeros(size=(128, 10))
-        y = torch.arange(128) % 5
+        y = torch.arange(128) % 10
 
         dataset = TensorDataset(x, y)
         loader = DataLoader(dataset)
@@ -100,6 +101,32 @@ class TestKLMatching(unittest.TestCase):
         scores = detector.predict_logits(logits)
         self.assertEqual(scores.shape, (16,))
         self.assertTrue(torch.isfinite(scores).all())
+
+    def test_warns_for_unfitted_classes(self):
+        """Fitting on data that misses a class warns, naming the class."""
+        logits = torch.randn(30, 3)
+        labels = torch.tensor([0, 2]).repeat(15)
+        with self.assertWarnsRegex(UserWarning, r"classes \[1\] of 3"):
+            KLMatching(None).fit_logits(logits, labels)
+
+    def test_no_warning_if_all_classes_fitted(self):
+        logits = torch.randn(30, 3)
+        labels = torch.arange(3).repeat(10)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            KLMatching(None).fit_logits(logits, labels)
+
+    def test_ignores_ood_samples(self):
+        """OOD samples neither get a distribution nor change the ones of known classes."""
+        torch.manual_seed(0)
+        logits = torch.randn(40, 3)
+        labels = torch.cat([torch.arange(3).repeat(10), -torch.ones(10, dtype=torch.long)])
+        detector = KLMatching(None).fit_logits(logits, labels)
+        reference = KLMatching(None).fit_logits(logits[:30], labels[:30])
+
+        self.assertEqual(sorted(detector.dists.keys()), ["0", "1", "2"])
+        for k in reference.dists.keys():
+            torch.testing.assert_close(detector.dists[k], reference.dists[k])
 
     def test_mock_performance(self):
         """
