@@ -54,11 +54,12 @@ class GradNorm(GradientDetector):
     For each input sample, computes the binary cross-entropy loss between the softmax output and a "confounding
     label", which is a vector of all ones. Then, for each set of parameters in the model (as given
     by ``model.named_parameters()``), computes the squared :math:`\\ell_2`-norm of the
-    gradients of the loss w.r.t. that parameter. The outlier score is the sum of these squared norms.
+    gradients of the loss w.r.t. that parameter. The outlier score is the negative sum of these squared norms.
 
-    The idea is that higher gradient norms indicates that the model would require large
-    parameter updates to accommodate the input, i.e., for such data, it is less familiar or
-    more uncertain, and hence more likely to be OOD.
+    The gradient of this loss w.r.t. the logits is :math:`C p - 1` for :math:`C` classes and softmax output
+    :math:`p`. It vanishes for a uniform softmax and is large for a confident prediction, so the gradient norm is
+    larger for inputs the model is familiar with. The sign is therefore flipped, so that uncertain inputs receive
+    higher outlier scores.
 
     .. note:: Using only the gradients of the final classification head makes this computationally cheaper.
      You can achieve this by setting ``param_filter``; gradients are only computed for the selected
@@ -73,16 +74,16 @@ class GradNorm(GradientDetector):
         original sequential loop over individual samples is used as a fallback.
 
     .. warning::
-        This implementation sums the norms of all (selected) parameters into a single scalar and uses it directly
-        as an outlier score, without any training. This requires no OOD data, but may perform poorly when ID and
+        This implementation sums the norms of all (selected) parameters into a single scalar and uses its negative
+        directly as an outlier score, without any training. This requires no OOD data, but may perform poorly when ID and
         OOD datasets are of similar complexity. For an unsupervised
         gradient-based alternative see :class:`~pytorch_ood.detector.GradNormKL`.
     """
 
     # The paper's actual experiments (Section 4) concatenate the per-layer squared L2 norms into a feature vector
-    # and then train a 2-layer FC binary classifier on labeled ID and OOD gradient representations. This class
-    # is a significant simplification (empirical AUROC of about 0.5 when ID and OOD are of similar complexity,
-    # because the scalar sum loses the per-layer structure the classifier exploits).
+    # and then train a 2-layer FC binary classifier on labeled ID and OOD gradient representations, which learns
+    # the direction of the score. This class is a significant simplification: it uses the scalar sum, negated
+    # because the gradient norm is largest for confident predictions.
     # OpenOOD uses only the gradients of the final classification head.
 
     info = DetectorInfo(
@@ -156,7 +157,7 @@ class GradNorm(GradientDetector):
         with torch.enable_grad():
             per_sample_grads = _vmap(_func_grad(loss_for_single), in_dims=(None, 0))(selected, x)
 
-        return sum(
+        return -sum(
             (g**2).sum(dim=tuple(range(1, g.ndim))) for g in per_sample_grads.values()
         ).detach()
 
@@ -175,4 +176,4 @@ class GradNorm(GradientDetector):
                     grads = torch.autograd.grad(loss, selected)
                 scores.append(sum((g**2).sum() for g in grads))
 
-        return torch.stack(scores).detach()
+        return -torch.stack(scores).detach()
