@@ -109,7 +109,7 @@ evaluating a detector takes a few lines.
 
          from pytorch_ood.detector import EnergyBased
          from pytorch_ood.model import load_model, load_transform
-         from pytorch_ood.utils import OODMetrics
+         from pytorch_ood.metrics import OODMetrics
 
          data_loader = ...  # your data, OOD samples with label < 0
 
@@ -242,6 +242,7 @@ If you use PyTorch-OOD in your research, please cite
    data
    augmentations
    models
+   metrics
    utils
    benchmark
 

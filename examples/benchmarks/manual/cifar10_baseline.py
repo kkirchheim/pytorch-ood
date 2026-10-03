@@ -101,8 +101,9 @@ from pytorch_ood.detector import (
     ViM,
     fDBD,
 )
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import get_model_info, load_model, load_transform
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
+from pytorch_ood.utils import ToUnknown, fix_random_seed
 
 device = "cuda:0"
 

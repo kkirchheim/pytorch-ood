@@ -98,5 +98,5 @@ class GEN(LogitsDetector):
             # keep the M largest probabilities per sample (top-M classes)
             p = p.sort(dim=1, descending=True).values[:, :M]
         # mean, not sum, to keep the score bounded regardless of class count; this rescales the score by a
-        # constant factor (no effect on AUROC/AUPR) and avoids float32 saturation in torchmetrics' binary_auroc
+        # constant factor, which does not change the ranking
         return (p.pow(gamma) * (1 - p).pow(gamma)).mean(dim=1)

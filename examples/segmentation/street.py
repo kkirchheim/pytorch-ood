@@ -31,7 +31,8 @@ from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import StreetHazards
 from pytorch_ood.detector import EnergyBased
-from pytorch_ood.utils import OODMetrics, fix_random_seed
+from pytorch_ood.metrics import OODPerImageSegmentationMetrics
+from pytorch_ood.utils import fix_random_seed
 
 device = "cuda:0"
 batch_size = 4
@@ -123,7 +124,8 @@ print("Evaluating")
 model.eval()
 loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
 detector = EnergyBased(model)
-metrics = OODMetrics(mode="segmentation")
+# mean over the images
+metrics = OODPerImageSegmentationMetrics()
 
 with torch.no_grad():
     for n, (x, y) in enumerate(loader):

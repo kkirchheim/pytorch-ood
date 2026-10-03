@@ -11,7 +11,7 @@ from pytorch_ood.benchmark.img.ssb import (
     _FGVCAircraft,
     _StanfordCars,
 )
-from pytorch_ood.utils import oscr_score
+from pytorch_ood.metrics import oscr_score
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -86,7 +86,7 @@ OOD data must be marked with labels < 0.
 
 
     from pytorch_ood.detector import EnergyBased
-    from pytorch_ood.utils import OODMetrics
+    from pytorch_ood.metrics import OODMetrics
     from pytorch_ood.model import load_model, load_transform
 
     data_loader = ... # your data, OOD with label < 0
@@ -167,7 +167,6 @@ The package can be installed via PyPI:
 * ``torch``
 * ``torchvision``
 * ``scipy``
-* ``torchmetrics``
 
 
 **Optional Dependencies**
