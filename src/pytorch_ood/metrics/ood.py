@@ -45,6 +45,17 @@ class AUROC(BufferedMetric):
         """
         super().__init__(device=device, void_label=void_label)
 
+    def update(self, scores: Tensor, labels: Tensor) -> Self:
+        """
+        Adds a batch.
+
+        :param scores: outlier scores of any shape; larger means more likely OOD
+        :param labels: labels of the same shape; labels :math:`< 0` mark OOD samples
+        :return: self
+        :raises ValueError: if the shapes differ
+        """
+        return super().update(scores, labels)
+
     @property
     def keys(self) -> Tuple[str, ...]:
         return ("AUROC",)
@@ -82,6 +93,17 @@ class AUPR(BufferedMetric):
         super().__init__(device=device, void_label=void_label)
         self.positive = positive
 
+    def update(self, scores: Tensor, labels: Tensor) -> Self:
+        """
+        Adds a batch.
+
+        :param scores: outlier scores of any shape; larger means more likely OOD
+        :param labels: labels of the same shape; labels :math:`< 0` mark OOD samples
+        :return: self
+        :raises ValueError: if the shapes differ
+        """
+        return super().update(scores, labels)
+
     @property
     def keys(self) -> Tuple[str, ...]:
         return ("AUPR-OUT",) if self.positive == "ood" else ("AUPR-IN",)
@@ -116,6 +138,17 @@ class FPRAtTPR(BufferedMetric):
         super().__init__(device=device, void_label=void_label)
         self.tpr = _check_fraction("tpr", tpr)
 
+    def update(self, scores: Tensor, labels: Tensor) -> Self:
+        """
+        Adds a batch.
+
+        :param scores: outlier scores of any shape; larger means more likely OOD
+        :param labels: labels of the same shape; labels :math:`< 0` mark OOD samples
+        :return: self
+        :raises ValueError: if the shapes differ
+        """
+        return super().update(scores, labels)
+
     @property
     def keys(self) -> Tuple[str, ...]:
         return (f"FPR{self.tpr * 100:g}TPR",)
@@ -143,6 +176,17 @@ class AUTC(BufferedMetric):
         :raises ValueError: if ``void_label`` is negative
         """
         super().__init__(device=device, void_label=void_label)
+
+    def update(self, scores: Tensor, labels: Tensor) -> Self:
+        """
+        Adds a batch.
+
+        :param scores: outlier scores of any shape; larger means more likely OOD
+        :param labels: labels of the same shape; labels :math:`< 0` mark OOD samples
+        :return: self
+        :raises ValueError: if the shapes differ
+        """
+        return super().update(scores, labels)
 
     @property
     def keys(self) -> Tuple[str, ...]:
@@ -183,6 +227,18 @@ class Accuracy(StreamingMetric):
         """
         super().__init__(device=device, void_label=void_label)
         self._reset()
+
+    def update(self, predictions: Tensor, labels: Tensor) -> Self:
+        """
+        Adds a batch.
+
+        :param predictions: predicted class indices of any shape
+        :param labels: labels of the same shape; labels :math:`< 0` mark OOD samples, which
+            are ignored
+        :return: self
+        :raises ValueError: if the shapes differ
+        """
+        return super().update(predictions, labels)
 
     @property
     def keys(self) -> Tuple[str, ...]:

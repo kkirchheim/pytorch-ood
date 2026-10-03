@@ -86,8 +86,10 @@ class TestMetricUpdates(unittest.TestCase):
 
     def test_invalid_inputs(self):
         scores, labels, _ = _cat(_batches())
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             AUROC().update(scores)
+        with self.assertRaises(ValueError):
+            AUROC().update(scores, None)
         with self.assertRaises(TypeError):
             AUROC().update(scores, labels, labels)
         with self.assertRaises(TypeError):
