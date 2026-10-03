@@ -112,7 +112,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
         return [
             (
                 "KNN",
-                lambda: (lambda model: KNN(model.features))(ClassificationModel()),
+                lambda: (lambda model: KNN(model.features, k=3))(ClassificationModel()),
             ),
             (
                 "GMM",
