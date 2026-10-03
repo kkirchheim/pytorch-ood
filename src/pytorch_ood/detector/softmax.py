@@ -10,7 +10,7 @@
 import logging
 from typing import Optional
 
-from torch import Tensor, tensor
+from torch import Tensor
 from torch.nn import Module
 from typing_extensions import Self
 
@@ -51,7 +51,7 @@ class MaxSoftmax(LogitsDetector):
         :param t: temperature value :math:`T`
         """
         super(MaxSoftmax, self).__init__()
-        self.t = tensor(t)
+        self.t = float(t)
         self.model = model
 
     def predict_logits(self, logits: Tensor) -> Tensor:

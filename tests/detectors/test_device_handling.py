@@ -321,7 +321,6 @@ class TestDetectorDeviceHandling(unittest.TestCase):
 
         self.assertEqual(detector.device, self.device)
         self.assertEqual(next(detector.model.parameters()).device, self.device)
-        self.assertEqual(detector.t.device, self.device)
 
     def test_vim_infers_device_from_constructor_tensors_without_explicit_to(self):
         # ViM must not silently pin its state to CPU when constructed directly from
