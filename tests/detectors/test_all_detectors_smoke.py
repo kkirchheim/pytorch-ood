@@ -167,7 +167,7 @@ class TestAllDetectorsSmoke(unittest.TestCase):
             ("MCD", lambda: MCD(eval_model(), samples=4, mode="var")),
             (
                 "KNN",
-                lambda: (lambda model: KNN(model.features))(eval_model()),
+                lambda: (lambda model: KNN(model.features, k=3))(eval_model()),
             ),
             (
                 "GMM",
