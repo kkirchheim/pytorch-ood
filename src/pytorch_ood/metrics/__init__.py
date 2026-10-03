@@ -1,15 +1,28 @@
 """
-Metrics for OOD detection, computed in torch on the device of the data.
+Metrics measure how well a detector separates in-distribution (ID) from out-of-distribution
+(OOD) samples. Outlier scores are larger for samples that are more likely OOD, and OOD samples
+have labels :math:`< 0`. The metrics are computed in torch, on the device of your data, so
+evaluation on the GPU does not need to copy the scores to the CPU.
 
-Each metric implements :class:`~pytorch_ood.metrics.Metric`: :meth:`~pytorch_ood.metrics.Metric.update` adds a batch,
-:meth:`~pytorch_ood.metrics.Metric.compute` returns the results as a dictionary of floats, and
-:meth:`~pytorch_ood.metrics.Metric.reset` starts over. :class:`~pytorch_ood.metrics.StreamingMetric` subclasses reduce each batch to a
-fixed-size state; :class:`~pytorch_ood.metrics.BufferedMetric` subclasses, such as the areas under curves, store
-their inputs until :meth:`~pytorch_ood.metrics.Metric.compute`. :class:`~pytorch_ood.metrics.MetricCollection` computes several metrics
-and stores each input only once. :class:`~pytorch_ood.metrics.OODMetrics` is the collection of the metrics commonly
-reported for OOD detection.
+For most evaluations, :class:`~pytorch_ood.metrics.OODMetrics` is all you need: feed it the
+outlier scores and labels of each batch, and read all commonly reported metrics at the end.
 
-The functions in :mod:`pytorch_ood.metrics.functional` compute the metrics from complete tensors.
+.. code-block:: python
+
+    from pytorch_ood.metrics import OODMetrics
+
+    metrics = OODMetrics()
+    for x, y in loader:
+        metrics.update(detector(x), y)
+    print(metrics.compute())  # {"AUROC": ..., "AUTC": ..., "AUPR-IN": ..., ...}
+
+Every metric works this way (see :class:`~pytorch_ood.metrics.Metric`), so you can also
+compute a single one, such as :class:`~pytorch_ood.metrics.AUROC`, or combine your own
+selection in a :class:`~pytorch_ood.metrics.MetricCollection`. Metrics based on curves need
+all scores at once, so they keep the scores and labels in memory until the end; with large
+datasets or segmentation, pass ``device="cpu"`` to keep them off the GPU. If you already have
+all scores, the functions in :mod:`pytorch_ood.metrics.functional` compute the metrics
+directly.
 """
 
 from . import functional

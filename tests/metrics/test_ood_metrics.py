@@ -2,7 +2,9 @@
 OODMetrics: the fixed collection of the commonly reported metrics.
 """
 
+import math
 import unittest
+import warnings
 
 import torch
 
@@ -33,7 +35,7 @@ class TestOODMetrics(unittest.TestCase):
         labels = torch.randint(-1, 10, (5000,), generator=g)
         scores = (torch.randn(5000, generator=g) + (labels < 0).float()) * 1e4
         predictions = torch.randint(0, 10, (5000,), generator=g)
-        result = OODMetrics(fpr=0.9).update(scores, labels, predictions).compute()
+        result = OODMetrics(fpr_at=0.9).update(scores, labels, predictions).compute()
         self.assertEqual(result["AUROC"], float(F.auroc(scores, labels)))
         self.assertEqual(result["AUTC"], float(F.autc(scores, labels)))
         self.assertEqual(result["AUPR-IN"], float(F.aupr(scores, labels, positive="id")))
@@ -96,6 +98,30 @@ class TestOODMetrics(unittest.TestCase):
         self.assertEqual(
             OODMetrics().update(scores.view(2, 2, 4), labels.view(2, 2, 4)).compute(), expected
         )
+
+    def test_autc_is_nan_for_constant_scores(self):
+        labels = torch.tensor([0, 0, -1, -1])
+        with self.assertWarns(UserWarning):
+            result = OODMetrics().update(torch.ones(4), labels).compute()
+        self.assertTrue(math.isnan(result["AUTC"]))
+        self.assertEqual(result["AUROC"], 0.5)
+
+    def test_autc_is_nan_for_infinite_scores(self):
+        labels = torch.tensor([0, 0, 0, -1, -1, -1])
+        scores = torch.tensor([-float("inf"), 0.0, 1.0, 1.0, 2.0, float("inf")])
+        with self.assertWarns(UserWarning):
+            result = OODMetrics().update(scores, labels).compute()
+        self.assertTrue(math.isnan(result["AUTC"]))
+        # infinite scores rank like any other: same as finite scores in the same order
+        expected = OODMetrics().update(torch.tensor([-9.0, 0, 1, 1, 2, 9]), labels).compute()
+        for key in ("AUROC", "AUPR-IN", "AUPR-OUT", "FPR95TPR"):
+            self.assertEqual(result[key], expected[key], key)
+
+    def test_no_warning_for_valid_scores(self):
+        scores, labels = _separated()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            OODMetrics().update(scores, labels).compute()
 
     def test_large_scores(self):
         # torchmetrics, used before, applied a sigmoid that saturated for such scores

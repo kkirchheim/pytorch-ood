@@ -15,7 +15,6 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 
 from ..api import Detector, FeaturesDetector, GradientDetector, LogitsDetector
-from ..metrics import OODMetrics
 from .utils import TensorBuffer, extract_features
 
 __all__ = ["GridSearch"]
@@ -76,8 +75,9 @@ class GridSearch:
         detector requires fitting; otherwise pass ``None`` (the argument itself is not optional).
     :param val_loader: validation data containing both ID and OOD samples
     :param hyperparameter_space: overrides the detector's ``hyperparameter_space``
-    :param metric: metric object with ``update(scores, y)`` / ``compute() -> dict``
-        and ``reset()``. Defaults to :class:`pytorch_ood.metrics.OODMetrics`.
+    :param metric: a metric from :mod:`pytorch_ood.metrics`, or any object with
+        ``update(scores=..., labels=...)``, ``compute() -> dict`` and ``reset()``. Defaults to
+        :class:`pytorch_ood.metrics.OODMetrics`.
     :param metric_name: key to read from the metric's ``compute()`` dict. Default ``"AUROC"``.
     :param higher_is_better: whether the metric should be maximized. Default ``True``.
     :param device: device used for extraction and scoring
@@ -108,7 +108,12 @@ class GridSearch:
         for name, values in self.space.items():
             if not values:
                 raise ValueError(f"Search space for hyperparameter '{name}' is empty.")
-        self.metric = metric if metric is not None else OODMetrics()
+        if metric is None:
+            # imported here: pytorch_ood.metrics imports from pytorch_ood.utils
+            from ..metrics import OODMetrics
+
+            metric = OODMetrics()
+        self.metric = metric
         self.metric_name = metric_name
         self.higher_is_better = higher_is_better
         self.device = device
@@ -133,7 +138,7 @@ class GridSearch:
 
     def _score(self, scores: Tensor, y: Tensor) -> float:
         self.metric.reset()
-        self.metric.update(scores, y)
+        self.metric.update(scores=scores, labels=y)
         return self._read_metric()
 
     def run(self) -> Dict:
@@ -237,7 +242,7 @@ class GridSearch:
             # spurious perfect value.
             if not torch.isfinite(scores).all():
                 return float("nan")
-            self.metric.update(scores, y.to(scores.device))
+            self.metric.update(scores=scores, labels=y.to(scores.device))
         return self._read_metric()
 
     def _score_or_nan(self, scores: Tensor, y: Tensor) -> float:

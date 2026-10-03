@@ -1,16 +1,15 @@
 """
-Functional metrics: stateless functions on complete tensors, on any device.
+Functions that compute a metric in one go from all scores and labels, on the device the tensors
+are on. They are useful when you already have all outlier scores, e.g., from
+:func:`~pytorch_ood.utils.extract_features`, and do not need to accumulate batches.
 
-The functions follow the label convention of the library: labels :math:`< 0` mark OOD samples,
-which are the positive class, and larger outlier scores mean more likely OOD. Unlike
-classification metric libraries, they never transform the scores, so scores of any range and
-dtype are supported.
+Labels :math:`< 0` mark OOD samples, which are the positive class, and larger outlier scores
+mean more likely OOD. Scores are used as given, so any range and dtype is supported.
 """
 
 import math
-from typing import Tuple
+from typing import Optional, Tuple
 
-import numpy as np
 import torch
 from torch import Tensor
 
@@ -87,6 +86,8 @@ class _Counts:
         self.tps = torch.cumsum(positive[order].long(), dim=0)[idx]
         self.fps = idx + 1 - self.tps
         self.thresholds = sorted_scores[idx]
+        # computed on first use, shared by AUROC and FPR@TPR
+        self.roc: Optional[Tuple[Tensor, Tensor]] = None
 
     @property
     def n_pos(self) -> Tensor:
@@ -109,10 +110,12 @@ class _Counts:
 
 
 def _roc(counts: _Counts) -> Tuple[Tensor, Tensor]:
-    zero = counts.tps.new_zeros(1)
-    fpr = _float64(torch.cat([zero, counts.fps])) / _float64(counts.n_neg)
-    tpr = _float64(torch.cat([zero, counts.tps])) / _float64(counts.n_pos)
-    return fpr, tpr
+    if counts.roc is None:
+        zero = counts.tps.new_zeros(1)
+        fpr = _float64(torch.cat([zero, counts.fps])) / _float64(counts.n_neg)
+        tpr = _float64(torch.cat([zero, counts.tps])) / _float64(counts.n_pos)
+        counts.roc = (fpr, tpr)
+    return counts.roc
 
 
 def _pr(tps: Tensor, fps: Tensor) -> Tuple[Tensor, Tensor]:
@@ -275,6 +278,10 @@ def autc(scores: Tensor, labels: Tensor) -> Tensor:
     if n_ood == 0 or n_ood == ood.numel():
         raise ValueError("AUTC requires both ID and OOD samples")
     scores = _float64(scores)
+    # The paper and its reference code assume scores in [0, 1] and do not normalize. Min-max
+    # normalization over the evaluated samples is a choice of this library, so that AUTC is
+    # defined for any score range. The integrals of the step curves are exact, where the
+    # reference code interpolates linearly between the per-sample thresholds.
     low, high = scores.min(), scores.max()
     if bool(low == high):
         raise ValueError("AUTC is undefined for constant scores")
@@ -332,19 +339,28 @@ def oscr_score(outlier_scores: Tensor, predictions: Tensor, labels: Tensor) -> f
         preds = model(x).argmax(dim=1)
         result = oscr_score(scores, preds, labels)
 
-    :param outlier_scores: outlier scores :math:`s(x)`, shape :math:`B`
-    :param predictions: predicted classes :math:`\\hat{y}(x)`, shape :math:`B`
-    :param labels: labels :math:`y(x)`, shape :math:`B`; labels :math:`< 0` mark unknown samples
+    :param outlier_scores: outlier scores :math:`s(x)` of any shape
+    :param predictions: predicted classes :math:`\\hat{y}(x)` of the same shape
+    :param labels: labels :math:`y(x)` of the same shape; labels :math:`< 0` mark unknown samples
     :return: OSCR in :math:`[0, 1]`
-    :raises ValueError: if ``labels`` contain no known or no unknown samples
+    :raises ValueError: if the shapes differ, the scores contain NaN, or ``labels`` contain no
+        known or no unknown samples
 
     :see Paper: `Reducing Network Agnostophobia <https://arxiv.org/abs/1811.04110>`__
     """
+    if predictions.shape != labels.shape:
+        raise ValueError(
+            f"Inputs must have the same shape, got {tuple(predictions.shape)} and "
+            f"{tuple(labels.shape)}"
+        )
+    outlier_scores, labels = _flatten(outlier_scores, labels)
+    predictions = predictions.detach().reshape(-1).to(outlier_scores.device)
+    _check_scores(outlier_scores)
     known_mask = labels >= 0
 
-    s_id = outlier_scores[known_mask].cpu()
-    s_ood = outlier_scores[~known_mask].cpu()
-    correct = (predictions[known_mask] == labels[known_mask]).cpu()
+    s_id = outlier_scores[known_mask]
+    s_ood = outlier_scores[~known_mask]
+    correct = predictions[known_mask] == labels[known_mask]
 
     n_id = s_id.shape[0]
     n_ood = s_ood.shape[0]
@@ -359,92 +375,102 @@ def oscr_score(outlier_scores: Tensor, predictions: Tensor, labels: Tensor) -> f
     thresholds = torch.unique(torch.cat([s_id, s_ood]))
 
     sort_idx = torch.argsort(s_id)
-    correct_counts = torch.cat([torch.zeros(1), torch.cumsum(correct[sort_idx].float(), dim=0)])
+    # int64 counts are exact for any number of samples
+    correct_counts = torch.cumsum(correct[sort_idx].long(), dim=0)
+    correct_counts = torch.cat([correct_counts.new_zeros(1), correct_counts])
     accepted_id = torch.searchsorted(s_id[sort_idx], thresholds, right=True)
-    ccr = correct_counts[accepted_id] / n_id
+    ccr = _float64(correct_counts[accepted_id]) / n_id
 
     s_ood_sorted, _ = torch.sort(s_ood)
-    fpr = torch.searchsorted(s_ood_sorted, thresholds, right=True).float() / n_ood
+    fpr = _float64(torch.searchsorted(s_ood_sorted, thresholds, right=True)) / n_ood
 
     # starts at (0, 0); the largest threshold accepts everything, so the curve ends at (1, accuracy)
-    fpr = torch.cat([torch.zeros(1), fpr])
-    ccr = torch.cat([torch.zeros(1), ccr])
+    fpr = torch.cat([fpr.new_zeros(1), fpr])
+    ccr = torch.cat([ccr.new_zeros(1), ccr])
 
-    return float(torch.trapezoid(ccr, fpr).item())
+    return float(_area(fpr, ccr))
 
 
 def calibration_error(
     confidence: torch.Tensor, correct: torch.Tensor, p: str = "2", beta: int = 100
 ) -> float:
     """
-    Calibration error of predicted confidences: the samples are sorted by confidence and
-    grouped into bins of (about) ``beta`` samples; the error is the :math:`p`-norm of the
-    differences between the mean confidence and the accuracy of the bins, weighted by bin size.
-    Requires CPU tensors that do not require gradients.
+    Calibration error of predicted confidences. The samples are sorted by confidence and
+    grouped into consecutive bins of ``beta`` samples; the last bin also holds the remaining
+    samples, and with fewer than ``beta`` samples, there is a single bin. For each bin, the
+    calibration gap is the absolute difference between its mean confidence and its accuracy.
+    The error is the bin-size weighted mean of the gaps for ``p="1"``, the root of the
+    bin-size weighted mean of the squared gaps for ``p="2"``, and the largest gap for
+    ``p="infty"``.
 
     :see Implementation: `Natural adversarial examples (Hendrycks et al.) on GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
 
-    :param confidence: predicted confidence per sample, of shape :math:`N`
-    :param correct: 1 where the prediction was correct, else 0, of shape :math:`N`
+    :param confidence: predicted confidence per sample, of any shape
+    :param correct: 1 where the prediction was correct, else 0, of the same shape as
+        ``confidence``
     :param p: norm; one of ``"1"``, ``"2"``, or ``"infty"``
-    :param beta: target bin size (number of samples per bin)
-    :return: calculated calibration error
+    :param beta: number of samples per bin
+    :return: calibration error
+    :raises ValueError: if ``p`` or ``beta`` is invalid, the shapes differ, there are no
+        samples, or ``confidence`` contains NaN
     """
+    if p not in ("1", "2", "infty", "infinity", "max"):
+        raise ValueError(f"p must be '1', '2', or 'infty', got {p!r}")
+    if beta < 1:
+        raise ValueError(f"beta must be a positive number of samples, got {beta}")
+    confidence, correct = _flatten(confidence, correct)
+    _check_scores(confidence)
+    n = confidence.numel()
+    if n == 0:
+        raise ValueError("calibration error is undefined without samples")
 
-    confidence = confidence.numpy()
-    correct = correct.numpy()
+    # The reference implementation skips the last bin (the most confident samples, plus the
+    # remainder) and fails with fewer than beta samples. Here every sample is in a bin.
+    order = torch.argsort(confidence)
+    confidence = _float64(confidence[order])
+    correct = _float64(correct[order])
+    n_bins = max(1, n // beta)
+    bin_index = (torch.arange(n, device=confidence.device) // beta).clamp(max=n_bins - 1)
+    sizes = torch.bincount(bin_index, minlength=n_bins).double()
+    gaps = (torch.zeros_like(sizes).index_add_(0, bin_index, confidence - correct) / sizes).abs()
 
-    idxs = np.argsort(confidence)
-    confidence = confidence[idxs]
-    correct = correct[idxs]
-    bins = [[i * beta, (i + 1) * beta] for i in range(len(confidence) // beta)]
-    bins[-1] = [bins[-1][0], len(confidence)]
-
-    cerr = 0
-    total_examples = len(confidence)
-    for i in range(len(bins) - 1):
-        bin_confidence = confidence[bins[i][0] : bins[i][1]]
-        bin_correct = correct[bins[i][0] : bins[i][1]]
-        num_examples_in_bin = len(bin_confidence)
-
-        if num_examples_in_bin > 0:
-            difference = np.abs(np.nanmean(bin_confidence) - np.nanmean(bin_correct))
-
-            if p == "2":
-                cerr += num_examples_in_bin / total_examples * np.square(difference)
-            elif p == "1":
-                cerr += num_examples_in_bin / total_examples * difference
-            elif p == "infty" or p == "infinity" or p == "max":
-                cerr = np.maximum(cerr, difference)
-            else:
-                assert False, "p must be '1', '2', or 'infty'"
-
+    if p == "1":
+        return float((sizes * gaps).sum() / n)
     if p == "2":
-        cerr = np.sqrt(cerr)
-
-    return float(cerr)
+        return float(((sizes * gaps**2).sum() / n).sqrt())
+    return float(gaps.max())
 
 
 def aurra(confidence: torch.Tensor, correct: torch.Tensor) -> float:
     """
     Area under the risk-response-rate curve (AURRA): the mean accuracy over all response rates,
-    when samples are answered in order of decreasing confidence.
-    Requires CPU tensors that do not require gradients.
+    when samples are answered in order of decreasing confidence. Higher is better. The order of
+    samples with equal confidence is arbitrary.
 
     :see Implementation: `Natural adversarial examples (Hendrycks et al.) on GitHub <https://github.com/hendrycks/natural-adv-examples/>`__
 
-    :param confidence: predicted confidence values, of shape :math:`N`
-    :param correct: 1 where the prediction was correct, else 0, of shape :math:`N`
-
-    :return: score
+    :param confidence: predicted confidence per sample, of any shape
+    :param correct: 1 where the prediction was correct, else 0, of the same shape as
+        ``confidence``
+    :return: AURRA in :math:`[0, 1]`
+    :raises ValueError: if the shapes differ, there are no samples, or ``confidence`` contains
+        NaN
     """
-    conf_ranks = np.argsort(confidence.numpy())[::-1]  # indices from greatest to least confidence
-    rra_curve = np.cumsum(np.asarray(correct.numpy())[conf_ranks])
-    rra_curve = rra_curve / np.arange(1, len(rra_curve) + 1)  # accuracy at each response rate
-    return float(np.mean(rra_curve))
+    confidence, correct = _flatten(confidence, correct)
+    _check_scores(confidence)
+    n = confidence.numel()
+    if n == 0:
+        raise ValueError("AURRA is undefined without samples")
+    order = torch.argsort(confidence, descending=True)
+    answered_correctly = torch.cumsum(_float64(correct[order]), dim=0)
+    # accuracy at each response rate
+    rra_curve = answered_correctly / torch.arange(
+        1, n + 1, dtype=answered_correctly.dtype, device=answered_correctly.device
+    )
+    return float(rra_curve.mean())
 
 
-def calc_openness(n_train, n_test, n_target):
+def calc_openness(n_train: int, n_test: int, n_target: int) -> float:
     """
     Openness of an open set recognition problem, as defined in *Toward Open Set Recognition*:
 

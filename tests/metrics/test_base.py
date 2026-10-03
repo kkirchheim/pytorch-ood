@@ -145,9 +145,57 @@ class TestMetricUpdates(unittest.TestCase):
         collection = OODMetrics().update(scores, labels.double(), predictions)
         self.assertEqual(collection._buffers["labels"][0].dtype, torch.int32)
         self.assertEqual(collection._buffers["scores"][0].dtype, scores.dtype)
-        # class indices beyond the range of int16
-        big = torch.tensor([70000, 40000, 3])
-        self.assertEqual(Accuracy().update(big, big).compute()["ACC"], 1.0)
+        # class indices beyond the range of int16: the wrong prediction equals the label modulo
+        # 2^16, so a 16-bit cast would count it as correct
+        labels = torch.tensor([70000, 40000])
+        predictions = torch.tensor([70000 - 2**16, 40000])
+        self.assertEqual(Accuracy().update(predictions, labels).compute()["ACC"], 0.5)
+
+    def test_accuracy_counts_beyond_float32_precision(self):
+        # float32 counts are exact only up to 2^24
+        n = 2**24 + 3
+        labels = torch.zeros(n, dtype=torch.int32)
+        predictions = torch.zeros(n, dtype=torch.int32)
+        predictions[0] = 1
+        metric = Accuracy()
+        for _ in range(2):
+            metric.update(predictions, labels)
+        self.assertEqual(int(metric._correct), 2 * (n - 1))
+        self.assertEqual(int(metric._total), 2 * n)
+        self.assertEqual(metric.compute()["ACC"], (n - 1) / n)
+
+    def test_buffered_inputs_do_not_share_memory_with_inputs(self):
+        scores, labels, predictions = _cat(_batches())
+        for metric, args in (
+            (AUROC(), (scores, labels)),
+            (OODMetrics(), (scores, labels, predictions)),
+        ):
+            with self.subTest(type(metric).__name__):
+                expected = type(metric)().update(*args).compute()
+                given = [a.clone() for a in args]
+                metric.update(*given)
+                for tensor in given:
+                    tensor.fill_(0)
+                self.assertEqual(metric.compute(), expected)
+
+    def test_device_and_void_label_are_keyword_only(self):
+        for metric_cls in (AUROC, AUTC, Accuracy, OODMetrics):
+            with self.subTest(metric_cls.__name__):
+                with self.assertRaises(TypeError):
+                    metric_cls("cpu")
+        with self.assertRaises(TypeError):
+            AUPR("id", "cpu")
+        with self.assertRaises(TypeError):
+            FPRAtTPR(0.95, "cpu")
+        with self.assertRaises(TypeError):
+            MetricCollection([AUROC()], "cpu")
+
+    def test_unknown_input_raises(self):
+        scores, labels, _ = _cat(_batches())
+        with self.assertRaises(TypeError):
+            AUROC().update(scores=scores, labels=labels, logits=scores)
+        with self.assertRaises(TypeError):
+            AUROC().update(scores, labels, scores)
 
     def test_float_labels(self):
         scores, labels, _ = _cat(_batches())
@@ -277,6 +325,49 @@ class TestCollection(unittest.TestCase):
             list(collection.compute()), ["AUROC", "AUPR-OUT", "FPR90TPR", "AUTC", "ACC"]
         )
 
+    def test_each_input_stored_once_per_update(self):
+        batches = _batches(n_batches=3, size=64)
+        collection = OODMetrics()
+        for scores, labels, predictions in batches:
+            collection.update(scores, labels, predictions)
+        for name in ("scores", "labels"):
+            self.assertEqual(len(collection._buffers[name]), 3)
+            self.assertEqual(sum(t.numel() for t in collection._buffers[name]), 3 * 64)
+        first = collection.compute()
+        # the concatenation is kept for later calls of compute
+        for name in ("scores", "labels"):
+            self.assertEqual(len(collection._buffers[name]), 1)
+            self.assertEqual(collection._buffers[name][0].numel(), 3 * 64)
+        self.assertEqual(collection.compute(), first)
+
+    def test_reset_resets_members(self):
+        scores, labels, predictions = _cat(_batches())
+        wrong = torch.where(labels >= 0, labels + 1, labels)
+        for collection, args in (
+            (OODMetrics(), lambda p: (scores, labels, p)),
+            (MetricCollection([Accuracy()]), None),
+        ):
+            with self.subTest(type(collection).__name__):
+                if args is None:
+                    collection.update(predictions=wrong, labels=labels)
+                    collection.reset()
+                    collection.update(predictions=labels.clamp(min=0), labels=labels)
+                else:
+                    collection.update(*args(wrong))
+                    collection.reset()
+                    collection.update(*args(labels.clamp(min=0)))
+                self.assertEqual(collection.compute()["ACC"], 1.0)
+
+    def test_failed_update_changes_nothing(self):
+        scores, labels, predictions = _cat(_batches())
+        collection = OODMetrics()
+        with self.assertRaises(ValueError):
+            collection.update(scores, labels, predictions[:-1])
+        # the failed call must not have committed to passing predictions
+        result = collection.update(scores, labels).compute()
+        self.assertNotIn("ACC", result)
+        self.assertEqual(result, OODMetrics().update(scores, labels).compute())
+
     def test_inputs_buffered_once(self):
         scores, labels, predictions = _cat(_batches())
         collection = MetricCollection([AUROC(), AUPR("id"), AUPR("ood"), FPRAtTPR(), Accuracy()])
@@ -288,11 +379,16 @@ class TestCollection(unittest.TestCase):
                 self.assertTrue(all(not values for values in metric._buffers.values()))
 
     def test_curve_computed_once(self):
-        scores, labels, _ = _cat(_batches())
-        collection = OODMetrics().update(scores, labels)
-        with mock.patch.object(base_module, "_Counts", side_effect=base_module._Counts) as counts:
+        # every curve sorts the scores, so one sort means one curve, whichever code path
+        # computes it
+        scores, labels, predictions = _cat(_batches())
+        collection = OODMetrics().update(scores, labels, predictions)
+        with mock.patch("torch.argsort", wraps=torch.argsort) as argsort:
             collection.compute()
-        self.assertEqual(counts.call_count, 1)
+        self.assertEqual(argsort.call_count, 1)
+        # AUROC and FPR95TPR share the ROC curve, which is computed on first use
+        counts = F._counts(scores, labels)
+        self.assertIs(F._roc(counts), F._roc(counts))
 
     def test_streaming_members_store_counts_only(self):
         _, labels, predictions = _cat(_batches())
@@ -332,6 +428,10 @@ class TestCollection(unittest.TestCase):
         with self.assertRaises(ValueError):
             collection.update(scores=scores, labels=labels[:-1])
 
+    def test_defaults(self):
+        self.assertEqual(AUPR().keys, ("AUPR-OUT",))
+        self.assertEqual(FPRAtTPR().keys, ("FPR95TPR",))
+
     def test_keys(self):
         self.assertEqual(FPRAtTPR(0.95).keys, ("FPR95TPR",))
         self.assertEqual(FPRAtTPR(0.9).keys, ("FPR90TPR",))
@@ -341,7 +441,7 @@ class TestCollection(unittest.TestCase):
         self.assertEqual(
             OODMetrics().keys, ("AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR", "ACC")
         )
-        self.assertEqual(OODMetrics(fpr=0.9).keys[4], "FPR90TPR")
+        self.assertEqual(OODMetrics(fpr_at=0.9).keys[4], "FPR90TPR")
 
     def test_invalid_parameters(self):
         with self.assertRaises(ValueError):
@@ -350,4 +450,4 @@ class TestCollection(unittest.TestCase):
             with self.assertRaises(ValueError):
                 FPRAtTPR(tpr)
             with self.assertRaises(ValueError):
-                OODMetrics(fpr=tpr)
+                OODMetrics(fpr_at=tpr)

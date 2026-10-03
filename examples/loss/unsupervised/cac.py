@@ -25,7 +25,7 @@ from pytorch_ood.dataset.img import Textures
 from pytorch_ood.loss import CACLoss
 from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model, load_transform
-from pytorch_ood.utils import ToUnknown, fix_random_seed, is_known
+from pytorch_ood.utils import ToUnknown, fix_random_seed
 
 fix_random_seed(123)
 

@@ -2,6 +2,7 @@
 Metrics for OOD detection and closed-set classification.
 """
 
+import warnings
 from typing import Dict, Optional, Tuple
 
 import torch
@@ -58,6 +59,7 @@ class AUPR(BufferedMetric):
     def __init__(
         self,
         positive: str = "ood",
+        *,
         device: Optional[Device] = None,
         void_label: Optional[int] = None,
     ):
@@ -93,6 +95,7 @@ class FPRAtTPR(BufferedMetric):
     def __init__(
         self,
         tpr: float = 0.95,
+        *,
         device: Optional[Device] = None,
         void_label: Optional[int] = None,
     ):
@@ -117,6 +120,10 @@ class AUTC(BufferedMetric):
     """
     Area under the threshold curve; lower is better. See
     :func:`~pytorch_ood.metrics.functional.autc`.
+
+    AUTC is undefined for constant or infinite scores. In these cases, the result is NaN and a
+    warning is issued, so that collections such as :class:`~pytorch_ood.metrics.OODMetrics`
+    still report the other metrics.
     """
 
     inputs = ("scores", "labels")
@@ -126,7 +133,11 @@ class AUTC(BufferedMetric):
         return ("AUTC",)
 
     def _compute_from(self, data: _Data) -> Dict[str, Tensor]:
-        return {"AUTC": F.autc(data["scores"], data["labels"])}
+        scores = data["scores"]
+        if not bool(torch.isfinite(scores).all()) or bool(scores.min() == scores.max()):
+            warnings.warn("AUTC is undefined for constant or infinite scores, returning NaN")
+            return {"AUTC": torch.tensor(float("nan"), dtype=torch.float64)}
+        return {"AUTC": F.autc(scores, data["labels"])}
 
 
 class Accuracy(StreamingMetric):
@@ -148,7 +159,7 @@ class Accuracy(StreamingMetric):
 
     inputs = ("predictions", "labels")
 
-    def __init__(self, device: Optional[Device] = None, void_label: Optional[int] = None):
+    def __init__(self, *, device: Optional[Device] = None, void_label: Optional[int] = None):
         """
         :param device: see :class:`~pytorch_ood.metrics.Metric`
         :param void_label: see :class:`~pytorch_ood.metrics.Metric`
@@ -162,8 +173,9 @@ class Accuracy(StreamingMetric):
 
     def _update(self, inputs: Dict[str, Tensor]) -> None:
         known = inputs["labels"] >= 0
-        correct = (inputs["predictions"][known] == inputs["labels"][known]).sum()
-        # kept on the device of the data, so updates do not synchronize with the host
+        # no boolean indexing, and the counts stay on the device of the data, so updates do
+        # not synchronize with the host
+        correct = ((inputs["predictions"] == inputs["labels"]) & known).sum()
         if self._correct is None:
             self._correct = torch.zeros((), dtype=torch.long, device=correct.device)
             self._total = torch.zeros((), dtype=torch.long, device=correct.device)
@@ -192,13 +204,15 @@ class OODMetrics(MetricCollection):
     - ``AUPR-IN``: area under the precision-recall curve with ID samples as the positive class,
       see :class:`~pytorch_ood.metrics.AUPR`
     - ``AUPR-OUT``: area under the precision-recall curve with OOD samples as the positive class
-    - ``FPR95TPR``: false positive rate at a true positive rate of 95%, see
-      :class:`~pytorch_ood.metrics.FPRAtTPR` (the key follows ``fpr``)
+    - ``FPR95TPR``: false positive rate at the threshold where the true positive rate reaches
+      95%, see :class:`~pytorch_ood.metrics.FPRAtTPR`. With ``fpr_at=0.9``, the key is
+      ``FPR90TPR``.
     - ``ACC``: closed-set accuracy on the ID samples, see :class:`~pytorch_ood.metrics.Accuracy`,
       if predicted class indices are passed to :meth:`~pytorch_ood.metrics.Metric.update`
 
     Inputs of any shape are flattened, so each entry counts as a sample. The scores and labels
-    are stored until :meth:`~pytorch_ood.metrics.Metric.compute` is called; the accuracy only stores counts.
+    are stored until :meth:`~pytorch_ood.metrics.Metric.compute` is called, on the device of
+    the first input unless ``device`` is given; the accuracy only stores counts.
 
     .. rubric:: Examples
 
@@ -219,18 +233,22 @@ class OODMetrics(MetricCollection):
     """
 
     def __init__(
-        self, device: Optional[Device] = None, void_label: Optional[int] = None, fpr: float = 0.95
+        self,
+        *,
+        fpr_at: float = 0.95,
+        device: Optional[Device] = None,
+        void_label: Optional[int] = None,
     ):
         """
+        :param fpr_at: true positive rate at which the false positive rate is reported, a
+            fraction in :math:`[0, 1]`
         :param device: see :class:`~pytorch_ood.metrics.Metric`
-        :param void_label: label of entries to ignore
-        :param fpr: true positive rate at which the false positive rate is reported, a fraction in
-            :math:`[0, 1]`
-        :raises ValueError: if ``fpr`` is not in :math:`[0, 1]` or ``void_label`` is negative
+        :param void_label: label of entries to ignore, e.g., unlabeled pixels
+        :raises ValueError: if ``fpr_at`` is not in :math:`[0, 1]` or ``void_label`` is negative
         """
         accuracy = Accuracy()
         super().__init__(
-            [AUROC(), AUTC(), AUPR("id"), AUPR("ood"), FPRAtTPR(fpr), accuracy],
+            [AUROC(), AUTC(), AUPR("id"), AUPR("ood"), FPRAtTPR(fpr_at), accuracy],
             device=device,
             void_label=void_label,
         )

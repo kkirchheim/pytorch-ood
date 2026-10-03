@@ -1,10 +1,6 @@
 Metrics
 *******
 
-Metrics for OOD detection, computed in torch on the device of the data, so that they run on
-the GPU, too. Larger outlier scores mean more likely OOD, and OOD samples have labels
-:math:`< 0`. The metrics are compared against scikit-learn in the tests.
-
 .. automodule:: pytorch_ood.metrics
    :no-members:
 

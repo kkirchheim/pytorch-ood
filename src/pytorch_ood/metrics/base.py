@@ -42,23 +42,33 @@ class _Data:
 
 class Metric(ABC):
     """
-    Interface of all metrics: :meth:`~pytorch_ood.metrics.Metric.update` adds a batch, :meth:`~pytorch_ood.metrics.Metric.compute` returns the results
-    as a dictionary, and :meth:`~pytorch_ood.metrics.Metric.reset` starts over.
+    Interface of all metrics. You feed a metric batch by batch with
+    :meth:`~pytorch_ood.metrics.Metric.update`, read the results with
+    :meth:`~pytorch_ood.metrics.Metric.compute`, and clear it with
+    :meth:`~pytorch_ood.metrics.Metric.reset` to evaluate the next model or dataset.
 
-    Each metric declares the names of its inputs in :attr:`~pytorch_ood.metrics.Metric.inputs`, which are the parameters of
-    :meth:`~pytorch_ood.metrics.Metric.update`. The inputs of one call must have the same shape. They are flattened, so each
-    entry counts as a sample; entries whose label equals ``void_label`` are ignored.
+    The inputs a metric takes are named in :attr:`~pytorch_ood.metrics.Metric.inputs`, e.g.,
+    ``("scores", "labels")``. All inputs of one call must have the same shape. They are
+    flattened, so each entry counts as a sample: for segmentation, you can pass score maps and
+    label masks as they are, and every pixel is a sample. Entries whose label equals
+    ``void_label`` are ignored.
 
-    **Devices.** If ``device`` is given, all inputs are moved there. Otherwise, the first call
-    of :meth:`~pytorch_ood.metrics.Metric.update` (after construction or :meth:`~pytorch_ood.metrics.Metric.reset`) fixes the device: that of its first
-    input. Inputs of this and later calls that live elsewhere are moved there, so the scores
-    can, e.g., be on the GPU while the labels are on the CPU.
+    **Devices.** If ``device`` is given, all inputs are moved there. Otherwise, the metric
+    stays on the device of the first input it is given (after construction or
+    :meth:`~pytorch_ood.metrics.Metric.reset`), and moves later inputs there. The scores can,
+    e.g., be on the GPU while the labels are on the CPU. Metrics that store their inputs keep
+    them on this device until :meth:`~pytorch_ood.metrics.Metric.compute`, which can use a lot
+    of GPU memory for large datasets or segmentation; pass ``device="cpu"`` to keep them in
+    main memory instead.
+
+    Labels and predictions are stored as 32-bit integers, so class indices must be smaller
+    than :math:`2^{31}`.
     """
 
     #: names of the inputs of :meth:`~pytorch_ood.metrics.Metric.update`, in order
     inputs: Tuple[str, ...] = ()
 
-    def __init__(self, device: Optional[Device] = None, void_label: Optional[int] = None):
+    def __init__(self, *, device: Optional[Device] = None, void_label: Optional[int] = None):
         """
         :param device: device for the state and the computations. If ``None``, the device of the
             first input of the first call of :meth:`~pytorch_ood.metrics.Metric.update` is used.
@@ -80,9 +90,12 @@ class Metric(ABC):
 
     def update(self, *args: Tensor, **kwargs: Tensor) -> Self:
         """
-        Adds a batch. The parameters are given by :attr:`~pytorch_ood.metrics.Metric.inputs`.
+        Adds a batch. The inputs are named by :attr:`~pytorch_ood.metrics.Metric.inputs` and can
+        be given by position or by name.
 
         :return: self
+        :raises TypeError: if an input is not a tensor, is not one of
+            :attr:`~pytorch_ood.metrics.Metric.inputs`, or is given twice
         :raises ValueError: if inputs are missing or have different shapes
         """
         inputs = self._bind(args, kwargs)
@@ -97,7 +110,8 @@ class Metric(ABC):
     def compute(self) -> Dict[str, float]:
         """
         :return: dictionary that maps :attr:`~pytorch_ood.metrics.Metric.keys` to the values of the metric
-        :raises ValueError: if no data was given, or the metric is undefined for the data
+        :raises ValueError: if no data was given, or the metric is undefined for the data, e.g.,
+            curves without ID or without OOD samples, or scores that contain NaN
         """
         return {key: float(value) for key, value in self._compute().items()}
 
@@ -132,6 +146,10 @@ class Metric(ABC):
             )
         inputs = dict(zip(self.inputs, args))
         for name, value in kwargs.items():
+            if name not in self.inputs:
+                raise TypeError(
+                    f"{type(self).__name__}.update takes the inputs {self.inputs}, got {name!r}"
+                )
             if name in inputs:
                 raise TypeError(f"{type(self).__name__}.update got multiple values for {name!r}")
             inputs[name] = value
@@ -159,10 +177,12 @@ class Metric(ABC):
 
         prepared = {}
         for name, value in tensors.items():
-            value = value.detach().reshape(-1).to(self._device)
-            if name in _LABEL_INPUTS:
-                value = value.to(torch.int32)
-            prepared[name] = value
+            dtype = torch.int32 if name in _LABEL_INPUTS else value.dtype
+            flat = value.detach().reshape(-1)
+            moved = flat.to(self._device, dtype)
+            # stored inputs must not share memory with the caller's tensors, which may be
+            # modified or reused after update
+            prepared[name] = moved.clone() if moved.data_ptr() == flat.data_ptr() else moved
 
         if self.void_label is not None and "labels" in prepared:
             keep = prepared["labels"] != self.void_label
@@ -185,7 +205,7 @@ class BufferedMetric(Metric):
     until :meth:`~pytorch_ood.metrics.Metric.compute` is called. Labels and predictions are stored as int32.
     """
 
-    def __init__(self, device: Optional[Device] = None, void_label: Optional[int] = None):
+    def __init__(self, *, device: Optional[Device] = None, void_label: Optional[int] = None):
         super().__init__(device=device, void_label=void_label)
         self._buffers: Dict[str, List[Tensor]] = {name: [] for name in self.inputs}
 
@@ -207,7 +227,11 @@ class BufferedMetric(Metric):
 
 
 def _concat(buffers: Dict[str, List[Tensor]]) -> Dict[str, Tensor]:
-    return {name: torch.cat(values) for name, values in buffers.items() if values}
+    for values in buffers.values():
+        # keep the concatenation, so that later calls of compute do not copy the inputs again
+        if len(values) > 1:
+            values[:] = [torch.cat(values)]
+    return {name: values[0] for name, values in buffers.items() if values}
 
 
 class MetricCollection(Metric):
@@ -235,6 +259,7 @@ class MetricCollection(Metric):
     def __init__(
         self,
         metrics: Sequence[Metric],
+        *,
         device: Optional[Device] = None,
         void_label: Optional[int] = None,
     ):
@@ -297,6 +322,7 @@ class MetricCollection(Metric):
             raise TypeError(f"No metric of the collection takes the inputs {unknown}")
         given = {name for name, value in kwargs.items() if value is not None}
 
+        fed_now = {}
         for metric in self.metrics:
             fed = all(name in given for name in metric.inputs)
             if metric in self._optional:
@@ -306,12 +332,14 @@ class MetricCollection(Metric):
                         f"The inputs {metric.inputs} of {type(metric).__name__} must be given "
                         f"in all calls of update or in none"
                     )
-                self._fed[id(metric)] = fed
+                fed_now[id(metric)] = fed
             elif not fed:
                 missing = [name for name in metric.inputs if name not in given]
                 raise ValueError(f"{type(metric).__name__} needs the inputs {missing}")
 
         prepared = self._prepare(kwargs)
+        # only after the inputs passed all checks
+        self._fed.update(fed_now)
         if prepared is not None:
             self._update(prepared)
         return self

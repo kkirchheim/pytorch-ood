@@ -3,13 +3,14 @@ The functional metrics, compared against scikit-learn on many kinds of data.
 """
 
 import itertools
+import math
 import unittest
 from fractions import Fraction
 
 import numpy as np
 import torch
 
-from src.pytorch_ood.metrics import aurra, calc_openness, calibration_error
+from src.pytorch_ood.metrics import aurra, calc_openness, calibration_error, oscr_score
 from src.pytorch_ood.metrics import functional as F
 
 try:
@@ -317,6 +318,16 @@ class TestEdgeCases(unittest.TestCase):
                 self.assertEqual(counts.fps.tolist(), [1000, 1000, 2001, 2001])
 
 
+class TestMixedDevices(unittest.TestCase):
+    @unittest.skipUnless(CUDA, "CUDA not available")
+    def test_labels_on_other_device(self):
+        g = torch.Generator().manual_seed(0)
+        labels = torch.randint(-1, 3, (200,), generator=g)
+        scores = torch.randn(200, generator=g) + (labels < 0).float()
+        for fn in (F.auroc, F.autc, lambda s, y: F.fpr_at_tpr(s, y, 0.95)):
+            self.assertAlmostEqual(float(fn(scores.cuda(), labels)), float(fn(scores, labels)))
+
+
 class TestAUTC(unittest.TestCase):
     def test_perfect_separation(self):
         labels = torch.cat([torch.zeros(50), -torch.ones(50)]).long()
@@ -380,14 +391,141 @@ class TestAccuracy(unittest.TestCase):
 
 
 class TestMovedFunctions(unittest.TestCase):
-    def test_calibration_error(self):
-        conf = torch.linspace(0, 1, 1000)
-        y = torch.ones(1000)
-        y[500:] = 0
-        self.assertGreater(calibration_error(conf, y), 0)
+    @staticmethod
+    def _three_bins():
+        # bins of 100 samples: confidence 0.2 / 0.5 / 0.9, accuracy 0.2 / 0.0 / 0.6,
+        # i.e. calibration gaps 0.0 / 0.5 / 0.3
+        conf = torch.cat([torch.full((100,), c) for c in (0.2, 0.5, 0.9)])
+        correct = torch.zeros(300)
+        correct[:20] = 1
+        correct[200:260] = 1
+        return conf, correct
+
+    def test_calibration_error_matches_hand_computed(self):
+        conf, correct = self._three_bins()
+        expected = {
+            "1": (0.0 + 0.5 + 0.3) / 3,
+            "2": math.sqrt((0.0 + 0.25 + 0.09) / 3),
+            "infty": 0.5,
+        }
+        for p, value in expected.items():
+            with self.subTest(p=p):
+                self.assertAlmostEqual(calibration_error(conf, correct, p=p, beta=100), value)
+
+    def test_calibration_error_includes_last_bin(self):
+        # only the highest-confidence bin is miscalibrated
+        conf = torch.cat([torch.full((100,), 0.5), torch.full((100,), 1.0)])
+        correct = torch.cat([torch.ones(50), torch.zeros(150)])
+        self.assertAlmostEqual(calibration_error(conf, correct, p="1", beta=100), 0.5)
+
+    def test_calibration_error_last_bin_takes_remainder(self):
+        # 250 samples: bins of 100 and 150 samples, gaps 0.0 and 0.4
+        conf = torch.cat([torch.full((100,), 0.5), torch.full((150,), 0.9)])
+        correct = torch.cat([torch.ones(50), torch.zeros(50), torch.ones(75), torch.zeros(75)])
+        self.assertAlmostEqual(calibration_error(conf, correct, p="1", beta=100), 150 / 250 * 0.4)
+
+    def test_calibration_error_with_fewer_samples_than_bin_size(self):
+        # a single bin with all samples
+        conf = torch.tensor([0.9, 0.9, 0.6, 0.6])
+        correct = torch.tensor([1, 0, 0, 0])
+        self.assertAlmostEqual(calibration_error(conf, correct, p="1", beta=100), 0.75 - 0.25)
+
+    def test_calibration_error_of_calibrated_predictions_is_zero(self):
+        # one bin per confidence level, with matching accuracy
+        conf = torch.cat([torch.full((100,), 0.25), torch.full((100,), 0.75)])
+        correct = torch.cat([torch.ones(25), torch.zeros(75), torch.ones(75), torch.zeros(25)])
+        for p in ("1", "2", "infty"):
+            with self.subTest(p=p):
+                self.assertAlmostEqual(calibration_error(conf, correct, p=p, beta=100), 0.0)
+
+    def test_calibration_error_is_permutation_invariant(self):
+        conf, correct = self._three_bins()
+        perm = torch.randperm(300, generator=torch.Generator().manual_seed(0))
+        self.assertAlmostEqual(
+            calibration_error(conf[perm], correct[perm]), calibration_error(conf, correct)
+        )
+
+    def test_calibration_error_rejects_invalid_input(self):
+        conf, correct = self._three_bins()
+        cases = {
+            "unknown norm": lambda: calibration_error(conf, correct, p="3"),
+            "bin size": lambda: calibration_error(conf, correct, beta=0),
+            "shape": lambda: calibration_error(conf, correct[:-1]),
+            "empty": lambda: calibration_error(conf[:0], correct[:0]),
+            "NaN": lambda: calibration_error(torch.full((4,), float("nan")), correct[:4]),
+        }
+        for name, call in cases.items():
+            with self.subTest(name):
+                with self.assertRaises(ValueError):
+                    call()
+
+    @unittest.skipUnless(CUDA, "CUDA not available")
+    def test_calibration_error_on_cuda(self):
+        conf, correct = self._three_bins()
+        self.assertAlmostEqual(
+            calibration_error(conf.cuda(), correct.cuda()), calibration_error(conf, correct)
+        )
 
     def test_aurra(self):
         self.assertEqual(aurra(torch.tensor([0.9, 0.1]), torch.tensor([1, 0])), 0.75)
+        # answered in the order 0.9, 0.5, 0.1: accuracies 1, 1/2, 2/3
+        self.assertAlmostEqual(
+            aurra(torch.tensor([0.1, 0.9, 0.5]), torch.tensor([1, 1, 0])), (1 + 1 / 2 + 2 / 3) / 3
+        )
+
+    def test_aurra_of_any_shape(self):
+        confidence = torch.rand(4, 5, generator=torch.Generator().manual_seed(0))
+        correct = (confidence > 0.3).long()
+        self.assertEqual(
+            aurra(confidence, correct), aurra(confidence.flatten(), correct.flatten())
+        )
+
+    def test_aurra_rejects_invalid_input(self):
+        with self.assertRaises(ValueError):
+            aurra(torch.rand(4), torch.ones(3))
+        with self.assertRaises(ValueError):
+            aurra(torch.zeros(0), torch.zeros(0))
+        with self.assertRaises(ValueError):
+            aurra(torch.tensor([0.5, float("nan")]), torch.ones(2))
+
+    @unittest.skipUnless(CUDA, "CUDA not available")
+    def test_aurra_on_cuda(self):
+        confidence = torch.rand(100, generator=torch.Generator().manual_seed(0))
+        correct = (confidence > 0.3).long()
+        self.assertAlmostEqual(
+            aurra(confidence.cuda(), correct.cuda()), aurra(confidence, correct)
+        )
+
+    def test_oscr_of_any_shape(self):
+        g = torch.Generator().manual_seed(0)
+        labels = torch.randint(-1, 3, (4, 6), generator=g)
+        scores = torch.randn(4, 6, generator=g)
+        predictions = torch.randint(0, 3, (4, 6), generator=g)
+        self.assertEqual(
+            oscr_score(scores, predictions, labels),
+            oscr_score(scores.flatten(), predictions.flatten(), labels.flatten()),
+        )
+
+    def test_oscr_rejects_invalid_input(self):
+        labels = torch.tensor([0, 1, -1, -1])
+        predictions = torch.tensor([0, 1, 0, 0])
+        with self.assertRaises(ValueError):
+            oscr_score(torch.rand(4), predictions[:3], labels)
+        with self.assertRaises(ValueError):
+            oscr_score(torch.rand(3), predictions, labels)
+        with self.assertRaises(ValueError):
+            oscr_score(torch.tensor([0.0, 1.0, float("nan"), 2.0]), predictions, labels)
+
+    @unittest.skipUnless(CUDA, "CUDA not available")
+    def test_oscr_on_cuda(self):
+        g = torch.Generator().manual_seed(0)
+        labels = torch.randint(-1, 3, (100,), generator=g)
+        scores = torch.randn(100, generator=g)
+        predictions = torch.randint(0, 3, (100,), generator=g)
+        self.assertAlmostEqual(
+            oscr_score(scores.cuda(), predictions.cuda(), labels),
+            oscr_score(scores, predictions, labels),
+        )
 
     def test_openness(self):
         self.assertAlmostEqual(

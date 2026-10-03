@@ -705,7 +705,28 @@ _SPLIT_SECTIONS = [
         prefix="utils/",
         packages=("pytorch_ood.utils",),
         needs_page=_is_class_or_function,
-        legacy_anchors={"transformations": ("utils/transforms", None)},
+        legacy_anchors={
+            "transformations": ("utils/transforms", None),
+            # the metrics moved from pytorch_ood.utils to pytorch_ood.metrics
+            "metrics": ("metrics", None),
+            "module-pytorch_ood.utils.metrics": ("metrics", None),
+            "pytorch_ood.utils.OODMetrics": (
+                "metrics/oodmetrics",
+                "pytorch_ood.metrics.OODMetrics",
+            ),
+            "pytorch_ood.utils.calc_openness": (
+                "metrics/functional",
+                "pytorch_ood.metrics.functional.calc_openness",
+            ),
+            "pytorch_ood.utils.metrics.calibration_error": (
+                "metrics/functional",
+                "pytorch_ood.metrics.functional.calibration_error",
+            ),
+            "pytorch_ood.utils.metrics.aurra": (
+                "metrics/functional",
+                "pytorch_ood.metrics.functional.aurra",
+            ),
+        },
         # internal helpers that leak into the package through ``from .utils import *``
         ignore=(
             "apply_reduction",

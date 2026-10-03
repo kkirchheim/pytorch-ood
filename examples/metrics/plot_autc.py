@@ -2,7 +2,7 @@
 AUTC
 -------------------------
 
-Historgram and Metrics for random scores with different delta.
+Histogram and metrics for random scores with different delta.
 
 """
 

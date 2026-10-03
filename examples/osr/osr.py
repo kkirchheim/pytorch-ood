@@ -18,7 +18,7 @@ from pytorch_ood.dataset.ossim import DynamicOSS
 from pytorch_ood.detector import MaxSoftmax
 from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import get_model_info, load_model, load_transform
-from pytorch_ood.utils import TargetMapping, fix_random_seed, is_known
+from pytorch_ood.utils import TargetMapping, fix_random_seed
 
 device = "cuda:0"
 num_epochs = 10

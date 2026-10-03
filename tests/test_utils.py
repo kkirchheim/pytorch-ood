@@ -1,4 +1,3 @@
-import math
 import unittest
 from os.path import dirname, join
 

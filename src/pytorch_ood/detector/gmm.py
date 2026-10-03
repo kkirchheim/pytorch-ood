@@ -157,10 +157,9 @@ class GMM(FeaturesDetector):
 
         # Per-class Mahalanobis distances; use max (closest class) as score.
         # We omit log-det and mixing-weight terms: they are constant per class and
-        # can push absolute score magnitudes into ranges that cause numerical issues
-        # in downstream metrics (e.g. torchmetrics binary_auroc applies sigmoid).
-        # Using only the Mahalanobis term preserves the ranking while keeping scores
-        # in a well-behaved range.
+        # can push absolute score magnitudes into very large ranges. Using only the
+        # Mahalanobis term preserves the ranking while keeping scores in a
+        # well-behaved range.
         d = z.shape[1]
         mahal_k = []
         for k in range(self._mu.shape[0]):
