@@ -1,3 +1,4 @@
+import functools
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -434,15 +435,15 @@ class LogitsDetector(Detector):
 
     @staticmethod
     def _wrap_representation_method(method):
+        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
+        # the parameters of the wrapped method instead of *args, **kwargs
+        @functools.wraps(method)
         def wrapped(self, *args, **kwargs):
             device = self.device
             if device is not None:
                 args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
             return method(self, *args, **kwargs)
 
-        wrapped.__name__ = method.__name__
-        wrapped.__doc__ = method.__doc__
-        wrapped.__qualname__ = method.__qualname__
         return wrapped
 
     def predict(self, x: Tensor) -> Tensor:
@@ -539,15 +540,15 @@ class FeaturesDetector(Detector):
 
     @staticmethod
     def _wrap_representation_method(method):
+        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
+        # the parameters of the wrapped method instead of *args, **kwargs
+        @functools.wraps(method)
         def wrapped(self, *args, **kwargs):
             device = self.device
             if device is not None:
                 args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
             return method(self, *args, **kwargs)
 
-        wrapped.__name__ = method.__name__
-        wrapped.__doc__ = method.__doc__
-        wrapped.__qualname__ = method.__qualname__
         return wrapped
 
     def fit_features(self, x: Tensor, y: Tensor) -> Self:
@@ -597,15 +598,15 @@ class FeatureMapsDetector(Detector):
 
     @staticmethod
     def _wrap_representation_method(method):
+        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
+        # the parameters of the wrapped method instead of *args, **kwargs
+        @functools.wraps(method)
         def wrapped(self, *args, **kwargs):
             device = self.device
             if device is not None:
                 args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
             return method(self, *args, **kwargs)
 
-        wrapped.__name__ = method.__name__
-        wrapped.__doc__ = method.__doc__
-        wrapped.__qualname__ = method.__qualname__
         return wrapped
 
     def fit_feature_maps(self, feature_maps: Tensor, y: Tensor) -> Self:
