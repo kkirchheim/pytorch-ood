@@ -139,7 +139,10 @@ class PerImage(StreamingMetric):
 
     def update(self, *args: Tensor, **kwargs: Tensor) -> Self:
         """
-        Adds a batch of images.
+        Adds a batch of images. The inputs are those of the wrapped metric, see its
+        :attr:`~pytorch_ood.metrics.Metric.inputs`, e.g., ``scores`` and ``labels`` for
+        :class:`~pytorch_ood.metrics.AUROC`. They can be given by position or by name, and
+        have the images along the first dimension, e.g., :math:`B \\times H \\times W`.
 
         :return: self
         :raises TypeError: if an input is not a tensor, is not one of
