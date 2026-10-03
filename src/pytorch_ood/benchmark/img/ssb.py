@@ -337,15 +337,17 @@ class _SSBBase(Benchmark):
 
         :param known: include ID
         :param unknown: include OOD
-        :return: the two test datasets
+        :return: the two combined test datasets, the two OOD test datasets, or the ID test dataset
+            (once), see :meth:`Benchmark.test_sets <pytorch_ood.benchmark.Benchmark.test_sets>`
+        :raises ValueError: if both ``known`` and ``unknown`` are false
         """
         if known and unknown:
             return [self._test_id + self._test_easy, self._test_id + self._test_hard]
         if known and not unknown:
-            return [self._test_id, self._test_id]
+            return [self._test_id]
         if not known and unknown:
             return [self._test_easy, self._test_hard]
-        raise ValueError()
+        raise ValueError("At least one of `known` or `unknown` must be True")
 
 
 # ─── Public Benchmark Classes ─────────────────────────────────────────────────
