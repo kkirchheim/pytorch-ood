@@ -269,9 +269,9 @@ class SSBBenchmarkStructureTest(unittest.TestCase):
         labels = [label for _, label in ds]
         self.assertTrue(all(label >= 0 for label in labels))
 
-    def test_known_only_returns_two_id_datasets(self):
+    def test_known_only_returns_the_id_dataset_once(self):
         sets = self.bench.test_sets(known=True, unknown=False)
-        self.assertEqual(len(sets), 2)
+        self.assertEqual(len(sets), 1)
         for ds in sets:
             labels = [label for _, label in ds]
             self.assertTrue(all(label >= 0 for label in labels))

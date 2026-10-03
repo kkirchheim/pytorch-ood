@@ -52,13 +52,14 @@ class Benchmark(ABC):
     def test_sets(self, known=True, unknown=True) -> List[Dataset]:
         """
         List of the different test datasets.
-        If known and unknown are true, each dataset contains ID and OOD data.
 
         :param known: include ID
         :param unknown: include OOD
-        :return: test datasets, in the order of ``ood_names``. OOD samples are labelled
-            :math:`< 0`.
-        :raises ValueError: if both ``known`` and ``unknown`` are false (in the implementations)
+        :return: with ``known`` and ``unknown``, one dataset per entry of ``ood_names`` that
+            combines the ID test set with that OOD set. With ``unknown`` only, the OOD sets in the
+            order of ``ood_names``. With ``known`` only, the ID test set, once. OOD samples are
+            labelled :math:`< 0`.
+        :raises ValueError: if both ``known`` and ``unknown`` are false
         """
         pass
 

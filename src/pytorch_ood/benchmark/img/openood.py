@@ -220,11 +220,13 @@ class _OpenOOD_Imglist(Benchmark):
     def test_sets(self, known=True, unknown=True) -> List[Dataset]:
         """
         List of the different test datasets.
-        If known and unknown are true, each dataset contains ID and OOD data.
 
         :param known: include ID
         :param unknown: include OOD
-        :return: one dataset per entry of ``ood_names``
+        :return: with ``known`` and ``unknown``, one dataset per entry of ``ood_names`` that
+            combines the ID test set with that OOD set. With ``unknown`` only, the OOD sets in the
+            order of ``ood_names``. With ``known`` only, the ID test set, once.
+        :raises ValueError: if both ``known`` and ``unknown`` are false
         """
         if known and unknown:
             return [ConcatDataset([self.test_in, other]) for other in self.test_oods]
@@ -235,7 +237,7 @@ class _OpenOOD_Imglist(Benchmark):
         if not known and unknown:
             return self.test_oods
 
-        raise ValueError()
+        raise ValueError("At least one of `known` or `unknown` must be True")
 
 
 class _OpenOOD_ImageNet(_OpenOOD_Imglist):
