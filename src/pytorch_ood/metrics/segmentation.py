@@ -77,10 +77,17 @@ class PerImage(StreamingMetric):
     dimension of the inputs indexes the images, e.g., :math:`B \\times H \\times W` for score
     maps and label masks.
 
-    Images without ID or without OOD pixels (after removing pixels with ``void_label``) are
-    skipped, since the curve-based metrics are undefined for them. :meth:`compute` warns about
-    skipped images and raises if all images were skipped. Only the sums of the results are
-    stored, so the memory does not grow with the number of images.
+    Images for which the metric is undefined are skipped: images without ID or without OOD
+    pixels for metrics based on curves, such as :class:`~pytorch_ood.metrics.AUROC`, and images
+    without ID pixels for :class:`~pytorch_ood.metrics.Accuracy` (see
+    :attr:`~pytorch_ood.metrics.Metric.needs_id` and
+    :attr:`~pytorch_ood.metrics.Metric.needs_ood`), as well as images whose pixels all have
+    ``void_label``. :meth:`compute` warns about skipped images and raises if all images were
+    skipped. Only the sums of the results are stored, so the memory does not grow with the
+    number of images.
+
+    A per-image metric can not be part of a :class:`~pytorch_ood.metrics.MetricCollection`.
+    To compute several metrics per image, wrap the collection instead.
 
     .. rubric:: Examples
 
@@ -93,6 +100,8 @@ class PerImage(StreamingMetric):
             metric.update(detector(x), y)
         print(metric.compute())  # {"AUROC": ...}, the mean over the images
     """
+
+    _per_image = True
 
     def __init__(
         self,
@@ -107,10 +116,12 @@ class PerImage(StreamingMetric):
             input, and must not set ``device`` or ``void_label`` itself.
         :param device: see :class:`~pytorch_ood.metrics.Metric`
         :param void_label: see :class:`~pytorch_ood.metrics.Metric`
-        :raises ValueError: if ``metric`` does not take labels, or sets its own ``device`` or
-            ``void_label``
+        :raises ValueError: if ``metric`` does not take labels, is itself a per-image metric,
+            or sets its own ``device`` or ``void_label``
         """
         super().__init__(device=device, void_label=void_label)
+        if metric._per_image:
+            raise ValueError(f"{type(metric).__name__} already computes metrics per image")
         if "labels" not in metric.inputs:
             raise ValueError(f"{type(metric).__name__} does not take labels")
         if metric.device is not None or metric.void_label is not None:
@@ -163,10 +174,12 @@ class PerImage(StreamingMetric):
         if inputs is None:
             # every pixel is void
             return
-        ood = inputs["labels"] < 0
-        n_ood = int(ood.sum())
-        if n_ood == 0 or n_ood == ood.numel():
-            return
+        if self.metric.needs_id or self.metric.needs_ood:
+            n_ood = int((inputs["labels"] < 0).sum())
+            if self.metric.needs_ood and n_ood == 0:
+                return
+            if self.metric.needs_id and n_ood == inputs["labels"].numel():
+                return
         self.metric._update(inputs)
         results = self.metric._compute()
         # the inner metric only ever holds one image
@@ -178,13 +191,18 @@ class PerImage(StreamingMetric):
     def _compute(self) -> Dict[str, Tensor]:
         if self._images == 0:
             raise ValueError(f"{type(self).__name__} was given no data")
+        reasons = [
+            f"without {name} pixels"
+            for name, needs in (("ID", self.metric.needs_id), ("OOD", self.metric.needs_ood))
+            if needs
+        ]
+        reasons.append("with only void pixels")
+        reason = ", ".join(reasons[:-1]) + " or " + reasons[-1] if len(reasons) > 1 else reasons[0]
         if self._counted == 0:
-            raise ValueError(f"None of the {self._images} images contains both ID and OOD pixels")
+            raise ValueError(f"All {self._images} images were skipped: images {reason}")
         skipped = self._images - self._counted
         if skipped:
-            warnings.warn(
-                f"Skipped {skipped} of {self._images} images without ID or without OOD pixels"
-            )
+            warnings.warn(f"Skipped {skipped} of {self._images} images {reason}")
         return {key: value / self._counted for key, value in self._sums.items()}
 
     def _reset(self) -> None:

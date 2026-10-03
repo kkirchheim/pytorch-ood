@@ -67,6 +67,12 @@ class Metric(ABC):
 
     #: names of the inputs of :meth:`~pytorch_ood.metrics.Metric.update`, in order
     inputs: Tuple[str, ...] = ()
+    #: whether the metric is undefined without ID samples (labels :math:`\geq 0`)
+    needs_id: bool = False
+    #: whether the metric is undefined without OOD samples (labels :math:`< 0`)
+    needs_ood: bool = False
+    # whether update takes batches of images instead of flattening its inputs (PerImage)
+    _per_image: bool = False
 
     def __init__(self, *, device: Optional[Device] = None, void_label: Optional[int] = None):
         """
@@ -268,8 +274,8 @@ class MetricCollection(Metric):
             themselves, as the collection prepares the inputs for all of them.
         :param device: see :class:`~pytorch_ood.metrics.Metric`
         :param void_label: see :class:`~pytorch_ood.metrics.Metric`
-        :raises ValueError: if ``metrics`` is empty, contains collections, metrics with their
-            own ``device`` or ``void_label``, or metrics with the same keys
+        :raises ValueError: if ``metrics`` is empty, contains collections, per-image metrics,
+            metrics with their own ``device`` or ``void_label``, or metrics with the same keys
         """
         super().__init__(device=device, void_label=void_label)
         metrics = list(metrics)
@@ -278,6 +284,12 @@ class MetricCollection(Metric):
         for metric in metrics:
             if isinstance(metric, MetricCollection):
                 raise ValueError("Collections can not be nested")
+            if metric._per_image:
+                # the collection flattens the batch, so the images could not be told apart
+                raise ValueError(
+                    f"{type(metric).__name__} computes metrics per image and can not be part of "
+                    f"a collection; wrap the collection in it instead"
+                )
             if metric.device is not None or metric.void_label is not None:
                 raise ValueError(
                     f"{type(metric).__name__} sets its own device or void_label; set them on "
@@ -304,6 +316,14 @@ class MetricCollection(Metric):
     @property
     def keys(self) -> Tuple[str, ...]:
         return tuple(key for metric in self.metrics for key in metric.keys)
+
+    @property
+    def needs_id(self) -> bool:
+        return any(metric.needs_id for metric in self.metrics)
+
+    @property
+    def needs_ood(self) -> bool:
+        return any(metric.needs_ood for metric in self.metrics)
 
     def update(self, *args: Tensor, **kwargs: Tensor) -> Self:
         """

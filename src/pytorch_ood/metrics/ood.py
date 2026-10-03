@@ -36,6 +36,8 @@ class AUROC(BufferedMetric):
     """
 
     inputs = ("scores", "labels")
+    needs_id = True
+    needs_ood = True
 
     def __init__(self, *, device: Optional[Device] = None, void_label: Optional[int] = None):
         """
@@ -96,6 +98,8 @@ class AUPR(BufferedMetric):
     """
 
     inputs = ("scores", "labels")
+    needs_id = True
+    needs_ood = True
 
     def __init__(
         self,
@@ -166,6 +170,8 @@ class FPRAtTPR(BufferedMetric):
     """
 
     inputs = ("scores", "labels")
+    needs_id = True
+    needs_ood = True
 
     def __init__(
         self,
@@ -239,6 +245,8 @@ class AUTC(BufferedMetric):
     """
 
     inputs = ("scores", "labels")
+    needs_id = True
+    needs_ood = True
 
     def __init__(self, *, device: Optional[Device] = None, void_label: Optional[int] = None):
         """
@@ -305,6 +313,7 @@ class Accuracy(StreamingMetric):
     """
 
     inputs = ("predictions", "labels")
+    needs_id = True
 
     def __init__(self, *, device: Optional[Device] = None, void_label: Optional[int] = None):
         """

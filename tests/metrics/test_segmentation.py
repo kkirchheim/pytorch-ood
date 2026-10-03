@@ -9,8 +9,11 @@ import warnings
 import torch
 
 from src.pytorch_ood.metrics import (
+    AUPR,
     AUROC,
+    AUTC,
     Accuracy,
+    FPRAtTPR,
     MetricCollection,
     OODMetrics,
     OODPerImageSegmentationMetrics,
@@ -110,7 +113,7 @@ class TestPerImage(unittest.TestCase):
     def test_all_skipped_raises(self):
         scores, labels = _images()
         metric = PerImage(AUROC()).update(scores, labels.clamp(min=0))
-        with self.assertRaisesRegex(ValueError, "None of the 4 images"):
+        with self.assertRaisesRegex(ValueError, "All 4 images were skipped"):
             metric.compute()
         with self.assertRaises(ValueError):
             PerImage(AUROC()).compute()
@@ -163,6 +166,49 @@ class TestPerImage(unittest.TestCase):
             OODPerImageSegmentationMetrics(fpr_at=95)
         with self.assertRaises(TypeError):
             OODPerImageSegmentationMetrics("cpu")
+
+    def test_accuracy_only_skips_images_without_id_pixels(self):
+        _, labels = _images(n=4)
+        labels[1] = labels[1].clamp(min=0)  # no OOD pixels: accuracy is defined
+        labels[2] = -1  # no ID pixels: accuracy is undefined
+        predictions = labels.clamp(min=0)
+        predictions[1] = 1 - predictions[1].clamp(max=1)  # image 1 is classified wrongly
+        metric = PerImage(Accuracy()).update(predictions, labels)
+        keep = [0, 1, 3]
+        with self.assertWarnsRegex(UserWarning, "Skipped 1 of 4 images without ID pixels or"):
+            result = metric.compute()
+        self.assertAlmostEqual(
+            result["ACC"], self._expected(predictions[keep], labels[keep], F.accuracy)
+        )
+        self.assertLess(result["ACC"], 1)
+
+    def test_collection_skips_images_any_member_is_undefined_for(self):
+        scores, labels = _images(n=4)
+        labels[1] = labels[1].clamp(min=0)
+        labels[2] = -1
+        predictions = labels.clamp(min=0)
+        metric = PerImage(MetricCollection([Accuracy(), AUROC()]))
+        metric.update(scores=scores, predictions=predictions, labels=labels)
+        with self.assertWarnsRegex(
+            UserWarning, "Skipped 2 of 4 images without ID pixels, without OOD pixels or"
+        ):
+            result = metric.compute()
+        keep = [0, 3]
+        self.assertAlmostEqual(result["AUROC"], self._expected(scores[keep], labels[keep]))
+
+    def test_needs(self):
+        for metric in (AUROC(), AUPR(), FPRAtTPR(), AUTC(), OODMetrics()):
+            self.assertEqual((metric.needs_id, metric.needs_ood), (True, True))
+        for metric in (Accuracy(), MetricCollection([Accuracy()])):
+            self.assertEqual((metric.needs_id, metric.needs_ood), (True, False))
+
+    def test_not_part_of_a_collection(self):
+        with self.assertRaisesRegex(ValueError, "wrap the collection"):
+            MetricCollection([AUROC(), PerImage(AUPR())])
+        with self.assertRaises(ValueError):
+            MetricCollection([OODPerImageSegmentationMetrics()])
+        with self.assertRaises(ValueError):
+            PerImage(PerImage(AUROC()))
 
     def test_wraps_streaming_metrics(self):
         _, labels = _images()
