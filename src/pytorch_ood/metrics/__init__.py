@@ -23,12 +23,18 @@ all scores at once, so they keep the scores and labels in memory until the end; 
 datasets or segmentation, pass ``device="cpu"`` to keep them off the GPU. If you already have
 all scores, the functions in :mod:`pytorch_ood.metrics.functional` compute the metrics
 directly.
+
+For anomaly segmentation, where each pixel is a sample,
+:class:`~pytorch_ood.metrics.OODSegmentationMetrics` computes the metrics over the pixels of all
+images together, and :class:`~pytorch_ood.metrics.OODPerImageSegmentationMetrics` computes them
+for each image and reports the mean.
 """
 
 from . import functional
 from .base import BufferedMetric, Metric, MetricCollection, StreamingMetric
 from .functional import aurra, calc_openness, calibration_error, oscr_score
 from .ood import AUPR, AUROC, AUTC, Accuracy, FPRAtTPR, OODMetrics
+from .segmentation import OODPerImageSegmentationMetrics, OODSegmentationMetrics, PerImage
 
 __all__ = [
     "Metric",
@@ -41,6 +47,9 @@ __all__ = [
     "AUTC",
     "Accuracy",
     "OODMetrics",
+    "PerImage",
+    "OODSegmentationMetrics",
+    "OODPerImageSegmentationMetrics",
     "oscr_score",
     "calibration_error",
     "aurra",

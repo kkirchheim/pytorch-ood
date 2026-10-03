@@ -18,6 +18,17 @@ OOD Detection
    metrics/autc
 
 
+Segmentation
+============
+
+.. toctree::
+   :maxdepth: 1
+
+   metrics/oodsegmentationmetrics
+   metrics/oodperimagesegmentationmetrics
+   metrics/perimage
+
+
 Classification
 ==============
 
