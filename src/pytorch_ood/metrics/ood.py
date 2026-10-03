@@ -56,6 +56,17 @@ class AUROC(BufferedMetric):
         """
         return super().update(scores, labels)
 
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes the AUROC from all batches added so far.
+
+        :return: ``{"AUROC": value}``, with a value in :math:`[0, 1]`. Higher is better; a
+            detector that guesses gets 0.5.
+        :raises ValueError: if no data was given, there are no ID or no OOD samples, or the
+            scores contain NaN
+        """
+        return super().compute()
+
     @property
     def keys(self) -> Tuple[str, ...]:
         return ("AUROC",)
@@ -71,6 +82,17 @@ class AUPR(BufferedMetric):
     (AUPR-OUT), OOD samples (labels :math:`< 0`) are the positive class; with
     ``positive="id"`` (AUPR-IN), ID samples are, and lower outlier scores mean more likely
     positive. See :func:`~pytorch_ood.metrics.functional.aupr`.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        from pytorch_ood.metrics import AUPR
+
+        metric = AUPR(positive="id")
+        for x, y in loader:
+            metric.update(detector(x), y)
+        print(metric.compute())  # {"AUPR-IN": ...}
     """
 
     inputs = ("scores", "labels")
@@ -104,6 +126,18 @@ class AUPR(BufferedMetric):
         """
         return super().update(scores, labels)
 
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes the AUPR from all batches added so far.
+
+        :return: ``{"AUPR-OUT": value}`` for ``positive="ood"`` and ``{"AUPR-IN": value}`` for
+            ``positive="id"``, with a value in :math:`[0, 1]`. Higher is better; a detector
+            that guesses gets the fraction of positive samples.
+        :raises ValueError: if no data was given, there are no ID or no OOD samples, or the
+            scores contain NaN
+        """
+        return super().compute()
+
     @property
     def keys(self) -> Tuple[str, ...]:
         return ("AUPR-OUT",) if self.positive == "ood" else ("AUPR-IN",)
@@ -114,10 +148,21 @@ class AUPR(BufferedMetric):
 
 class FPRAtTPR(BufferedMetric):
     """
-    False positive rate at the first threshold with a true positive rate of at least ``tpr``,
-    with OOD samples as the positive class. See
-    :func:`~pytorch_ood.metrics.functional.fpr_at_tpr`. The key is, e.g., ``FPR95TPR`` for
-    ``tpr=0.95``.
+    False positive rate at the threshold where the true positive rate first reaches ``tpr``,
+    with OOD samples as the positive class: the fraction of ID samples that are flagged as OOD
+    when the threshold is set so that, e.g., 95% of the OOD samples are detected. See
+    :func:`~pytorch_ood.metrics.functional.fpr_at_tpr`.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        from pytorch_ood.metrics import FPRAtTPR
+
+        metric = FPRAtTPR(tpr=0.95)
+        for x, y in loader:
+            metric.update(detector(x), y)
+        print(metric.compute())  # {"FPR95TPR": ...}
     """
 
     inputs = ("scores", "labels")
@@ -149,6 +194,18 @@ class FPRAtTPR(BufferedMetric):
         """
         return super().update(scores, labels)
 
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes the false positive rate from all batches added so far.
+
+        :return: a dictionary with one entry, named after ``tpr`` in percent: ``{"FPR95TPR":
+            value}`` for ``tpr=0.95``, ``{"FPR90TPR": value}`` for ``tpr=0.9``. The value is in
+            :math:`[0, 1]`; lower is better.
+        :raises ValueError: if no data was given, there are no ID or no OOD samples, or the
+            scores contain NaN
+        """
+        return super().compute()
+
     @property
     def keys(self) -> Tuple[str, ...]:
         return (f"FPR{self.tpr * 100:g}TPR",)
@@ -159,8 +216,22 @@ class FPRAtTPR(BufferedMetric):
 
 class AUTC(BufferedMetric):
     """
-    Area under the threshold curve; lower is better. See
+    Area under the threshold curve: the false positive and the false negative rate, averaged
+    over all thresholds, after the outlier scores are scaled to :math:`[0, 1]`. Unlike AUROC,
+    it also reflects how far apart the scores of ID and OOD samples are. Lower is better; 0
+    means that all ID samples get the lowest and all OOD samples the highest score. See
     :func:`~pytorch_ood.metrics.functional.autc`.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        from pytorch_ood.metrics import AUTC
+
+        metric = AUTC()
+        for x, y in loader:
+            metric.update(detector(x), y)
+        print(metric.compute())  # {"AUTC": ...}
 
     AUTC is undefined for constant or infinite scores. In these cases, the result is NaN and a
     warning is issued, so that collections such as :class:`~pytorch_ood.metrics.OODMetrics`
@@ -188,12 +259,28 @@ class AUTC(BufferedMetric):
         """
         return super().update(scores, labels)
 
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes the AUTC from all batches added so far.
+
+        :return: ``{"AUTC": value}``, with a value in :math:`[0, 1]`; lower is better. The value
+            is NaN, with a warning, if the scores are constant or contain infinite values.
+        :raises ValueError: if no data was given, there are no ID or no OOD samples, or the
+            scores contain NaN
+        """
+        return super().compute()
+
     @property
     def keys(self) -> Tuple[str, ...]:
         return ("AUTC",)
 
     def _compute_from(self, data: _Data) -> Dict[str, Tensor]:
         scores = data["scores"]
+        # errors in the data raise as for the other metrics; only the undefined cases are NaN
+        F._check_scores(scores)
+        n_ood = int((data["labels"] < 0).sum())
+        if n_ood == 0 or n_ood == scores.numel():
+            raise ValueError("AUTC requires both ID and OOD samples")
         if not bool(torch.isfinite(scores).all()) or bool(scores.min() == scores.max()):
             warnings.warn("AUTC is undefined for constant or infinite scores, returning NaN")
             return {"AUTC": torch.tensor(float("nan"), dtype=torch.float64)}
@@ -239,6 +326,15 @@ class Accuracy(StreamingMetric):
         :raises ValueError: if the shapes differ
         """
         return super().update(predictions, labels)
+
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes the accuracy from all batches added so far.
+
+        :return: ``{"ACC": value}``, with a value in :math:`[0, 1]`; higher is better
+        :raises ValueError: if no data was given or there are no ID samples
+        """
+        return super().compute()
 
     @property
     def keys(self) -> Tuple[str, ...]:
@@ -326,6 +422,16 @@ class OODMetrics(MetricCollection):
             void_label=void_label,
         )
         self._optional = (accuracy,)
+
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes all metrics from the batches added so far.
+
+        :return: dictionary with the entries listed above
+        :raises ValueError: if no data was given, there are no ID or no OOD samples, or the
+            scores contain NaN
+        """
+        return super().compute()
 
     def update(self, scores: Tensor, labels: Tensor, predictions: Optional[Tensor] = None) -> Self:
         """

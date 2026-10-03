@@ -8,7 +8,7 @@ import warnings
 
 import torch
 
-from src.pytorch_ood.metrics import OODMetrics
+from src.pytorch_ood.metrics import AUTC, OODMetrics
 from src.pytorch_ood.metrics import functional as F
 
 
@@ -116,6 +116,22 @@ class TestOODMetrics(unittest.TestCase):
         expected = OODMetrics().update(torch.tensor([-9.0, 0, 1, 1, 2, 9]), labels).compute()
         for key in ("AUROC", "AUPR-IN", "AUPR-OUT", "FPR95TPR"):
             self.assertEqual(result[key], expected[key], key)
+
+    def test_autc_raises_for_invalid_data(self):
+        # only constant and infinite scores give NaN; invalid data raises as for the others
+        labels = torch.tensor([0, 0, -1, -1])
+        cases = {
+            "NaN": (torch.tensor([0.0, float("nan"), 1.0, 2.0]), labels),
+            "only ID": (torch.ones(4), torch.zeros(4).long()),
+            "only OOD": (torch.arange(4.0), -torch.ones(4).long()),
+        }
+        for name, (scores, y) in cases.items():
+            with self.subTest(name):
+                metric = AUTC().update(scores, y)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error")
+                    with self.assertRaises(ValueError):
+                        metric.compute()
 
     def test_no_warning_for_valid_scores(self):
         scores, labels = _separated()

@@ -344,6 +344,17 @@ class MetricCollection(Metric):
             self._update(prepared)
         return self
 
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes all metrics from the batches added so far.
+
+        :return: the results of all metrics in one dictionary, in the order of ``metrics``,
+            e.g., ``{"AUROC": ..., "FPR95TPR": ...}`` for ``[AUROC(), FPRAtTPR()]``
+        :raises ValueError: if no data was given, or one of the metrics is undefined for the
+            data
+        """
+        return super().compute()
+
     def _active(self, metrics: Sequence[Metric]) -> List[Metric]:
         return [m for m in metrics if m not in self._optional or self._fed.get(id(m), False)]
 
