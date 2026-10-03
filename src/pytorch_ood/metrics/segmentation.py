@@ -59,6 +59,18 @@ class OODSegmentationMetrics(MetricCollection):
         """
         super().__init__(_ood_metrics(fpr_at), device=device, void_label=void_label)
 
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes all metrics over the pixels of all images added so far.
+
+        :return: dictionary with the entries ``AUROC``, ``AUTC``, ``AUPR-IN``, ``AUPR-OUT``,
+            and ``FPR95TPR`` (named after ``fpr_at``, e.g., ``FPR90TPR`` for ``fpr_at=0.9``),
+            see :class:`~pytorch_ood.metrics.OODMetrics`
+        :raises ValueError: if no data was given, there are no ID or no OOD pixels, or the
+            scores contain NaN
+        """
+        return super().compute()
+
     def update(self, scores: Tensor, labels: Tensor) -> Self:
         """
         Adds a batch.
@@ -136,6 +148,17 @@ class PerImage(StreamingMetric):
     @property
     def keys(self) -> Tuple[str, ...]:
         return self.metric.keys
+
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes the mean of the wrapped metric over the images added so far, without the
+        skipped images.
+
+        :return: dictionary with the same entries as the wrapped metric returns, e.g.,
+            ``{"AUROC": value}`` for :class:`~pytorch_ood.metrics.AUROC`
+        :raises ValueError: if no data was given, or all images were skipped
+        """
+        return super().compute()
 
     def update(self, *args: Tensor, **kwargs: Tensor) -> Self:
         """
@@ -253,6 +276,18 @@ class OODPerImageSegmentationMetrics(PerImage):
         super().__init__(
             MetricCollection(_ood_metrics(fpr_at)), device=device, void_label=void_label
         )
+
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes the mean of all metrics over the images added so far, without the skipped
+        images.
+
+        :return: dictionary with the entries ``AUROC``, ``AUTC``, ``AUPR-IN``, ``AUPR-OUT``,
+            and ``FPR95TPR`` (named after ``fpr_at``, e.g., ``FPR90TPR`` for ``fpr_at=0.9``),
+            see :class:`~pytorch_ood.metrics.OODMetrics`
+        :raises ValueError: if no data was given, or all images were skipped
+        """
+        return super().compute()
 
     def update(self, scores: Tensor, labels: Tensor) -> Self:
         """
