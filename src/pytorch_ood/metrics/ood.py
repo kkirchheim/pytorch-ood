@@ -37,6 +37,14 @@ class AUROC(BufferedMetric):
 
     inputs = ("scores", "labels")
 
+    def __init__(self, *, device: Optional[Device] = None, void_label: Optional[int] = None):
+        """
+        :param device: see :class:`~pytorch_ood.metrics.Metric`
+        :param void_label: see :class:`~pytorch_ood.metrics.Metric`
+        :raises ValueError: if ``void_label`` is negative
+        """
+        super().__init__(device=device, void_label=void_label)
+
     @property
     def keys(self) -> Tuple[str, ...]:
         return ("AUROC",)
@@ -67,7 +75,7 @@ class AUPR(BufferedMetric):
         :param positive: the positive class, ``"ood"`` or ``"id"``
         :param device: see :class:`~pytorch_ood.metrics.Metric`
         :param void_label: see :class:`~pytorch_ood.metrics.Metric`
-        :raises ValueError: if ``positive`` is invalid
+        :raises ValueError: if ``positive`` is invalid or ``void_label`` is negative
         """
         if positive not in ("ood", "id"):
             raise ValueError(f"positive must be 'ood' or 'id', got {positive!r}")
@@ -103,7 +111,7 @@ class FPRAtTPR(BufferedMetric):
         :param tpr: true positive rate, a fraction in :math:`[0, 1]`
         :param device: see :class:`~pytorch_ood.metrics.Metric`
         :param void_label: see :class:`~pytorch_ood.metrics.Metric`
-        :raises ValueError: if ``tpr`` is not in :math:`[0, 1]`
+        :raises ValueError: if ``tpr`` is not in :math:`[0, 1]` or ``void_label`` is negative
         """
         super().__init__(device=device, void_label=void_label)
         self.tpr = _check_fraction("tpr", tpr)
@@ -127,6 +135,14 @@ class AUTC(BufferedMetric):
     """
 
     inputs = ("scores", "labels")
+
+    def __init__(self, *, device: Optional[Device] = None, void_label: Optional[int] = None):
+        """
+        :param device: see :class:`~pytorch_ood.metrics.Metric`
+        :param void_label: see :class:`~pytorch_ood.metrics.Metric`
+        :raises ValueError: if ``void_label`` is negative
+        """
+        super().__init__(device=device, void_label=void_label)
 
     @property
     def keys(self) -> Tuple[str, ...]:
@@ -163,6 +179,7 @@ class Accuracy(StreamingMetric):
         """
         :param device: see :class:`~pytorch_ood.metrics.Metric`
         :param void_label: see :class:`~pytorch_ood.metrics.Metric`
+        :raises ValueError: if ``void_label`` is negative
         """
         super().__init__(device=device, void_label=void_label)
         self._reset()
