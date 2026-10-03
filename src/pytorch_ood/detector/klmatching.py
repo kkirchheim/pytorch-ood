@@ -8,7 +8,6 @@
 """
 
 import logging
-import warnings
 from typing import Optional
 
 import torch
@@ -33,15 +32,21 @@ class KLMatching(LogitsDetector):
     """
     Implements KL-Matching from the paper *Scaling Out-of-Distribution Detection for Real-World Settings*.
 
-    For each class :math:`k`, a typical posterior distribution
-    :math:`d_k = \\mathbb{E}_{x \\sim \\mathcal{X}_{val}}[p(y \\vert x)]` is
-    estimated as the mean posterior of the fitted data (the validation set :math:`\\mathcal{X}_{val}`) of class
-    :math:`k`. In this implementation, the samples are grouped by the class labels passed to
-    :meth:`fit_logits`.
-    During evaluation, the KL-Divergence between the observed posterior and the typical posterior
-    :math:`D_{KL}[p(y \\vert x) \\Vert d_{\\hat{y}}]` of the predicted class
-    :math:`\\hat{y} = \\arg\\max_y p(y \\vert x)` is used as outlier score.
-    Posteriors can only be scored for classes that were fitted.
+    For each class :math:`k`, a typical posterior distribution :math:`d_k` is estimated as the mean
+    posterior of the samples of the fitted data (a validation set :math:`\\mathcal{X}_{\\text{val}}`) that the
+    model predicts as class :math:`k`:
+
+    .. math::
+        d_k = \\mathbb{E}_{x' \\sim \\mathcal{X}_{\\text{val}}} [p(y \\vert x') \\mid \\arg\\max_y p(y \\vert x') = k]
+
+    This requires no class labels. The outlier score of an input :math:`x` is the KL divergence of its
+    posterior to the closest typical posterior:
+
+    .. math::
+        \\min_k D_{KL}[p(y \\vert x) \\Vert d_k]
+
+    where the minimum runs over the classes that the model predicts for at least one sample of the fitted
+    data.
     """
 
     info = DetectorInfo(
@@ -66,34 +71,27 @@ class KLMatching(LogitsDetector):
         self.model = model
         self.dists: ParameterDict = ParameterDict()  #: Typical posteriors per class
 
-    def fit_logits(self, logits: Tensor, labels: Tensor) -> Self:
+    def fit_logits(self, logits: Tensor, labels: Optional[Tensor] = None) -> Self:
         """
-        Estimates typical distributions for each class.
-        Ignores OOD samples. Warns if not every class is present, since
-        :meth:`predict_logits` raises for posteriors whose predicted class was not fitted.
+        Estimates the typical posterior of each class from the samples the model predicts as that
+        class. The class labels are not needed; if given, they are only used to ignore OOD samples.
 
         :param logits: logits of shape :math:`N \\times C`
-        :param labels: class labels of shape :math:`N`
+        :param labels: labels of shape :math:`N`; samples with labels :math:`< 0` are ignored
         :return: the fitted detector
         """
         device = self.device or logits.device
         logits = logits.to(device)
-        labels = labels.to(device)
-        known = is_known(labels)
-        probabilities = logits[known].softmax(dim=1)
-        labels = labels[known]
+        if labels is not None:
+            logits = logits[is_known(labels.to(device))]
+        probabilities = logits.softmax(dim=1)
+        predictions = probabilities.argmax(dim=1)
 
-        for label in labels.unique():
-            log.debug(f"Fitting class {label}")
-            d_k = probabilities[labels == label].mean(dim=0)
-            self.dists[str(label.item())] = Parameter(d_k)
-
-        missing = [c for c in range(logits.shape[1]) if str(c) not in self.dists]
-        if missing:
-            warnings.warn(
-                f"No samples for classes {missing} of {logits.shape[1]}. Predicting one of them "
-                f"will raise. Fit on data that covers every class, e.g. a shuffled subset."
-            )
+        self.dists = ParameterDict()
+        for k in predictions.unique():
+            log.debug(f"Fitting class {k}")
+            d_k = probabilities[predictions == k].mean(dim=0)
+            self.dists[str(k.item())] = Parameter(d_k, requires_grad=False)
 
         return self
 
@@ -101,8 +99,10 @@ class KLMatching(LogitsDetector):
         """
         :param logits: logits predicted by the model, shape :math:`B \\times C`
         :return: outlier scores of shape :math:`B`
-        :raises ValueError: if a predicted class was not fitted
+        :raises RequiresFittingException: if the detector was not fitted
         """
+        if len(self.dists) == 0:
+            raise RequiresFittingException("KL-Matching has to be fitted on validation data.")
         p = logits.softmax(dim=1)
         return self._score_probabilities(p)
 
@@ -113,21 +113,14 @@ class KLMatching(LogitsDetector):
         :param p: probabilities predicted by the model, shape :math:`B \\times C`
         :return: outlier scores of shape :math:`B`
         """
-        device = p.device
-        predictions = p.argmax(dim=1)
-        scores = torch.empty(size=(p.shape[0],), device=device)
-
-        for label in predictions.unique():
-            if str(label.item()) not in self.dists:
-                raise ValueError(f"Label {label.item()} not fitted.")
-
-            dist = self.dists[str(label.item())]
-            class_p = p[predictions == label]
-            class_d = dist.unsqueeze(0).repeat(class_p.shape[0], 1)
-            d_kl = (class_p * (class_p / class_d).log()).sum(dim=1)
-            scores[predictions == label] = d_kl
-
-        return scores
+        dists = torch.stack([d.to(p.device) for d in self.dists.values()])  # K x C
+        # KL[p || d_k] = sum p log p - sum p log d_k for every input and fitted class, B x K.
+        # 0 log 0 = 0; log 0 is replaced by the lowest finite value, so that probabilities of 0
+        # contribute nothing and positive ones where d_k is 0 give a (near) infinite divergence.
+        log_d = dists.log().nan_to_num(neginf=torch.finfo(dists.dtype).min)
+        p_log_p = torch.where(p > 0, p * p.log(), torch.zeros_like(p))
+        kl = p_log_p.sum(dim=1, keepdim=True) - p @ log_d.T
+        return kl.min(dim=1).values
 
     def predict(self, x: Tensor) -> Tensor:
         """
