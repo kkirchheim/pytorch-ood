@@ -35,7 +35,7 @@ from pytorch_ood.metrics import OODPerImageSegmentationMetrics
 from pytorch_ood.utils import fix_random_seed
 
 device = "cuda:0"
-batch_size = 4
+batch_size = 1
 num_epochs = 1
 
 fix_random_seed(12345)
@@ -143,8 +143,8 @@ print(metrics.compute())
 # %%
 # Output:
 #
-# +---------------+-----------+-------+--------+---------+-----------+----------+
-# | Dataset       | Detector | AUROC  | AUTC   | AUPR-IN | AUPR-OUT  | FPR95TPR |
-# +===============+==========+========+========+=========+===========+==========+
-# | Streethazards | Energy   | 81.93  | 42.28  | 99.70   | 09.05     | 57.43    |
-# +---------------+----------+--------+--------+---------+-----------+----------+
+# +---------------+----------+-------+-------+---------+----------+----------+
+# | Dataset       | Detector | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
+# +===============+==========+=======+=======+=========+==========+==========+
+# | StreetHazards | Energy   | 84.33 | 41.25 | 99.71   | 8.58     | 52.06    |
+# +---------------+----------+-------+-------+---------+----------+----------+

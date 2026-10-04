@@ -1,11 +1,15 @@
 """
-StreetHazards + COCO objects
------------------------------------------------
+StreetHazards with Entropic Loss and COCO Objects
+--------------------------------------------------
 
 We train a Feature Pyramid Segmentation model
 with a ResNet-50 backbone pre-trained on the ImageNet
-on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>`.
-During training, we insert random COCO objects as anomalies into the image to regularize the model.
+on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` training set using
+the supervised :class:`EntropicOpenSetLoss<pytorch_ood.loss.EntropicOpenSetLoss>`.
+The loss needs anomalous pixels, which the training set does not contain, so we insert random
+COCO objects as anomalies with :class:`InsertCOCO<pytorch_ood.augment.img.InsertCOCO>`.
+
+We then use the :class:`Entropy<pytorch_ood.detector.Entropy>` OOD detector.
 
 .. warning :: The results produced by this script vary. It is impossible to ensure the
     reproducibility of the exact numerical values at the moment, because the model includes operations for
@@ -22,15 +26,15 @@ from segmentation_models_pytorch.metrics import iou_score
 from torch.utils.data import DataLoader
 from torchvision.transforms.functional import pad, to_tensor
 
+from pytorch_ood.augment.img import InsertCOCO
 from pytorch_ood.dataset.img import StreetHazards
 from pytorch_ood.detector import Entropy
 from pytorch_ood.loss import EntropicOpenSetLoss
 from pytorch_ood.metrics import OODPerImageSegmentationMetrics
 from pytorch_ood.utils import fix_random_seed
-from pytorch_ood.utils.transforms import InsertCOCO
 
 device = "cuda:0"
-batch_size = 4
+batch_size = 1
 num_epochs = 1
 
 fix_random_seed(12345)
@@ -47,6 +51,7 @@ coco_transform = InsertCOCO(
     coco_dir="data/coco",
     exclude_classes="Streethazards",
     p=1,
+    download=True,
 )
 
 
@@ -157,8 +162,8 @@ print(metrics.compute())
 # %%
 # Output:
 #
-# +--------------------+----------+--------+--------+--------+-----------+----------+
-# | Dataset            | Detector | AUROC  | AUTC   | AUPR-IN | AUPR-OUT | FPR95TPR |
-# +====================+==========+========+========+=========+==========+==========+
-# | StreetHazards+COCO | Entropy  | 93.88  | 25.26  | 99.93   | 19.43    | 19.14    |
-# +--------------------+----------+--------+--------+---------+----------+----------+
+# +--------------------+----------+-------+-------+---------+----------+----------+
+# | Dataset            | Detector | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
+# +====================+==========+=======+=======+=========+==========+==========+
+# | StreetHazards+COCO | Entropy  | 92.55 | 28.01 | 99.90   | 16.11    | 22.95    |
+# +--------------------+----------+-------+-------+---------+----------+----------+
