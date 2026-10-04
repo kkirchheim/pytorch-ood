@@ -123,7 +123,7 @@ class _BenchmarkContractMixin:
         bench = self._make_benchmark()
         sets = bench.test_sets(known=True, unknown=False)
         self.assertEqual(len(sets), 1)
-        self.assertEqual(len(sets[0]), self.expected_train_size)
+        self.assertEqual(len(sets[0]), self.expected_test_in_size)
 
     def test_test_sets_unknown_only(self):
         bench = self._make_benchmark()
