@@ -1,9 +1,17 @@
 """
 GradNorm
-==============================
+==========
 
 Running :class:`GradNorm <pytorch_ood.detector.GradNorm>` on CIFAR 10.
 
+The detector computes the :math:`\\ell_1`-norm of the gradient of the KL divergence between the
+uniform distribution and the softmax output, with respect to the weights of the final classification
+layer. This norm is the product of the :math:`\\ell_1`-norm of the penultimate features and the
+:math:`\\ell_1`-distance of the softmax output from the uniform distribution. In-distribution inputs
+tend to produce larger gradient norms, so the score is negated.
+
+The method was proposed for large-scale models (ImageNet). On CIFAR 10, the feature norms of the
+model used here are larger for the OOD data, so the detector performs poorly.
 """
 
 # sphinx_gallery_thumbnail_path = "_static/thumbs/detectors.png"
@@ -29,38 +37,28 @@ device = "cuda"
 # Setup preprocessing and data
 trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
-dataset_train = CIFAR10(root="data", train=True, download=True, transform=trans)
 dataset_in_test = CIFAR10(root="data", train=False, download=True, transform=trans)
 dataset_out_test = Textures(
     root="data", download=True, transform=trans, target_transform=ToUnknown()
 )
 
-train_loader = DataLoader(dataset_train, batch_size=128, shuffle=True, num_workers=10)
-
-# create data loaders
-test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=128, num_workers=10)
+test_loader = DataLoader(dataset_in_test + dataset_out_test, batch_size=64, num_workers=4)
 
 # %%
-# Stage 1: Create DNN pre-trained on CIFAR 10
+# Stage 1: Load pre-trained WideResNet for CIFAR-10.
 model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 
 # %%
-
-# Stage 2: Create detector, fitting is not required
-detector = GradNorm(model, param_filter=lambda name: name.startswith("fc"))
-
+# Stage 2: Create the detector, which requires no fitting. Gradients are only computed for the
+# weights of the final layer.
+detector = GradNorm(model, param_filter=lambda name: name == "fc.weight")
 
 # %%
-# Stage 3: Evaluate Detectors
+# Stage 3: Evaluate
 print("Testing...")
 
 metrics = OODMetrics()
 for x, y in test_loader:
     metrics.update(detector(x.to(device)), y)
 
-
 print(metrics.compute())
-
-# %%
-# This produces the following output:
-# {'AUROC': 0.4999113380908966, 'AUTC': 0.5440057516098022, 'AUPR-IN': 0.31969308853149414, 'AUPR-OUT': 0.6802297830581665, 'FPR95TPR': 1.0}

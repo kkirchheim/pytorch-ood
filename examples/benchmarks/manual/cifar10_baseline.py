@@ -46,13 +46,13 @@ Example benchmark code for CIFAR10
 +------------------+-------+-------+---------+----------+----------+
 | KLMatching       | 88.48 | 39.83 | 72.29   | 91.33    | 57.84    |
 +------------------+-------+-------+---------+----------+----------+
-| GradNormKL       | 80.97 | 49.97 | 68.70   | 89.49    | 79.72    |
+| GradNorm         | 80.97 | 49.97 | 68.70   | 89.49    | 79.72    |
 +------------------+-------+-------+---------+----------+----------+
 | Gram             | 69.37 | 46.01 | 58.02   | 77.49    | 75.03    |
 +------------------+-------+-------+---------+----------+----------+
 | RankFeat         | 55.43 | 49.92 | 45.31   | 63.80    | 86.35    |
 +------------------+-------+-------+---------+----------+----------+
-| GradNorm         | 50.00 | 60.78 | 18.37   | 81.63    | 100.00   |
+| GradUncertainty  | 50.00 | 60.78 | 18.37   | 81.63    | 100.00   |
 +------------------+-------+-------+---------+----------+----------+
 
 
@@ -89,7 +89,7 @@ from pytorch_ood.detector import (
     EnergyBased,
     Entropy,
     GradNorm,
-    GradNormKL,
+    GradUncertainty,
     Gram,
     KLMatching,
     Mahalanobis,
@@ -156,8 +156,10 @@ detectors["fDBD"] = fDBD(encoder=model.features, head=model.fc)
 detectors["ASH"] = ASH(backbone=model.feature_maps, head=model.forward_feature_maps)
 detectors["RankFeat"] = RankFeat(backbone=model.feature_maps, head=model.forward_feature_maps)
 
-detectors["GradNorm"] = GradNorm(model, param_filter=lambda name: name.startswith("fc"))
-detectors["GradNormKL"] = GradNormKL(model, param_filter=lambda name: name == "fc.weight")
+detectors["GradUncertainty"] = GradUncertainty(
+    model, param_filter=lambda name: name.startswith("fc")
+)
+detectors["GradNorm"] = GradNorm(model, param_filter=lambda name: name == "fc.weight")
 
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)

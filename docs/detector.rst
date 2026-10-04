@@ -76,8 +76,8 @@ Gradient-based detectors are based on the observation that the gradients (w.r.t.
 .. toctree::
    :maxdepth: 1
 
+   detectors/graduncertainty
    detectors/gradnorm
-   detectors/gradnormkl
    detectors/odin
    detectors/mahalanobis_odin
    detectors/nac

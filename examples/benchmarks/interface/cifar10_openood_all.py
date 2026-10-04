@@ -38,7 +38,7 @@ from pytorch_ood.detector import (
     EnergyBased,
     Entropy,
     GradNorm,
-    GradNormKL,
+    GradUncertainty,
     Gram,
     KLMatching,
     Mahalanobis,
@@ -125,8 +125,10 @@ def build_detectors(model, norm_std):
         ],
     )
 
-    detectors["GradNorm"] = GradNorm(model, param_filter=lambda name: name.startswith("fc"))
-    detectors["GradNormKL"] = GradNormKL(model, param_filter=lambda name: name == "fc.weight")
+    detectors["GradUncertainty"] = GradUncertainty(
+        model, param_filter=lambda name: name.startswith("fc")
+    )
+    detectors["GradNorm"] = GradNorm(model, param_filter=lambda name: name == "fc.weight")
 
     detectors["NAC-UE"] = NACUE(
         model=model,

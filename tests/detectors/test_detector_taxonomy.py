@@ -22,7 +22,7 @@ from pytorch_ood.detector import (
     EnergyBased,
     Entropy,
     GradNorm,
-    GradNormKL,
+    GradUncertainty,
     Gram,
     KLMatching,
     Mahalanobis,
@@ -138,7 +138,7 @@ class TestDetectorTaxonomy(unittest.TestCase):
                 self.assertTrue(detector_cls.requires_fit)
 
     def test_model_only_detectors_inherit_detector_base_only(self):
-        detectors = (ODIN, MCD, GradNorm, GradNormKL, NACUE)
+        detectors = (ODIN, MCD, GradUncertainty, GradNorm, NACUE)
 
         for detector_cls in detectors:
             with self.subTest(detector=detector_cls.__name__):
@@ -155,8 +155,8 @@ class TestDetectorTaxonomy(unittest.TestCase):
         self.assertTrue(NACUE.requires_fit)
         self.assertFalse(ODIN.requires_fit)
         self.assertFalse(MCD.requires_fit)
+        self.assertFalse(GradUncertainty.requires_fit)
         self.assertFalse(GradNorm.requires_fit)
-        self.assertFalse(GradNormKL.requires_fit)
 
     def test_structured_outliers_inherit_structured_base(self):
         self.assertTrue(issubclass(Gram, StructuredDetector))
