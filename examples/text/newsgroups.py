@@ -12,19 +12,19 @@ The original results can not be reproduced, as the dictionaries (word-to-token-m
 +-------------+-------+-------+---------+----------+----------+
 | Detector    | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
 +=============+=======+=======+=========+==========+==========+
-| KLMatching  | 80.24 | 41.52 | 72.06   | 83.54    | 55.63    |
+| MaxSoftmax  | 71.47 | 41.83 | 61.00   | 79.01    | 68.68    |
 +-------------+-------+-------+---------+----------+----------+
-| MaxSoftmax  | 80.47 | 35.98 | 74.39   | 83.86    | 53.85    |
+| KLMatching  | 72.64 | 42.98 | 55.75   | 80.66    | 79.35    |
 +-------------+-------+-------+---------+----------+----------+
-| Mahalanobis | 83.53 | 40.63 | 79.72   | 84.03    | 46.28    |
+| Entropy     | 73.58 | 41.64 | 62.25   | 80.77    | 68.19    |
 +-------------+-------+-------+---------+----------+----------+
-| Entropy     | 83.61 | 36.23 | 77.28   | 85.89    | 51.74    |
+| MaxLogit    | 79.50 | 41.37 | 70.57   | 83.71    | 58.08    |
 +-------------+-------+-------+---------+----------+----------+
-| ViM         | 84.19 | 41.52 | 81.51   | 84.42    | 42.44    |
+| EnergyBased | 80.07 | 41.07 | 71.32   | 83.94    | 57.39    |
 +-------------+-------+-------+---------+----------+----------+
-| MaxLogit    | 87.86 | 38.30 | 85.11   | 87.65    | 36.81    |
+| ViM         | 84.37 | 40.81 | 78.93   | 86.10    | 46.19    |
 +-------------+-------+-------+---------+----------+----------+
-| EnergyBased | 88.35 | 38.17 | 85.84   | 87.83    | 35.52    |
+| Mahalanobis | 86.84 | 39.27 | 82.65   | 87.45    | 42.04    |
 +-------------+-------+-------+---------+----------+----------+
 
 
@@ -32,12 +32,13 @@ The original results can not be reproduced, as the dictionaries (word-to-token-m
 
 # sphinx_gallery_thumbnail_path = "_static/thumbs/text.png"
 
+import re
+from collections import Counter
+
 import pandas as pd
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torchtext.data.utils import get_tokenizer
-from torchtext.vocab import build_vocab_from_iterator
 from tqdm import tqdm
 
 from pytorch_ood.dataset.txt import Multi30k, NewsGroup20, Reuters52, WMT16Sentences
@@ -67,20 +68,22 @@ root = "data"
 # download datasets
 train_dataset = NewsGroup20(root, train=True, download=True)
 
-tokenizer = get_tokenizer("basic_english")
+# index 0 is for unknown tokens, index 1 for padding (the GRUClassifier embeds it as zero)
+UNK, PAD = 0, 1
 
 
-def yield_tokens(data_iter):
-    for text, _ in data_iter:
-        yield tokenizer(text)
+def tokenize(text):
+    """Lowercase, then split into words and punctuation marks."""
+    return re.findall(r"\w+|[^\w\s]", text.lower())
 
 
-vocab = build_vocab_from_iterator(yield_tokens(train_dataset))
-vocab.set_default_index(0)
+# vocabulary of all tokens in the training set, most frequent first
+counts = Counter(token for text, _ in train_dataset for token in tokenize(text))
+vocab = {token: i for i, (token, _) in enumerate(counts.most_common(), start=2)}
 
 
 def prep(x):
-    return torch.tensor([vocab[v] for v in tokenizer(x)], dtype=torch.int64)
+    return torch.tensor([vocab.get(t, UNK) for t in tokenize(x)], dtype=torch.int64)
 
 
 # %%
@@ -99,7 +102,7 @@ def collate_batch(batch):
 
     padded = []
     for text in texts:
-        t = torch.cat([torch.zeros(max_t_length - len(text), dtype=torch.long), text])
+        t = torch.cat([torch.full((max_t_length - len(text),), PAD, dtype=torch.long), text])
         padded.append(t)
     return torch.stack(padded, dim=0), labels
 
@@ -109,7 +112,7 @@ loader_in_test = DataLoader(dataset_in_test, batch_size=16, shuffle=True, collat
 
 # %% Create a neural network
 print("STAGE 1: Train Model")
-model = GRUClassifier(num_classes=20, n_vocab=len(vocab))
+model = GRUClassifier(num_classes=20, n_vocab=len(vocab) + 2)
 model.to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -223,5 +226,7 @@ with torch.no_grad():
 # calculate mean scores over all datasets, use percent
 
 df = pd.DataFrame(results)
-mean_scores = df.groupby("Detector").mean() * 100
+mean_scores = (
+    df.groupby("Detector")[["AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR"]].mean() * 100
+)
 print(mean_scores.sort_values("AUROC").to_csv(float_format="%.2f"))
