@@ -636,6 +636,11 @@ _SPLIT_SECTIONS = [
         legacy_anchors={
             "api": ("core_api/detectors", None),
             "overview": ("core_api/detectors", "class-hierarchy"),
+            # GradNormKL was renamed to GradNorm in 0.4.0
+            "pytorch_ood.detector.GradNormKL": (
+                "detectors/gradnorm",
+                "pytorch_ood.detector.GradNorm",
+            ),
         },
     ),
     _SplitSection(

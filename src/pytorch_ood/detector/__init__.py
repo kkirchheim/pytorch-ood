@@ -87,7 +87,7 @@ from .fdbd import fDBD
 from .gen import GEN
 from .gmm import GMM
 from .gradnorm import GradNorm
-from .gradnormkl import GradNormKL
+from .graduncertainty import GradUncertainty
 from .gram import Gram
 from .klmatching import KLMatching
 from .knn import KNN
@@ -123,7 +123,7 @@ __all__ = [
     "GEN",
     "GMM",
     "GradNorm",
-    "GradNormKL",
+    "GradUncertainty",
     "Gram",
     "KLMatching",
     "KNN",

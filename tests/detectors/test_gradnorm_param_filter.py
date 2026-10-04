@@ -1,5 +1,5 @@
 """
-GradNorm and GradNormKL compute gradients only for the parameters that ``param_filter``
+GradUncertainty and GradNorm compute gradients only for the parameters that ``param_filter``
 selects, independent of ``requires_grad``, and leave no gradients on the model.
 """
 
@@ -8,13 +8,13 @@ from unittest import mock
 
 import torch
 
-from src.pytorch_ood.detector import GradNorm, GradNormKL
+from src.pytorch_ood.detector import GradNorm, GradUncertainty
 from src.pytorch_ood.detector import gradnorm as gradnorm_module
-from src.pytorch_ood.detector import gradnormkl as gradnormkl_module
+from src.pytorch_ood.detector import graduncertainty as graduncertainty_module
 from src.pytorch_ood.model import WideResNet
 from tests.helpers import ClassificationModel
 
-DETECTORS = ((GradNorm, gradnorm_module), (GradNormKL, gradnormkl_module))
+DETECTORS = ((GradUncertainty, graduncertainty_module), (GradNorm, gradnorm_module))
 
 
 def _only_classifier_weight(name):
@@ -55,7 +55,7 @@ class TestParamFilter(unittest.TestCase):
                 torch.testing.assert_close(batched, sequential)
 
     def test_paths_agree_on_conv_model(self):
-        # batch normalization buffers, several selected layers, and chunking in GradNormKL
+        # batch normalization buffers, several selected layers, and chunking in GradNorm
         model = WideResNet(num_classes=10, depth=10, widen_factor=1).eval()
         x = torch.randn(5, 3, 32, 32)
         filters = {
@@ -66,7 +66,7 @@ class TestParamFilter(unittest.TestCase):
         for cls, module in DETECTORS:
             for label, param_filter in filters.items():
                 with self.subTest(cls.__name__, param_filter=label):
-                    kwargs = {"micro_batch_size": 2} if cls is GradNormKL else {}
+                    kwargs = {"micro_batch_size": 2} if cls is GradNorm else {}
                     detector = cls(model, param_filter=param_filter, **kwargs)
                     batched = detector(x)
                     with mock.patch.object(module, "_TORCH_FUNC_AVAILABLE", False):
