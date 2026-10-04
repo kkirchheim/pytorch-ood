@@ -34,7 +34,7 @@ class WikiText2(Dataset):
         ),
     )
 
-    url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip"
+    url = "https://wikitext.smerity.com/wikitext-2-v1.zip"
     md5 = "542ccefacc6c27f945fb54453812b3cd"
     base_dir = "wikitext-2"
     filenames = {
@@ -137,7 +137,7 @@ class WikiText103(WikiText2):
         ),
     )
 
-    url = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-103-v1.zip"
+    url = "https://wikitext.smerity.com/wikitext-103-v1.zip"
     md5 = "9ddaacaf6af0710eda8c456decff7832"
     base_dir = "wikitext-103"
     filenames = {
