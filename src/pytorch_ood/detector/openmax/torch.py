@@ -10,7 +10,14 @@ from torch import Tensor
 from torch.nn import Module
 from typing_extensions import Self
 
-from ...api import DetectorInfo, LogitsDetector, ModelNotSetException, Paper, Task
+from ...api import (
+    DetectorInfo,
+    LogitsDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from .numpy import OpenMax as NumpyOpenMax
 
 log = logging.getLogger(__name__)
@@ -70,6 +77,7 @@ class OpenMax(LogitsDetector):
         self.tailsize = tailsize
         self.alpha = alpha
         self.euclid_weight = euclid_weight
+        self._openmax: Optional[NumpyOpenMax] = None
 
     def fit_logits(self, logits: Tensor, y: Tensor) -> Self:
         """
@@ -94,6 +102,8 @@ class OpenMax(LogitsDetector):
         """
         :param x: input batch, will be passed through the model to get logits
         :return: outlier scores of shape :math:`B`
+        :raises ModelNotSetException: if the detector has no ``model``
+        :raises RequiresFittingException: if the detector was not fitted
         """
         if self.model is None:
             raise ModelNotSetException
@@ -111,7 +121,11 @@ class OpenMax(LogitsDetector):
         """
         :param logits: logits of shape :math:`B \\times C`
         :return: probability of the unknown class, shape :math:`B`
+        :raises RequiresFittingException: if the detector was not fitted
         """
+        if self._openmax is None:
+            raise RequiresFittingException()
+
         device = self.device or logits.device
         logits = logits.detach().cpu().numpy()
         return torch.tensor(self._openmax.predict(logits)[:, 0], device=device)
