@@ -26,14 +26,14 @@ bibliography: paper.bib
 
 # Summary
 
-Machine learning models, particularly deep neural networks can produce unreliable predictions when they encounter data that differs from what they were trained on. Detecting such cases - commonly referred to as out-of-distribution (OOD) detection - is particularly important in safety-critical applications [@yang2021generalized].
+Machine learning models, particularly deep neural networks, can produce unreliable predictions when they encounter data that differs from what they were trained on. Detecting such cases -- commonly referred to as out-of-distribution (OOD) detection -- is particularly important in safety-critical applications [@yang2021generalized].
 Despite rapid progress in the field, practical experimentation remains fragmented. Implementations are often tied to individual papers, interfaces differ across methods, and evaluation setups can be difficult to reproduce.
 
-`pytorch-ood` is a Python library that provides a unified framework for OOD detection in the PyTorch deep learning ecosystem [@paszke2019pytorch]. It encompasses a broad range of detection methods, training objectives, datasets, pre-trained models, and evaluation tools under a consistent interface. This allows users to apply different methods, compare them under shared conditions, and integrate them into existing workflows with minimal additional code.
+`pytorch-ood` is a Python library that provides a unified framework for OOD detection in the PyTorch deep learning ecosystem [@paszke2019pytorch]. It encompasses a broad range of detection methods, training objectives, datasets, pretrained models, and evaluation tools under a consistent interface. This allows users to apply different methods, compare them under shared conditions, and integrate them into existing workflows with minimal additional code.
 The library is designed to support flexible experimentation rather than a single fixed benchmark. It is accompanied by extensive documentation and unit tests, enabling reliable reuse and facilitating reproducible research.
 
 
-# Statement of need
+# Statement of Need
 
 Research on OOD detection faces a recurring methodological problem: many published methods are conceptually comparable but difficult to compare in practice. Small implementation differences in preprocessing, score orientation, or metric computation can materially affect conclusions. At the same time, reproducing baselines often requires re-implementing substantial amounts of auxiliary code for dataset handling, evaluation, and model integration. This duplication slows progress and makes empirical results harder to audit.
 
@@ -41,10 +41,10 @@ Research on OOD detection faces a recurring methodological problem: many publish
 
 The library is intended for researchers developing and evaluating OOD detection methods in PyTorch. It reduces engineering overhead compared to bespoke per-paper implementations while remaining more flexible than fixed benchmark pipelines. In this sense, `pytorch-ood` provides a unified and reproducible interface for OOD detection experiments, bridging the gap between ad-hoc research code and standardized benchmarking frameworks.
 
-An earlier version of the library was introduced in [@kirchheim2022pytorch]. The present work reflects a substantially extended and matured system.
+An earlier version of the library was introduced in @kirchheim2022pytorch. The present work reflects a substantially extended and matured system.
 
 
-# State of the field
+# State of the Field
 
 Several tools for OOD detection exist, many of which were released after `pytorch-ood`. Frameworks such as OpenOOD [@yang2022openood] emphasize standardized benchmark pipelines, enabling consistent large-scale evaluation across datasets and methods. Other tools, such as FrOoDo [@stieber2022froodo], focus on specific application domains, for example medical imaging.
 
@@ -59,15 +59,16 @@ It is therefore best understood as complementary to benchmark-centric frameworks
 The design of `pytorch-ood` is guided by the goal of enabling *comparable and reusable OOD detection experiments* while maintaining flexibility for research.
 A central design choice is interface unification.
 
-### Detectors
+## Detectors
 
 All OOD detection methods implement a shared `Detector` abstraction with a `predict()` method that maps inputs to outlier scores and, where required, an optional `fit()` method for calibration or training.
-This defines a minimal contract: given an input tensor $x$, a detector produces a scalar outlier score $s(x) \in \mathbb{R}$ indicating how likely it is to be out-of-distribution.
+This defines a minimal contract: given an input tensor $x$, a detector produces a tensor of outlier scores $s(x)$, where larger values indicate stronger evidence that the corresponding inputs or spatial locations are out-of-distribution.
+For classification, this typically yields one score per input sample, while segmentation methods may instead produce spatially resolved score maps.
 As a result, different detectors can be applied interchangeably and compared directly, without requiring knowledge of their internal implementation or score computation.
 The trade-off is a slight restriction on method-specific interfaces in exchange for consistent and comparable usage across detectors.
 
 
-### Representation-specific Interfaces
+## Representation-Specific Interfaces
 
 OOD detectors can be differentiated based on the kind of input that they work on.
 Usually, they operate on neural representations of the input in some layer of a deep neural network.
@@ -87,7 +88,7 @@ While this separation reduces redundant computation and simplifies controlled co
 ![Overview of Relevant Abstractions](arch.png)
 
 
-### Evaluation Semantics
+## Evaluation Semantics
 
 A third design principle is the standardization of evaluation semantics.
 In practice, OOD detection experiments often differ in label encoding or metric assumptions, which can lead to subtle and hard-to-detect errors in evaluation.
@@ -96,14 +97,14 @@ To mitigate this, `pytorch-ood` enforces a canonical evaluation protocol across 
 While this slightly reduces flexibility, it eliminates ambiguity in metric computation and ensures that results are directly comparable across methods.
 
 
-### Benchmarks
+## Benchmarks
 
 Finally, the library provides a benchmark abstraction that exposes a common `evaluate()` interface.
 This enables the reproduction of established evaluation protocols while remaining compatible with custom training setups.
 The design balances two competing goals: supporting standardized experiments and preserving the ability to compose new ones.
 In practice, benchmark objects allow users to evaluate multiple detectors on shared datasets with minimal boilerplate while retaining full control over other experimental details.
 
-For example, a minimal evaluation workflow to replicate the OpenOOD v1.5 CIFAR-10 benchmark [@yang2022openood] with the pre-trained model and baseline detector from one of the first OOD detection benchmark papers [@hendrycks2016baseline] and an additional, more recent detector [@liu2023gen] can be written directly as:
+For example, a minimal evaluation workflow to replicate the OpenOOD v1.5 CIFAR-10 benchmark [@zhang2023openood] with a pretrained WideResNet-40-2, the maximum softmax probability baseline detector [@hendrycks2016baseline], and a more recent detector [@liu2023gen] can be written directly as:
 
 ```python
 import torch
