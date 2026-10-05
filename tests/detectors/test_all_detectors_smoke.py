@@ -25,7 +25,7 @@ from src.pytorch_ood.detector import (
     EnergyBased,
     Entropy,
     GradNorm,
-    GradNormKL,
+    GradUncertainty,
     Gram,
     KLMatching,
     Mahalanobis,
@@ -146,7 +146,7 @@ class TestAllDetectorsSmoke(unittest.TestCase):
             model.eval()
             return model
 
-        def gradnorm_model():
+        def gradient_model():
             model = ClassificationModel()
             model.requires_grad_(False)
             model.classifier.requires_grad_(True)
@@ -276,9 +276,9 @@ class TestAllDetectorsSmoke(unittest.TestCase):
                 )(eval_model()),
             ),
             (
-                "GradNorm",
-                lambda: GradNorm(
-                    gradnorm_model(),
+                "GradUncertainty",
+                lambda: GradUncertainty(
+                    gradient_model(),
                     param_filter=lambda name: name.startswith("classifier"),
                 ),
             ),
@@ -287,9 +287,9 @@ class TestAllDetectorsSmoke(unittest.TestCase):
                 lambda: (lambda model: MahalanobisODIN(model.features, eps=0.001))(eval_model()),
             ),
             (
-                "GradNormKL",
-                lambda: GradNormKL(
-                    gradnorm_model(),
+                "GradNorm",
+                lambda: GradNorm(
+                    gradient_model(),
                     param_filter=lambda name: name.startswith("classifier"),
                 ),
             ),

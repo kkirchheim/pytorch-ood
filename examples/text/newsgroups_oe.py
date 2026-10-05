@@ -10,34 +10,35 @@ Uses GRU model from the OOD detection baseline paper.
 
 The original results can not be reproduced, as the dictionaries (word-to-token-mappings) are not available.
 
-+-------------+-------+---------+----------+----------+
-| Detector    | AUROC | AUPR-IN | AUPR-OUT | FPR95TPR |
-+=============+=======+=========+==========+==========+
-| ViM         | 57.87 | 67.14   | 65.42    | 53.18    |
-+-------------+-------+---------+----------+----------+
-| Mahalanobis | 63.27 | 68.39   | 69.40    | 50.52    |
-+-------------+-------+---------+----------+----------+
-| KLMatching  | 92.92 | 91.70   | 93.17    | 21.32    |
-+-------------+-------+---------+----------+----------+
-| MaxSoftmax  | 93.55 | 92.27   | 94.50    | 20.17    |
-+-------------+-------+---------+----------+----------+
-| Entropy     | 94.33 | 93.05   | 95.10    | 19.76    |
-+-------------+-------+---------+----------+----------+
-| EnergyBased | 94.63 | 93.14   | 95.67    | 16.90    |
-+-------------+-------+---------+----------+----------+
-| MaxLogit    | 94.66 | 93.14   | 95.66    | 17.18    |
-+-------------+-------+---------+----------+----------+
++-------------+-------+-------+---------+----------+----------+
+| Detector    | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
++=============+=======+=======+=========+==========+==========+
+| Mahalanobis | 78.85 | 43.50 | 81.71   | 77.37    | 36.04    |
++-------------+-------+-------+---------+----------+----------+
+| ViM         | 84.16 | 42.03 | 86.74   | 81.60    | 27.62    |
++-------------+-------+-------+---------+----------+----------+
+| KLMatching  | 93.92 | 21.39 | 94.40   | 92.29    | 18.94    |
++-------------+-------+-------+---------+----------+----------+
+| MaxSoftmax  | 95.36 | 19.02 | 95.72   | 94.64    | 17.66    |
++-------------+-------+-------+---------+----------+----------+
+| Entropy     | 95.81 | 18.42 | 96.15   | 95.03    | 16.89    |
++-------------+-------+-------+---------+----------+----------+
+| EnergyBased | 95.94 | 35.06 | 96.47   | 94.97    | 14.97    |
++-------------+-------+-------+---------+----------+----------+
+| MaxLogit    | 95.98 | 32.30 | 96.46   | 95.10    | 15.15    |
++-------------+-------+-------+---------+----------+----------+
 
 
 """
 
 # sphinx_gallery_thumbnail_path = "_static/thumbs/text.png"
 
+import re
+from collections import Counter
+
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
-from torchtext.data.utils import get_tokenizer
-from torchtext.vocab import build_vocab_from_iterator
 from tqdm import tqdm
 
 from pytorch_ood.dataset.txt import (
@@ -72,20 +73,22 @@ root = "data"
 # download datasets
 train_dataset_in = NewsGroup20(root, train=True, download=True)
 
-tokenizer = get_tokenizer("basic_english")
+# index 0 is for unknown tokens, index 1 for padding (the GRUClassifier embeds it as zero)
+UNK, PAD = 0, 1
 
 
-def yield_tokens(data_iter):
-    for text, _ in data_iter:
-        yield tokenizer(text)
+def tokenize(text):
+    """Lowercase, then split into words and punctuation marks."""
+    return re.findall(r"\w+|[^\w\s]", text.lower())
 
 
-vocab = build_vocab_from_iterator(yield_tokens(train_dataset_in))
-vocab.set_default_index(0)
+# vocabulary of all tokens in the training set, most frequent first
+counts = Counter(token for text, _ in train_dataset_in for token in tokenize(text))
+vocab = {token: i for i, (token, _) in enumerate(counts.most_common(), start=2)}
 
 
 def prep(x):
-    return torch.tensor([vocab[v] for v in tokenizer(x)], dtype=torch.int64)
+    return torch.tensor([vocab.get(t, UNK) for t in tokenize(x)], dtype=torch.int64)
 
 
 # %%
@@ -107,7 +110,7 @@ def collate_batch(batch):
 
     padded = []
     for text in texts:
-        t = torch.cat([torch.zeros(max_t_length - len(text), dtype=torch.long), text])
+        t = torch.cat([torch.full((max_t_length - len(text),), PAD, dtype=torch.long), text])
         padded.append(t)
     return torch.stack(padded, dim=0), labels
 
@@ -122,7 +125,7 @@ loader_in_test = DataLoader(dataset_in_test, batch_size=16, shuffle=True, collat
 
 # %% Create a neural network
 print("STAGE 1: Train Model")
-model = GRUClassifier(num_classes=20, n_vocab=len(vocab))
+model = GRUClassifier(num_classes=20, n_vocab=len(vocab) + 2)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
@@ -235,5 +238,7 @@ with torch.no_grad():
 # %% calculate mean scores over all datasets, use percent
 
 df = pd.DataFrame(results)
-mean_scores = df.groupby("Detector").mean() * 100
+mean_scores = (
+    df.groupby("Detector")[["AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR"]].mean() * 100
+)
 print(mean_scores.sort_values("AUROC").to_csv(float_format="%.2f"))

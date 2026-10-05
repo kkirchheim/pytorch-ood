@@ -21,7 +21,7 @@ from src.pytorch_ood.detector import (
     EnergyBased,
     Entropy,
     GradNorm,
-    GradNormKL,
+    GradUncertainty,
     Gram,
     KLMatching,
     Mahalanobis,
@@ -212,7 +212,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
 
     @staticmethod
     def _raw_predict_registry():
-        def make_gradnorm_model():
+        def make_gradient_model():
             model = ClassificationModel()
             model.requires_grad_(False)
             model.classifier.requires_grad_(True)
@@ -223,16 +223,16 @@ class TestDetectorDeviceHandling(unittest.TestCase):
             ("ODIN", lambda: ODIN(ClassificationModel().eval(), eps=0.001)),
             ("MCD", lambda: MCD(ClassificationModel().eval(), samples=4, mode="var")),
             (
-                "GradNorm",
-                lambda: GradNorm(
-                    make_gradnorm_model(),
+                "GradUncertainty",
+                lambda: GradUncertainty(
+                    make_gradient_model(),
                     param_filter=lambda name: name.startswith("classifier"),
                 ),
             ),
             (
-                "GradNormKL",
-                lambda: GradNormKL(
-                    make_gradnorm_model(),
+                "GradNorm",
+                lambda: GradNorm(
+                    make_gradient_model(),
                     param_filter=lambda name: name.startswith("classifier"),
                 ),
             ),

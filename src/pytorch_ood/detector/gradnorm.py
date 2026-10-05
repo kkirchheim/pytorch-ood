@@ -7,16 +7,15 @@
     :exclude-members: fit
 """
 
-from contextlib import contextmanager
-from typing import Callable, Dict, List
+from typing import Callable, Dict
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, Task
+from .graduncertainty import _requires_grad
 
 try:
     from torch.func import (
@@ -34,76 +33,79 @@ except ImportError:
     _TORCH_FUNC_AVAILABLE = False
 
 
-@contextmanager
-def _requires_grad(params: List[Tensor]):
-    """Temporarily enables gradients for ``params``, so that frozen parameters can be scored."""
-    flags = [p.requires_grad for p in params]
-    try:
-        for p in params:
-            p.requires_grad_(True)
-        yield
-    finally:
-        for p, flag in zip(params, flags):
-            p.requires_grad_(flag)
+def _uniform_cross_entropy(logits: Tensor, temperature: float) -> Tensor:
+    # cross-entropy to the uniform distribution, which is the KL divergence up to the constant
+    # log C; the official code sums instead of averaging over the classes, which scales all
+    # scores by C and does not change their ranking
+    return -(logits / temperature).log_softmax(dim=1).mean()
 
 
 class GradNorm(GradientDetector):
     """
-    Detector from the paper *Gradients as a Measure of Uncertainty in Neural Networks*.
+    Detector from the paper *On the Importance of Gradients for Detecting Distributional Shifts
+    in the Wild*.
 
-    For each input sample, computes the binary cross-entropy loss between the softmax output and a "confounding
-    label", which is a vector of all ones. Then, for each set of parameters in the model (as given
-    by ``model.named_parameters()``), computes the squared :math:`\\ell_2`-norm of the
-    gradients of the loss w.r.t. that parameter. The outlier score is the negative sum of these squared norms.
+    For each input sample, computes the KL divergence between the uniform distribution
+    :math:`u` and the softmax output at temperature :math:`T`, implemented as the cross-entropy to
+    :math:`u`, which differs from the KL divergence only by a constant:
 
-    The gradient of this loss w.r.t. the logits is :math:`C p - 1` for :math:`C` classes and softmax output
-    :math:`p`. It vanishes for a uniform softmax and is large for a confident prediction, so the gradient norm is
-    larger for inputs the model is familiar with. The sign is therefore flipped, so that uncertain inputs receive
-    higher outlier scores.
+    .. math::
+        \\mathcal{L}(x) = -\\frac{1}{C} \\sum_{c=1}^{C} \\log \\frac{e^{f_c(x) / T}}{\\sum_{c'} e^{f_{c'}(x) / T}}
 
-    .. note:: Using only the gradients of the final classification head makes this computationally cheaper.
-     You can achieve this by setting ``param_filter``; gradients are only computed for the selected
-     parameters. For an example, see the :doc:`GradNorm example </auto_examples/detectors/gradnorm>`.
+    The outlier score is the :math:`\\ell_1`-norm of the gradients of this loss w.r.t. the selected
+    parameters :math:`w` of the model, negated relative to the paper:
 
-    The model is not switched to evaluation mode, so layers such as batch normalization and dropout behave
-    according to ``model.training``; you should usually call ``model.eval()`` first. Gradients are computed per
-    sample, and :meth:`predict` must not be wrapped in ``torch.no_grad()``.
+    .. math::
+        -\\left\\lVert \\frac{\\partial \\mathcal{L}(x)}{\\partial w} \\right\\rVert_1
+
+    The gradient w.r.t. the logits is :math:`(\\text{softmax}(f(x) / T) - u) / T`, which is zero
+    when the model predicts a uniform distribution and grows as the prediction becomes more
+    peaked. In-distribution inputs typically get more confident predictions, and thus larger
+    gradient norms, than OOD inputs.
+
+    .. note:: The paper uses only the gradients of the weights of the final classification layer.
+        You can achieve this by setting ``param_filter``, e.g. ``lambda name: name == "fc.weight"``.
+        Gradients are only computed for the selected parameters.
 
     .. note:: On PyTorch ≥ 2.0, per-sample gradients are computed with ``torch.func.vmap`` +
         ``torch.func.grad`` in a single batched forward+backward pass. On PyTorch 1.x the
         original sequential loop over individual samples is used as a fallback.
-
-    .. warning::
-        This implementation sums the norms of all (selected) parameters into a single scalar and uses its negative
-        directly as an outlier score, without any training. This requires no OOD data, but may perform poorly when ID and
-        OOD datasets are of similar complexity. For an unsupervised
-        gradient-based alternative see :class:`~pytorch_ood.detector.GradNormKL`.
     """
-
-    # The paper's actual experiments (Section 4) concatenate the per-layer squared L2 norms into a feature vector
-    # and then train a 2-layer FC binary classifier on labeled ID and OOD gradient representations, which learns
-    # the direction of the score. This class is a significant simplification: it uses the scalar sum, negated
-    # because the gradient norm is largest for confident predictions.
-    # OpenOOD uses only the gradients of the final classification head.
 
     info = DetectorInfo(
         paper=Paper(
-            title="Gradients as a Measure of Uncertainty in Neural Networks",
-            venue="ICIP",
-            year=2020,
-            url="https://arxiv.org/abs/2008.08030v2",
-            code=None,
+            title="On the Importance of Gradients for Detecting Distributional Shifts in the Wild",
+            venue="NeurIPS",
+            year=2021,
+            url="https://arxiv.org/abs/2110.00218",
+            code="https://github.com/deeplearning-wisc/gradnorm_ood",
         ),
         tasks={Task.CLASSIFICATION},
+        ai_coded=True,
     )
 
-    def __init__(self, model: torch.nn.Module, param_filter: Callable[[str], bool] = None):
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        param_filter: Callable[[str], bool] = None,
+        micro_batch_size: int = 32,
+        temperature: float = 1.0,
+    ):
         """
-        :param model: A pre-trained classification model
-        :param param_filter: Function which indicates whether a named parameter should be included in the scoring.
-            Gradients are only computed for these. If ``None``, all parameters are used.
+        :param model: A pre-trained classification model :math:`f`.
+        :param param_filter: Function indicating whether a named parameter should be included in
+            the scoring, selecting the parameters :math:`w`. Gradients are only computed for these.
+            If ``None``, all parameters are used.
+        :param micro_batch_size: maximum number of samples whose per-sample gradients are computed at
+            once. Smaller values reduce peak memory. Must be at least 1. Only used on PyTorch >= 2.0.
+        :param temperature: temperature :math:`T` of the softmax
         :raises ModelNotSetException: if ``model`` is ``None``
         """
+        # _predict_batched splits the input into chunks of at most micro_batch_size before calling vmap:
+        # per-sample gradients require holding every sample's forward activations through the full network
+        # simultaneously, so peak memory scales linearly with batch size (e.g. ~53 GB at
+        # batch size 128 for a ResNet-50 at 224x224, even restricted to a single layer's
+        # gradients). Chunking bounds peak memory independent of the caller's batch size.
         if model is None:
             raise ModelNotSetException("Model must be provided.")
 
@@ -111,17 +113,18 @@ class GradNorm(GradientDetector):
             return True
 
         self.param_filter = param_filter or default_filter
-
         self.model = model
+        self.micro_batch_size = micro_batch_size
+        self.temperature = temperature
 
     def fit(self, data_loader: DataLoader, **kwargs) -> Self:
         return self
 
     def predict(self, x: Tensor) -> Tensor:
         """
-        Compute outlier scores from input batch.
+        Compute outlier scores for an input batch.
 
-        :param x: input of shape :math:`B \\times \\ldots`, will be passed through the network
+        :param x: input tensor of shape :math:`B \\times \\ldots`, will be passed through the network
         :return: outlier scores of shape :math:`B`
         :raises ValueError: if ``param_filter`` selects no parameter
         """
@@ -141,25 +144,34 @@ class GradNorm(GradientDetector):
         return selected
 
     def _predict_batched(self, x: Tensor) -> Tensor:
-        """Vectorized per-sample gradients via torch.func (PyTorch ≥ 2.0)."""
+        """Vectorized per-sample gradients via torch.func (PyTorch ≥ 2.0), chunked to
+        bound peak memory (see ``micro_batch_size``)."""
         selected = self._selected_params()
         # torch.func.grad differentiates w.r.t. everything it is given, regardless of
         # requires_grad, so only the selected parameters are passed as its argument
         constants = {n: p for n, p in self.model.named_parameters() if n not in selected}
         constants.update(self.model.named_buffers())
         model = self.model
+        temperature = self.temperature
 
         def loss_for_single(params, x_single):
             logits = _functional_call(model, {**params, **constants}, (x_single.unsqueeze(0),))
-            y_conf = torch.ones_like(logits)
-            return F.binary_cross_entropy(logits.softmax(dim=1), y_conf, reduction="sum")
+            return _uniform_cross_entropy(logits, temperature)
 
+        chunks = []
         with torch.enable_grad():
-            per_sample_grads = _vmap(_func_grad(loss_for_single), in_dims=(None, 0))(selected, x)
+            for start in range(0, x.shape[0], self.micro_batch_size):
+                x_chunk = x[start : start + self.micro_batch_size]
+                per_sample_grads = _vmap(_func_grad(loss_for_single), in_dims=(None, 0))(
+                    selected, x_chunk
+                )
+                chunks.append(
+                    sum(
+                        g.abs().sum(dim=tuple(range(1, g.ndim))) for g in per_sample_grads.values()
+                    )
+                )
 
-        return -sum(
-            (g**2).sum(dim=tuple(range(1, g.ndim))) for g in per_sample_grads.values()
-        ).detach()
+        return -torch.cat(chunks).detach()
 
     def _predict_sequential(self, x: Tensor) -> Tensor:
         """Per-sample gradients via serial backward passes (PyTorch < 2.0 fallback)."""
@@ -169,11 +181,9 @@ class GradNorm(GradientDetector):
         with _requires_grad(selected):
             for xi in x:
                 with torch.enable_grad():
-                    logits = self.model(xi.unsqueeze(0))
-                    y_conf = torch.ones_like(logits)
-                    loss = F.binary_cross_entropy(logits.softmax(dim=1), y_conf, reduction="sum")
+                    loss = _uniform_cross_entropy(self.model(xi.unsqueeze(0)), self.temperature)
                     # only the selected parameters, without writing .grad into the model
                     grads = torch.autograd.grad(loss, selected)
-                scores.append(sum((g**2).sum() for g in grads))
+                scores.append(-sum(g.abs().sum() for g in grads))
 
-        return -torch.stack(scores).detach()
+        return torch.stack(scores).detach()

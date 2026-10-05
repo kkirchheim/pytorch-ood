@@ -1,6 +1,6 @@
 import os
 import unittest
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from src.pytorch_ood.dataset.img import (
     CIFAR10C,
@@ -87,14 +87,18 @@ class TestDatasetAvailability(unittest.TestCase):
         status = urlopen(StreetHazards.url_list["validation"]).getcode()
         self.assertEqual(status, 200)
 
-    @unittest.skip("Unavailable because of changed permissions in s3")
     def test_download_Wiki2(self):
-        status = urlopen(WikiText2.url).getcode()
+        # the mirror rejects Python's default User-Agent; torchvision's download_url sends this one
+        status = urlopen(
+            Request(WikiText2.url, headers={"User-Agent": "pytorch/vision"})
+        ).getcode()
         self.assertEqual(status, 200)
 
-    @unittest.skip("Unavailable because of changed permissions in s3")
     def test_download_Wiki103(self):
-        status = urlopen(WikiText103.url).getcode()
+        # the mirror rejects Python's default User-Agent; torchvision's download_url sends this one
+        status = urlopen(
+            Request(WikiText103.url, headers={"User-Agent": "pytorch/vision"})
+        ).getcode()
         self.assertEqual(status, 200)
 
     def test_download_Reuters52(self):
