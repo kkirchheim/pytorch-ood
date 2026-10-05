@@ -18,6 +18,12 @@ repos:
         args: [--fix]
       - id: ruff-format
 
+  # GitHub Actions workflow linting (pre-commit bootstraps Go for this, no local install needed)
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
   # yaml formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v2.3.0

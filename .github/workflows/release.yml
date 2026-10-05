@@ -1,0 +1,131 @@
+# Builds the sdist and wheel once from a release tag, publishes exactly those files to
+# PyPI, and attaches the same files plus their SHA-256 sums to the GitHub release, so that
+# the GitHub and PyPI artifacts can be compared hash-for-hash (see issue #164).
+#
+# Release procedure: bump `__version__` in src/pytorch_ood/__init__.py as the last commit,
+# wait for CI on it, then push the tag:  git tag v<version> && git push origin v<version>
+#
+# A manual run (workflow_dispatch) only builds and smoke-tests; nothing is published, even
+# when dispatched on a tag.
+#
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Least privilege by default; jobs that need more request it explicitly.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          python -m twine check --strict dist/*
+          if [ "$(find dist -maxdepth 1 -type f -name '*.whl' | wc -l)" -ne 1 ] \
+            || [ "$(find dist -maxdepth 1 -type f -name '*.tar.gz' | wc -l)" -ne 1 ]; then
+            echo "::error::expected exactly one wheel and one sdist in dist/"
+            ls -l dist
+            exit 1
+          fi
+      # The checksums are taken here, from the files the build produced; the jobs below
+      # verify their downloaded copies against them before publishing.
+      - name: Compute checksums
+        run: |
+          (cd dist && sha256sum -- *) > SHA256SUMS
+          cat SHA256SUMS
+      # Install the built wheel (not the checkout) into a fresh venv, resolving its
+      # dependencies from the wheel's metadata; the PyTorch CPU index is an additional
+      # source for torch/torchvision (pip gives neither index priority). Then check that it
+      # imports, and that the tag, the distribution metadata (what PyPI publishes) and
+      # pytorch_ood.__version__ agree.
+      - name: Smoke-test the wheel
+        run: |
+          python -m venv "${RUNNER_TEMP}/smoke"
+          py="${RUNNER_TEMP}/smoke/bin/python"
+          "${py}" -m pip install --upgrade pip
+          "${py}" -m pip install dist/*.whl --extra-index-url https://download.pytorch.org/whl/cpu
+          "${py}" -m pip check
+          cd "${RUNNER_TEMP}"
+          "${py}" -c "import pytorch_ood, pytorch_ood.detector, pytorch_ood.benchmark"
+          module_version="$("${py}" -c "import pytorch_ood; print(pytorch_ood.__version__)")"
+          dist_version="$("${py}" -c "import importlib.metadata; print(importlib.metadata.version('pytorch-ood'))")"
+          echo "pytorch_ood.__version__ = ${module_version}, distribution version = ${dist_version}"
+          if [ "${module_version}" != "${dist_version}" ]; then
+            echo "::error::pytorch_ood.__version__ ${module_version} does not match distribution version ${dist_version}"
+            exit 1
+          fi
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "v${dist_version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match package version ${dist_version}"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+      # Kept out of dist/, which the PyPI action uploads in full.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: checksums
+          path: SHA256SUMS
+          if-no-files-found: error
+
+  publish-pypi:
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/pytorch-ood/
+    permissions:
+      id-token: write # OIDC token for PyPI trusted publishing
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: checksums
+      - name: Verify artifacts
+        run: cd dist && sha256sum --check --strict ../SHA256SUMS
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  github-release:
+    needs: publish-pypi
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release and upload assets
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: checksums
+      - name: Verify artifacts
+        run: cd dist && sha256sum --check --strict ../SHA256SUMS
+      - name: Attach artifacts and checksums to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" > /dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/* SHA256SUMS --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/* SHA256SUMS --verify-tag --generate-notes
+          fi
