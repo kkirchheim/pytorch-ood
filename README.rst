@@ -110,13 +110,13 @@ OOD data must be marked with labels < 0.
 
 You can find more examples in the `documentation <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/benchmarks/>`_.
 
-Benchmarks (Beta)
+Benchmarks
 ---------------------------
 
 Evaluate detectors against common benchmarks, for example the OpenOOD v1.5 CIFAR benchmark.
-All datasets will be downloaded automatically.
+Datasets will be downloaded automatically.
 When evaluating several detectors on the same benchmark, cached logits
-and pooled features can be reused across calls:
+and pooled features are reused across calls:
 
 .. code-block:: python
 
