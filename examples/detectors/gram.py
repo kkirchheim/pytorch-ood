@@ -6,6 +6,8 @@ Running :class:`Gram <pytorch_ood.detector.Gram>` on CIFAR 10.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/detectors.png"
+
 import logging
 
 from torch import nn
@@ -14,8 +16,9 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import Gram
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model, load_transform
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
+from pytorch_ood.utils import ToUnknown, fix_random_seed
 
 logging.basicConfig(level=logging.INFO)
 

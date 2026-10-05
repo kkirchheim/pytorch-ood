@@ -5,10 +5,12 @@ https://github.com/hendrycks/outlier-exposure/blob/master/NLP_classification/mul
 
 import logging
 import os
-from typing import Tuple
+from typing import Any, Tuple
 
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
+
+from ...api import DatasetInfo, Task
 
 log = logging.getLogger(__name__)
 
@@ -17,8 +19,14 @@ class Multi30k(Dataset):
     """
     Multi-30k dataset, as used by Hendrycks et al.
 
-    Usually used as OOD data, labels are -1 by default.
+    Usually used as OOD data, labels are -1 by default. Each item is a tuple ``(text, -1)`` with the sentence
+    as :class:`str`.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license=None,
+    )
 
     train_url = "https://github.com/hendrycks/outlier-exposure/raw/master/NLP_classification/multi30k/train.txt"
     test_url = "https://raw.githubusercontent.com/hendrycks/outlier-exposure/master/NLP_classification/multi30k/val.txt"
@@ -28,7 +36,14 @@ class Multi30k(Dataset):
     train_filename = "m30k-train.txt"
     test_filename = "m30k-test.txt"
 
-    def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
+    def __init__(self, root, transform=None, target_transform=None, train=True, download=False):
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the text (a :class:`str`)
+        :param target_transform: function applied to the target
+        :param train: use the training file (``True``) or the validation file ``val.txt`` (``False``)
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(Dataset, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform
@@ -79,7 +94,12 @@ class Multi30k(Dataset):
 
         return True
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        :param index: index of the sample
+        :return: tuple ``(text, target)`` of the text as :class:`str` (or the output of ``transform``)
+            and the target ``-1`` (or the output of ``target_transform``)
+        """
         x = self._data[index]
         y = -1
 

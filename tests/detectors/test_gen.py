@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.utils import OODMetrics
+from pytorch_ood.metrics import OODMetrics
 from src.pytorch_ood.detector import GEN
 from tests.helpers import ClassificationModel, SegmentationModel
 
@@ -160,9 +160,7 @@ class TestGEN(unittest.TestCase):
     def test_mock_performance_many_classes(self):
         """
         Regression test: with M=None, the score is computed over all classes. For datasets
-        with many classes (e.g. CIFAR-100, ImageNet), a naive sum grows past 1.0. OODMetrics
-        (via torchmetrics' binary_auroc) silently applies a sigmoid to scores outside [0, 1],
-        which saturates to 1.0 in float32 for such magnitudes and collapses AUROC to ~0.5.
+        with many classes (e.g. CIFAR-100, ImageNet), a naive sum grows past 1.0.
         Verifies the score stays bounded and AUROC remains high with 100 classes.
         """
         torch.manual_seed(42)

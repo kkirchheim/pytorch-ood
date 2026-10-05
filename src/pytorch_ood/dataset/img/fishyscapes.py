@@ -8,6 +8,8 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import check_md5, download_and_extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -18,6 +20,9 @@ class FishyScapes(Dataset):
     You additionally have to manually download the CityScapes validation dataset (left, 8 bit).
 
     The dataset contains annotations for a *void*-class that should be ignored during evaluation.
+    Images are :class:`PIL.Image.Image` of size :math:`2048 \\times 1024`. The target is a long tensor of shape
+    :math:`H \\times W` with value ``0`` for in-distribution pixels, ``-1`` for anomalous pixels and
+    ``VOID_LABEL`` (``1``) for void pixels.
 
     There are currently three versions:
 
@@ -29,12 +34,21 @@ class FishyScapes(Dataset):
         :width: 800px
         :alt: FishyScapes example
         :align: center
-
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/1904.03215>`__
-    :see Website: `Website <https://fishyscapes.com/>`__
-    :see Implementation: `GitHub <https://github.com/hermannsblum/bdl-benchmark>`__
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license="CC-BY-4.0 (Lost and Found validation annotations)",
+        paper=Paper(
+            title="The Fishyscapes Benchmark: Measuring Blind Spots in Semantic Segmentation",
+            venue="IJCV",
+            year=2021,
+            url="https://arxiv.org/abs/1904.03215",
+            code="https://github.com/hermannsblum/bdl-benchmark",
+        ),
+        homepage="https://fishyscapes.com/",
+    )
 
     dataset_links = {
         "1.0.0": (
@@ -58,12 +72,14 @@ class FishyScapes(Dataset):
 
     def __init__(self, root, cs_root, version="3.0.0", download: bool = False, transforms=None):
         """
-
-        :param root: dataset root
-        :param cs_root: directory with cityscapes validation images
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param cs_root: path to the CityScapes ``leftImg8bit/val`` directory (with one sub-directory per city),
+            which has to be downloaded manually
         :param version: can be one of ``1.0.0``, ``2.0.0``, ``3.0.0``
-        :param download: whether to download the dataset
-        :param transforms: transformations to apply to image and target mask
+        :param download: download the data to ``root`` if it is not found there
+        :param transforms: called as ``transforms(image, mask)`` with the PIL image and the target mask,
+            and must return the transformed ``(image, mask)`` tuple
+        :raises AssertionError: if ``version`` is unknown
         """
         assert version in self.dataset_links.keys(), f"Unknown dataset version: '{version}'"
 
@@ -82,7 +98,7 @@ class FishyScapes(Dataset):
             )
 
         self.files = [
-            f for f in os.listdir(join(self.root, self.dirname)) if f.endswith("_rgb.npz")
+            f for f in sorted(os.listdir(join(self.root, self.dirname))) if f.endswith("_rgb.npz")
         ]
 
     def _check_integrity(self):
@@ -152,19 +168,29 @@ class LostAndFound(Dataset):
 
     The dataset contains annotations for a *void*-class that should be ignored during evaluation.
     The labels are provided by FishyScapes.
+    Images are :class:`PIL.Image.Image`. The target is an integer tensor of shape :math:`H \\times W` with value ``-1``
+    for anomalous pixels, ``VOID_LABEL`` (``1``) for void pixels and ``0`` for in-distribution pixels.
 
     .. image:: https://fishyscapes.com/assets/img/laf_0008_rgb.jpg
         :width: 800px
         :alt: LostAndFound (Fishy edition) example
         :align: center
 
-    :see Paper: `ArXiv <https://arxiv.org/abs/1609.04653>`__
-    :see Website: `Website <http://wwwlehre.dhbw-stuttgart.de/~sgehrig/lostAndFoundDataset/index.html>`__
-
-
     .. warning:: The image with index 79 does not contain any outlier pixels.
-
     """
+
+    info = DatasetInfo(
+        task=Task.SEGMENTATION,
+        roles={Role.BENCHMARK},
+        license="Daimler AG non-commercial license",
+        paper=Paper(
+            title="Lost and Found: Detecting Small Road Hazards for Self-Driving Vehicles",
+            venue="IROS",
+            year=2016,
+            url="https://arxiv.org/abs/1609.04653",
+        ),
+        homepage="http://wwwlehre.dhbw-stuttgart.de/~sgehrig/lostAndFoundDataset/index.html",
+    )
 
     annotation_url = (
         "http://robotics.ethz.ch/~asl-datasets/Fishyscapes/fishyscapes_lostandfound.zip",
@@ -186,9 +212,10 @@ class LostAndFound(Dataset):
 
     def __init__(self, root, download=False, transforms=None):
         """
-        :param root: where datasets are stored
-        :param download: set true to automatically download datasets
-        :param transforms: transforms applied to image and mask
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param download: download the data to ``root`` if it is not found there
+        :param transforms: called as ``transforms(image, mask)`` with the PIL image and the target mask,
+            and must return the transformed ``(image, mask)`` tuple
         """
         self.root = root
         self.transforms = transforms
@@ -201,8 +228,7 @@ class LostAndFound(Dataset):
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
-        self.ano_files = os.listdir(join(self.root, self.annotation_dir))
-        self.ano_files.sort()
+        self.ano_files = sorted(os.listdir(join(self.root, self.annotation_dir)))
 
     def _check_integrity(self):
         url, filename, md5hash = self.annotation_url

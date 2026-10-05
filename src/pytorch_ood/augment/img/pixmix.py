@@ -51,10 +51,14 @@ class PixMixDataset(torch.utils.data.Dataset):
     Dataset wrapper to perform PixMix, from the paper
     *PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures*.
 
-    :see Paper: `ArXiv <https://arxiv.org/abs/2112.05135>`__
+    ``dataset`` and ``mixing_set`` must return PIL images, since the augmentation primitives
+    operate on PIL images.
 
-    .. note ::
-        Some of the augmentations primitives used in the paper are not yet implemented.
+    :see Paper: `PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures <https://arxiv.org/abs/2112.05135>`__
+
+    .. note::
+        Only the augmentation primitives autocontrast, equalize, posterize, rotate and solarize
+        are implemented; the other primitives used in the paper are not.
 
     .. image:: https://github.com/andyzoujm/pixmix/raw/main/assets/pixmix.png
         :width: 800px
@@ -74,13 +78,17 @@ class PixMixDataset(torch.utils.data.Dataset):
         mean=(1.0, 1.0, 1.0),
     ):
         """
-        :param dataset: original dataset
-        :param mixing_set: dataset used for mixing
-        :param beta: mixing coefficient
+        :param dataset: original dataset, returning ``(PIL image, label)``
+        :param mixing_set: dataset used for mixing, returning ``(PIL image, label)``; labels are ignored
+        :param beta: parameter :math:`\\beta` of the Beta distributions from which the mixing
+            weights are drawn
         :param aug_severity: severity used for augmentation primitives
-        :param k: number of mixing iterations
-        :param mean: used for normalization
-        :param std: used for normalization
+        :param k: maximum number of mixing rounds; the number of rounds is drawn uniformly from
+            :math:`\\{0, \\dots, k\\}` for each image
+        :param mean: per-channel mean used for normalization. The default of ones (with ``std`` of
+            ones) shifts the pixel values in :math:`[0, 1]` by :math:`-1`; pass the statistics of the
+            dataset to standardize.
+        :param std: per-channel standard deviation used for normalization
         """
         self.dataset = dataset
         self.mixing_set = mixing_set
@@ -98,6 +106,11 @@ class PixMixDataset(torch.utils.data.Dataset):
         self.k = k
 
     def __getitem__(self, i):
+        """
+        :param i: index of the sample
+        :return: tuple of the mixed image as normalized tensor of shape
+            :math:`C \\times H \\times W` and the label of the original sample
+        """
         x, y = self.dataset[i]
         rnd_idx = np.random.choice(len(self.mixing_set))
         mixing_pic, _ = self.mixing_set[rnd_idx]

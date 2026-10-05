@@ -1,35 +1,28 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.RMD
     :members:
     :inherited-members:
     :show-inheritance:
-    :exclude-members: predict_features
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
 from pytorch_ood.detector.mahalanobis import Mahalanobis
 
-from ..api import ModelNotSetException, RequiresFittingException
+from ..api import DetectorInfo, ModelNotSetException, Paper, RequiresFittingException, Task
 from ..utils import (
     extract_features,
     is_known,
 )
 
 log = logging.getLogger(__name__)
-
-Self = TypeVar("Self")
 
 
 class RMD(Mahalanobis):
@@ -45,21 +38,32 @@ class RMD(Mahalanobis):
 
     .. math :: \\min_k \\lbrace d_k(f(x)) - d_0(f(x)) \\rbrace
 
-    where :math:`d_k` is the mahalanobis score for class :math:`k` and :math:`d_0` is the
-    mahalanobis score under the background gaussian.
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/2106.09022.pdf>`__
+    where :math:`f(x)` are the features of :math:`x`, :math:`d_k(z) = (z - \\mu_k)^\\top \\Sigma^{-1} (z - \\mu_k)` is
+    the squared Mahalanobis distance to class :math:`k` and :math:`d_0` is the
+    squared Mahalanobis distance under the background gaussian.
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="A Simple Fix to Mahalanobis Distance for Improving Near-OOD Detection",
+            venue="arXiv",
+            year=2021,
+            url="https://arxiv.org/pdf/2106.09022.pdf",
+            code=None,
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     def __init__(
         self,
-        model: Optional[Callable[[Tensor], Tensor]],
+        encoder: Optional[Callable[[Tensor], Tensor]],
     ):
         """
-        :param model: the Neural Network, should output features. Can be ``None`` when
-            using ``fit_features(...)`` and ``predict_features(...)`` directly.
+        :param encoder: feature extractor that maps inputs to features of shape :math:`B \\times D`.
+            Can be ``None`` when using ``fit_features(...)`` and ``predict_features(...)``
+            directly.
         """
-        super(RMD, self).__init__(encoder=model)
+        super(RMD, self).__init__(encoder=encoder)
 
         self.background_mu = None
         self.background_cov = None
@@ -67,10 +71,11 @@ class RMD(Mahalanobis):
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
-        Fit parameters of the multi variate gaussian for the given loader.
+        Fit parameters of the multivariate Gaussians for the given loader.
         Ignores OOD Inputs.
 
         :param data_loader: data loader with training data
+        :return: self
         """
         device = self.device
         if device is None:
@@ -81,13 +86,13 @@ class RMD(Mahalanobis):
         z, y = extract_features(data_loader, self.encoder, device=device)
         return self.fit_features(z, y)
 
-    def fit_features(self: Self, z: Tensor, y: Tensor) -> Self:
+    def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
-        Fit parameters of the multi variate gaussian. Ignores OOD inputs.
+        Fit parameters of the multivariate Gaussians. Ignores OOD inputs.
 
-        :param z: features
-        :param y: class labels
-        :return:
+        :param z: features of shape :math:`N \\times D`
+        :param y: class labels of shape :math:`N`
+        :return: self
         """
         device = self.device or z.device
 
@@ -134,9 +139,11 @@ class RMD(Mahalanobis):
     @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:
         """
-        Calculates mahalanobis distance directly on features.
+        Calculates the relative Mahalanobis distance directly on features.
 
-        :param z: features, as given by the model.
+        :param z: features of shape :math:`B \\times D` (or feature maps of shape
+            :math:`B \\times C \\times H \\times W`, which are spatially averaged)
+        :return: relative Mahalanobis scores of shape :math:`B`
         """
 
         if self.mu is None:
@@ -151,7 +158,8 @@ class RMD(Mahalanobis):
     @torch.no_grad()
     def predict(self, x: Tensor) -> Tensor:
         """
-        :param x: input tensor
+        :param x: input batch, will be passed through the encoder
+        :return: relative Mahalanobis scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException

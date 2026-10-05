@@ -1,0 +1,18 @@
+{#- Uses page_source_path from conf.py (_source_links) when set: the file the page
+    is actually written in. An empty value hides the button. -#}
+{% extends "!components/view-this-page.html" %}
+
+{% block link_available -%}
+{%- if page_source_path is defined -%}
+  {%- if page_source_path -%}
+<div class="view-this-page">
+  <a class="muted-link" href="{{ theme_source_repository.rstrip('/') }}/blob/{{ theme_source_branch }}/{{ page_source_path }}" title="{{ _('View this page') }}">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">{{ _("View this page") }}</span>
+  </a>
+</div>
+  {%- endif -%}
+{%- else -%}
+{{ super() }}
+{%- endif -%}
+{%- endblock %}

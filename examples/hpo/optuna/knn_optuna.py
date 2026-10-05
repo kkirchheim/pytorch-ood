@@ -8,6 +8,8 @@ trial only changes ``k`` (which does not affect the fitted index) and re-scores 
 validation set. Ranges are defined by hand in the objective with ``trial.suggest_*``.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/hpo.png"
+
 import logging
 
 import optuna
@@ -18,8 +20,9 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import KNN
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model, load_transform
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
+from pytorch_ood.utils import ToUnknown, fix_random_seed
 
 logging.basicConfig(level=logging.INFO)
 fix_random_seed(123)
@@ -79,19 +82,23 @@ print(f"\nBest: {study.best_params}  AUROC = {study.best_value:.4f}")
 # +-----+--------+
 # | k   | AUROC  |
 # +=====+========+
-# | 3   | 0.9164 |
+# | 4   | 0.9276 |
 # +-----+--------+
-# | 5   | 0.9159 |
+# | 3   | 0.9272 |
 # +-----+--------+
-# | 7   | 0.9142 |
+# | 5   | 0.9271 |
 # +-----+--------+
-# | 14  | 0.9106 |
+# | 7   | 0.9267 |
 # +-----+--------+
-# | 27  | 0.9057 |
+# | 2   | 0.9266 |
 # +-----+--------+
-# | 43  | 0.9015 |
+# | 12  | 0.9253 |
 # +-----+--------+
-# | 125 | 0.8875 |
+# | 19  | 0.9237 |
 # +-----+--------+
-# | 236 | 0.2343 |
+# | 42  | 0.9210 |
+# +-----+--------+
+# | 132 | 0.9185 |
+# +-----+--------+
+# | 205 | 0.4812 |
 # +-----+--------+

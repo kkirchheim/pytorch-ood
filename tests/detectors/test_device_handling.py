@@ -21,7 +21,7 @@ from src.pytorch_ood.detector import (
     EnergyBased,
     Entropy,
     GradNorm,
-    GradNormKL,
+    GradUncertainty,
     Gram,
     KLMatching,
     Mahalanobis,
@@ -112,7 +112,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
         return [
             (
                 "KNN",
-                lambda: (lambda model: KNN(model.features))(ClassificationModel()),
+                lambda: (lambda model: KNN(model.features, k=3))(ClassificationModel()),
             ),
             (
                 "GMM",
@@ -172,7 +172,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
                         encoder=model.features,
                         w=model.classifier.weight,
                         b=model.classifier.bias,
-                        p=65.0,
+                        p=0.65,
                     )
                 )(ClassificationModel()),
             ),
@@ -212,7 +212,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
 
     @staticmethod
     def _raw_predict_registry():
-        def make_gradnorm_model():
+        def make_gradient_model():
             model = ClassificationModel()
             model.requires_grad_(False)
             model.classifier.requires_grad_(True)
@@ -223,16 +223,16 @@ class TestDetectorDeviceHandling(unittest.TestCase):
             ("ODIN", lambda: ODIN(ClassificationModel().eval(), eps=0.001)),
             ("MCD", lambda: MCD(ClassificationModel().eval(), samples=4, mode="var")),
             (
-                "GradNorm",
-                lambda: GradNorm(
-                    make_gradnorm_model(),
+                "GradUncertainty",
+                lambda: GradUncertainty(
+                    make_gradient_model(),
                     param_filter=lambda name: name.startswith("classifier"),
                 ),
             ),
             (
-                "GradNormKL",
-                lambda: GradNormKL(
-                    make_gradnorm_model(),
+                "GradNorm",
+                lambda: GradNorm(
+                    make_gradient_model(),
                     param_filter=lambda name: name.startswith("classifier"),
                 ),
             ),
@@ -321,7 +321,6 @@ class TestDetectorDeviceHandling(unittest.TestCase):
 
         self.assertEqual(detector.device, self.device)
         self.assertEqual(next(detector.model.parameters()).device, self.device)
-        self.assertEqual(detector.t.device, self.device)
 
     def test_vim_infers_device_from_constructor_tensors_without_explicit_to(self):
         # ViM must not silently pin its state to CPU when constructed directly from

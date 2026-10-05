@@ -1,218 +1,10 @@
 """
-
-All objective functions are implemented as ``torch.nn.Modules``.
-Some of them have a set of trainable parameters and must be moved to the appropriate device.
-
-
-Unsupervised
-=====================
-Unsupervised losses only use in-distribution data (or similarly, only on
-examples from "known known" classes.)
-
-Therefore, all of these loss functions expect that the target labels are strictly :math:`\\geq 0`.
-
-
-Deep SVDD Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-
-.. autoclass:: pytorch_ood.loss.DeepSVDDLoss
-    :members:
-
-
-Class Anchor Clustering Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-
-..  autoclass:: pytorch_ood.loss.CACLoss
-    :members:
-
-
-II Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-
-..  autoclass:: pytorch_ood.loss.IILoss
-    :members:
-
-
-Center Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-
-.. autoclass:: pytorch_ood.loss.CenterLoss
-    :members:
-
-
-Cross-Entropy Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-
-..  autoclass:: pytorch_ood.loss.CrossEntropyLoss
-    :members:
-
-
-Confidence Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-..  autoclass:: pytorch_ood.loss.ConfidenceLoss
-    :members:
-
-
-LogitNorm Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-..  autoclass:: pytorch_ood.loss.LogitNorm
-    :members:
-
-
-Supervised
-=====================
-Supervised Losses make use from example Out-of-Distribution samples (or samples from known unknown classes).
-Thus, these losses can handle samples with target values :math:`< 0`.
-
-
-Outlier Exposure Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-
-.. autoclass:: pytorch_ood.loss.OutlierExposureLoss
-    :members:
-
-
-Entropic Open-Set Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-
-.. autoclass:: pytorch_ood.loss.EntropicOpenSetLoss
-    :members:
-
-
-Objectosphere Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-.. autoclass:: pytorch_ood.loss.ObjectosphereLoss
-    :members:
-
-
-Energy-Bounded Learning Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-
-.. autoclass:: pytorch_ood.loss.EnergyRegularizedLoss
-    :members:
-
-VOS Energy-Based Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: segmentation badge
-
-.. autoclass:: pytorch_ood.loss.VOSRegLoss
-    :members:
-
-
-Virtual Outlier Synthesizing  Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-.. autoclass:: pytorch_ood.loss.VirtualOutlierSynthesizingRegLoss
-    :members:
-
-MCHAD Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-..  autoclass:: pytorch_ood.loss.MCHADLoss
-    :members:
-
-
-
-Background Class Loss
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-.. autoclass:: pytorch_ood.loss.BackgroundClassLoss
-    :members:
-
-
-Energy Margin Loss (Scone)
-----------------------------------------------
-
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
-.. autoclass:: pytorch_ood.loss.EnergyMarginLoss
-    :members:
-
+All objective functions are implemented as :class:`torch.nn.Module` subclasses.
+Losses compute on the device of their inputs. Losses that store tensors, such as class centers,
+say so in a note and must be moved to the device of the model with ``.to(device)``.
 """
+
+import warnings
 
 from .background import BackgroundClassLoss
 from .cac import CACLoss
@@ -229,5 +21,17 @@ from .oe import OutlierExposureLoss
 from .scone import EnergyMarginLoss
 
 # from .triplet import TripletLoss
-from .svdd import DeepSVDDLoss, SSDeepSVDDLoss
+from .svdd import DeepSADLoss, DeepSVDDLoss
 from .vos import VirtualOutlierSynthesizingRegLoss, VOSRegLoss
+
+
+def __getattr__(name):
+    # renamed; the old name keeps working for now
+    if name == "SSDeepSVDDLoss":
+        warnings.warn(
+            "SSDeepSVDDLoss was renamed to DeepSADLoss and will be removed in a future release",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return DeepSADLoss
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

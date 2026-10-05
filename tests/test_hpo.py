@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from src.pytorch_ood.api import Detector, FeaturesDetector
 from src.pytorch_ood.detector import ASH, GEN, KNN, ODIN, ReAct
+from src.pytorch_ood.metrics import AUROC, FPRAtTPR, MetricCollection
 from src.pytorch_ood.model import WideResNet
 from src.pytorch_ood.utils import GridSearch
 from tests.helpers import ClassificationModel
@@ -120,6 +121,18 @@ class _NaNDetector(FeaturesDetector):
 
     def predict(self, x):
         return self.predict_features(self.encoder(x))
+
+
+class _ConstantDetector(Detector):
+    """Returns constant scores for ``w = 1``, for which AUTC is undefined."""
+
+    hyperparameter_space = {"w": [0.0, 1.0]}
+
+    def __init__(self):
+        self.w = 0.0
+
+    def predict(self, x):
+        return (1.0 - self.w) * x[:, 0]
 
 
 class TestGridSearch(unittest.TestCase):
@@ -345,6 +358,23 @@ class TestGridSearchEdgeCases(unittest.TestCase):
         best = search.run()
         self.assertEqual(detector.bias, best["bias"])
         self.assertEqual(detector._fitted_bias, detector.bias)
+
+    def test_metric_collection(self):
+        metric = MetricCollection([AUROC(), FPRAtTPR()])
+        for detector, fit_loader in (
+            (_WeightedFeatureDetector(), self.fit_loader),
+            (_RawWeightedDetector(), None),
+        ):
+            with self.subTest(type(detector).__name__):
+                search = GridSearch(detector, fit_loader, self.val_loader, metric=metric)
+                self.assertEqual(search.run(), {"w": 0.0})
+
+    def test_constant_scores_do_not_abort(self):
+        search = GridSearch(_ConstantDetector(), None, self.val_loader)
+        with self.assertWarns(UserWarning):
+            best = search.run()
+        self.assertEqual(best, {"w": 0.0})
+        self.assertEqual(search.results_[1]["score"], 0.5)
 
     def test_unknown_metric_name_raises_readable(self):
         detector = _RawWeightedDetector()

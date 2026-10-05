@@ -12,6 +12,8 @@ TinyImages database, which contains random images scraped from the internet.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/loss.png"
+
 import torch
 import torchvision.transforms as tvt
 from torch.optim import Adam
@@ -21,8 +23,9 @@ from torchvision.datasets import CIFAR10
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.detector import MaxSoftmax
 from pytorch_ood.loss import OutlierExposureLoss
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model
-from pytorch_ood.utils import OODMetrics, ToUnknown
+from pytorch_ood.utils import ToUnknown
 
 torch.manual_seed(123)
 

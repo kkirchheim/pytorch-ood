@@ -20,6 +20,8 @@ We then use the :class:`EnergyBased<pytorch_ood.detector.EnergyBased>` OOD detec
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/segmentation.png"
+
 import segmentation_models_pytorch as smp
 import torch
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
@@ -29,10 +31,11 @@ from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import StreetHazards
 from pytorch_ood.detector import EnergyBased
-from pytorch_ood.utils import OODMetrics, fix_random_seed
+from pytorch_ood.metrics import OODPerImageSegmentationMetrics
+from pytorch_ood.utils import fix_random_seed
 
 device = "cuda:0"
-batch_size = 4
+batch_size = 1
 num_epochs = 1
 
 fix_random_seed(12345)
@@ -121,7 +124,8 @@ print("Evaluating")
 model.eval()
 loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
 detector = EnergyBased(model)
-metrics = OODMetrics(mode="segmentation")
+# mean over the images
+metrics = OODPerImageSegmentationMetrics()
 
 with torch.no_grad():
     for n, (x, y) in enumerate(loader):
@@ -139,8 +143,8 @@ print(metrics.compute())
 # %%
 # Output:
 #
-# +---------------+-----------+-------+--------+---------+-----------+----------+
-# | Dataset       | Detector | AUROC  | AUTC   | AUPR-IN | AUPR-OUT  | FPR95TPR |
-# +===============+==========+========+========+=========+===========+==========+
-# | Streethazards | Energy   | 81.93  | 42.28  | 99.70   | 09.05     | 57.43    |
-# +---------------+----------+--------+--------+---------+-----------+----------+
+# +---------------+----------+-------+-------+---------+----------+----------+
+# | Dataset       | Detector | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
+# +===============+==========+=======+=======+=========+==========+==========+
+# | StreetHazards | Energy   | 84.33 | 41.25 | 99.71   | 8.58     | 52.06    |
+# +---------------+----------+-------+-------+---------+----------+----------+

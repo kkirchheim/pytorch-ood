@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.utils import OODMetrics
+from pytorch_ood.metrics import OODMetrics
 from src.pytorch_ood.detector import NACUE
 
 

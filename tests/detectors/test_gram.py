@@ -81,7 +81,7 @@ class GramTest(unittest.TestCase):
         receive higher outlier scores than the fitting data (higher = more OOD).
         The previous implementation returned inverted scores.
         """
-        from src.pytorch_ood.utils import OODMetrics
+        from src.pytorch_ood.metrics import OODMetrics
 
         model = InitGram().model
         y = torch.cat([torch.zeros(50, dtype=torch.int), torch.ones(50, dtype=torch.int)])

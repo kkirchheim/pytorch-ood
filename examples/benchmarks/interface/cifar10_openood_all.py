@@ -11,13 +11,14 @@ external dependencies or method-specific trained weights, such as OpenMax and
 WeightedEBO.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
+
 from collections import OrderedDict
-from copy import deepcopy
 
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 
 from pytorch_ood.benchmark import CIFAR10_OpenOOD
 from pytorch_ood.detector import (
@@ -37,7 +38,7 @@ from pytorch_ood.detector import (
     EnergyBased,
     Entropy,
     GradNorm,
-    GradNormKL,
+    GradUncertainty,
     Gram,
     KLMatching,
     Mahalanobis,
@@ -88,7 +89,7 @@ def build_detectors(model, norm_std):
     detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
     detectors["NCI"] = NCI(encoder=model.features, head=model.fc, alpha=0.0)
     detectors["SHE"] = SHE(model.features, model.fc)
-    detectors["DICE"] = DICE(encoder=model.features, w=model.fc.weight, b=model.fc.bias, p=65.0)
+    detectors["DICE"] = DICE(encoder=model.features, w=model.fc.weight, b=model.fc.bias, p=0.65)
     detectors["LTS"] = LTS(encoder=model.features, head=model.fc)
     # threshold is estimated from the training activations during fit()
     detectors["ReAct"] = ReAct(model.features, model.fc)
@@ -124,17 +125,10 @@ def build_detectors(model, norm_std):
         ],
     )
 
-    model_gn = deepcopy(model)
-    model_gn.requires_grad_(False)
-    model_gn.fc.requires_grad_(True)
-    detectors["GradNorm"] = GradNorm(model_gn, param_filter=lambda name: name.startswith("fc"))
-
-    model_gnkl = deepcopy(model)
-    model_gnkl.requires_grad_(False)
-    model_gnkl.fc.requires_grad_(True)
-    detectors["GradNormKL"] = GradNormKL(
-        model_gnkl, param_filter=lambda name: name.startswith("fc")
+    detectors["GradUncertainty"] = GradUncertainty(
+        model, param_filter=lambda name: name.startswith("fc")
     )
+    detectors["GradNorm"] = GradNorm(model, param_filter=lambda name: name == "fc.weight")
 
     detectors["NAC-UE"] = NACUE(
         model=model,
@@ -172,11 +166,9 @@ benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
 
 train_dataset = benchmark.train_set()
 train_loader = DataLoader(train_dataset, shuffle=True, **loader_kwargs)
-calibration_loader = DataLoader(
-    Subset(train_dataset, range(len(train_dataset) - 5000, len(train_dataset))),
-    shuffle=False,
-    **loader_kwargs,
-)
+# OpenOOD's held-out validation split covers every class; its OOD samples are ignored by the
+# calibration detectors
+calibration_loader = DataLoader(benchmark.validation_set(), shuffle=False, **loader_kwargs)
 
 print("STAGE 2: Creating and fitting detectors")
 detectors = build_detectors(model=model, norm_std=norm_std)

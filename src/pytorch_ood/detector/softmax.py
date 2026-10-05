@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-yes-brightgreen?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.MaxSoftmax
     :members:
     :inherited-members:
@@ -13,15 +8,15 @@
 """
 
 import logging
-from typing import Optional, TypeVar
+from typing import Optional
 
-from torch import Tensor, tensor
+from torch import Tensor
 from torch.nn import Module
+from typing_extensions import Self
 
-from ..api import LogitsDetector
+from ..api import DetectorInfo, LogitsDetector, Paper, Task
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class MaxSoftmax(LogitsDetector):
@@ -34,35 +29,45 @@ class MaxSoftmax(LogitsDetector):
     .. math:: - \\max_y \\sigma_y(f(x) / T)
 
     where :math:`\\sigma` is the softmax function and :math:`\\sigma_y`  indicates the :math:`y^{th}` value of the
-    resulting probability vector.
-
-    :see Paper:
-        `ArXiv <https://arxiv.org/abs/1610.02136>`_
-    :see Implementation:
-        `GitHub <https://github.com/hendrycks/error-detection>`_
-
+    resulting probability vector, and :math:`f(x)` are the logits.
+    The sign is flipped so that larger values indicate outliers.
     """
 
-    def __init__(self, model: Optional[Module], t: Optional[float] = 1.0):
+    info = DetectorInfo(
+        paper=Paper(
+            title="A Baseline for Detecting Misclassified and Out-of-Distribution Examples in Neural Networks",
+            venue="ICLR",
+            year=2017,
+            url="https://arxiv.org/abs/1610.02136",
+            code="https://github.com/hendrycks/error-detection",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+    )
+
+    def __init__(self, model: Optional[Module], t: float = 1.0):
         """
         :param model: neural network to use. Can be ``None`` when using
             ``predict_logits(...)`` directly.
-        :param t: temperature value :math:`T`. Default is 1.
+        :param t: temperature value :math:`T`
         """
         super(MaxSoftmax, self).__init__()
-        self.t = tensor(t)
+        self.t = float(t)
         self.model = model
 
     def predict_logits(self, logits: Tensor) -> Tensor:
         """
-        :param logits: logits given by the model
+        :param logits: logits of shape :math:`B \\times C` (or :math:`B \\times C \\times H \\times W`)
+        :return: outlier scores of shape :math:`B` (or :math:`B \\times H \\times W`)
         """
         return MaxSoftmax.score(logits, self.t)
 
     @staticmethod
-    def score(logits: Tensor, t: Optional[float] = 1.0) -> Tensor:
+    def score(logits: Tensor, t: float = 1.0) -> Tensor:
         """
-        :param logits: logits for samples
-        :param t: temperature value
+        Negative maximum softmax probability of the temperature-scaled logits.
+
+        :param logits: logits of shape :math:`B \\times C` (or :math:`B \\times C \\times H \\times W`)
+        :param t: temperature :math:`T`
+        :return: negative maximum softmax probability, shape :math:`B` (or :math:`B \\times H \\times W`);
         """
         return -logits.div(t).softmax(dim=1).max(dim=1).values

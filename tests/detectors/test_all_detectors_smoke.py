@@ -19,15 +19,17 @@ from src.pytorch_ood.detector import (
     ODIN,
     PNML,
     RMD,
+    SCALE,
     SHE,
     VRA,
     EnergyBased,
     Entropy,
     GradNorm,
-    GradNormKL,
+    GradUncertainty,
     Gram,
     KLMatching,
     Mahalanobis,
+    MahalanobisODIN,
     MaxLogit,
     MaxSoftmax,
     MultiMahalanobis,
@@ -144,7 +146,7 @@ class TestAllDetectorsSmoke(unittest.TestCase):
             model.eval()
             return model
 
-        def gradnorm_model():
+        def gradient_model():
             model = ClassificationModel()
             model.requires_grad_(False)
             model.classifier.requires_grad_(True)
@@ -165,7 +167,7 @@ class TestAllDetectorsSmoke(unittest.TestCase):
             ("MCD", lambda: MCD(eval_model(), samples=4, mode="var")),
             (
                 "KNN",
-                lambda: (lambda model: KNN(model.features))(eval_model()),
+                lambda: (lambda model: KNN(model.features, k=3))(eval_model()),
             ),
             (
                 "GMM",
@@ -241,7 +243,7 @@ class TestAllDetectorsSmoke(unittest.TestCase):
                         encoder=model.features,
                         w=model.classifier.weight,
                         b=model.classifier.bias,
-                        p=65.0,
+                        p=0.65,
                     )
                 )(eval_model()),
             ),
@@ -274,16 +276,20 @@ class TestAllDetectorsSmoke(unittest.TestCase):
                 )(eval_model()),
             ),
             (
-                "GradNorm",
-                lambda: GradNorm(
-                    gradnorm_model(),
+                "GradUncertainty",
+                lambda: GradUncertainty(
+                    gradient_model(),
                     param_filter=lambda name: name.startswith("classifier"),
                 ),
             ),
             (
-                "GradNormKL",
-                lambda: GradNormKL(
-                    gradnorm_model(),
+                "MahalanobisODIN",
+                lambda: (lambda model: MahalanobisODIN(model.features, eps=0.001))(eval_model()),
+            ),
+            (
+                "GradNorm",
+                lambda: GradNorm(
+                    gradient_model(),
                     param_filter=lambda name: name.startswith("classifier"),
                 ),
             ),
@@ -296,6 +302,15 @@ class TestAllDetectorsSmoke(unittest.TestCase):
                 "ASH",
                 lambda: (
                     lambda model: ASH(
+                        backbone=model.feature_maps,
+                        head=model.forward_feature_maps,
+                    )
+                )(TinyConvDetectorModel().eval()),
+            ),
+            (
+                "SCALE",
+                lambda: (
+                    lambda model: SCALE(
                         backbone=model.feature_maps,
                         head=model.forward_feature_maps,
                     )

@@ -4,23 +4,23 @@ StreetHazards with VOS Loss
 
 We train a Feature Pyramid Segmentation model
 with a ResNet-50 backbone pre-trained on the ImageNet
-on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` **test set** using
+on the :class:`StreetHazards<pytorch_ood.dataset.img.StreetHazards>` training set using
 the supervised :class:`VOSRegLoss<pytorch_ood.loss.VOSRegLoss>`.
+The loss needs anomalous pixels, which the training set does not contain, so we insert random
+COCO objects as anomalies with :class:`InsertCOCO<pytorch_ood.augment.img.InsertCOCO>`.
 
-We then use the :class:`VOSBased<pytorch_ood.detector.VOSBased>` OOD detector.
+We then use the :class:`WeightedEBO<pytorch_ood.detector.WeightedEBO>` OOD detector.
 
 This setup is merely made to demonstrate how to train a supervised anomaly segmentation model with
 this loss function.
-
-.. warning :: We train on the test set, as it contains examples of anomalies.
-    The results will not be meaningful.
-
 
 .. note :: Training with a batch-size of 4 requires slightly more than 12 GB of GPU memory.
     However, the models tend to also converge to reasonable performance with a smaller batch-size.
     This loss is more effektive with a scheduler and a lot of epochs.
 
 """
+
+# sphinx_gallery_thumbnail_path = "_static/thumbs/segmentation.png"
 
 import numpy as np
 import segmentation_models_pytorch as smp
@@ -30,13 +30,15 @@ from segmentation_models_pytorch.metrics import iou_score
 from torch.utils.data import DataLoader
 from torchvision.transforms.functional import pad, to_tensor
 
+from pytorch_ood.augment.img import InsertCOCO
 from pytorch_ood.dataset.img import StreetHazards
 from pytorch_ood.detector import WeightedEBO
 from pytorch_ood.loss import VOSRegLoss
-from pytorch_ood.utils import OODMetrics, fix_random_seed
+from pytorch_ood.metrics import OODPerImageSegmentationMetrics
+from pytorch_ood.utils import fix_random_seed
 
 device = "cuda:0"
-batch_size = 4
+batch_size = 1
 num_epochs = 1
 lr = 0.0001
 num_classes = 13
@@ -50,8 +52,18 @@ g.manual_seed(0)
 # Setup preprocessing
 preprocess_input = get_preprocessing_fn("resnet50", pretrained="imagenet")
 
+# for demonstration purposes, we set the probability of OOD to 1
+coco_transform = InsertCOCO(
+    coco_dir="data/coco",
+    exclude_classes="Streethazards",
+    p=1,
+    download=True,
+)
 
-def my_transform(img, target):
+
+def my_transform(img, target, use_coco_transform):
+    if use_coco_transform:
+        img, target = coco_transform(img, target)
     img = to_tensor(img)[:3, :, :]  # drop 4th channel
     img = torch.moveaxis(img, 0, -1)
     img = preprocess_input(img)
@@ -68,9 +80,19 @@ def cosine_annealing(step, total_steps, lr_max, lr_min):
 
 
 # %%
-# Setup datasets, train on ood images for demonstration purposes.
-dataset = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
-dataset_test = StreetHazards(root="data", subset="test", transform=my_transform, download=True)
+# Setup datasets, insert COCO objects into the training images only.
+dataset = StreetHazards(
+    root="data",
+    subset="train",
+    transform=lambda img, target: my_transform(img, target, True),
+    download=True,
+)
+dataset_test = StreetHazards(
+    root="data",
+    subset="test",
+    transform=lambda img, target: my_transform(img, target, False),
+    download=True,
+)
 
 
 # %%
@@ -88,7 +110,7 @@ phi = torch.nn.Linear(1, 2).to(device)
 weights_energy = torch.nn.Linear(num_classes, 1).to(device)
 torch.nn.init.uniform_(weights_energy.weight)
 
-criterion = VOSRegLoss(phi, weights_energy, device=device)
+criterion = VOSRegLoss(phi, weights_energy).to(device)
 
 
 # %%
@@ -152,8 +174,9 @@ for epoch in range(num_epochs):
 print("Evaluating")
 model.eval()
 loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
-detector = WeightedEBO(model, weights_energy)
-metrics = OODMetrics(mode="segmentation")
+detector = WeightedEBO(model, weights_energy.weight)
+# mean over the images
+metrics = OODPerImageSegmentationMetrics()
 
 with torch.no_grad():
     for n, (x, y) in enumerate(loader):
@@ -172,8 +195,8 @@ print(metrics.compute())
 # %%
 # Output:
 #
-# +-----------------------+-------------+--------+--------+---------+-----------+----------+
-# | Dataset               | Detector    | AUROC  | AUTC   | AUPR-IN | AUPR-OUT  | FPR95TPR |
-# +=======================+=============+========+========+=========+===========+==========+
-# | Streethazards+VOS-Loss| WeightedEBO | 93.56  | 36.51  | 99.94   | 15.45     | 17.98    |
-# +-----------------------+-------------+--------+--------+---------+-----------+----------+
+# +--------------------+-------------+-------+-------+---------+----------+----------+
+# | Dataset            | Detector    | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
+# +====================+=============+=======+=======+=========+==========+==========+
+# | StreetHazards+COCO | WeightedEBO | 90.95 | 38.93 | 99.87   | 11.68    | 28.51    |
+# +--------------------+-------------+-------+-------+---------+----------+----------+

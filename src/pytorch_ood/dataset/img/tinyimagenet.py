@@ -6,6 +6,8 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import download_and_extract_archive
 
+from ...api import DatasetInfo, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -14,17 +16,18 @@ class TinyImageNet(VisionDataset):
     Small Version of the ImageNet with images of size :math:`64 \\times 64` from 200 classes used by
     Stanford. Each class has 500 images for training.
 
-    .. image :: https://production-media.paperswithcode.com/datasets/Tiny_ImageNet-0000001404-a53923c3_XCrVSGm.jpg
-        :width: 400px
-        :alt: Textured Dataset
-        :align: center
-
-
     This dataset is often used for training, but not included in Torchvision.
-
-    :see Website: `Stanford <http://cs231n.stanford.edu/>`__
-
+    Images are returned as :class:`PIL.Image.Image`. The ``train`` and ``val`` subsets return the class index
+    :math:`0, \\dots, 199` as target; the ``test`` subset has no annotations, so all its targets are ``-1``
+    (the label of OOD samples).
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.IN_DISTRIBUTION, Role.OOD_TEST},
+        license=None,
+        homepage="http://cs231n.stanford.edu/",
+    )
 
     url = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
     dir_name = "tiny-imagenet-200"
@@ -41,7 +44,12 @@ class TinyImageNet(VisionDataset):
         target_transform=None,
     ):
         """
-        :para subset: can be one of ``train``, ``val`` and ``test``
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param subset: can be one of ``train``, ``val`` and ``test``
+        :param download: download the data to ``root`` if it is not found there
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :raises ValueError: if ``subset`` is invalid
         """
         if subset not in self.subsets:
             raise ValueError(f"Invalid subset: {subset}. Possible values are {self.subsets}")
@@ -60,8 +68,7 @@ class TinyImageNet(VisionDataset):
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
 
-        classes = os.listdir(join(self.root, self.dir_name, "train"))
-        classes.sort()
+        classes = sorted(os.listdir(join(self.root, self.dir_name, "train")))
         self.class_map = {c: n for n, c in enumerate(classes)}  # : map class_names to integers
         self.basename = join(self.root, self.dir_name, self.subset)
         self.paths = []
@@ -70,7 +77,7 @@ class TinyImageNet(VisionDataset):
         if subset == "train":
             for d in classes:
                 p = join(self.basename, d, "images")
-                files = [join(p, img) for img in os.listdir(p)]
+                files = [join(p, img) for img in sorted(os.listdir(p))]
 
                 self.paths += files
                 self.labels += [self.class_map[d]] * len(files)
@@ -85,7 +92,7 @@ class TinyImageNet(VisionDataset):
 
         elif subset == "test":
             d = join(self.basename, "images")
-            self.paths = [join(d, img) for img in os.listdir(d)]
+            self.paths = [join(d, img) for img in sorted(os.listdir(d))]
             self.labels = [-1] * len(self.paths)
 
     def download(self):
@@ -103,7 +110,8 @@ class TinyImageNet(VisionDataset):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is the class index in :math:`[0, 199]` for the ``train`` and ``val``
+            subsets and ``-1`` for the unlabeled ``test`` subset.
         """
         img, target = self.paths[index], self.labels[index]
 

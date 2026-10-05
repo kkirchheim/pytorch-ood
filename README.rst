@@ -86,7 +86,7 @@ OOD data must be marked with labels < 0.
 
 
     from pytorch_ood.detector import EnergyBased
-    from pytorch_ood.utils import OODMetrics
+    from pytorch_ood.metrics import OODMetrics
     from pytorch_ood.model import load_model, load_transform
 
     data_loader = ... # your data, OOD with label < 0
@@ -110,13 +110,13 @@ OOD data must be marked with labels < 0.
 
 You can find more examples in the `documentation <https://pytorch-ood.readthedocs.io/en/latest/auto_examples/benchmarks/>`_.
 
-Benchmarks (Beta)
+Benchmarks
 ---------------------------
 
 Evaluate detectors against common benchmarks, for example the OpenOOD v1.5 CIFAR benchmark.
-All datasets will be downloaded automatically.
+Datasets will be downloaded automatically.
 When evaluating several detectors on the same benchmark, cached logits
-and pooled features can be reused across calls:
+and pooled features are reused across calls:
 
 .. code-block:: python
 
@@ -167,7 +167,6 @@ The package can be installed via PyPI:
 * ``torch``
 * ``torchvision``
 * ``scipy``
-* ``torchmetrics``
 
 
 **Optional Dependencies**
@@ -222,13 +221,13 @@ If you use this project, please cite:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Energy-Based OOD Detection  | Implements the energy score of *Energy-based Out-of-distribution Detection*.                   | 2020 | [#EnergyBasedOOD]_ |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| GradNorm                    | Gradient norms as a measure of uncertainty in neural networks.                                 | 2020 | [#GradNorm]_       |
+| GradUncertainty             | Gradient norms as a measure of uncertainty in neural networks.                                 | 2020 | [#GradUncertainty]_|
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Entropy                     | Uses entropy to detect OOD inputs.                                                             | 2021 | [#MaxEntropy]_     |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | ReAct                       | ReAct: Out-of-distribution detection with Rectified Activations.                               | 2021 | [#ReAct]_          |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
-| GradNormKL                  | KL-divergence gradient norms for detecting distributional shifts.                              | 2021 | [#GradNormKL]_     |
+| GradNorm                    | KL-divergence gradient norms for detecting distributional shifts.                              | 2021 | [#GradNorm]_       |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | Relative Mahalanobis (RMD)  | Relative Mahalanobis distance with a background Gaussian.                                      | 2021 | [#RMD]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
@@ -540,9 +539,9 @@ The legal implications of using pre-trained models in commercial services are, t
 
 .. [#NNGuide] Park, J., et al. (2023) Nearest Neighbor Guidance for Out-of-Distribution Detection. ICCV.
 
-.. [#GradNorm] Lee, J., & AlRegib, G. (2020) Gradients as a Measure of Uncertainty in Neural Networks. ICIP.
+.. [#GradUncertainty] Lee, J., & AlRegib, G. (2020) Gradients as a Measure of Uncertainty in Neural Networks. ICIP.
 
-.. [#GradNormKL] Huang, R., et al. (2021) On the Importance of Gradients for Detecting Distributional Shifts in the Wild. NeurIPS.
+.. [#GradNorm] Huang, R., et al. (2021) On the Importance of Gradients for Detecting Distributional Shifts in the Wild. NeurIPS.
 
 .. [#RMD] Ren, J., et al. (2021) A Simple Fix to Mahalanobis Distance for Improving Near-OOD Detection. `ArXiv <https://arxiv.org/pdf/2106.09022.pdf>`__.
 

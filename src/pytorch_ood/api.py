@@ -1,13 +1,16 @@
+import functools
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List, TypeVar
+from dataclasses import dataclass
+from enum import Enum
+from typing import ClassVar, Dict, FrozenSet, Iterable, List, Optional, Union
 
 import torch
 from torch import Tensor
 from torch.nn import Module, Parameter
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
-Self = TypeVar("Self")
 log = logging.getLogger(__name__)
 
 
@@ -22,11 +25,175 @@ class RequiresFittingException(Exception):
 
 class ModelNotSetException(ValueError):
     """
-    Raised when predict() is called but no model was given.
+    Raised when predict() or fit() needs a model but none was given.
     """
 
     def __init__(self, msg="When using predict(), model must not be None"):
         super(ModelNotSetException, self).__init__(msg)
+
+
+# -- Component metadata --------------------------------------------------------
+# Detectors, training objectives, datasets and benchmarks carry a class attribute
+# ``info`` with one of the records below. The documentation renders badges, links and
+# comparison tables from it, and the tests check the claims it makes.
+
+
+class Task(str, Enum):
+    """
+    Granularity at which inputs are labeled or scored as in- or out-of-distribution.
+    """
+
+    #: one label or outlier score per input, e.g. a :math:`B \times C` logit tensor
+    CLASSIFICATION = "classification"
+    #: one label or outlier score per pixel, e.g. a :math:`B \times C \times H \times W` logit tensor
+    SEGMENTATION = "segmentation"
+
+
+class Representation(str, Enum):
+    """
+    What a component is applied to. For detectors, this follows from their base
+    class (see :doc:`/core_api/detectors`); training objectives list it in their ``info``.
+    """
+
+    #: model outputs before the softmax
+    LOGITS = "logits"
+    #: pooled features of the penultimate layer, shape :math:`B \times D`
+    FEATURES = "features"
+    #: activations of a convolutional layer, shape :math:`B \times C \times H \times W`
+    FEATURE_MAPS = "feature maps"
+    #: activations of several layers at once
+    LAYERS = "several layers"
+    #: distances to class centers
+    DISTANCES = "distances"
+    #: a separately predicted confidence
+    CONFIDENCE = "confidence"
+    #: the model's original inputs, e.g. to compute gradients with respect to them or to
+    #: sample with dropout
+    INPUTS = "model inputs"
+
+
+class Role(str, Enum):
+    """
+    The part a dataset usually plays in OOD detection experiments.
+    """
+
+    #: in-distribution data that models are trained and evaluated on
+    IN_DISTRIBUTION = "in-distribution"
+    #: out-of-distribution data used only for evaluation
+    OOD_TEST = "OOD test set"
+    #: in-distribution data under distribution shift, e.g. corruptions
+    DISTRIBUTION_SHIFT = "distribution shift"
+    #: example outliers used during training, e.g. for Outlier Exposure
+    AUXILIARY_OUTLIERS = "auxiliary outliers"
+    #: in- and out-of-distribution samples in one dataset, e.g. anomaly segmentation benchmarks
+    BENCHMARK = "benchmark"
+
+
+@dataclass(frozen=True)
+class Paper:
+    """
+    The publication that introduced a component.
+    """
+
+    #: title of the publication
+    title: str
+    #: short venue name, e.g. ``"NeurIPS"`` or ``"arXiv"``
+    venue: str
+    #: year of publication
+    year: int
+    #: link to the publication
+    url: str
+    #: reference implementation by the authors, if public
+    code: Optional[str] = None
+
+
+def _frozen(values: Iterable) -> FrozenSet:
+    return values if isinstance(values, frozenset) else frozenset(values)
+
+
+@dataclass(frozen=True)
+class DetectorInfo:
+    """
+    Metadata of an OOD detector, see :attr:`pytorch_ood.api.Detector.info`.
+    """
+
+    #: tasks the detector supports; checked by the test suite
+    tasks: FrozenSet[Task]
+    #: publication that introduced the detector; ``None`` for baselines without one
+    paper: Optional[Paper] = None
+    #: whether the implementation was written with an AI coding assistant
+    ai_coded: bool = False
+
+    def __post_init__(self):
+        object.__setattr__(self, "tasks", _frozen(self.tasks))
+
+
+@dataclass(frozen=True)
+class LossInfo:
+    """
+    Metadata of a training objective.
+    """
+
+    #: tasks the objective supports; checked by the test suite
+    tasks: FrozenSet[Task]
+    #: what the objective is applied to, e.g. logits, or logits and features
+    inputs: FrozenSet[Representation]
+    #: whether the objective takes example outliers (targets :math:`< 0`, e.g. auxiliary OOD
+    #: data) during training; unsupervised objectives only take in-distribution data, possibly
+    #: synthesizing outliers from it internally
+    supervised: bool
+    #: publication that introduced the objective; ``None`` for baselines without one
+    paper: Optional[Paper] = None
+    #: whether the implementation was written with an AI coding assistant
+    ai_coded: bool = False
+
+    def __post_init__(self):
+        object.__setattr__(self, "tasks", _frozen(self.tasks))
+        object.__setattr__(self, "inputs", _frozen(self.inputs))
+
+
+@dataclass(frozen=True)
+class DatasetInfo:
+    """
+    Metadata of a dataset.
+    """
+
+    #: granularity of the labels
+    task: Task
+    #: SPDX identifier (e.g. ``"CC-BY-4.0"``) or short description of the license or terms
+    #: of use; ``None`` if no license statement is known
+    license: Optional[str]
+    #: parts the dataset usually plays in OOD experiments; empty where no usage is established
+    roles: FrozenSet[Role] = frozenset()
+    #: publication that introduced the dataset, if any
+    paper: Optional[Paper] = None
+    #: project page of the dataset, if any
+    homepage: Optional[str] = None
+    #: whether the implementation was written with an AI coding assistant
+    ai_coded: bool = False
+
+    def __post_init__(self):
+        object.__setattr__(self, "roles", _frozen(self.roles))
+
+
+@dataclass(frozen=True)
+class BenchmarkInfo:
+    """
+    Metadata of a benchmark, see :attr:`pytorch_ood.benchmark.Benchmark.info`.
+    """
+
+    #: publication whose evaluation protocol the benchmark reproduces
+    paper: Paper
+    #: tasks the benchmark evaluates
+    tasks: FrozenSet[Task]
+    #: whether the implementation was written with an AI coding assistant
+    ai_coded: bool = False
+
+    def __post_init__(self):
+        object.__setattr__(self, "tasks", _frozen(self.tasks))
+
+
+# -- Detectors ------------------------------------------------------------------
 
 
 class Detector(ABC):
@@ -46,6 +213,13 @@ class Detector(ABC):
     Search space for hyperparameter optimization, mapping each tunable hyperparameter
     name to the list of candidate values to try. Empty for detectors without tunable
     hyperparameters. Used by :class:`pytorch_ood.utils.GridSearch`.
+    """
+
+    info: ClassVar[Optional[DetectorInfo]] = None
+    """
+    Metadata of the detector: the paper that introduced it, the tasks it supports,
+    and so on (see :doc:`/core_api/metadata`). Every detector in
+    :mod:`pytorch_ood.detector` defines its own.
     """
 
     @staticmethod
@@ -144,7 +318,7 @@ class Detector(ABC):
 
         return getattr(self, "_device", None)
 
-    def to(self: Self, device) -> Self:
+    def to(self, device: Union[str, torch.device]) -> Self:
         """
         Move detector-owned modules and tensor state to ``device``.
 
@@ -152,7 +326,7 @@ class Detector(ABC):
         modules, tensors, and common container-valued state stored on the
         detector itself.
 
-        :param device: target torch device
+        :param device: target device, e.g. ``"cuda:0"`` or a :class:`torch.device`
         :return: self
         """
         device = torch.device(device)
@@ -178,7 +352,7 @@ class Detector(ABC):
         """
         return {name: getattr(self, name) for name in self.hyperparameter_space}
 
-    def set_hyperparameters(self: Self, **kwargs) -> Self:
+    def set_hyperparameters(self, **kwargs) -> Self:
         """
         Set tunable hyperparameters by name.
 
@@ -189,7 +363,8 @@ class Detector(ABC):
 
         :param kwargs: hyperparameter values to set; keys must be in
             :attr:`hyperparameter_space`
-        :raise ValueError: if a key is not a known hyperparameter
+        :return: self
+        :raises ValueError: if a key is not a known hyperparameter
         """
         for name, value in kwargs.items():
             if name not in self.hyperparameter_space:
@@ -207,13 +382,17 @@ class Detector(ABC):
         """
         return self.predict(*args, **kwargs)
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Fit the detector to a dataset. Some methods require this.
 
-        :param data_loader: dataset to fit on. This is usually the training dataset.
+        The base implementation does nothing and returns ``self`` for detectors
+        with ``requires_fit = False``. Detectors that require fitting override it.
 
-        :raise ModelNotSetException: if model was not set
+        :param data_loader: data loader to fit on. This is usually the training set,
+            yielding batches ``(x, y)``.
+        :return: the fitted detector
+        :raises NotImplementedError: if the detector requires fitting but does not override ``fit()``
         """
         if self.requires_fit:
             raise NotImplementedError(
@@ -227,11 +406,13 @@ class Detector(ABC):
         """
         Calculates outlier scores. Inputs will be passed through the model.
 
-        :param x: batch of data
-        :return: outlier scores for points
+        :param x: batch of inputs, e.g. images of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B` (:math:`B \\times H \\times W` for grid-like
+            input, e.g. in anomaly segmentation). Larger values indicate that the input is more
+            likely to be out-of-distribution.
 
-        :raise RequiresFitException: if detector has to be fitted to some data
-        :raise ModelNotSetException: if model was not set
+        :raises RequiresFittingException: if detector has to be fitted to some data
+        :raises ModelNotSetException: if model was not set
         """
         raise NotImplementedError
 
@@ -254,23 +435,28 @@ class LogitsDetector(Detector):
 
     @staticmethod
     def _wrap_representation_method(method):
+        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
+        # the parameters of the wrapped method instead of *args, **kwargs
+        @functools.wraps(method)
         def wrapped(self, *args, **kwargs):
             device = self.device
             if device is not None:
                 args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
             return method(self, *args, **kwargs)
 
-        wrapped.__name__ = method.__name__
-        wrapped.__doc__ = method.__doc__
-        wrapped.__qualname__ = method.__qualname__
         return wrapped
 
     def predict(self, x: Tensor) -> Tensor:
         """
         Apply the model and forward its logits to ``predict_logits(...)``.
 
-        :param x: input batch
-        :return: outlier scores
+        ``x`` is moved to the detector's device (if one is set). The model is called as
+        is; it is not switched to evaluation mode.
+
+        :param x: input batch, e.g. images of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B` (:math:`B \\times H \\times W` for grid-like
+            input), larger values indicate that the input is more likely to be out-of-distribution
+        :raises ModelNotSetException: if the detector has no model
         """
         if not hasattr(self, "model") or self.model is None:
             raise ModelNotSetException
@@ -281,11 +467,14 @@ class LogitsDetector(Detector):
 
         return self.predict_logits(self.model(x))
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
-        Extract logits from a loader and forward them to ``fit_logits(...)``.
+        Extract logits from a loader with the detector's model and forward them to
+        ``fit_logits(...)``.
 
-        :param data_loader: loader to extract logits from
+        :param data_loader: loader yielding batches ``(x, y)`` to extract logits from
+        :return: the fitted detector
+        :raises ModelNotSetException: if the detector has no model
         """
         if not self.requires_fit:
             return self
@@ -304,12 +493,13 @@ class LogitsDetector(Detector):
         z, y = extract_features(data_loader=data_loader, model=self.model, device=device)
         return self.fit_logits(z, y)
 
-    def fit_logits(self: Self, logits: Tensor, y: Tensor) -> Self:
+    def fit_logits(self, logits: Tensor, y: Tensor) -> Self:
         """
         Fit the detector directly on logits.
 
-        :param logits: training logits to use for fitting.
-        :param y: corresponding class labels.
+        :param logits: training logits of shape :math:`N \\times C`
+        :param y: corresponding class labels of shape :math:`N`
+        :return: the fitted detector
         """
         if not self.requires_fit:
             return self
@@ -321,8 +511,10 @@ class LogitsDetector(Detector):
         """
         Calculates outlier scores directly from logits.
 
-        :param logits: batch of logits
-        :return: outlier scores for points
+        :param logits: logits of shape :math:`B \\times C` (or :math:`B \\times C \\times H \\times W`
+            for grid-like input)
+        :return: outlier scores of shape :math:`B` (:math:`B \\times H \\times W` for grid-like
+            input), larger values indicate that the input is more likely to be out-of-distribution
         """
         raise NotImplementedError
 
@@ -336,7 +528,7 @@ class FeaturesDetector(Detector):
 
     **Parameter naming convention**: Subclasses that accept a feature extractor should use
     the parameter name ``encoder`` to receive a callable that produces pooled feature vectors
-    of shape :math:`(B, D)`, where :math:`B` is batch size and :math:`D` is feature dimension.
+    of shape :math:`B \\times D`, where :math:`B` is batch size and :math:`D` is feature dimension.
     """
 
     def __init_subclass__(cls, **kwargs):
@@ -348,23 +540,24 @@ class FeaturesDetector(Detector):
 
     @staticmethod
     def _wrap_representation_method(method):
+        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
+        # the parameters of the wrapped method instead of *args, **kwargs
+        @functools.wraps(method)
         def wrapped(self, *args, **kwargs):
             device = self.device
             if device is not None:
                 args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
             return method(self, *args, **kwargs)
 
-        wrapped.__name__ = method.__name__
-        wrapped.__doc__ = method.__doc__
-        wrapped.__qualname__ = method.__qualname__
         return wrapped
 
-    def fit_features(self: Self, x: Tensor, y: Tensor) -> Self:
+    def fit_features(self, x: Tensor, y: Tensor) -> Self:
         """
         Fit the detector directly on feature tensors.
 
-        :param x: training features to use for fitting
-        :param y: corresponding class labels
+        :param x: training features of shape :math:`N \\times D`
+        :param y: corresponding class labels of shape :math:`N`
+        :return: the fitted detector
         """
         if not self.requires_fit:
             return self
@@ -376,8 +569,9 @@ class FeaturesDetector(Detector):
         """
         Calculate outlier scores directly from feature tensors.
 
-        :param x: batch of features
-        :return: outlier scores for points
+        :param x: pooled features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`, larger values indicate that the input is more
+            likely to be out-of-distribution
         """
         raise NotImplementedError
 
@@ -391,7 +585,7 @@ class FeatureMapsDetector(Detector):
 
     **Parameter naming convention**: Subclasses that accept a feature extractor should use
     the parameter name ``backbone`` to receive a callable that produces spatial feature maps
-    of shape :math:`(B, C, H, W)`, where :math:`B` is batch size, :math:`C` is number of
+    of shape :math:`B \\times C \\times H \\times W`, where :math:`B` is batch size, :math:`C` is number of
     channels, and :math:`H, W` are spatial dimensions.
     """
 
@@ -404,23 +598,24 @@ class FeatureMapsDetector(Detector):
 
     @staticmethod
     def _wrap_representation_method(method):
+        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
+        # the parameters of the wrapped method instead of *args, **kwargs
+        @functools.wraps(method)
         def wrapped(self, *args, **kwargs):
             device = self.device
             if device is not None:
                 args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
             return method(self, *args, **kwargs)
 
-        wrapped.__name__ = method.__name__
-        wrapped.__doc__ = method.__doc__
-        wrapped.__qualname__ = method.__qualname__
         return wrapped
 
-    def fit_feature_maps(self: Self, feature_maps: Tensor, y: Tensor) -> Self:
+    def fit_feature_maps(self, feature_maps: Tensor, y: Tensor) -> Self:
         """
         Fit the detector directly on feature maps.
 
-        :param feature_maps: training feature maps to use for fitting.
-        :param y: corresponding class labels.
+        :param feature_maps: training feature maps of shape :math:`N \\times C \\times H \\times W`
+        :param y: corresponding class labels of shape :math:`N`
+        :return: the fitted detector
         """
         if not self.requires_fit:
             return self
@@ -432,8 +627,9 @@ class FeatureMapsDetector(Detector):
         """
         Calculates outlier scores directly from feature maps.
 
-        :param feature_maps: batch of feature maps
-        :return: outlier scores for points
+        :param feature_maps: feature maps of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B`, larger values indicate that the input is more
+            likely to be out-of-distribution
         """
         raise NotImplementedError
 
@@ -447,9 +643,13 @@ class StructuredDetector(Detector):
     inputs such as logits plus feature maps.
     """
 
-    def fit_structured(self: Self, *args, **kwargs) -> Self:
+    def fit_structured(self, *args, **kwargs) -> Self:
         """
         Fit the detector directly on structured intermediate representations.
+
+        The expected arguments depend on the detector, see its documentation.
+
+        :return: the fitted detector
         """
         if not self.requires_fit:
             return self
@@ -460,6 +660,11 @@ class StructuredDetector(Detector):
     def predict_structured(self, *args, **kwargs) -> Tensor:
         """
         Calculates outlier scores directly from structured intermediate representations.
+
+        The expected arguments depend on the detector, see its documentation.
+
+        :return: outlier scores with one entry per input, larger values indicate that the input is
+            more likely to be out-of-distribution
         """
         raise NotImplementedError
 

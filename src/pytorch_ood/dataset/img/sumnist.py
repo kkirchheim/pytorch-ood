@@ -7,6 +7,8 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import check_integrity, download_url
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -17,18 +19,38 @@ class SuMNIST(Dataset):
     However, the test set with 10,000 images, there are 8,500 normal instances and 1,500 anomalous
     instances for which the numbers do not sum to 20. The challenge is to detect these anomalies.
 
-    Returns a tuple with ``(img, dict)``  where dict contains bounding boxes, labels, etc.
+    Returns a tuple ``(img, target)``. The image is a tensor of shape :math:`3 \\times 56 \\times 56` (not a PIL image),
+    and ``target`` is a dictionary with the keys
 
+    * ``boxes``: bounding boxes of the digits as a float32 tensor of shape :math:`4 \\times 4`, in
+      ``(x_min, y_min, x_max, y_max)`` format
+    * ``labels``: the digit of each box as a int64 tensor of shape :math:`4`
+    * ``image_id``: the index of the image
+    * ``area``: area of each box
+    * ``iscrowd``: zeros
+    * ``anomaly``: ``-1`` if the digits do not sum to 20, else ``0``
 
-    :see Paper: `LNCS <https://link.springer.com/chapter/10.1007/978-3-031-40953-0_32>`__
-    :see Examples: `GitHub <https://github.com/kkirchheim/sumnist>`__
+    :see Examples: `SuMNIST repository <https://github.com/kkirchheim/sumnist>`__
 
-    .. image:: https://github.com/kkirchheim/sumnist/blob/master/img/mnist-example.png?raw=true
-        :width: 800px
-        :alt: SuMNIST Dataset examples
-        :align: center
+    .. figure:: /_static/datasets/sumnist.webp
+        :width: 100%
+        :alt: Eight SuMNIST test images with digit bounding boxes, four normal and four anomalous
 
+        Test images with their bounding boxes: normal (digits sum to 20) and anomalous.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.BENCHMARK},
+        license="MIT",
+        paper=Paper(
+            title="Towards Deep Anomaly Detection with Structured Knowledge Representations",
+            venue="SAFECOMP",
+            year=2023,
+            url="https://link.springer.com/chapter/10.1007/978-3-031-40953-0_32",
+        ),
+        homepage="https://github.com/kkirchheim/sumnist",
+    )
 
     url = "https://files.kondas.de/sumnist/"
 
@@ -45,11 +67,11 @@ class SuMNIST(Dataset):
 
     def __init__(self, root, train=True, transforms=None, download=False):
         """
-
-        :param root: where to store dataset
-        :param train: set to `False` to use test set
-        :param transforms: callable to apply to image and target dictionary
-        :param download: set to `True` to download automatically
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param train: set to ``False`` to use the test set
+        :param transforms: called as ``transforms(image, target)`` with the image tensor and the target
+            dictionary, and must return the transformed ``(image, target)`` tuple
+        :param download: download the data to ``root`` if it is not found there
         """
         self.root = join(root, SuMNIST.base_dir)
         self.transforms = transforms
@@ -125,7 +147,7 @@ class SuMNIST(Dataset):
         target["labels"] = labels
         target["image_id"] = torch.tensor([index])
         target["area"] = area
-        target["iscrowd"] = labels = torch.zeros((len(boxes),), dtype=torch.int64)
+        target["iscrowd"] = torch.zeros((len(boxes),), dtype=torch.int64)
         target["anomaly"] = torch.tensor(-1 if labels.sum().item() != 20 else 0).long()
 
         if self.transforms is not None:

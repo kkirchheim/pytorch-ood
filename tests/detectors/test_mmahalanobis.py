@@ -67,3 +67,17 @@ class MultiMahalanobisTest(unittest.TestCase):
 
         scores = model(x)
         self.assertEqual(scores.shape[0], 20)
+
+
+class MultiMahalanobisScoreTest(unittest.TestCase):
+    def test_weighted_sum_of_half_squared_distances_to_closest_center(self):
+        detector = MultiMahalanobis([torch.nn.Identity(), torch.nn.Identity()], alpha=[1.0, 2.0])
+        detector.mu = [
+            torch.tensor([[0.0, 0.0], [4.0, 0.0]]),
+            torch.tensor([[0.0, 0.0], [0.0, 2.0]]),
+        ]
+        detector.precision = [torch.diag(torch.tensor([1.0, 4.0])), torch.eye(2)]
+        x = torch.tensor([[1.0, 1.0], [3.0, 0.0]])
+        # layer 1: squared distances (5, 13) and (9, 1); layer 2: (2, 2) and (9, 13)
+        expected = 1.0 * torch.tensor([2.5, 0.5]) + 2.0 * torch.tensor([1.0, 4.5])
+        torch.testing.assert_close(detector.predict_structured([x, x]), expected)

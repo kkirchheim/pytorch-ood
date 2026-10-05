@@ -5,12 +5,13 @@ https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/20%2
 
 import logging
 import os
-from typing import Tuple
+from typing import Any, Tuple
 
 import numpy as np
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 
+from ...api import DatasetInfo, Task
 from .stop_words import stop_words
 
 log = logging.getLogger(__name__)
@@ -18,10 +19,16 @@ log = logging.getLogger(__name__)
 
 class NewsGroup20(Dataset):
     """
-    Stemmed etc. version of the 20 NewsGroups dataset, as used by Hendrycks et al.
+    Version of the 20 NewsGroups dataset with stop words removed, as used by Hendrycks et al.
 
-    Contains 20 classes.
+    Contains 20 classes. Each item is a tuple ``(text, target)`` of a :class:`str` and the integer class index,
+    which is the position of the class in :attr:`class_names`.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license=None,
+    )
 
     train_url = (
         "https://raw.githubusercontent.com/hendrycks/outlier-exposure/"
@@ -35,6 +42,7 @@ class NewsGroup20(Dataset):
     train_md5 = "4444a088dda968b44f7a6dec756698b3"
     train_filename = "20ng-train-no-short.txt"
     test_filename = "20ng-test-no-short.txt"
+    #: names of the 20 newsgroups; a target is the index of its class in this list
     class_names = [
         "alt.atheism",
         "comp.graphics",
@@ -58,7 +66,14 @@ class NewsGroup20(Dataset):
         "talk.religion.misc",
     ]
 
-    def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
+    def __init__(self, root, transform=None, target_transform=None, train=True, download=False):
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the text (a :class:`str`)
+        :param target_transform: function applied to the target
+        :param train: use the training file (``True``) or the test file (``False``)
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(Dataset, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform
@@ -116,7 +131,12 @@ class NewsGroup20(Dataset):
 
         return True
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        :param index: index of the sample
+        :return: tuple ``(text, target)`` of the text as :class:`str` (or the output of ``transform``)
+            and the class index into :attr:`class_names` (or the output of ``target_transform``)
+        """
         x = self._data[index]
         y = self._targets[index]
         if self.target_transform:

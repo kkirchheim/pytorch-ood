@@ -16,7 +16,8 @@ def _get_resource_file(name):
 
 class ImageDatasetBase(VisionDataset):
     """
-    Base Class for Downloading Image related Datasets
+    Base Class for Downloading Image related Datasets. Images are returned as :class:`PIL.Image.Image`, and
+    all targets are ``-1``, the label of OOD samples.
 
     Code inspired by : https://pytorch.org/vision/0.8/_modules/torchvision/datasets/cifar.html#CIFAR10
     """
@@ -33,6 +34,12 @@ class ImageDatasetBase(VisionDataset):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(ImageDatasetBase, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
@@ -49,7 +56,7 @@ class ImageDatasetBase(VisionDataset):
 
     def _load_files(self):
         self.basedir = os.path.join(self.root, self.base_folder)
-        return [join(self.basedir, img) for img in os.listdir(self.basedir)]
+        return [join(self.basedir, img) for img in sorted(os.listdir(self.basedir))]
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
@@ -57,7 +64,7 @@ class ImageDatasetBase(VisionDataset):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is ``-1`` (the label of OOD samples).
         """
         path, target = self.files[index], -1
 

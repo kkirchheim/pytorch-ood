@@ -3,6 +3,7 @@ import os
 from os.path import join
 from typing import Callable, Optional
 
+from pytorch_ood.api import DatasetInfo, Paper, Role, Task
 from pytorch_ood.dataset.img.base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
@@ -20,12 +21,21 @@ class NINCO(ImageDatasetBase):
         to the original publication, as they calculate metrics over each class individually and
         report the mean.
 
-
-    :see Paper: `ICML <https://arxiv.org/pdf/2306.00826.pdf>`__
-    :see Code: `GitHub <https://github.com/j-cb/NINCO>`__
     :see Download: `Zenodo <https://zenodo.org/record/8013288>`__
-
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license="CC-BY-4.0",
+        paper=Paper(
+            title="In or Out? Fixing ImageNet Out-of-Distribution Detection Evaluation",
+            venue="ICML",
+            year=2023,
+            url="https://arxiv.org/abs/2306.00826",
+            code="https://github.com/j-cb/NINCO",
+        ),
+    )
 
     base_folders = [
         "NINCO_OOD_classes"
@@ -41,6 +51,12 @@ class NINCO(ImageDatasetBase):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(NINCO, self).__init__(
             root,
             transform=transform,
@@ -52,7 +68,9 @@ class NINCO(ImageDatasetBase):
         files = []
         for d in self.base_folders:
             path = join(self.root, "NINCO", d)
-            for subdir in os.listdir(path):
-                files += [join(path, subdir, img) for img in os.listdir(join(path, subdir))]
+            for subdir in sorted(os.listdir(path)):
+                files += [
+                    join(path, subdir, img) for img in sorted(os.listdir(join(path, subdir)))
+                ]
 
         return files

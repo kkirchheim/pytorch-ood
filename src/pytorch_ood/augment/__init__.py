@@ -1,10 +1,5 @@
 """
-Augmentations
-******************
-
-.. automodule:: pytorch_ood.augment.img
-
-
+Data augmentations for OOD detection.
 """
 
 from .img import *

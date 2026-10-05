@@ -29,11 +29,11 @@ from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
-from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10, CIFAR100
 from tqdm import tqdm
 
 from pytorch_ood.dataset.img import ImageNet200
+from pytorch_ood.metrics import Accuracy
 from pytorch_ood.model import load_model
 from pytorch_ood.utils import ToRGB, ToUnknown
 
@@ -127,13 +127,13 @@ def build_datasets(cfg: DictConfig, train_transform, test_transform):
 
 
 def evaluate(model, loader, device, num_classes) -> float:
-    accuracy = Accuracy(task="multiclass", num_classes=num_classes).to(device)
+    accuracy = Accuracy(device=device)
     model.eval()
     with torch.no_grad():
         for x, y in loader:
             logits = model(x.to(device))
-            accuracy.update(logits, y.to(device))
-    return accuracy.compute().item()
+            accuracy.update(logits.argmax(dim=1), y)
+    return accuracy.compute()["ACC"]
 
 
 @hydra.main(config_path="configs", config_name="config", version_base="1.3")

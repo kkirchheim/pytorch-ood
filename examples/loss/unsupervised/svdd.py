@@ -16,6 +16,8 @@ We test the model against FashionMNIST.
 First, some imports etc.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/loss.png"
+
 import torch
 from torch import nn
 from torch.optim import Adam
@@ -24,7 +26,8 @@ from torchvision.datasets import MNIST, FashionMNIST
 from torchvision.transforms import ToTensor
 
 from pytorch_ood.loss import DeepSVDDLoss
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
+from pytorch_ood.metrics import OODMetrics
+from pytorch_ood.utils import ToUnknown, fix_random_seed
 
 fix_random_seed(1234)
 

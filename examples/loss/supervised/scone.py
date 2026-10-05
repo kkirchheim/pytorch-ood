@@ -12,6 +12,8 @@ TinyImages database, which contains random images scraped from the internet.
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/loss.png"
+
 from typing import Callable
 
 import numpy as np
@@ -28,8 +30,9 @@ from torchvision.datasets import CIFAR10
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.detector import EnergyBased
 from pytorch_ood.loss import EnergyMarginLoss
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model
-from pytorch_ood.utils import OODMetrics, ToUnknown, to_np
+from pytorch_ood.utils import ToUnknown, to_np
 
 torch.manual_seed(123)
 
@@ -125,7 +128,7 @@ full_train_loss = evaluate_classification_loss_training(
     model=model, train_loader_in=train_loader_in
 )
 
-criterion = EnergyMarginLoss(full_train_loss=full_train_loss)
+criterion = EnergyMarginLoss(full_train_loss=full_train_loss).to(device)
 
 scheduler = torch.optim.lr_scheduler.MultiStepLR(
     optimizer=opti,

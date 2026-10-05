@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.ViM
     :members:
     :inherited-members:
@@ -13,37 +8,68 @@
 """
 
 import logging
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
-from ..api import FeaturesDetector, ModelNotSetException, RequiresFittingException
+from ..api import (
+    DetectorInfo,
+    FeaturesDetector,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    Task,
+)
 from ..utils import extract_features
 
 log = logging.getLogger(__name__)
-Self = TypeVar("Self")
 
 
 class ViM(FeaturesDetector):
     """
     Implements Virtual Logit Matching (ViM) from the paper *ViM: Out-Of-Distribution with Virtual-logit Matching*.
 
-    :see Paper:
-        `ArXiv <https://arxiv.org/abs/2203.10807>`__
-    :see Implementation:
-        `GitHub <https://github.com/haoqiwang/vim/>`__
+    ViM decomposes the (centered) features into a principal subspace of dimension :math:`d` and
+    its orthogonal residual. The residual norm, scaled by a factor :math:`\\alpha` estimated in ``fit``, is
+    the *virtual logit*. The outlier score is the virtual logit minus the energy of the real logits:
 
-    .. note::
-        Requires PyTorch ≥ 1.9 (``torch.linalg``).
+    .. math::
+        \\alpha \\lVert x^{P\\perp} \\rVert - \\log \\sum_i e^{l_i(x)}
+
+    where :math:`x^{P\\perp}` is the residual of the features :math:`x` after centering at the origin
+    :math:`u = -W^{+} b` and projecting out the principal subspace, :math:`W` and :math:`b` are the weights and
+    biases of the last layer and :math:`l_i(x)` are the logits.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        model = WideResNet()
+        detector = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
+        detector.fit(train_loader)
+        scores = detector(images)
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="ViM: Out-Of-Distribution with Virtual-logit Matching",
+            venue="CVPR",
+            year=2022,
+            url="https://arxiv.org/abs/2203.10807",
+            code="https://github.com/haoqiwang/vim/",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 
     #: Default search space for :class:`pytorch_ood.utils.GridSearch`: the principal-subspace
-    #: dimension ``d``. Candidates exceeding a model's feature dimension are clamped during
-    #: fitting, so this single space is safe across architectures of different width.
+    #: dimension ``d``. If ``d`` exceeds the feature dimension :math:`D` during fitting, it is replaced by
+    #: :math:`D // 2`.
+    # This lets a single search space work across architectures of different width.
     hyperparameter_space = {"d": [16, 32, 64, 128, 256, 512]}
 
     def __init__(
@@ -57,8 +83,8 @@ class ViM(FeaturesDetector):
         :param encoder: feature encoder. Can be
             ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param d: dimensionality of the principal subspace
-        :param w: weights :math:`W` of the last layer of the network
-        :param b: biases :math:`b` of the last layer of the network
+        :param w: weights :math:`W` of the last layer of the network, of shape :math:`C \\times D`
+        :param b: biases :math:`b` of the last layer of the network, of shape :math:`C`
         """
         super(ViM, self).__init__()
         self.encoder = encoder
@@ -80,6 +106,7 @@ class ViM(FeaturesDetector):
     def predict(self, x: Tensor) -> Tensor:
         """
         :param x: model input, will be passed through neural network
+        :return: outlier scores of shape :math:`B`
         """
         if self.encoder is None:
             raise ModelNotSetException
@@ -95,11 +122,12 @@ class ViM(FeaturesDetector):
     def __repr__(self):
         return f"ViM(d={self.d})"
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
-        Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
+        Extracts features, computes the principal subspace and alpha. Ignores OOD samples.
 
         :param data_loader: dataset to fit on
+        :return: self
         """
         if self.encoder is None:
             raise ModelNotSetException
@@ -116,7 +144,8 @@ class ViM(FeaturesDetector):
     @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:
         """
-        :param x: features as given by the model
+        :param x: features of shape :math:`B \\times D`
+        :return: outlier scores of shape :math:`B`
         """
         device = self.w.device
         x = x.detach().to(device).float()
@@ -134,13 +163,13 @@ class ViM(FeaturesDetector):
         score = -vlogit + energy
         return -score
 
-    def fit_features(self: Self, features: Tensor, labels: Tensor) -> Self:
+    def fit_features(self, features: Tensor, labels: Tensor) -> Self:
         """
-        Extracts features and logits, computes principle subspace and alpha. Ignores OOD samples.
+        Computes the principal subspace and alpha from pre-extracted features. Ignores OOD samples.
 
-        :param features: features
-        :param labels: class labels
-        :return:
+        :param features: features of shape :math:`N \\times D`
+        :param labels: class labels of shape :math:`N`
+        :return: self
         """
         device = self.device or self.w.device
         features = features.detach().to(device).float()

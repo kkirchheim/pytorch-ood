@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.utils import OODMetrics
+from pytorch_ood.metrics import OODMetrics
 from src.pytorch_ood.detector import Entropy
 from tests.helpers import ClassificationModel, SegmentationModel
 

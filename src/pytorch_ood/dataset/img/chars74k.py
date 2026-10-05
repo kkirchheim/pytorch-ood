@@ -9,20 +9,21 @@ import numpy as np
 from PIL import Image
 from torchvision.datasets.utils import check_integrity, download_url
 
+from pytorch_ood.api import DatasetInfo, Paper, Role, Task
 from pytorch_ood.dataset.img.base import ImageDatasetBase
 
 log = logging.getLogger(__name__)
 
 
 def _get_file_list(dir_name):
-    file_list = os.listdir(dir_name)
+    file_list = sorted(os.listdir(dir_name))
     all_files = list()
     all_labels = list()
 
     for entry in file_list:
         full_path = os.path.join(dir_name, entry)
         label = int(str(Path(full_path).name).split("Sample")[1]) - 1
-        dir_files = os.listdir(full_path)
+        dir_files = sorted(os.listdir(full_path))
         for files in dir_files:
             all_files.append(os.path.join(full_path, files))
             all_labels.append(label)
@@ -33,18 +34,32 @@ class Chars74k(ImageDatasetBase):
     """
     Dataset from the paper *Character Recognition in Natural Images*. Can be used as example OOD data.
 
-    .. image:: http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/Samples/confusing_english.png
-        :width: 800px
-        :alt: Chars47k Dataset Example
-        :align: center
+    Images are returned as :class:`PIL.Image.Image`. Targets are the character class indices
+    (remapped to :math:`0, \\dots, n-1`), **not** ``-1``. When using this dataset as OOD data, mark the samples as
+    OOD with ``target_transform=ToUnknown()`` (see :class:`pytorch_ood.utils.ToUnknown`).
 
-    :see Website: `Link <http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/>`__
-    :see Paper: `Link <http://personal.ee.surrey.ac.uk/Personal/T.Decampos/papers/decampos_etal_visapp2009.pdf>`__
+    .. image:: https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/Samples/confusing_english.png
+        :width: 800px
+        :alt: Chars74k Dataset Example
+        :align: center
     """
 
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license="No explicit license; cite the paper and notify the authors of use",
+        paper=Paper(
+            title="Character Recognition in Natural Images",
+            venue="VISAPP",
+            year=2009,
+            url="https://teodecampos.github.io/chars74k/decampos_etal_visapp2009.pdf",
+        ),
+        homepage="https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/",
+    )
+
     base_folder = "chars74k"
-    url_dataset = "http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/EnglishImg.tgz"
-    url_list = "http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/ListsTXT.tgz"
+    url_dataset = "https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/EnglishImg.tgz"
+    url_list = "https://info-ee.surrey.ac.uk/CVSSP/demos/chars74k/ListsTXT.tgz"
     filename_dataset = "EnglishImg.tgz"
     filename_list = "ListsTXT.tgz"
 
@@ -59,7 +74,7 @@ class Chars74k(ImageDatasetBase):
         download: bool = False,
     ):
         """
-        :param root: root directory of dataset
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
         :param transform: transformation to apply to the images
         :param target_transform: transformation to apply to the labels
         :param download: set to true to automatically download the dataset

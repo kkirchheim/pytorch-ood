@@ -22,13 +22,13 @@ class ImageListDataset(VisionDataset):
 
     Each non-empty, non-comment line of ``imglist_path`` has the form
     ``<relative_path> <label>``, where ``<relative_path>`` is resolved
-    against ``root``. This format is used by OpenOOD and OpenMIBOOD.
+    against ``root``. This format is used by OpenOOD and OpenMIBOOD. Lines with fewer than two fields are skipped,
+    and labels are taken verbatim from the file (entries of OOD samples usually have the label ``-1``).
 
     For non-PIL formats (e.g. NIfTI ``.nii.gz`` volumes used by OASIS-3),
     pass a custom ``loader`` callable.
 
-    .. image:: https://img.shields.io/badge/AI_Coded-yes-blue?style=flat-square
-       :alt: slop-badge
+    :bdg-warning-line:`AI-coded`
     """
 
     def __init__(
@@ -45,6 +45,7 @@ class ImageListDataset(VisionDataset):
         :param transform: transform applied to each loaded image
         :param target_transform: transform applied to each label
         :param loader: callable mapping a file path to an image; defaults to :func:`PIL.Image.open`
+        :raises RuntimeError: if ``root`` or ``imglist_path`` does not exist
         """
         super().__init__(root, transform=transform, target_transform=target_transform)
 

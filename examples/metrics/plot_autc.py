@@ -2,27 +2,27 @@
 AUTC
 -------------------------
 
-Historgram and Metrics for random scores with different delta.
+Histogram and metrics for random scores with different delta.
 
 """
+
+# sphinx_gallery_thumbnail_path = "_static/thumbs/metrics.png"
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from torchmetrics.functional.classification import binary_roc
 
-from pytorch_ood.utils import OODMetrics
+from pytorch_ood.metrics import OODMetrics
+from pytorch_ood.metrics.functional import roc_curve
 
 
 def fpr_tpr_curve(labels, scores, pos_label=1):
     """Compute FPR/TPR over thresholds for min-max normalized scores."""
-    labels = (labels == pos_label).long()
     scores = (scores - scores.min()) / (scores.max() - scores.min())
-    fpr, tpr, thresholds = binary_roc(scores, labels)
-    # prepend the (threshold=1) point where nothing is flagged as positive
-    fpr = torch.cat([torch.tensor([0.0], device=fpr.device), fpr])
-    tpr = torch.cat([torch.tensor([0.0], device=tpr.device), tpr])
-    thresholds = torch.cat([torch.tensor([1.0], device=thresholds.device), thresholds])
+    # labels < 0 mark the positive (OOD) class
+    fpr, tpr, thresholds = roc_curve(scores, -(labels == pos_label).long())
+    # the first point, where nothing is flagged as positive, has no threshold: plot it at 1
+    thresholds = torch.cat([thresholds.new_ones(1), thresholds])
     return fpr, tpr, thresholds
 
 

@@ -7,6 +7,8 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, extract_archive
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -28,6 +30,13 @@ class PixMixExampleDatasets(VisionDataset):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param subset: ``fractals`` or ``features``
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there (requires ``gdown``)
+        """
         super(PixMixExampleDatasets, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
@@ -44,7 +53,7 @@ class PixMixExampleDatasets(VisionDataset):
             )
 
         self.basedir = join(self.root, self.base_folder, self.subdirs[subset])
-        self.files = os.listdir(self.basedir)
+        self.files = sorted(os.listdir(self.basedir))
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
@@ -52,7 +61,7 @@ class PixMixExampleDatasets(VisionDataset):
             index (int): Index
 
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, target) where target is ``-1`` (the label of OOD samples).
         """
         file, target = self.files[index], -1
         # doing this so that it is consistent with all other datasets
@@ -93,11 +102,23 @@ class PixMixExampleDatasets(VisionDataset):
 
 class FeatureVisDataset(PixMixExampleDatasets):
     """
-    Dataset with Feature visualizations, as used in
+    Dataset with feature visualizations (images that visualize what the first layers of a network respond to),
+    as used for the mixing set in
     *PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures*.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2112.05135>`__
+    Images are returned as :class:`PIL.Image.Image`; all targets are ``-1`` (the label of OOD samples) by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license=None,
+        paper=Paper(
+            title="PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures",
+            venue="CVPR",
+            year=2022,
+            url="https://arxiv.org/abs/2112.05135",
+        ),
+    )
 
     def __init__(
         self,
@@ -106,6 +127,12 @@ class FeatureVisDataset(PixMixExampleDatasets):
         target_transform: Optional[Callable] = None,
         download=False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(FeatureVisDataset, self).__init__(
             root,
             subset="features",
@@ -117,11 +144,22 @@ class FeatureVisDataset(PixMixExampleDatasets):
 
 class FractalDataset(PixMixExampleDatasets):
     """
-    Dataset with Fractals, as used in
+    Dataset with fractal images, as used for the mixing set in
     *PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures*.
-
-    :see Paper: `ArXiv <https://arxiv.org/abs/2112.05135>`__
+    Images are returned as :class:`PIL.Image.Image`; all targets are ``-1`` (the label of OOD samples) by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license=None,
+        paper=Paper(
+            title="PixMix: Dreamlike Pictures Comprehensively Improve Safety Measures",
+            venue="CVPR",
+            year=2022,
+            url="https://arxiv.org/abs/2112.05135",
+        ),
+    )
 
     def __init__(
         self,
@@ -130,6 +168,12 @@ class FractalDataset(PixMixExampleDatasets):
         target_transform: Optional[Callable] = None,
         download=False,
     ) -> None:
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the image (a :class:`PIL.Image.Image`)
+        :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(FractalDataset, self).__init__(
             root,
             subset="fractals",

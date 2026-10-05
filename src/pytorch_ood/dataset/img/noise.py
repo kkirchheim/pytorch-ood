@@ -10,6 +10,8 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 
+from ...api import DatasetInfo, Role, Task
+
 
 class NoiseDataset(Dataset, ABC):
     """
@@ -26,8 +28,15 @@ class NoiseDataset(Dataset, ABC):
 
 class GaussianNoise(NoiseDataset):
     """
-    Dataset with samples drawn from a normal distribution.
+    Dataset with images drawn from a normal distribution. Images are returned as :class:`PIL.Image.Image` with
+    values clipped to :math:`[0, 255]`; all targets are ``-1`` (the label of OOD samples) by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+    )
 
     def __init__(
         self,
@@ -41,11 +50,11 @@ class GaussianNoise(NoiseDataset):
     ):
         """
         :param length: number of samples in the dataset
-        :param size: shape of the generated noise samples
+        :param size: shape :math:`H \\times W \\times C` of each generated image; with :math:`C=1`, images are grayscale
         :param transform: transformation to apply to images
         :param target_transform: transformation to apply to labels
         :param loc: mean :math:`\\mu` of the gaussian
-        :param scale: scaling factor :math:`\\sigma^2` of the gaussian
+        :param scale: standard deviation :math:`\\sigma` of the gaussian
         :param seed: random seed
         """
         super(GaussianNoise, self).__init__(seed=seed)
@@ -82,8 +91,15 @@ class GaussianNoise(NoiseDataset):
 
 class UniformNoise(NoiseDataset):
     """
-    Dataset with samples drawn from uniform distribution.
+    Dataset with images drawn from a uniform distribution over :math:`[0, 255]`. Images are returned as
+    :class:`PIL.Image.Image`; all targets are ``-1`` (the label of OOD samples) by default.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+    )
 
     def __init__(
         self,
@@ -95,7 +111,7 @@ class UniformNoise(NoiseDataset):
     ):
         """
         :param length: number of samples in the dataset
-        :param size: shape of the generated noise samples
+        :param size: shape :math:`H \\times W \\times C` of each generated image; with :math:`C=1`, images are grayscale
         :param transform: transformation to apply to images
         :param target_transform: transformation to apply to labels
         :param seed: random seed

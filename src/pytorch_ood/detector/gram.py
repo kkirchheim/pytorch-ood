@@ -1,11 +1,6 @@
 # Adapted from https://github.com/VectorInstitute/gram-ood-detection
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: segmentation badge
-
 ..  autoclass:: pytorch_ood.detector.Gram
     :members:
     :inherited-members:
@@ -13,34 +8,41 @@
 """
 
 import logging
-from typing import List, Optional, Tuple, TypeVar
+from typing import List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
+from typing_extensions import Self
 
-from ..api import ModelNotSetException, RequiresFittingException, StructuredDetector
+from ..api import (
+    DetectorInfo,
+    ModelNotSetException,
+    Paper,
+    RequiresFittingException,
+    StructuredDetector,
+    Task,
+)
 
 log = logging.getLogger(__name__)
-
-Self = TypeVar("Self")
 
 
 class Gram(StructuredDetector):
     """
-    Implements the on Gram matrices based Method from the paper *Detecting Out-of-Distribution Examples with
+    Implements the Gram-matrix-based method from the paper *Detecting Out-of-Distribution Examples with
     In-distribution Examples and Gram Matrices*.
 
     The Gram detector identifies OOD examples by analyzing feature correlations within the layers of a neural network using Gram matrices,
     which are computed as:
 
-    .. math :: G^p_l = \\left(F_l^p F_l^{p \\top}\\right)^{\\frac{1}{p}}
+    .. math:: G^p_l = \\left(F_l^p F_l^{p \\top}\\right)^{\\frac{1}{p}}
 
-    Where :math:`F_l` is the feature-map in layer :math:`l`.
+    Where :math:`F_l` is the feature-map in layer :math:`l` (the output of ``feature_layers[l]``) and :math:`p`
+    is a pole (an entry of ``num_poles_list``).
     The Gram matrices capture the pairwise correlations between feature maps, which can be seen as capturing the image style.
-    For each layer, matrices for several values of :math:`p`, called *''poles''* are computed.
+    For each layer, matrices for several values of :math:`p`, called *poles* are computed.
     During fitting, class-specific minimum and maximum bounds are calculated for each entry of the
     (row-summed) Gram matrices of the ID data in multiple layers of the neural network.
     For a test input :math:`x`, deviations :math:`\\delta_l(x)` are calculated layer-wise by comparing each Gram
@@ -48,13 +50,21 @@ class Gram(StructuredDetector):
     The total deviation is the sum over all layers :math:`l`, normalized by the expected deviation of the layer,
     which is estimated on a held-out fraction of the fitting data:
 
-    .. math :: \\Delta(x) = \\sum_{l} \\frac{\\delta_l(x)}{\\mathbb{E}[\\delta_l]}
+    .. math:: \\Delta(x) = \\sum_{l} \\frac{\\delta_l(x)}{\\mathbb{E}[\\delta_l]}
 
     Higher values indicate more likely OOD inputs.
-
-    :see Implementation: `GitHub <https://github.com/VectorInstitute/gram-ood-detection>`__
-    :see Paper: `ArXiv <https://arxiv.org/abs/1912.12510>`__
     """
+
+    info = DetectorInfo(
+        paper=Paper(
+            title="Detecting Out-of-Distribution Examples with Gram Matrices",
+            venue="ICML",
+            year=2020,
+            url="https://arxiv.org/abs/1912.12510",
+            code="https://github.com/VectorInstitute/gram-ood-detection",
+        ),
+        tasks={Task.CLASSIFICATION},
+    )
 
     requires_fit = True
 
@@ -66,13 +76,16 @@ class Gram(StructuredDetector):
         head: Module,
         feature_layers: List[Module],
         num_classes: int,
-        num_poles_list: List[int] = None,
+        num_poles_list: Optional[List[int]] = None,
     ):
         """
-        :param head: the head of the model
-        :param feature_layers: the layers of the model to be used for feature extraction
-        :param num_classes: the number of classes in the dataset
-        :param num_poles_list: the list of poles to be used for higher-order Gram matrices
+        :param head: the head of the model. It receives the output of the last of the ``feature_layers`` and has
+            to return logits of shape :math:`B \\times C`.
+        :param feature_layers: the layers of the model to be used for feature extraction, applied sequentially
+            (each layer consumes the output of the previous one). Their outputs are the feature maps :math:`F_l`.
+        :param num_classes: the number of classes :math:`C` in the dataset, must match the size of the logits
+        :param num_poles_list: the list of poles :math:`p` to be used for higher-order Gram matrices.
+            Default is :math:`1, \\ldots, L`, where :math:`L` is the number of layers.
         """
         super(Gram, self).__init__()
         self.head = head
@@ -84,11 +97,11 @@ class Gram(StructuredDetector):
         else:
             self.num_poles_list = num_poles_list
 
-        #: per-entry lower bounds, indexed ``[layer][pole]``, each of shape ``(num_classes, C_l)``
+        #: per-entry lower bounds, indexed ``[layer][pole]``, each of shape :math:`\\text{num\\_classes} \\times C_l`
         self.feature_min: Optional[List[List[Tensor]]] = None
-        #: per-entry upper bounds, indexed ``[layer][pole]``, each of shape ``(num_classes, C_l)``
+        #: per-entry upper bounds, indexed ``[layer][pole]``, each of shape :math:`\\text{num\\_classes} \\times C_l`
         self.feature_max: Optional[List[List[Tensor]]] = None
-        #: expected deviation :math:`\mathbb{E}[\delta_l]` per layer, shape ``(num_layer,)``
+        #: expected deviation :math:`\mathbb{E}[\delta_l]` per layer, shape :math:`L`
         self.layer_norm: Optional[Tensor] = None
 
     @torch.no_grad()
@@ -115,8 +128,8 @@ class Gram(StructuredDetector):
         """
         Row sums of the :math:`p`-th order Gram matrix of a batch of feature maps.
 
-        :param feature: feature maps of shape :math:`(B, C, ...)`
-        :return: gram statistics of shape :math:`(B, C)`
+        :param feature: feature maps of shape :math:`B \\times C \\times ...`
+        :return: gram statistics of shape :math:`B \\times C`
         """
         temp = feature.detach() ** p
         temp = temp.reshape(temp.shape[0], temp.shape[1], -1)
@@ -128,22 +141,26 @@ class Gram(StructuredDetector):
         """
         Elementwise out-of-bounds deviation, summed over gram entries.
 
-        :param g: gram statistics of shape :math:`(B, C)`
-        :param mins: lower bounds, broadcastable to :math:`(B, C)`
-        :param maxs: upper bounds, broadcastable to :math:`(B, C)`
-        :return: deviations of shape :math:`(B,)`
+        :param g: gram statistics of shape :math:`B \\times C`
+        :param mins: lower bounds, broadcastable to :math:`B \\times C`
+        :param maxs: upper bounds, broadcastable to :math:`B \\times C`
+        :return: deviations of shape :math:`B`
         """
         dev = (F.relu(mins - g) / torch.abs(mins + 1e-6)).sum(dim=1)
         dev = dev + (F.relu(g - maxs) / torch.abs(maxs + 1e-6)).sum(dim=1)
         return dev
 
-    def fit(self: Self, data_loader: DataLoader) -> Self:
+    def fit(self, data_loader: DataLoader) -> Self:
         """
         Calculate the per-entry minimum and maximum bounds of the Gram matrix statistics of
         the training data, as well as the expected deviation per layer. Ignores OOD inputs.
 
         :param data_loader: data loader for training data
         :return: self
+        :raises ValueError: if a class between ``0`` and ``num_classes - 1`` has no in-distribution samples
+
+        The held-out split is drawn with :func:`torch.randperm`, so results depend on the random seed. If a
+        class has fewer than 10 samples, no data is held out for it.
         """
         device = self.device
         if device is None:
@@ -233,8 +250,9 @@ class Gram(StructuredDetector):
         Calculate deviation for inputs
 
         :param x: input tensor, will be passed through model
-
-        :return: Gram based deviations
+        :return: Gram based deviations of shape :math:`B`
+        :raises ModelNotSetException: if ``head`` is ``None``
+        :raises RequiresFittingException: if the detector was not fitted
         """
         if self.head is None:
             raise ModelNotSetException
@@ -250,9 +268,11 @@ class Gram(StructuredDetector):
 
     def predict_structured(self, logits: Tensor, feature_list: List[Tensor]) -> Tensor:
         """
-        :param logits: logits given by your model
-        :param feature_list: list of features extracted from the model
-        :return: Gram based Deviations
+        :param logits: logits given by your model, shape :math:`B \\times C`
+        :param feature_list: list of features extracted from the model, one tensor of shape
+            :math:`B \\times C_l \\times \\ldots` for each entry of ``feature_layers``, in the same order
+        :return: Gram based deviations of shape :math:`B`
+        :raises RequiresFittingException: if the detector was not fitted
         """
         device = self.device or logits.device
         logits = logits.to(device)

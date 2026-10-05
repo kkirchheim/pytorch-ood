@@ -9,6 +9,8 @@ We then use the :class:`WeightedEBO<pytorch_ood.detector.WeightedEBO>` OOD detec
 We can use a model pre-trained on the :math:`32 \\times 32` resized version of the ImageNet as a foundation.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/loss.png"
+
 import numpy as np
 import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -18,8 +20,9 @@ from torchvision.datasets import CIFAR10
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import EnergyBased, WeightedEBO
 from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model, load_transform
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
+from pytorch_ood.utils import ToUnknown, fix_random_seed
 
 device = "cuda:0"
 batch_size = 128
@@ -69,15 +72,12 @@ torch.nn.init.uniform_(weights_energy.weight)
 criterion = VirtualOutlierSynthesizingRegLoss(
     phi,
     weights_energy,
-    device=device,
-    num_classes=num_classes,
-    num_input_last_layer=128,
     fc=model.fc,
     sample_number=10000,
     select=1,
     sample_from=1000,
     alpha=0.1,
-)
+).to(device)
 
 # %%
 # Train model for some epochs

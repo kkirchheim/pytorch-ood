@@ -6,12 +6,13 @@ https://github.com/hendrycks/error-detection/blob/master/NLP/Categorization/Reut
 import logging
 import os
 import re
-from typing import Tuple
+from typing import Any, Tuple
 
 import numpy as np
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 
+from ...api import DatasetInfo, Task
 from .stop_words import stop_words
 
 log = logging.getLogger(__name__)
@@ -21,8 +22,14 @@ class Reuters52(Dataset):
     """
     Stemmed version of the Reuters 52 dataset, as used by Hendrycks et al.
 
-    Contains 52 classes.
+    Contains 52 classes. Each item is a tuple ``(text, target)`` of a :class:`str` with the stop words removed
+    and the integer class index. The mapping from class names to indices is given by :attr:`class2index`.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license=None,
+    )
 
     train_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r52-train.txt"
     test_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r52-test.txt"
@@ -30,6 +37,7 @@ class Reuters52(Dataset):
     train_md5 = "6b1d32bd95e95c1c26cd592d3bdb8c0e"
     train_filename = "r52-train-stemmed.txt"
     test_filename = "r52-test-stemmed.txt"
+    #: mapping from class name to target index
     class2index = {
         "acq": 0,
         "alum": 1,
@@ -85,7 +93,14 @@ class Reuters52(Dataset):
         "zinc": 51,
     }
 
-    def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
+    def __init__(self, root, transform=None, target_transform=None, train=True, download=False):
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the text (a :class:`str`)
+        :param target_transform: function applied to the target
+        :param train: use the training file (``True``) or the test file (``False``)
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(Dataset, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform
@@ -142,7 +157,12 @@ class Reuters52(Dataset):
 
         return True
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        :param index: index of the sample
+        :return: tuple ``(text, target)`` of the text as :class:`str` (or the output of ``transform``)
+            and the class index, see :attr:`class2index` (or the output of ``target_transform``)
+        """
         x = self._data[index]
         y = self._targets[index]
         if self.target_transform:
@@ -159,8 +179,15 @@ class Reuters8(Reuters52):
     """
     Stemmed version of the Reuters 8 dataset, as used by Hendrycks et al.
 
-    Contains 8 classes.
+    Contains 8 classes. Each item is a tuple ``(text, target)`` of a :class:`str` with the stop words removed
+    and the integer class index. The class names of this dataset are not exposed: ``class2index`` only holds the
+    names of the 52 classes of :class:`Reuters52`.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        license=None,
+    )
 
     train_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r8-train.txt"
     test_url = "https://raw.githubusercontent.com/hendrycks/error-detection/master/NLP/Categorization/data/r8-test.txt"
@@ -169,7 +196,14 @@ class Reuters8(Reuters52):
     train_filename = "r8-train-stemmed.txt"
     test_filename = "r8-test-stemmed.txt"
 
-    def __init__(self, root, transform=None, target_transform=None, train=True, download=True):
+    def __init__(self, root, transform=None, target_transform=None, train=True, download=False):
+        """
+        :param root: directory in which the data is stored, or looked up if it was downloaded before
+        :param transform: function applied to the text (a :class:`str`)
+        :param target_transform: function applied to the target
+        :param train: use the training file (``True``) or the test file (``False``)
+        :param download: download the data to ``root`` if it is not found there
+        """
         super(Reuters52, self).__init__()
         self.root = os.path.expanduser(root)
         self.transforms = transform

@@ -11,7 +11,7 @@ from pytorch_ood.benchmark.img.ssb import (
     _FGVCAircraft,
     _StanfordCars,
 )
-from pytorch_ood.utils import oscr_score
+from pytorch_ood.metrics import oscr_score
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -269,9 +269,9 @@ class SSBBenchmarkStructureTest(unittest.TestCase):
         labels = [label for _, label in ds]
         self.assertTrue(all(label >= 0 for label in labels))
 
-    def test_known_only_returns_two_id_datasets(self):
+    def test_known_only_returns_the_id_dataset_once(self):
         sets = self.bench.test_sets(known=True, unknown=False)
-        self.assertEqual(len(sets), 2)
+        self.assertEqual(len(sets), 1)
         for ds in sets:
             labels = [label for _, label in ds]
             self.assertTrue(all(label >= 0 for label in labels))
@@ -342,6 +342,67 @@ class OSCRTest(unittest.TestCase):
         preds = torch.zeros(10, dtype=torch.long)
         with self.assertRaises(ValueError):
             oscr_score(scores, preds, labels)
+
+
+def _oscr_brute_force(scores, preds, labels):
+    # every unique score is a threshold; a sample is accepted if its score is at most the threshold
+    known = labels >= 0
+    correct = known & (preds == labels)
+    points = [(0.0, 0.0)]
+    for t in torch.unique(scores):
+        accepted = scores <= t
+        fpr = (accepted & ~known).sum().item() / (~known).sum().item()
+        ccr = (accepted & correct).sum().item() / known.sum().item()
+        points.append((fpr, ccr))
+    return sum((x1 - x0) * (y0 + y1) / 2 for (x0, y0), (x1, y1) in zip(points, points[1:]))
+
+
+class OSCRValuesTest(unittest.TestCase):
+    def _oscr(self, id_scores, ood_scores, id_correct):
+        id_scores, ood_scores = torch.tensor(id_scores), torch.tensor(ood_scores)
+        labels = torch.cat([torch.zeros(len(id_scores)), -torch.ones(len(ood_scores))]).long()
+        preds = torch.cat(
+            [torch.tensor([0 if c else 1 for c in id_correct]), torch.zeros(len(ood_scores))]
+        ).long()
+        return oscr_score(torch.cat([id_scores, ood_scores]), preds, labels)
+
+    def test_step_function_without_ties(self):
+        # curve (0, 0) -> (0, 1/2) -> (1/2, 1/2) -> (1/2, 1) -> (1, 1)
+        self.assertAlmostEqual(self._oscr([0.0, 2.0], [1.0, 3.0], [True, True]), 0.75)
+
+    def test_ties_between_known_and_unknown_are_diagonal(self):
+        # curve (0, 0) -> (0, 1/3) -> (1/2, 1) -> (1, 1)
+        self.assertAlmostEqual(self._oscr([0.0, 1.0, 1.0], [1.0, 2.0], [True, True, True]), 5 / 6)
+
+    def test_constant_scores_give_half_the_accuracy(self):
+        self.assertAlmostEqual(self._oscr([0.0] * 4, [0.0] * 4, [True, True, True, False]), 0.375)
+
+    def test_inverted_scores_give_zero(self):
+        self.assertAlmostEqual(self._oscr([1.0, 1.0], [0.0, 0.0], [True, True]), 0.0)
+
+    def test_random_scores_give_half_the_accuracy(self):
+        torch.manual_seed(0)
+        n = 5000
+        correct = torch.rand(n) < 0.6
+        result = self._oscr(torch.rand(n).tolist(), torch.rand(n).tolist(), correct.tolist())
+        self.assertAlmostEqual(result, correct.float().mean().item() / 2, delta=0.01)
+
+    def test_matches_brute_force(self):
+        torch.manual_seed(0)
+        for levels in (None, 3, 10):
+            with self.subTest(levels=levels):
+                labels = torch.cat(
+                    [torch.randint(0, 4, (200,)), -torch.ones(100, dtype=torch.long)]
+                )
+                preds = torch.randint(0, 4, (300,))
+                scores = torch.randn(300)
+                if levels is not None:
+                    scores = (scores * levels).round()
+                self.assertAlmostEqual(
+                    oscr_score(scores, preds, labels),
+                    _oscr_brute_force(scores, preds, labels),
+                    places=5,
+                )
 
 
 if __name__ == "__main__":

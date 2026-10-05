@@ -12,6 +12,8 @@ each layer on its own), assigns it to the detector, and selects the best weighti
 held-out validation set with :class:`GridSearch <pytorch_ood.utils.GridSearch>`.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/hpo.png"
+
 import logging
 
 import torch
@@ -21,8 +23,9 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import MultiMahalanobis
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model, load_transform
-from pytorch_ood.utils import GridSearch, OODMetrics, ToUnknown, fix_random_seed
+from pytorch_ood.utils import GridSearch, ToUnknown, fix_random_seed
 
 logging.basicConfig(level=logging.INFO)
 fix_random_seed(123)

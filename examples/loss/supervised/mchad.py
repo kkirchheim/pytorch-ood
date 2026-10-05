@@ -25,20 +25,22 @@ You can run this example with:
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/loss.png"
+
 import math
 
 import torch
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, random_split
-from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10
 from tqdm import tqdm
 
 from pytorch_ood.dataset.img import Textures, TinyImages300k
 from pytorch_ood.loss import MCHADLoss
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model, load_transform
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed, is_known
+from pytorch_ood.utils import ToUnknown, fix_random_seed
 
 fix_random_seed(123)
 
@@ -97,7 +99,6 @@ scheduler = CosineAnnealingLR(opti, T_max=n_epochs * len(train_loader))
 
 def test():
     metrics = OODMetrics()
-    acc = Accuracy(num_classes=10, task="multiclass")
 
     model.eval()
 
@@ -107,13 +108,11 @@ def test():
             z = model(x.to(device))
             # calculate the distance of each embedding to each center
             distances = criterion.distance(z).cpu()
-            metrics.update(distances.min(dim=1).values, y)
-            known = is_known(y)
-            if known.any():
-                acc.update(distances[known].min(dim=1).indices, y[known])
+            # the closest center is the predicted class, used for the accuracy ("ACC")
+            min_distances, predictions = distances.min(dim=1)
+            metrics.update(min_distances, y, predictions)
 
     print(metrics.compute())
-    print(f"Accuracy: {acc.compute().item():.2%}")
     model.train()
 
 

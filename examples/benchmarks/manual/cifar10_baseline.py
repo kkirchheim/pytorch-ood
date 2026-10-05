@@ -8,58 +8,58 @@ Example benchmark code for CIFAR10
 +------------------+-------+-------+---------+----------+----------+
 | Detector         | AUROC | AUTC  | AUPR-IN | AUPR-OUT | FPR95TPR |
 +==================+=======+=======+=========+==========+==========+
-| GEN              | 93.38 | 29.75 | 87.80   | 94.62    | 29.50    |
+| MultiMahalanobis | 93.70 | 44.00 | 87.78   | 96.55    | 21.32    |
 +------------------+-------+-------+---------+----------+----------+
-| EnergyBased      | 93.11 | 35.45 | 87.09   | 94.46    | 31.14    |
+| GEN              | 93.32 | 29.78 | 87.75   | 94.56    | 29.80    |
 +------------------+-------+-------+---------+----------+----------+
-| ASH              | 93.06 | 35.70 | 77.62   | 94.43    | 31.31    |
+| EnergyBased      | 93.07 | 35.47 | 87.03   | 94.41    | 31.43    |
 +------------------+-------+-------+---------+----------+----------+
-| MaxLogit         | 93.05 | 35.84 | 87.01   | 94.40    | 31.31    |
+| ASH              | 93.01 | 35.73 | 86.95   | 94.37    | 31.58    |
 +------------------+-------+-------+---------+----------+----------+
-| MultiMahalanobis | 92.89 | 45.35 | 85.51   | 96.09    | 24.95    |
+| KNN              | 93.00 | 32.01 | 87.99   | 94.27    | 28.00    |
 +------------------+-------+-------+---------+----------+----------+
-| DICE             | 92.80 | 35.83 | 86.68   | 94.20    | 32.35    |
+| MaxLogit         | 93.00 | 35.88 | 86.96   | 94.35    | 31.58    |
 +------------------+-------+-------+---------+----------+----------+
-| KNN              | 92.67 | 36.61 | 87.07   | 94.21    | 29.49    |
+| Gram             | 92.75 | 47.17 | 86.62   | 97.15    | 40.54    |
 +------------------+-------+-------+---------+----------+----------+
-| RMD              | 92.61 | 31.24 | 87.21   | 93.81    | 27.96    |
+| Mahalanobis+ODIN | 92.55 | 42.54 | 86.78   | 94.99    | 27.19    |
 +------------------+-------+-------+---------+----------+----------+
-| Mahalanobis+ODIN | 92.60 | 42.76 | 86.81   | 95.08    | 27.11    |
+| RMD              | 92.53 | 31.33 | 87.11   | 93.72    | 28.37    |
 +------------------+-------+-------+---------+----------+----------+
-| ViM              | 92.31 | 40.25 | 85.77   | 94.93    | 29.48    |
+| DICE             | 92.24 | 37.48 | 85.42   | 94.24    | 33.76    |
 +------------------+-------+-------+---------+----------+----------+
-| ODIN             | 92.14 | 47.06 | 84.98   | 94.46    | 34.32    |
+| ViM              | 92.23 | 40.32 | 85.69   | 94.83    | 29.56    |
 +------------------+-------+-------+---------+----------+----------+
-| Mahalanobis      | 91.82 | 42.93 | 86.21   | 93.85    | 28.60    |
+| Entropy          | 91.97 | 35.95 | 86.64   | 93.40    | 29.97    |
 +------------------+-------+-------+---------+----------+----------+
-| fDBD             | 91.82 | 35.31 | 83.54   | 93.98    | 35.72    |
+| Mahalanobis      | 91.74 | 42.79 | 86.15   | 93.70    | 28.80    |
 +------------------+-------+-------+---------+----------+----------+
-| Entropy          | 92.03 | 35.90 | 86.70   | 93.47    | 29.75    |
+| fDBD             | 91.69 | 35.32 | 83.40   | 93.86    | 36.39    |
 +------------------+-------+-------+---------+----------+----------+
-| MSP              | 91.41 | 37.07 | 86.36   | 92.42    | 29.93    |
+| MSP              | 91.35 | 37.07 | 86.31   | 92.35    | 30.21    |
 +------------------+-------+-------+---------+----------+----------+
-| SHE              | 90.08 | 39.69 | 69.17   | 92.92    | 38.48    |
+| ODIN             | 91.21 | 37.98 | 83.58   | 93.92    | 36.38    |
 +------------------+-------+-------+---------+----------+----------+
-| GMM              | 89.99 | 42.95 | 85.59   | 90.26    | 30.42    |
+| GMM              | 90.79 | 42.46 | 86.43   | 91.01    | 28.93    |
 +------------------+-------+-------+---------+----------+----------+
-| NAC-UE           | 88.74 | 39.89 | 81.40   | 90.36    | 46.12    |
+| SHE              | 90.08 | 39.69 | 82.38   | 92.90    | 38.38    |
 +------------------+-------+-------+---------+----------+----------+
-| KLMatching       | 88.48 | 39.83 | 72.29   | 91.33    | 57.84    |
+| KLMatching       | 88.38 | 39.24 | 72.08   | 91.27    | 57.69    |
 +------------------+-------+-------+---------+----------+----------+
-| GradNormKL       | 80.97 | 49.97 | 68.70   | 89.49    | 79.72    |
+| GradUncertainty  | 88.30 | 39.23 | 78.90   | 91.90    | 44.96    |
 +------------------+-------+-------+---------+----------+----------+
-| Gram             | 69.37 | 46.01 | 58.02   | 77.49    | 75.03    |
+| NAC-UE           | 88.00 | 40.75 | 80.74   | 89.46    | 47.65    |
 +------------------+-------+-------+---------+----------+----------+
-| RankFeat         | 55.43 | 49.92 | 45.31   | 63.80    | 86.35    |
+| GradNorm         | 78.46 | 41.97 | 68.64   | 85.85    | 56.19    |
 +------------------+-------+-------+---------+----------+----------+
-| GradNorm         | 50.00 | 60.78 | 18.37   | 81.63    | 100.00   |
+| RankFeat         | 44.58 | 50.07 | 37.80   | 59.16    | 92.20    |
 +------------------+-------+-------+---------+----------+----------+
 
 
 
 """
 
-from copy import deepcopy
+# sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
 
 import pandas as pd  # additional dependency, used here for convenience
 import torch
@@ -89,7 +89,7 @@ from pytorch_ood.detector import (
     EnergyBased,
     Entropy,
     GradNorm,
-    GradNormKL,
+    GradUncertainty,
     Gram,
     KLMatching,
     Mahalanobis,
@@ -101,8 +101,9 @@ from pytorch_ood.detector import (
     ViM,
     fDBD,
 )
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import get_model_info, load_model, load_transform
-from pytorch_ood.utils import OODMetrics, ToUnknown, fix_random_seed
+from pytorch_ood.utils import ToUnknown, fix_random_seed
 
 device = "cuda:0"
 
@@ -155,16 +156,10 @@ detectors["fDBD"] = fDBD(encoder=model.features, head=model.fc)
 detectors["ASH"] = ASH(backbone=model.feature_maps, head=model.forward_feature_maps)
 detectors["RankFeat"] = RankFeat(backbone=model.feature_maps, head=model.forward_feature_maps)
 
-# we make a copy of the model just so deactivating gradients does not influence other detectors
-model_gn = deepcopy(model)
-model_gn.requires_grad_(False)
-model_gn.fc.requires_grad_(True)
-detectors["GradNorm"] = GradNorm(model_gn, param_filter=lambda name: name.startswith("fc"))
-
-model_gnkl = deepcopy(model)
-model_gnkl.requires_grad_(False)
-model_gnkl.fc.requires_grad_(True)
-detectors["GradNormKL"] = GradNormKL(model_gnkl, param_filter=lambda name: name.startswith("fc"))
+detectors["GradUncertainty"] = GradUncertainty(
+    model, param_filter=lambda name: name.startswith("fc")
+)
+detectors["GradNorm"] = GradNorm(model, param_filter=lambda name: name == "fc.weight")
 
 detectors["Entropy"] = Entropy(model)
 detectors["ViM"] = ViM(model.features, d=64, w=model.fc.weight, b=model.fc.bias)

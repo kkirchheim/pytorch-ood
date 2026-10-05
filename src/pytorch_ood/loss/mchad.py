@@ -5,7 +5,8 @@ from torch import nn
 
 from pytorch_ood.model import ClassCenters
 
-from ..utils import apply_reduction, is_unknown
+from ..api import LossInfo, Paper, Representation, Task
+from ..utils import apply_reduction, is_known, is_unknown
 from .center import CenterLoss
 from .crossentropy import CrossEntropyLoss
 
@@ -32,9 +33,44 @@ class MCHADLoss(nn.Module):
 
     The loss can be used in a supervised, as well as in an unsupervised manner.
 
-    :see Implementation: `GitLab <https://gitlab.com/kkirchheim/mchad>`__
-    :see Paper: `ICPR <https://ieeexplore.ieee.org/document/9956337>`__
+    .. note:: The class centers and the margin are stored in this loss, so move it to the device of the model
+        with ``.to(device)``.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.loss import MCHADLoss
+
+        encoder = torch.nn.Linear(10, 2)  # maps inputs into the 2-dimensional space of the centers
+        criterion = MCHADLoss(n_classes=3, n_dim=2)
+        # the centers are learnable, so the optimizer also updates the loss
+        optimizer = torch.optim.SGD([*encoder.parameters(), *criterion.parameters()], lr=0.01)
+
+        x, y = torch.randn(8, 10), torch.tensor([0, 1, 2, 0, 1, 2, -1, -1])  # -1: outliers
+        # forward() takes the distances to the centers of this loss
+        distances = criterion.distance(encoder(x))
+        loss = criterion(distances, y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        scores = distances.min(dim=1).values  # outlier scores: distance to the closest center
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Multi-Class Hypersphere Anomaly Detection",
+            venue="ICPR",
+            year=2022,
+            url="https://ieeexplore.ieee.org/document/9956337",
+            code="https://gitlab.com/kkirchheim/mchad",
+        ),
+        tasks={Task.CLASSIFICATION},
+        inputs={Representation.DISTANCES},
+        supervised=True,
+    )
 
     def __init__(
         self,
@@ -49,8 +85,8 @@ class MCHADLoss(nn.Module):
         """
         :param n_classes: number of classes  :math:`C`
         :param n_dim: dimensionality of the output space :math:`D`
-        :param radius: radius of the hyperspheres
-        :param margin: margin around hyperspheres
+        :param radius: radius :math:`r` of the hyperspheres
+        :param margin: margin :math:`m` around the hyperspheres
         :param weight_center: weight :math:`\\lambda_{\\Lambda}` for the center loss term
         :param weight_nll: weight  :math:`\\lambda_{\\Delta}` for the maximum likelihood term
         :param weight_oe: weight  :math:`\\lambda_{\\Theta}` for the outlier exposure term
@@ -87,12 +123,15 @@ class MCHADLoss(nn.Module):
     def forward(self, distmat: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
         :param distmat: distance matrix  shape :math:`B \\times C`.
-        :param y: labels
-        :returns: loss values
+        :param y: labels of shape :math:`B`; labels :math:`< 0` are OOD (without OOD samples, the third term
+            is zero)
+        :return: scalar loss
         """
-        loss_center = self.center_loss(distmat, y)
+        # the center and cross-entropy terms only use ID samples
+        known = is_known(y)
+        loss_center = self.center_loss(distmat[known], y[known])
         # cross-entropy with integrated softmax becomes softmin with e^-x
-        loss_nll = self.nll_loss(-distmat, y)
+        loss_nll = self.nll_loss(-distmat[known], y[known])
         loss_out = self.regu_loss(distmat, y)
 
         loss = (
@@ -106,12 +145,14 @@ class MCHADLoss(nn.Module):
 
 class CenterRegularizationLoss(nn.Module):
     """
-    Regularization Term, uses sum reduction
+    Regularization term of the :class:`MCHADLoss <pytorch_ood.loss.MCHADLoss>` that acts on OOD samples
+    (the third term, :math:`\\mathcal{L}_{\\Theta}`).
     """
 
     def __init__(self, margin: float, reduction="sum"):
         """
         :param margin: Margin around centers of the spheres (i.e. including the original radius)
+        :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
         """
         super(CenterRegularizationLoss, self).__init__()
         self.margin = torch.nn.Parameter(torch.tensor([margin]).float())

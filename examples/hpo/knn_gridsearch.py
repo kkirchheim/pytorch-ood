@@ -15,6 +15,8 @@ Since ``KNN`` exposes a feature encoder, ``GridSearch`` extracts the features
 once and reuses them across all candidate values of :math:`k`.
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/hpo.png"
+
 import logging
 
 import torch
@@ -23,8 +25,9 @@ from torchvision.datasets import CIFAR10
 
 from pytorch_ood.dataset.img import Textures
 from pytorch_ood.detector import KNN
+from pytorch_ood.metrics import OODMetrics
 from pytorch_ood.model import load_model, load_transform
-from pytorch_ood.utils import GridSearch, OODMetrics, ToUnknown, fix_random_seed
+from pytorch_ood.utils import GridSearch, ToUnknown, fix_random_seed
 
 logging.basicConfig(level=logging.INFO)
 fix_random_seed(123)

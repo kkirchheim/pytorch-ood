@@ -1,16 +1,23 @@
 """
-This module provides a collection of different Out-of-Distribution Detectors.
+Out-of-Distribution detectors and the API they share.
 
-API
-------
+Common Interface
+----------------
+
 Each detector implements a common API which contains a ``predict`` and a ``fit`` method, where ``fit`` is optional.
-The objects ``__call__`` methods is delegated to the ``predict`` function, so you can use
+The ``__call__`` method of a detector delegates to ``predict``, so you can use
 
-.. code:: python
+.. code-block:: python
 
-    detector = Detector(model)
+    from pytorch_ood.detector import OpenMax
+
+    detector = OpenMax(model)
     detector.fit(data_loader)
     scores = detector(x)
+
+Outlier scores and labels follow the library's :ref:`design choices <design-choices>`. Logits have shape :math:`B \\times C`, features :math:`B \\times D` and feature maps
+:math:`B \\times C \\times H \\times W`. Detectors return a tensor of shape :math:`B`, or
+:math:`B \\times H \\times W` for grid-like input.
 
 
 ..  autoclass:: pytorch_ood.api.Detector
@@ -18,12 +25,13 @@ The objects ``__call__`` methods is delegated to the ``predict`` function, so yo
 
 
 
-Some of the detectors support grid-like input, so that they can be used for anomaly segmentation
-without further adjustment.
+Some of the detectors support grid-like input, i.e. logits of shape
+:math:`B \\times C \\times H \\times W` (see :attr:`Task.SEGMENTATION <pytorch_ood.api.Task.SEGMENTATION>`),
+so that they can be used for anomaly segmentation without further adjustment.
 
 
 Representation Interface
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------
 
 Alternatively, detectors can be used on intermediate representations without passing inputs
 through the full model again. The available methods will depend on the base class of the detector:
@@ -35,9 +43,11 @@ through the full model again. The available methods will depend on the base clas
 - structured detectors: ``predict_structured(...)`` and optionally
   ``fit_structured(...)``
 
-.. code:: python
+.. code-block:: python
 
-    detector = LogitsDetector(model=None)
+    from pytorch_ood.detector import OpenMax
+
+    detector = OpenMax(model=None)
     detector.fit_logits(train_logits, train_labels)
     scores = detector.predict_logits(test_logits)
 
@@ -45,223 +55,27 @@ through the full model again. The available methods will depend on the base clas
 ..  autoclass:: pytorch_ood.api.LogitsDetector
     :members:
     :show-inheritance:
+    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.FeaturesDetector
     :members:
     :show-inheritance:
+    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.FeatureMapsDetector
     :members:
     :show-inheritance:
+    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.StructuredDetector
     :members:
     :show-inheritance:
+    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.GradientDetector
     :members:
     :show-inheritance:
-
-
-Overview
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-..  inheritance-diagram:: pytorch_ood.api.Detector pytorch_ood.api.LogitsDetector pytorch_ood.api.FeaturesDetector pytorch_ood.api.FeatureMapsDetector pytorch_ood.api.StructuredDetector pytorch_ood.api.GradientDetector pytorch_ood.detector.MaxSoftmax pytorch_ood.detector.TemperatureScaling pytorch_ood.detector.Entropy pytorch_ood.detector.KLMatching pytorch_ood.detector.GEN pytorch_ood.detector.MCD pytorch_ood.detector.MaxLogit pytorch_ood.detector.OpenMax pytorch_ood.detector.EnergyBased pytorch_ood.detector.WeightedEBO pytorch_ood.detector.Mahalanobis pytorch_ood.detector.MahalanobisODIN pytorch_ood.detector.RMD pytorch_ood.detector.ViM pytorch_ood.detector.KNN pytorch_ood.detector.NNGuide pytorch_ood.detector.SHE pytorch_ood.detector.Gram pytorch_ood.detector.NCI pytorch_ood.detector.fDBD pytorch_ood.detector.GMM pytorch_ood.detector.MCM pytorch_ood.detector.PNML pytorch_ood.detector.GradNorm pytorch_ood.detector.GradNormKL pytorch_ood.detector.ODIN pytorch_ood.detector.MCD pytorch_ood.detector.ASH pytorch_ood.detector.ReAct pytorch_ood.detector.DICE pytorch_ood.detector.RankFeat pytorch_ood.detector.VRA pytorch_ood.detector.SCALE pytorch_ood.detector.MultiMahalanobis pytorch_ood.detector.NACUE
-    :parts: 1
-    :top-classes: pytorch_ood.api.Detector
-
-
-Probability-based
--------------------------------
-
-Probability-based methods are based on the observation that OOD inputs tend to be assigned lower posteriors with higher
-entropy, i.e., the predicted distribution is often less concentrated on a single class.
-
-
-Maximum Softmax (MSP)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.softmax
-
-Monte Carlo Dropout (MCD)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.mcd
-
-Temperature Scaling
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.tscaling
-
-KL-Matching
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.klmatching
-
-Entropy
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.entropy
-
-Generalized Entropy (GEN)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.gen
-
-
-
-Logit-based
--------------------------------
-
-Logit-based methods are based on the observation that OOD inputs tend to yield different logits compared to ID data.
-
-Maximum Logit
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.maxlogit
-
-OpenMax
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.openmax
-
-Energy Based (EBO)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.energy
-
-Weighted Energy Based (WEBO)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.webo
-
-
-
-Feature-based
--------------------------------
-
-
-Mahalanobis Distance (MD)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.mahalanobis
-
-Multi-Layer Mahalanobis Distance (MD)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.mmahalanobis
-
-Mahalanobis Distance with ODIN (MahalanobisODIN)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: pytorch_ood.detector.MahalanobisODIN
-    :members:
-    :inherited-members:
-    :show-inheritance:
-
-
-Relative Mahalanobis Distance (RMD)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.rmd
-
-
-Virtual Logit Matching (ViM)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.vim
-
-
-Nearest Neighbor (kNN)
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. note::
-   ``pytorch_ood.detector.KNN`` requires ``scikit-learn`` to be installed.
-
-.. automodule:: pytorch_ood.detector.knn
-
-Nearest Neighbor Guidance (NNGuide)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.nnguide
-
-
-Simplified Hopfield Energy (SHE)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.she
-
-Gram Matrices Based (GM)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.gram
-
-
-Neural Collapse Inspired (NCI)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.nci
-
-Fast Decision Boundary Distance (fDBD)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.fdbd
-
-Gaussian Mixture Model (GMM)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.gmm
-
-Predictive Normalized Maximum Likelihood (pNML)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.pnml
-
-Maximum Concept Matching (MCM)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.mcm
-
-Logit Scaling (LTS)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.lts
-
-
-Gradient-based
---------------------------
-
-Gradient-based detectors are based on the observation that the gradients (w.r.t. the model parameters or
-the inputs) for ID and OOD data behave differently. All gradient-based detectors inherit from
-:class:`pytorch_ood.api.GradientDetector`.
-
-GradNorm
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.gradnorm
-
-GradNormKL
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.gradnormkl
-
-
-ODIN Preprocessing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.odin
-
-
-NAC-UE
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.nac
-
-
-
-Activation Pruning
----------------------
-
-Activation pruning methods are based on the observation that OOD inputs cause unusual activations in the model,
-and that, by rectifying these unusual activations, we can often improve discriminability of ID and OOD samples.
-
-
-Activation Shaping (ASH)
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.ash
-
-ReAct
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.react
-
-DICE
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.dice
-
-RankFeat
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.rankfeat
-
-VRA
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.vra
-
-SCALE
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: pytorch_ood.detector.scale
-
+    :exclude-members: fit, predict
 
 """
 
@@ -273,7 +87,7 @@ from .fdbd import fDBD
 from .gen import GEN
 from .gmm import GMM
 from .gradnorm import GradNorm
-from .gradnormkl import GradNormKL
+from .graduncertainty import GradUncertainty
 from .gram import Gram
 from .klmatching import KLMatching
 from .knn import KNN
@@ -309,7 +123,7 @@ __all__ = [
     "GEN",
     "GMM",
     "GradNorm",
-    "GradNormKL",
+    "GradUncertainty",
     "Gram",
     "KLMatching",
     "KNN",

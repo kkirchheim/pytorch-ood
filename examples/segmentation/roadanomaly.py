@@ -17,6 +17,8 @@ This model is evaluated using the :class:`EnergyBased<pytorch_ood.detector.Energ
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/segmentation.png"
+
 import segmentation_models_pytorch as smp
 import torch
 from PIL import Image
@@ -28,7 +30,8 @@ from torchvision.transforms.functional import pad, to_tensor
 
 from pytorch_ood.dataset.img import RoadAnomaly, SegmentMeIfYouCan
 from pytorch_ood.detector import EnergyBased
-from pytorch_ood.utils import OODMetrics, fix_random_seed
+from pytorch_ood.metrics import OODSegmentationMetrics
+from pytorch_ood.utils import fix_random_seed
 
 device = "cuda:0"
 batch_size = 4
@@ -77,7 +80,9 @@ def cityscapes_transform(img, target):
 
 
 def eval(dataset_test, detector):
-    metrics = OODMetrics(mode="segmentation", void_label=1)
+    # pooled over the pixels of all images, as in the SegmentMeIfYouCan benchmark; the
+    # scores of all pixels are kept in main memory
+    metrics = OODSegmentationMetrics(device="cpu", void_label=1)
     loader = DataLoader(dataset_test, batch_size=4, worker_init_fn=fix_random_seed, generator=g)
 
     with torch.no_grad():

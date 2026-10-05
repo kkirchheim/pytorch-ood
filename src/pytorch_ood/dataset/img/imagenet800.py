@@ -4,6 +4,7 @@ from typing import Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.datasets import ImageNet, VisionDataset
 
+from ...api import DatasetInfo, Paper, Role, Task
 from .base import _get_resource_file
 
 log = logging.getLogger(__name__)
@@ -19,13 +20,26 @@ class ImageNet800(VisionDataset):
     """
     ImageNet-800 comprises the 800 ImageNet-1K classes that are *not* part of
     :class:`ImageNet200`, i.e. the two class sets are disjoint and together cover all of
-    ImageNet-1K. Samples are intended to
-    be used as auxiliary/outlier data during training (e.g. with
-    :class:`pytorch_ood.loss.OutlierExposureLoss`), not as a standalone classification task,
-    so ``__getitem__`` always returns a target of ``-1``.
+    ImageNet-1K. It uses all training images of these 800 classes (the ImageNet validation split is not used).
 
-    :see Paper: `OpenOOD v1.5 <https://arxiv.org/abs/2306.09301>`__
+    Samples are intended to be used as auxiliary/outlier data during training
+    (e.g. with :class:`pytorch_ood.loss.OutlierExposureLoss`), not as a standalone classification task,
+    so ``__getitem__`` always returns a target of ``-1`` (the label of OOD samples).
+    Images are returned as :class:`PIL.Image.Image`.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license="ImageNet terms of access (non-commercial research)",
+        paper=Paper(
+            title="OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection",
+            venue="DMLR",
+            year=2024,
+            url="https://arxiv.org/abs/2306.09301",
+        ),
+        ai_coded=True,
+    )
 
     def __init__(
         self,

@@ -4,6 +4,7 @@ from typing import Optional
 import torch
 from torch import nn
 
+from ..api import LossInfo, Paper, Representation, Task
 from ..utils import apply_reduction, contains_unknown, is_unknown
 from .crossentropy import cross_entropy
 
@@ -25,20 +26,29 @@ class OutlierExposureLoss(nn.Module):
        {
        -\\log \\sigma_y(f(x)) \\quad \\quad \\quad  \\quad   \\quad \\quad \\quad  \\quad  \\quad \\quad  \\text{if } y \\geq 0
         \\atop
-       \\alpha (\\sum_{c=1}^C f(x)_c - \\log(\\sum_{c=1}^C  e^{f(x)_c})) \\quad \\text{ otherwise }
+       \\alpha \\Bigl(\\log \\sum_{c=1}^C e^{f(x)_c} - \\frac{1}{C} \\sum_{c=1}^C f(x)_c\\Bigr) \\quad \\text{ otherwise }
        }
 
 
-    where :math:`C` is the number of classes, :math:`\\alpha` is a hyper parameter, and :math:`\\sigma_y`
+    where :math:`C` is the number of classes, :math:`\\alpha` is a hyperparameter, and :math:`\\sigma_y`
     denotes the :math:`y^{th}` softmax output.
-
-    :see Paper: `ArXiv <https://arxiv.org/pdf/1812.04606v1.pdf>`__
-    :see Implementation: `GitHub <https://github.com/hendrycks/outlier-exposure>`__
     """
+
+    info = LossInfo(
+        paper=Paper(
+            title="Deep Anomaly Detection with Outlier Exposure",
+            venue="ICLR",
+            year=2019,
+            url="https://arxiv.org/abs/1812.04606",
+            code="https://github.com/hendrycks/outlier-exposure",
+        ),
+        tasks={Task.CLASSIFICATION, Task.SEGMENTATION},
+        inputs={Representation.LOGITS},
+        supervised=True,
+    )
 
     def __init__(self, alpha: float = 0.5, reduction: Optional[str] = "mean"):
         """
-
         :param alpha: weighting coefficient :math:`\\alpha`
         :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
         """
@@ -48,10 +58,10 @@ class OutlierExposureLoss(nn.Module):
 
     def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
-
-        :param logits: class logits for predictions
-        :param target: labels for predictions
-        :return: loss
+        :param logits: class logits of shape :math:`B \\times C` or :math:`B \\times C \\times H \\times W`
+        :param target: labels of shape :math:`B` or :math:`B \\times H \\times W`; labels :math:`< 0` are OOD
+        :return: loss; if the reduction is ``none``, one value per sample (or per pixel)
+        :raises ValueError: if ``logits`` are neither two- nor four-dimensional
         """
 
         # for classification

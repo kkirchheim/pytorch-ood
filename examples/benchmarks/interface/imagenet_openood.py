@@ -6,6 +6,8 @@ Reproduces the OpenOOD v1.5 benchmark for OOD detection on ImageNet, using a pre
 
 """
 
+# sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
+
 import pandas as pd  # additional dependency, used here for convenience
 import torch
 from torchvision.models import resnet50

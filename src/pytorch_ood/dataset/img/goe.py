@@ -8,6 +8,8 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 
+from ...api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -19,18 +21,28 @@ class CIFAR100GAN(Dataset):
     Can be used as auxiliary outliers, e.g. for :class:`OutlierExposure <pytorch_ood.loss.OutlierExposureLoss>` or
     any of the supervised training objectives in general.
 
-    Default sample :math:`\\sigma` is 50.0. Contains 50,000 samples. Label is `-1` by default.
+    Default sample :math:`\\sigma` is 50.0. Contains 50,000 RGB images of size :math:`32 \\times 32`, returned as
+    :class:`PIL.Image.Image`. The label is ``-1`` (the label of OOD samples) by default.
 
+    .. figure:: /_static/datasets/cifar100gan.webp
+        :width: 100%
+        :alt: 48 samples from the CIFAR 100 GAN dataset
 
-    .. image :: https://files.kondas.de/goe-data/cifar100gan.jpg
-        :width: 600px
-        :alt: CIFAR 100 GAN Dataset
-        :align: center
-
-    :see Website: `GitHub <https://github.com/kkirchheim/mlsw2022-goe>`__
-    :see Paper: `NeurIPS MLSW <https://openreview.net/forum?id=SU7OAfhc8OM>`__
-
+        Random samples (:math:`\\sigma = 50`).
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.AUXILIARY_OUTLIERS},
+        license="MIT",
+        paper=Paper(
+            title="On Outlier Exposure with Generative Models",
+            venue="NeurIPS MLSW",
+            year=2022,
+            url="https://openreview.net/forum?id=SU7OAfhc8OM",
+        ),
+        homepage="https://github.com/kkirchheim/mlsw2022-goe",
+    )
 
     filename = {2.0: "samples-2.0.npz", 50.0: "samples-50.0.npz"}
 
@@ -50,7 +62,9 @@ class CIFAR100GAN(Dataset):
         :param transform: transform to apply to the data
         :param target_transform: transform to apply to the target
         :param download: whether to download the dataset if it is not found in root
-        :param sigma: sample :math:`\\sigma` used to generate dataset. Can be ``50.0`` or ``2.0``.
+        :param sigma: sample :math:`\\sigma` used to generate dataset. Can be ``50.0`` or ``2.0``;
+            other values raise a :class:`KeyError`
+        :raises FileNotFoundError: if the data is not found in ``root`` and ``download`` is false
         """
         self.datafile = join(root, self.filename[sigma])
         if not exists(self.datafile):

@@ -52,8 +52,14 @@ class ImagePreprocessing(Preprocessing):
     """
 
     mean: Tuple[float, ...]
+    """Per-channel mean used for normalization, for pixel values in :math:`[0, 1]`."""
+
     std: Tuple[float, ...]
+    """Per-channel standard deviation used for normalization, for pixel values in :math:`[0, 1]`."""
+
     size: Tuple[int, int] = (32, 32)
+    """Target size ``(height, width)``; images are resized to exactly this size."""
+
     crop_size: Optional[Tuple[int, int]] = None
     """If set, images are resized to ``size`` and then center-cropped to
     ``crop_size`` (the standard ImageNet-style eval pipeline), instead of being
@@ -94,9 +100,16 @@ class ModelEntry:
 
     # structured slots for filtering; by convention these make up the key
     arch: Optional[str] = None
+    """Architecture, e.g. ``wrn-40-2``."""
+
     dataset: Optional[str] = None
+    """Training dataset, e.g. ``cifar10``."""
+
     loss: Optional[str] = None
+    """Training method, e.g. ``oe``."""
+
     seed: Optional[str] = None
+    """Training seed, e.g. ``s0``; ``None`` if unknown."""
 
     state_dict_transform: Optional[StateDictTransform] = None
     """Optional fixup applied to the raw state dict before loading."""
@@ -105,12 +118,14 @@ class ModelEntry:
     """Input preprocessing used during training; ``None`` if unknown."""
 
     metrics: Dict[str, float] = field(default_factory=dict)
-    """Evaluation metrics, e.g. ``{"accuracy": 0.94}``."""
+    """Evaluation metrics of the training run, with the keys
+    ``final_accuracy`` and ``best_accuracy`` (e.g. ``{"final_accuracy": 0.94}``)."""
 
     source: Optional[str] = None
     """URL of the paper or upstream repository the weights originate from."""
 
     description: str = ""
+    """Short description of the model."""
 
     @property
     def file_name(self) -> str:
@@ -161,6 +176,7 @@ def list_models(
     :param arch: only include models with this architecture, e.g. ``wrn-40-2``
     :param dataset: only include models trained on this dataset, e.g. ``cifar10``
     :param loss: only include models trained with this method, e.g. ``oe``
+    :return: sorted list of model identifiers
     """
     entries = _ENTRIES
     if arch is not None:
@@ -180,6 +196,7 @@ def get_model_info(identifier: str) -> ModelEntry:
     ``wrn-40-2/cifar10/logitnorm``) resolves if exactly one entry matches.
 
     :param identifier: model identifier
+    :return: the registry entry
     :raises ValueError: if the identifier is unknown or ambiguous
     """
     return _lookup(identifier)
@@ -194,9 +211,15 @@ def load_model(identifier: str, map_location: str = "cpu") -> Module:
     methods, like intermediate layers, remain accessible. The model is
     returned in evaluation mode.
 
+    As in :func:`get_model_info`, an identifier without seed component resolves if exactly
+    one entry matches.
+
     :param identifier: model identifier, e.g. ``wrn-40-2/cifar10/logitnorm/s0``
-    :param map_location: passed to ``torch.load``
+    :param map_location: where to load the weights to, passed to
+        :func:`torch.hub.load_state_dict_from_url`, e.g. ``"cpu"`` or a :class:`torch.device`
+    :return: the pre-trained model in evaluation mode
     :raises ValueError: if the identifier is unknown or ambiguous
+    :raises RuntimeError: if the download fails or the checkpoint hash does not match
     """
     entry = _lookup(identifier)
     cls = _resolve_class(entry.arch_class)
@@ -220,6 +243,7 @@ def load_transform(identifier: str) -> Callable:
     Create the input preprocessing for a pre-trained model.
 
     :param identifier: model identifier, e.g. ``wrn-40-2/cifar10/logitnorm/s0``
+    :return: transform that maps PIL images to normalized tensors
     :raises ValueError: if the identifier is unknown or the preprocessing of
         the model is not known
     """
