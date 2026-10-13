@@ -45,6 +45,10 @@ class Mahalanobis(FeaturesDetector):
     .. math :: \\frac{1}{2} \\min_k (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k)
 
     The paper uses the negated distance as a confidence score, so the sign is flipped.
+
+    To ensure that the covariance matrix is invertible, a small value :math:`\\epsilon` is added to its
+    diagonal before inversion, i.e., :math:`\\Sigma + \\epsilon I` is used. :math:`\\epsilon` can be
+    set via the ``eps`` parameter.
     """
 
     info = DetectorInfo(
@@ -63,13 +67,17 @@ class Mahalanobis(FeaturesDetector):
     def __init__(
         self,
         encoder: Optional[Callable[[Tensor], Tensor]],
+        eps: float = 1e-6,
     ):
         """
         :param encoder: feature encoder that maps inputs to features of shape :math:`B \\times D`. Can be
             ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
+        :param eps: regularization constant :math:`\\epsilon` added to the diagonal of the covariance matrix
+            before inversion, so that the matrix is invertible. Set to ``0`` to disable regularization.
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder
+        self.eps = eps
         self.mu: Tensor = None  #: Centers
         self.cov: Tensor = None  #: Covariance Matrix
         self.precision: Tensor = None  #: Precision Matrix
@@ -123,7 +131,7 @@ class Mahalanobis(FeaturesDetector):
             self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
 
         # the covariance is the sum of the centered outer products (not divided by N), plus a small ridge term
-        self.cov += torch.eye(self.cov.shape[0], device=self.cov.device) * 1e-6
+        self.cov += torch.eye(self.cov.shape[0], device=self.cov.device) * self.eps
         self.precision = torch.linalg.inv(self.cov)
         return self
 
