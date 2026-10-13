@@ -47,7 +47,10 @@ class fDBD(FeaturesDetector):
     where :math:`C` is the set of classes, :math:`\\text{logit}_c = w_c^\\top z + b_c` is the logit of class
     :math:`c` computed by the classification head with weight vectors :math:`w_c`, and :math:`\\mu`
     is the mean of the training features. The distance is negated so that larger scores indicate OOD.
-    This method is hyperparameter-free.
+
+    With ``distance_as_normalizer=False``, the feature norm :math:`\\lVert z \\rVert_2` is used as normalizer
+    instead of :math:`\\lVert z - \\mu \\rVert_2`. This variant is not part of the original paper, but is
+    implemented in OpenOOD and OpenMIBOOD, where it is selected on the validation data for some benchmarks.
 
     The detector has to be fitted on in-distribution data: the labels given to :meth:`fit` are ignored, so only
     in-distribution samples should be passed. The pairwise weight differences are computed at fit time and are
@@ -68,14 +71,21 @@ class fDBD(FeaturesDetector):
 
     requires_fit = True
 
-    def __init__(self, encoder: Module, head: Linear) -> None:
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`: the normalizer of the score.
+    hyperparameter_space = {"distance_as_normalizer": [True, False]}
+
+    def __init__(self, encoder: Module, head: Linear, distance_as_normalizer: bool = True) -> None:
         """
         :param encoder: model mapping inputs to penultimate-layer features
         :param head: the linear classification head of the model
+        :param distance_as_normalizer: if ``True``, normalize by the distance of the features to the training
+            feature mean, as in the original paper. If ``False``, normalize by the norm of the features, as in
+            OpenOOD and OpenMIBOOD.
         """
         super(fDBD, self).__init__()
         self.encoder = encoder
         self.head = head
+        self.distance_as_normalizer = distance_as_normalizer
         self.train_mean: Tensor = None
         self._denom_matrix: Tensor = None
 
@@ -168,8 +178,11 @@ class fDBD(FeaturesDetector):
         # per-boundary distances, summed over all classes (diagonal contributes 0 since logit_diff is 0 there)
         boundary_sum = (logit_diff / weight_norms).sum(dim=1)  # (N,)
 
-        # normalize by distance to training mean
-        feat_dist = (z - train_mean).norm(dim=1)  # (N,)
+        # normalize by distance to training mean, or by the feature norm
+        if self.distance_as_normalizer:
+            feat_dist = (z - train_mean).norm(dim=1)  # (N,)
+        else:
+            feat_dist = z.norm(dim=1)  # (N,)
         # guard against zero-norm features
         feat_dist = feat_dist.clamp(min=1e-8)
 
