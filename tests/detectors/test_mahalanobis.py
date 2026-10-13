@@ -73,25 +73,17 @@ class MahalanobisEpsTest(unittest.TestCase):
         self.assertEqual(model.eps, 1e-3)
 
     def test_eps_applied_to_covariance(self):
-        """The eps value should be added to the covariance diagonal during fit."""
-        nn = ClassificationModel()
-        eps = 1e-3
-        model = Mahalanobis(nn, eps=eps)
-
-        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
+        """The eps value should be added to the diagonal of the covariance matrix during fit."""
         x = torch.randn(size=(20, 10))
-        dataset = TensorDataset(x, y)
-        loader = DataLoader(dataset)
+        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))]).long()
 
-        model.fit(loader)
+        model_a = Mahalanobis(None, eps=0.0).fit_features(x, y)
+        model_b = Mahalanobis(None, eps=1e-2).fit_features(x, y)
 
-        # The diagonal of the covariance should have been shifted by eps,
-        # so the precision matrix must exist and be finite (matrix is invertible).
-        self.assertIsNotNone(model.precision)
-        self.assertTrue(torch.isfinite(model.precision).all(),
-                        "Precision matrix should be finite when eps > 0.")
+        torch.testing.assert_close(model_b.cov - model_a.cov, torch.eye(10) * 1e-2)
+        torch.testing.assert_close(model_b.precision, torch.linalg.inv(model_b.cov))
 
-    def test_eps_zero_raises_or_singular(self):
+    def test_eps_makes_singular_covariance_invertible(self):
         """
         eps=0 on near-singular data can lead to singular matrices.
         With eps > 0 the same data should produce a finite precision matrix.
@@ -105,5 +97,7 @@ class MahalanobisEpsTest(unittest.TestCase):
 
         model_safe = Mahalanobis(nn, eps=1e-3)
         model_safe.fit(loader)
-        self.assertTrue(torch.isfinite(model_safe.precision).all(),
-                        "With eps=1e-3, precision matrix should be finite even for constant inputs.")
+        self.assertTrue(
+            torch.isfinite(model_safe.precision).all(),
+            "With eps=1e-3, precision matrix should be finite even for constant inputs.",
+        )

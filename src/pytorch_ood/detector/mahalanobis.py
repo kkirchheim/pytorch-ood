@@ -45,6 +45,10 @@ class Mahalanobis(FeaturesDetector):
     .. math :: \\frac{1}{2} \\min_k (f(x) - \\mu_k)^{\\top} \\Sigma^{-1} (f(x) - \\mu_k)
 
     The paper uses the negated distance as a confidence score, so the sign is flipped.
+
+    To ensure that the covariance matrix is invertible, a small value :math:`\\epsilon` is added to its
+    diagonal before inversion, i.e., :math:`\\Sigma + \\epsilon I` is used. :math:`\\epsilon` can be
+    set via the ``eps`` parameter.
     """
 
     info = DetectorInfo(
@@ -68,7 +72,8 @@ class Mahalanobis(FeaturesDetector):
         """
         :param encoder: feature encoder that maps inputs to features of shape :math:`B \\times D`. Can be
             ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
-        :param eps: small noise added to the diagonal of the covariance matrix to prevent singularity.
+        :param eps: regularization constant :math:`\\epsilon` added to the diagonal of the covariance matrix
+            before inversion, so that the matrix is invertible. Set to ``0`` to disable regularization.
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder
