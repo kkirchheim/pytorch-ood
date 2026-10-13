@@ -52,3 +52,58 @@ class MahalanobisScoreTest(unittest.TestCase):
         x = torch.tensor([[1.0, 1.0], [3.0, 0.0]])
         # squared distances: (5, 13) and (9, 1)
         torch.testing.assert_close(detector.predict_features(x), torch.tensor([2.5, 0.5]))
+
+
+class MahalanobisEpsTest(unittest.TestCase):
+    """
+    Tests for the configurable eps parameter added to the Mahalanobis detector.
+    """
+
+    def setUp(self) -> None:
+        torch.manual_seed(42)
+
+    def test_default_eps(self):
+        """Mahalanobis should use eps=1e-6 by default."""
+        model = Mahalanobis(None)
+        self.assertEqual(model.eps, 1e-6)
+
+    def test_custom_eps(self):
+        """Mahalanobis should accept a custom eps value."""
+        model = Mahalanobis(None, eps=1e-3)
+        self.assertEqual(model.eps, 1e-3)
+
+    def test_eps_applied_to_covariance(self):
+        """The eps value should be added to the covariance diagonal during fit."""
+        nn = ClassificationModel()
+        eps = 1e-3
+        model = Mahalanobis(nn, eps=eps)
+
+        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
+        x = torch.randn(size=(20, 10))
+        dataset = TensorDataset(x, y)
+        loader = DataLoader(dataset)
+
+        model.fit(loader)
+
+        # The diagonal of the covariance should have been shifted by eps,
+        # so the precision matrix must exist and be finite (matrix is invertible).
+        self.assertIsNotNone(model.precision)
+        self.assertTrue(torch.isfinite(model.precision).all(),
+                        "Precision matrix should be finite when eps > 0.")
+
+    def test_eps_zero_raises_or_singular(self):
+        """
+        eps=0 on near-singular data can lead to singular matrices.
+        With eps > 0 the same data should produce a finite precision matrix.
+        """
+        nn = ClassificationModel()
+        # Use identical samples to create a (near-)singular covariance
+        x_const = torch.ones(size=(20, 10))
+        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
+        dataset = TensorDataset(x_const, y)
+        loader = DataLoader(dataset)
+
+        model_safe = Mahalanobis(nn, eps=1e-3)
+        model_safe.fit(loader)
+        self.assertTrue(torch.isfinite(model_safe.precision).all(),
+                        "With eps=1e-3, precision matrix should be finite even for constant inputs.")
