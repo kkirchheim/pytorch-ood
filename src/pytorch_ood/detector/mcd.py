@@ -180,7 +180,7 @@ class MCD(Detector):
         for i in range(samples):
             output = model(x).softmax(dim=1)
             if results is None:
-                results = torch.zeros(size=output.shape, device=dev)
+                results = torch.zeros_like(output, device=dev)
             results += output
         results /= samples
 
