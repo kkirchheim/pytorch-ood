@@ -130,13 +130,14 @@ class MCD(Detector):
 
         results = []
 
-        for i in range(samples):
-            output = model(x).softmax(dim=1).cpu()
-            results.append(output)
-
-        if mode_switch:
-            log.debug("Putting model into eval mode ... ")
-            model.eval()
+        try:
+            for i in range(samples):
+                output = model(x).softmax(dim=1).cpu()
+                results.append(output)
+        finally:
+            if mode_switch:
+                log.debug("Putting model into eval mode ... ")
+                model.eval()
 
         # samples x batch x classes
         y = torch.stack(results)
@@ -177,16 +178,17 @@ class MCD(Detector):
         dev = x.device
 
         results = None
-        for i in range(samples):
-            output = model(x).softmax(dim=1)
-            if results is None:
-                results = torch.zeros_like(output, device=dev)
-            results += output
-        results /= samples
-
-        if mode_switch:
-            log.debug("Putting model into eval mode ... ")
-            model.eval()
+        try:
+            for i in range(samples):
+                output = model(x).softmax(dim=1)
+                if results is None:
+                    results = torch.zeros_like(output, device=dev)
+                results += output
+            results /= samples
+        finally:
+            if mode_switch:
+                log.debug("Putting model into eval mode ... ")
+                model.eval()
 
         return results
 
