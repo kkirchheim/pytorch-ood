@@ -54,8 +54,9 @@ def ash_s(x: Tensor, percentile: float = 0.65) -> Tensor:
     x = _prune(x, percentile)
     s2 = x.sum(dim=[1, 2, 3])
 
-    # apply sharpening
-    scale = s1 / s2
+    # A fully pruned map stays zero, without 0/0 or 0 * exp(inf).
+    empty = (x == 0).flatten(1).all(dim=1)
+    scale = (s1 / s2.masked_fill(empty, 1)).masked_fill(empty, 0)
     x = x * torch.exp(scale[:, None, None, None])
 
     return x
