@@ -71,6 +71,21 @@ class TestRemoveRank1(unittest.TestCase):
         out.sum().backward()
         self.assertIsNotNone(x.grad)
 
+    def test_non_contiguous(self):
+        """Transposed or strided feature maps cannot be viewed as (B, C, H*W)."""
+        x = torch.randn(2, 4, 6, 8)
+        for name, y in [("transposed", x.transpose(2, 3)), ("strided", x[:, :, ::2, ::2])]:
+            with self.subTest(layout=name):
+                self.assertFalse(y.is_contiguous())
+                torch.testing.assert_close(_remove_rank1(y), _remove_rank1(y.contiguous()))
+
+    def test_non_contiguous_gradient(self):
+        x = torch.randn(2, 4, 3, 5, requires_grad=True)
+        x_ref = x.detach().clone().requires_grad_()
+        _remove_rank1(x.transpose(2, 3)).pow(2).sum().backward()
+        _remove_rank1(x_ref.transpose(2, 3).contiguous()).pow(2).sum().backward()
+        torch.testing.assert_close(x.grad, x_ref.grad)
+
 
 class TestRankFeat(unittest.TestCase):
     """Tests for the RankFeat OOD detector."""
@@ -107,6 +122,18 @@ class TestRankFeat(unittest.TestCase):
         with torch.no_grad():
             scores = detector(x)
         self.assertEqual(scores.shape, (4,))
+
+    def test_non_contiguous_backbone_output(self):
+        model = SimpleCNN().eval()
+        transposed = RankFeat(
+            backbone=lambda x: model.backbone(x).transpose(2, 3), head=model.head
+        )
+        contiguous = RankFeat(
+            backbone=lambda x: model.backbone(x).transpose(2, 3).contiguous(), head=model.head
+        )
+        x = torch.randn(4, 3, 8, 8)
+        with torch.no_grad():
+            torch.testing.assert_close(transposed(x), contiguous(x))
 
     def test_fit_is_noop(self):
         model = SimpleCNN().eval()

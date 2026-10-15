@@ -3,6 +3,7 @@ import unittest
 import torch
 
 from src.pytorch_ood.detector import ASH
+from src.pytorch_ood.detector.ash import ash_s
 from src.pytorch_ood.model import WideResNet
 
 
@@ -78,3 +79,29 @@ class TestASHOutOfPlace(unittest.TestCase):
                 torch.testing.assert_close(
                     detector.ash(x, 0.65), _old_in_place(x.clone(), 0.65, variant)
                 )
+
+
+class TestASHSEmptyMaps(unittest.TestCase):
+    """
+    ASH-S divides by the sum of the pruned map, which is zero if nothing remains after pruning.
+    """
+
+    def test_all_zero_input(self):
+        x = torch.rand(3, 4, 5, 5)
+        x[1] = 0
+        out = ash_s(x, 0.65)
+        self.assertTrue(torch.isfinite(out).all())
+        self.assertTrue(torch.equal(out[1], torch.zeros_like(out[1])))
+        # the other samples are unaffected
+        expected = _old_in_place(x[[0, 2]].clone(), 0.65, "ash-s")
+        torch.testing.assert_close(out[[0, 2]], expected)
+
+    def test_full_pruning(self):
+        x = torch.rand(3, 4, 5, 5)
+        out = ash_s(x, 1.0)
+        self.assertTrue(torch.equal(out, torch.zeros_like(x)))
+
+    def test_detector_scores_finite(self):
+        detector = ASH(backbone=None, head=lambda f: f.mean(dim=(2, 3)), variant="ash-s")
+        scores = detector.predict_feature_maps(torch.zeros(2, 4, 5, 5))
+        self.assertTrue(torch.isfinite(scores).all())

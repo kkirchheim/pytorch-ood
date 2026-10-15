@@ -28,8 +28,9 @@ def _remove_rank1(x: Tensor) -> Tensor:
     :return: feature maps with rank-1 component subtracted, same shape
     """
     B, C, H, W = x.shape
-    # Reshape to (B, C, H*W) — each sample is a (C, H*W) matrix
-    m = x.view(B, C, H * W)
+    # Reshape to (B, C, H*W) — each sample is a (C, H*W) matrix. reshape instead of view, since
+    # the feature maps may be non-contiguous (e.g. transposed or strided)
+    m = x.reshape(B, C, H * W)
     # Economy SVD: only need the first singular triplet
     u, s, v = torch.linalg.svd(m, full_matrices=False)
     # Subtract rank-1 approximation:  s_1 * u_1 @ v_1^T
