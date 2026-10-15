@@ -17,6 +17,12 @@ All kinds of contributions are welcome, including but not limited to the followi
 If you plan to add some new features that involve large changes, it is encouraged to open an issue for discussion first.
 
 
+### AI-assisted contributions
+
+Using AI tools is fine, but you are responsible for every PR you submit: review and understand the
+changes before opening it. PRs that were not reviewed by their author may be closed.
+
+
 ### Code style
 
 We use [pre-commit](https://pre-commit.com/) hooks that automatically check and format code on every commit via [ruff](https://docs.astral.sh/ruff/).
