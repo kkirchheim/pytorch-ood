@@ -10,7 +10,7 @@
 import logging
 from typing import Callable, Optional
 
-from torch import Tensor, tensor
+from torch import Tensor, bfloat16, float16, tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
@@ -152,6 +152,8 @@ class KNN(FeaturesDetector):
         return self
 
     def _prepare(self, z: Tensor) -> Tensor:
+        if z.dtype in (float16, bfloat16):
+            z = z.float()
         if not self.normalize:
             return z
         # the paper's normalization; the clamp keeps zero vectors finite
