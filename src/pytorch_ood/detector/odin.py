@@ -63,6 +63,8 @@ def odin_preprocessing(
     with torch.inference_mode(False):
         if torch.is_inference(x):
             x = x.clone()
+        if y is not None and torch.is_inference(y):
+            y = y.clone()
 
         with torch.enable_grad():
             x = x.detach().requires_grad_()
