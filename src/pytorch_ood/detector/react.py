@@ -157,6 +157,8 @@ class ReAct(FeatureMapsDetector):
         return self
 
     def _set_threshold_from_activations(self, activations: Tensor) -> None:
+        if activations.dtype == torch.bfloat16:
+            activations = activations.float()
         self.threshold = float(np.percentile(activations.numpy(), self.percentile * 100))
         self._is_fitted = True
 
