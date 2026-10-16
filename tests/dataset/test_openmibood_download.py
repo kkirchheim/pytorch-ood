@@ -33,12 +33,11 @@ class TestDownloadFallback(unittest.TestCase):
         self.tmp.cleanup()
 
     def _download(self, error, md5, content=CONTENT):
-        with (
-            mock.patch.object(openmibood, "download_url", side_effect=error),
-            mock.patch.object(
-                openmibood.urllib.request, "urlopen", return_value=io.BytesIO(content)
-            ) as urlopen,
-        ):
+        download_url = mock.patch.object(openmibood, "download_url", side_effect=error)
+        urlopen_patch = mock.patch.object(
+            openmibood.urllib.request, "urlopen", return_value=io.BytesIO(content)
+        )
+        with download_url, urlopen_patch as urlopen:
             try:
                 openmibood._download_url_with_ssl_fallback(URL, self.root, "data.zip", md5=md5)
             finally:

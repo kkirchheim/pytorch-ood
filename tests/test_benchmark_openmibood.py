@@ -151,13 +151,11 @@ class _BenchmarkContractMixin:
         self.assertGreaterEqual(label, 0)
 
     def test_default_does_not_download(self):
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            mock.patch("pytorch_ood.benchmark.img.openmibood.download_url") as download_url,
-        ):
-            with self.assertRaises(RuntimeError):
-                self.benchmark_cls(root=tmp, transform=transforms.ToTensor())
-            download_url.assert_not_called()
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch("pytorch_ood.benchmark.img.openmibood.download_url") as download_url:
+                with self.assertRaises(RuntimeError):
+                    self.benchmark_cls(root=tmp, transform=transforms.ToTensor())
+                download_url.assert_not_called()
 
     def test_warns_about_missing_ood_data(self):
         path = join(self.data_root, "ood_0.png")
@@ -223,17 +221,15 @@ class OASIS3OpenMIBOODTest(_FixtureBase, _BenchmarkContractMixin, unittest.TestC
 
 class CHAOSTest(unittest.TestCase):
     def test_download_without_simpleitk_raises(self):
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            mock.patch.dict(sys.modules, {"SimpleITK": None}),
-            mock.patch(
-                "pytorch_ood.dataset.img.openmibood._download_url_with_ssl_fallback"
-            ) as download,
-        ):
-            with self.assertRaises(RuntimeError) as ctx:
-                CHAOS(root=tmp, download=True)
-            self.assertIn("SimpleITK", str(ctx.exception))
-            download.assert_not_called()
+        download_patch = mock.patch(
+            "pytorch_ood.dataset.img.openmibood._download_url_with_ssl_fallback"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(sys.modules, {"SimpleITK": None}), download_patch as download:
+                with self.assertRaises(RuntimeError) as ctx:
+                    CHAOS(root=tmp, download=True)
+                self.assertIn("SimpleITK", str(ctx.exception))
+                download.assert_not_called()
 
 
 class ImageListDatasetTest(unittest.TestCase):
