@@ -167,8 +167,11 @@ class OpenMIBOODDataset(VisionDataset):
 
 class KvasirSEG(OpenMIBOODDataset):
     """
-    Kvasir-SEG dataset for gastrointestinal polyp images (Far-OOD for PhaKIR).
-    Contains 1,000 polyp images (900 used in PhaKIR benchmark split).
+    Kvasir-SEG: 1,000 endoscopic images of polyps in the bowel. Used as far-OOD test data in
+    :class:`~pytorch_ood.benchmark.PhaKIR_OpenMIBOOD`.
+
+    Can be downloaded automatically with ``download=True``. The images are stored in
+    ``<root>/far/kvasir-seg/``.
 
     :see Website: `Simula Kvasir-SEG <https://datasets.simula.no/kvasir-seg/>`__
     :see Paper: `ArXiv <https://arxiv.org/abs/1911.07069>`__
@@ -221,8 +224,11 @@ class KvasirSEG(OpenMIBOODDataset):
 
 class CATARACTS(OpenMIBOODDataset):
     """
-    CATARACTS surgical video dataset (Far-OOD for PhaKIR).
-    Contains video frames from ophthalmic surgery.
+    Frames from microscope videos of cataract (eye) surgeries. Used as far-OOD test data in
+    :class:`~pytorch_ood.benchmark.PhaKIR_OpenMIBOOD`.
+
+    Can be downloaded automatically with ``download=True``. A cleaned subset prepared by the
+    OpenMIBOOD authors is downloaded from Zenodo and stored in ``<root>/far/CATARACTS/``.
 
     :see Zenodo: `CATARACTS Cleaned Subset <https://doi.org/10.5281/zenodo.14924735>`__
     """
@@ -257,7 +263,13 @@ class CATARACTS(OpenMIBOODDataset):
 
 class Cholec80(OpenMIBOODDataset):
     """
-    Cholec80 laparoscopic cholecystectomy cropped frames (Near-OOD for PhaKIR).
+    Frames from videos of laparoscopic gallbladder removals (cholecystectomies) that use different
+    instruments than PhaKIR. Used as near-OOD test data in
+    :class:`~pytorch_ood.benchmark.PhaKIR_OpenMIBOOD`.
+
+    Can be downloaded automatically with ``download=True``. The frames, already cropped by the
+    OpenMIBOOD authors to remove the black borders, are downloaded from Zenodo and stored in
+    ``<root>/near/Cholec80_cropped/``.
 
     :see Zenodo: `Cholec80 Cropped <https://doi.org/10.5281/zenodo.14921670>`__
     """
@@ -292,11 +304,18 @@ class Cholec80(OpenMIBOODDataset):
 
 class PhaKIR(OpenMIBOODDataset):
     """
-    In-distribution laparoscopic surgical instrument classification dataset (7 classes).
+    Frames from videos of laparoscopic gallbladder removals (cholecystectomies) from the PhaKIR
+    challenge, labelled with the visible surgical instrument (7 classes, including "no
+    instrument"). This is the in-distribution data of
+    :class:`~pytorch_ood.benchmark.PhaKIR_OpenMIBOOD`. Frames with medium or heavy smoke form the
+    covariate-shifted ID test sets.
 
     .. warning::
-        Automatic download of PhaKIR is not possible because the dataset has restricted access.
-        Please request access at https://doi.org/10.5281/zenodo.16753918.
+        PhaKIR can not be downloaded automatically, because access is restricted.
+
+        1. Request access at https://doi.org/10.5281/zenodo.16753918.
+        2. Download ``phakir_openmibood.zip`` and extract it into ``<root>``, so that the
+           ``Video_XX`` folders are directly below ``<root>``.
     """
 
     info = DatasetInfo(
@@ -322,12 +341,23 @@ class PhaKIR(OpenMIBOODDataset):
 
 class EndoVis2018(OpenMIBOODDataset):
     """
-    EndoVis 2018 robotic surgery dataset (Near-OOD for PhaKIR).
+    Frames from the EndoVis 2018 robotic scene segmentation challenge, showing robotic
+    instruments in kidney surgeries on pigs. Used as near-OOD test data in
+    :class:`~pytorch_ood.benchmark.PhaKIR_OpenMIBOOD`. Only the left camera frames of the four
+    official test sequences are used.
 
     .. warning::
-        Automatic download of EndoVis 2018 is not possible.
-        Please register at https://endovissub2018-roboticscenesegmentation.grand-challenge.org/
-        and download test sequences 1-4.
+        EndoVis 2018 can not be downloaded automatically, because it requires registration.
+
+        1. Register at https://endovissub2018-roboticscenesegmentation.grand-challenge.org/ and
+           join the challenge.
+        2. Download the test data (sequences 1-4).
+        3. Copy ``test_data/seq_<i>/left_frames`` to ``<root>/near/Endovis2018/seq_<i>/left_frames``
+           for each sequence, or run ``download_phakir_endovis2018.py`` from the
+           `OpenMIBOOD scripts <https://github.com/remic-othr/OpenMIBOOD/tree/main/scripts/download/OpenMIBOOD>`__. The script also adds the frame
+           ``seq_2/left_frames/frame249.png``, which is missing from the current download.
+
+        See the `OpenMIBOOD instructions <https://github.com/remic-othr/OpenMIBOOD/tree/main/instructions/Endovis2018>`__ for screenshots.
     """
 
     info = DatasetInfo(
@@ -358,8 +388,16 @@ class EndoVis2018(OpenMIBOODDataset):
 
 class MIDOG(OpenMIBOODDataset):
     """
-    MIDOG in-distribution mitosis dataset (3 classes: Mitosis, Hard Negative, Non-mitosis).
-    Downloads WSI slides from Figshare and extracts 50x50 TIFF patches.
+    MIDOG++: microscope scans of tissue from seven cancer types (human and dog), stained with
+    Hematoxylin & Eosin, with annotations of mitotic figures (dividing cells) and imposters
+    (cells that look similar). This is the in-distribution, covariate-shifted ID and near-OOD
+    data of :class:`~pytorch_ood.benchmark.MIDOG_OpenMIBOOD`.
+
+    Can be downloaded automatically with ``download=True``. The slides are downloaded from
+    Figshare one after another and cut into 50x50 pixel TIFF patches, as in the paper: one patch
+    per annotation, plus one background patch shifted 100 px to the right if it does not overlap
+    any annotation. Each slide is deleted after its patches are extracted. The patches are stored
+    in ``<root>/1a/`` (ID), ``<root>/csid/<domain>/`` and ``<root>/near/<domain>/``.
 
     :see Paper: `MIDOG++ <https://doi.org/10.1038/s41597-023-02327-4>`__
     """
@@ -986,8 +1024,12 @@ class MIDOG(OpenMIBOODDataset):
 
 class CCAgT(OpenMIBOODDataset):
     """
-    Cervical cell cytology dataset (Far-OOD for MIDOG).
-    Downloads archive from Mendeley Data and crops 50x50 nuclei patches.
+    CCAgT: images of cervical cancer cells stained with the AgNOR technique. Used as far-OOD test
+    data in :class:`~pytorch_ood.benchmark.MIDOG_OpenMIBOOD`.
+
+    Can be downloaded automatically with ``download=True``. The archive is downloaded from
+    Mendeley Data and 50x50 pixel patches centered on each annotated cell nucleus are extracted
+    to ``<root>/far/ccagt_crops/``, as in the paper.
 
     :see Mendeley: `CCAgT Dataset <https://data.mendeley.com/datasets/wg4bpm33hj/2>`__
     """
@@ -1070,10 +1112,19 @@ class CCAgT(OpenMIBOODDataset):
 
 class FNAC2019(OpenMIBOODDataset):
     """
-    Fine-needle aspirate cytology (FNAC 2019) dataset (Far-OOD for MIDOG).
+    FNAC 2019: images of breast fine-needle aspiration cytology samples. Used as far-OOD test
+    data in :class:`~pytorch_ood.benchmark.MIDOG_OpenMIBOOD`.
 
     .. warning::
-        Automatic download of FNAC 2019 requires manual setup due to dynamic token authentication.
+        FNAC 2019 can not be downloaded automatically, because it is only shared via a OneDrive
+        link that has no stable direct download URL.
+
+        1. Download the archive from https://1drv.ms/u/s!Al-T6d-_ENf6axsEbvhbEc2gUFs.
+        2. Extract the 50x50 pixel patches by running ``download_midog_fnac2019.py`` from the
+           `OpenMIBOOD scripts <https://github.com/remic-othr/OpenMIBOOD/tree/main/scripts/download/OpenMIBOOD>`__ (requires ``opencv-python``). The script segments
+           the cell clusters with a threshold and morphological operations, and crops patches at
+           the 10 largest clusters.
+        3. Place the result in ``<root>/far/fnac2019_crops/``.
     """
 
     info = DatasetInfo(
@@ -1102,13 +1153,15 @@ class FNAC2019(OpenMIBOODDataset):
 
 class CHAOS(OpenMIBOODDataset):
     """
-    Combined Healthy Abdominal Organ Segmentation (CHAOS) MRI dataset (Far-OOD for OASIS-3).
-    Converts DICOM slices to NIfTI volumes.
+    CHAOS: abdominal MRI scans (T1-weighted, in-phase). Used as far-OOD test data in
+    :class:`~pytorch_ood.benchmark.OASIS3_OpenMIBOOD`.
+
+    Can be downloaded automatically with ``download=True``. The DICOM slices of each scan are
+    converted to one NIfTI volume in ``<root>/far/CHAOS/NIFTI/InPhase/``.
 
     .. note::
-        Automatic conversion from DICOM to NIfTI requires the ``SimpleITK`` package.
-        Please install it manually (``pip install SimpleITK``). If it is not installed,
-        the raw DICOM folders will be copied without conversion.
+        The conversion requires the ``SimpleITK`` package (``pip install SimpleITK``). Without it,
+        ``download=True`` raises an error.
 
     :see Zenodo: `CHAOS Test Sets <https://zenodo.org/records/3431873>`__
     """
@@ -1130,6 +1183,13 @@ class CHAOS(OpenMIBOODDataset):
         if _is_nonempty_dir(dest_dir):
             return
 
+        try:
+            import SimpleITK as sitk
+        except ImportError as e:
+            raise RuntimeError(
+                "Converting CHAOS from DICOM to NIfTI requires 'SimpleITK' (pip install SimpleITK)."
+            ) from e
+
         archive_path = _download_url_with_ssl_fallback(
             self.url, self.root, filename=self.filename, md5=self.tgz_md5
         )
@@ -1142,35 +1202,35 @@ class CHAOS(OpenMIBOODDataset):
 
         os.makedirs(dest_dir, exist_ok=True)
 
-        try:
-            import SimpleITK as sitk
+        mr_path = join(tmp_extract, "Test_Sets", "MR")
+        if not exists(mr_path):
+            mr_path = join(tmp_extract, "MR")
 
-            mr_path = join(tmp_extract, "Test_Sets", "MR")
-            if not exists(mr_path):
-                mr_path = join(tmp_extract, "MR")
-
-            if exists(mr_path):
-                for subject in sorted(os.listdir(mr_path)):
-                    in_phase_path = join(mr_path, subject, "T1DUAL", "DICOM_anon", "InPhase")
-                    if exists(in_phase_path):
-                        reader = sitk.ImageSeriesReader()
-                        dicom_names = reader.GetGDCMSeriesFileNames(in_phase_path)
-                        reader.SetFileNames(dicom_names)
-                        image = reader.Execute()
-                        nii_out = join(dest_dir, f"{subject}.nii.gz")
-                        sitk.WriteImage(image, nii_out)
-        except ImportError:
-            log.warning("SimpleITK not installed; copying raw DICOM folders instead.")
-            raw_target = join(self.root, "far/CHAOS/raw")
-            os.makedirs(raw_target, exist_ok=True)
-            shutil.copytree(tmp_extract, raw_target, dirs_exist_ok=True)
+        if exists(mr_path):
+            for subject in sorted(os.listdir(mr_path)):
+                in_phase_path = join(mr_path, subject, "T1DUAL", "DICOM_anon", "InPhase")
+                if exists(in_phase_path):
+                    reader = sitk.ImageSeriesReader()
+                    dicom_names = reader.GetGDCMSeriesFileNames(in_phase_path)
+                    reader.SetFileNames(dicom_names)
+                    image = reader.Execute()
+                    nii_out = join(dest_dir, f"{subject}.nii.gz")
+                    sitk.WriteImage(image, nii_out)
 
         shutil.rmtree(tmp_extract, ignore_errors=True)
 
 
 class Task02Heart(OpenMIBOODDataset):
     """
-    MSD Task02 Heart MRI dataset (Far-OOD for OASIS-3).
+    Heart MRI scans from task 2 of the Medical Segmentation Decathlon. Used as far-OOD test data
+    in :class:`~pytorch_ood.benchmark.OASIS3_OpenMIBOOD`.
+
+    Can be downloaded automatically with ``download=True``. The data is stored in
+    ``<root>/far/SegmentationDecathlon/Task02_Heart/``.
+
+    .. note::
+        The download requires the ``gdown`` package (``pip install gdown``), because the data is
+        hosted on Google Drive.
 
     :see Medical Segmentation Decathlon: `MSD <http://medicaldecathlon.com/>`__
     """
@@ -1211,12 +1271,25 @@ class Task02Heart(OpenMIBOODDataset):
 
 class OASIS3(OpenMIBOODDataset):
     """
-    In-distribution brain MRI dataset from OASIS-3 (2 classes).
+    OASIS-3: 3D brain MRI and CT scans of cognitively normal subjects and subjects with
+    Alzheimer's disease. This is the in-distribution data (T1-weighted MRI), the
+    covariate-shifted ID data (T2-weighted MRI and a held-out scanner) and the CT near-OOD data
+    of :class:`~pytorch_ood.benchmark.OASIS3_OpenMIBOOD`.
 
     .. warning::
-        Automatic download is not possible because data access requires registration.
-        Request access at https://sites.wustl.edu/oasisbrains/home/access/ and download
-        via your NITRC account.
+        OASIS-3 can not be downloaded automatically, because access requires registration. The
+        scans also have to be preprocessed.
+
+        1. Request access to "OASIS-3: Longitudinal Multimodal Imaging" at
+           https://sites.wustl.edu/oasisbrains/home/access/ and register a NITRC account with the
+           same email.
+        2. Download all sessions with scan types CT, T1w and T2w in NIfTI format, following the
+           `OpenMIBOOD instructions <https://github.com/remic-othr/OpenMIBOOD/tree/main/instructions/OASIS3>`__ (the checkbox settings matter).
+        3. Run ``download_oasis3.py`` from the `OpenMIBOOD scripts <https://github.com/remic-othr/OpenMIBOOD/tree/main/scripts/download/OpenMIBOOD>`__. It resamples
+           the MRI scans to 1 mm voxels, removes the skull with
+           `HD-BET <https://github.com/MIC-DKFZ/HD-BET>`__ (``pip install hd-bet``, version 2.0.1
+           to reproduce the paper), fixes the orientation of the Siemens Vision scans and clips
+           the CT values. The results must be placed in ``<root>/OASIS3/``.
     """
 
     info = DatasetInfo(
@@ -1242,8 +1315,20 @@ class OASIS3(OpenMIBOODDataset):
 
 class BraTS(OpenMIBOODDataset):
     """
-    BraTS 2023 glioma MRI dataset (Near-OOD for OASIS-3).
-    Requires Synapse challenge registration.
+    BraTS 2023: brain MRI scans of patients with gliomas (large brain tumors). Used as near-OOD
+    test data in :class:`~pytorch_ood.benchmark.OASIS3_OpenMIBOOD`. Only the T1-weighted scans
+    are used, without further preprocessing.
+
+    .. warning::
+        BraTS 2023 can not be downloaded automatically, because it requires registration.
+
+        1. Register at https://www.synapse.org/Synapse:syn51156910/wiki/627000 and fill out the
+           data access form.
+        2. Download ``ASNR-MICCAI-BraTS2023-GLI-Challenge-TrainingData.zip``.
+        3. Extract it with ``download_oasis3_brats.py`` from the
+           `OpenMIBOOD scripts <https://github.com/remic-othr/OpenMIBOOD/tree/main/scripts/download/OpenMIBOOD>`__ into ``<root>/near/BraTS2023-GLI/``.
+
+        See the `OpenMIBOOD instructions <https://github.com/remic-othr/OpenMIBOOD/tree/main/instructions/BraTS>`__ for screenshots.
     """
 
     info = DatasetInfo(
@@ -1268,12 +1353,22 @@ class BraTS(OpenMIBOODDataset):
 
 class ATLAS(OpenMIBOODDataset):
     """
-    ATLAS R2.0 stroke lesion MRI dataset (Near-OOD for OASIS-3).
+    ATLAS R2.0: brain MRI scans of patients with stroke lesions. Used as near-OOD test data in
+    :class:`~pytorch_ood.benchmark.OASIS3_OpenMIBOOD`.
 
     .. warning::
-        Automatic download is not possible.
-        Please agree to terms at https://fcon_1000.projects.nitrc.org/indi/retro/atlas.html
-        and submit the form to acquire the decryption key.
+        ATLAS can not be downloaded automatically, because it requires agreeing to terms of use.
+        The scans also have to be preprocessed.
+
+        1. Agree to the terms at https://fcon_1000.projects.nitrc.org/indi/retro/atlas.html and
+           fill out the form to receive the decryption key.
+        2. Download and decrypt ``ATLAS_R2.0.tar.gz``.
+        3. Run ``download_oasis3_atlas.py`` from the `OpenMIBOOD scripts <https://github.com/remic-othr/OpenMIBOOD/tree/main/scripts/download/OpenMIBOOD>`__. It
+           resamples the T1-weighted scans to 1 mm voxels and removes the skull with
+           `HD-BET <https://github.com/MIC-DKFZ/HD-BET>`__. The results must be placed in
+           ``<root>/near/ATLAS/``.
+
+        See the `OpenMIBOOD instructions <https://github.com/remic-othr/OpenMIBOOD/tree/main/instructions/ATLAS>`__ for screenshots.
     """
 
     info = DatasetInfo(
@@ -1327,7 +1422,7 @@ def download_all_openmibood(root: str, benchmark: str = "all") -> None:
                     log.error(f"Failed downloading {cls.__name__}: {e}")
 
         elif b == "midog":
-            for cls in (CCAgT,):
+            for cls in (MIDOG, CCAgT):
                 try:
                     cls(root=root, download=True)
                 except Exception as e:

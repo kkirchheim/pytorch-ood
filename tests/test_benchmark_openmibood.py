@@ -7,9 +7,11 @@ loader for non-PIL formats). They do not download any real medical imaging data.
 """
 
 import os
+import sys
 import tempfile
 import unittest
 from os.path import join
+from unittest import mock
 
 from PIL import Image
 from torchvision import transforms
@@ -19,7 +21,7 @@ from pytorch_ood.benchmark import (
     OASIS3_OpenMIBOOD,
     PhaKIR_OpenMIBOOD,
 )
-from pytorch_ood.dataset.img import ImageListDataset
+from pytorch_ood.dataset.img import CHAOS, ImageListDataset
 
 
 def _write_png(path, color=(128, 64, 32)):
@@ -97,7 +99,6 @@ class _BenchmarkContractMixin:
     """Shared assertions for all 3 benchmarks."""
 
     def _make_benchmark(self, **kwargs):
-        kwargs.setdefault("download", False)
         return self.benchmark_cls(
             root=self.data_root,
             transform=transforms.ToTensor(),
@@ -149,6 +150,25 @@ class _BenchmarkContractMixin:
         _, label = bench.test_in[0]
         self.assertGreaterEqual(label, 0)
 
+    def test_default_does_not_download(self):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            mock.patch("pytorch_ood.benchmark.img.openmibood.download_url") as download_url,
+        ):
+            with self.assertRaises(RuntimeError):
+                self.benchmark_cls(root=tmp, transform=transforms.ToTensor())
+            download_url.assert_not_called()
+
+    def test_warns_about_missing_ood_data(self):
+        path = join(self.data_root, "ood_0.png")
+        os.rename(path, path + ".bak")
+        try:
+            with self.assertLogs("pytorch_ood.benchmark.img.openmibood", "WARNING") as logs:
+                bench = self._make_benchmark()
+        finally:
+            os.rename(path + ".bak", path)
+        self.assertIn(bench.ood_names[0], logs.output[0])
+
 
 class MIDOGOpenMIBOODTest(_FixtureBase, _BenchmarkContractMixin, unittest.TestCase):
     benchmark_cls = MIDOG_OpenMIBOOD
@@ -199,6 +219,21 @@ class OASIS3OpenMIBOODTest(_FixtureBase, _BenchmarkContractMixin, unittest.TestC
         bench = self._make_benchmark(loader=fake_loader)
         _ = bench.test_in[0]
         self.assertGreater(sentinel["called"], 0)
+
+
+class CHAOSTest(unittest.TestCase):
+    def test_download_without_simpleitk_raises(self):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            mock.patch.dict(sys.modules, {"SimpleITK": None}),
+            mock.patch(
+                "pytorch_ood.dataset.img.openmibood._download_url_with_ssl_fallback"
+            ) as download,
+        ):
+            with self.assertRaises(RuntimeError) as ctx:
+                CHAOS(root=tmp, download=True)
+            self.assertIn("SimpleITK", str(ctx.exception))
+            download.assert_not_called()
 
 
 class ImageListDatasetTest(unittest.TestCase):
