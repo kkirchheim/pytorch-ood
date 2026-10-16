@@ -110,6 +110,7 @@ from .scale import SCALE
 from .she import SHE
 from .softmax import MaxSoftmax
 from .tscaling import TemperatureScaling
+from .residual import Residual
 from .vim import ViM
 from .vra import VRA
 from .webo import WeightedEBO
@@ -148,6 +149,7 @@ __all__ = [
     "SCALE",
     "SHE",
     "TemperatureScaling",
+    "Residual",
     "ViM",
     "VRA",
     "WeightedEBO",

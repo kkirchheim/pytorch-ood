@@ -12,34 +12,30 @@ from typing import Callable, Optional
 
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import (
-    DetectorInfo,
-    FeaturesDetector,
     ModelNotSetException,
-    Paper,
     RequiresFittingException,
-    Task,
 )
-from ..utils import extract_features
+
+from .residual import Residual
 
 log = logging.getLogger(__name__)
 
 
-class ViM(FeaturesDetector):
+class ViM(Residual):
     """
     Implements Virtual Logit Matching (ViM) from the paper *ViM: Out-Of-Distribution with Virtual-logit Matching*.
 
     ViM decomposes the (centered) features into a principal subspace of dimension :math:`d` and
-    its orthogonal residual. The residual norm, scaled by a factor :math:`\\alpha` estimated in ``fit``, is
+    its orthogonal residual. The residual norm, scaled by a factor :math:`\alpha` estimated in ``fit``, is
     the *virtual logit*. The outlier score is the virtual logit minus the energy of the real logits:
 
     .. math::
-        \\alpha \\lVert x^{P\\perp} \\rVert - \\log \\sum_i e^{l_i(x)}
+        \alpha \lVert x^{P\perp} \rVert - \log \sum_i e^{l_i(x)}
 
-    where :math:`x^{P\\perp}` is the residual of the features :math:`x` after centering at the origin
+    where :math:`x^{P\perp}` is the residual of the features :math:`x` after centering at the origin
     :math:`u = -W^{+} b` and projecting out the principal subspace, :math:`W` and :math:`b` are the weights and
     biases of the last layer and :math:`l_i(x)` are the logits.
 
@@ -53,25 +49,6 @@ class ViM(FeaturesDetector):
         scores = detector(images)
     """
 
-    info = DetectorInfo(
-        paper=Paper(
-            title="ViM: Out-Of-Distribution with Virtual-logit Matching",
-            venue="CVPR",
-            year=2022,
-            url="https://arxiv.org/abs/2203.10807",
-            code="https://github.com/haoqiwang/vim/",
-        ),
-        tasks={Task.CLASSIFICATION},
-    )
-
-    requires_fit = True
-
-    #: Default search space for :class:`pytorch_ood.utils.GridSearch`: the principal-subspace
-    #: dimension ``d``. If ``d`` exceeds the feature dimension :math:`D` during fitting, it is replaced by
-    #: :math:`D // 2`.
-    # This lets a single search space work across architectures of different width.
-    hyperparameter_space = {"d": [16, 32, 64, 128, 256, 512]}
-
     def __init__(
         self,
         encoder: Optional[Callable[[torch.Tensor], torch.Tensor]],
@@ -83,25 +60,11 @@ class ViM(FeaturesDetector):
         :param encoder: feature encoder. Can be
             ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param d: dimensionality of the principal subspace
-        :param w: weights :math:`W` of the last layer of the network, of shape :math:`C \\times D`
+        :param w: weights :math:`W` of the last layer of the network, of shape :math:`C \times D`
         :param b: biases :math:`b` of the last layer of the network, of shape :math:`C`
         """
-        super(ViM, self).__init__()
-        self.encoder = encoder
-        self.d = d
-        w = w.detach().float()
-        b = b.detach().float()
-        self.w = w  # (C, D)
-        self.b = b  # (C,)
-        self.u = -(torch.linalg.pinv(w) @ b)  # (D,)  new origin
-        self.principal_subspace: Optional[Tensor] = None
+        super(ViM, self).__init__(encoder=encoder, d=d, w=w, b=b)
         self.alpha: Optional[float] = None  #: the computed :math:`\alpha` value
-
-    def _get_logits(self, features: Tensor) -> Tensor:
-        """
-        Calculates logits from features.
-        """
-        return features @ self.w.T + self.b
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -119,45 +82,18 @@ class ViM(FeaturesDetector):
 
         return self.predict_features(features)
 
-    def __repr__(self):
-        return f"ViM(d={self.d})"
-
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Extracts features, computes the principal subspace and alpha. Ignores OOD samples.
-
-        :param data_loader: dataset to fit on
-        :return: self
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        features, labels = extract_features(data_loader, self.encoder, device)
-        return self.fit_features(features, labels)
-
     @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:
         """
-        :param x: features of shape :math:`B \\times D`
+        :param x: features of shape :math:`B \times D`
         :return: outlier scores of shape :math:`B`
         """
         device = self.w.device
         x = x.detach().to(device).float()
         logits = self._get_logits(x)  # (N, C)
+        
+        vlogit = super().predict_features(x) * self.alpha
 
-        # Project centered features onto the null subspace and take L2 norm
-        x_p_t = (x - self.u) @ self.principal_subspace  # (N, D-d)
-        vlogit = x_p_t.norm(dim=-1) * self.alpha  # (N,)
-
-        # torch.logsumexp subtracts the max internally, so it is already numerically
-        # stable without clamping -- clamping would distort the result for models
-        # whose raw logits exceed +-100.
         energy = torch.logsumexp(logits, dim=-1)  # (N,)
 
         score = -vlogit + energy
@@ -167,40 +103,18 @@ class ViM(FeaturesDetector):
         """
         Computes the principal subspace and alpha from pre-extracted features. Ignores OOD samples.
 
-        :param features: features of shape :math:`N \\times D`
+        :param features: features of shape :math:`N \times D`
         :param labels: class labels of shape :math:`N`
         :return: self
         """
+        super().fit_features(features, labels)
+
         device = self.device or self.w.device
         features = features.detach().to(device).float()
-
-        if features.shape[1] < self.d:
-            n = features.shape[1] // 2
-            log.warning(f"{features.shape[1]=} is smaller than {self.d=}. Will be adjusted to {n}")
-            self.d = n
-
         logits = self._get_logits(features)  # (N, C)
 
-        log.info("Computing principal space ...")
-        X = features - self.u  # (N, D)  centered features
-
-        # Empirical covariance (assume_centered=True → MLE: divide by n)
-        cov = (X.T @ X) / X.shape[0]  # (D, D)
-
-        # Eigendecomposition of the symmetric covariance matrix.
-        # torch.linalg.eigh returns eigenvalues in ascending order with
-        # corresponding eigenvectors as columns.
-        eig_vals, eig_vecs = torch.linalg.eigh(cov)  # vals: (D,), vecs: (D, D)
-
-        # Select the null subspace: the (D - d) eigenvectors that correspond
-        # to the *smallest* eigenvalues (i.e. directions least explained by the
-        # training data).  With ascending eigh output these are the first columns.
-        k = eig_vecs.shape[1] - self.d
-        self.principal_subspace = eig_vecs[:, :k].contiguous()  # (D, D-d)
-
         log.info("Computing alpha ...")
-        x_p_t = X @ self.principal_subspace  # (N, D-d)
-        vlogits = x_p_t.norm(dim=-1)  # (N,)
+        vlogits = super().predict_features(features)
         self.alpha = (logits.max(dim=-1).values.mean() / vlogits.mean()).item()
         log.info(f"{self.alpha=:.4f}")
         return self
