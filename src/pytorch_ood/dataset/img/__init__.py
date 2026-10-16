@@ -16,6 +16,22 @@ from .mvtech import MVTechAD
 from .ninco import NINCO
 from .noise import GaussianNoise, UniformNoise
 from .odin import LSUNCrop, LSUNResize, TinyImageNetCrop, TinyImageNetResize
+from .openmibood import (
+    ATLAS,
+    CATARACTS,
+    CHAOS,
+    FNAC2019,
+    MIDOG,
+    OASIS3,
+    BraTS,
+    CCAgT,
+    Cholec80,
+    EndoVis2018,
+    KvasirSEG,
+    PhaKIR,
+    Task02Heart,
+    download_all_openmibood,
+)
 from .openood import (
     ImageNetES,
     ImageNetV2,
@@ -34,6 +50,20 @@ from .tinyimagenet import TinyImageNet
 from .tinyimages import TinyImages, TinyImages300k
 
 __all__ = [
+    "ATLAS",
+    "CATARACTS",
+    "CCAgT",
+    "CHAOS",
+    "FNAC2019",
+    "MIDOG",
+    "OASIS3",
+    "BraTS",
+    "Cholec80",
+    "EndoVis2018",
+    "KvasirSEG",
+    "PhaKIR",
+    "Task02Heart",
+    "download_all_openmibood",
     "Chars74k",
     "ImageListDataset",
     "CIFAR10C",

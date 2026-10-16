@@ -54,8 +54,11 @@ The benchmarks proposed in
 *OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection*
 (`arXiv:2503.16247 <https://arxiv.org/abs/2503.16247>`_, CVPR 2025).
 Each benchmark uses a 4-way split (ID, covariate-shifted ID, near-OOD, far-OOD).
-Data must be prepared first following the
-`OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`_.
+Only some of the datasets can be downloaded automatically. The others require registration, and
+some need preprocessing with the scripts from the
+`OpenMIBOOD repository <https://github.com/remic-othr/OpenMIBOOD>`_. The documentation of each
+benchmark lists which datasets are affected, and the
+:doc:`OpenMIBOOD dataset documentation <datasets/openmibood>` explains how to prepare them.
 
 .. image:: https://raw.githubusercontent.com/remic-othr/OpenMIBOOD/main/Datasets_Summary.jpg
    :alt: OpenMIBOOD datasets overview
