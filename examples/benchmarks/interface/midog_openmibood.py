@@ -16,10 +16,12 @@ import os
 import pandas as pd
 import torch
 from torchvision import transforms
+from torchvision.datasets.utils import download_url
 from torchvision.models import resnet50
 
 from pytorch_ood.api import Detector
 from pytorch_ood.benchmark import MIDOG_OpenMIBOOD
+from pytorch_ood.dataset.img import ImageListDataset
 from pytorch_ood.detector import (
     # --- activation pruning ---
     ASH,
@@ -41,7 +43,7 @@ from pytorch_ood.detector import (
     ViM,
     fDBD,
 )
-from pytorch_ood.utils import fix_random_seed
+from pytorch_ood.utils import ToRGB, fix_random_seed
 
 fix_random_seed(123)
 
@@ -90,12 +92,26 @@ trans = transforms.Compose(
 )
 
 # %%
+root = "/data/openmibood/midog"
 benchmark = MIDOG_OpenMIBOOD(
-    root="/data/openmibood/midog",
+    root=root,
     transform=trans,
     download=True,
 )
 train_loader = torch.utils.data.DataLoader(benchmark.train_set(), batch_size=64)
+
+# OpenMIBOOD fits some detectors (KLMatching, ReAct) on the ID validation set instead of the training set
+imglist_dir = os.path.join(root, "imglists", "midog")
+download_url(
+    "https://raw.githubusercontent.com/remic-othr/OpenMIBOOD/main/data/benchmark_imglist/midog/valid_midog.txt",
+    imglist_dir,
+)
+val_set = ImageListDataset(
+    root=root,
+    imglist_path=os.path.join(imglist_dir, "valid_midog.txt"),
+    transform=transforms.Compose([ToRGB(), trans]),
+)
+val_loader = torch.utils.data.DataLoader(val_set, batch_size=64)
 
 
 # %%
@@ -124,9 +140,9 @@ fdbd.fit(train_loader)
 print("Fitting DICE...")
 dice.fit(train_loader)
 print("Fitting KLMatching...")
-klm.fit(train_loader)
+klm.fit(val_loader)
 print("Fitting ReAct...")
-react.fit(train_loader)
+react.fit(val_loader)
 
 
 # %%
@@ -181,7 +197,7 @@ class OpenMIBOOD_RankFeat(Detector):
 detectors = {
     # Probability-based
     "MSP": MaxSoftmax(model),
-    "GEN": GEN(model, gamma=0.01, M=3),
+    "GEN": GEN(model, gamma=0.01, M=2),
     "KLMatching": klm,
     # Logit-based
     "MaxLogit": MaxLogit(model),
@@ -196,7 +212,7 @@ detectors = {
     # Activation pruning
     "ASH": ASH(conv_backbone, act_head, percentile=0.65),
     "ReAct": react,
-    "RankFeat": OpenMIBOOD_RankFeat(model, temperature=100.0),
+    "RankFeat": OpenMIBOOD_RankFeat(model, temperature=0.1),
 }
 
 results = []
