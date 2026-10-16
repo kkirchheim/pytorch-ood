@@ -75,6 +75,12 @@ class ViM(Residual):
         super(ViM, self).__init__(encoder=encoder, d=d, w=w, b=b)
         self.alpha: Optional[float] = None  #: the computed :math:`\\alpha` value
 
+    def _get_logits(self, features: Tensor) -> Tensor:
+        """
+        Calculates logits from features.
+        """
+        return features @ self.w.T + self.b
+
     @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:
         """

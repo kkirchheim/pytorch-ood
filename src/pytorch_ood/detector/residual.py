@@ -98,12 +98,6 @@ class Residual(FeaturesDetector):
         self.u = -(torch.linalg.pinv(w) @ b)  # (D,)  new origin
         self.principal_subspace: Optional[Tensor] = None
 
-    def _get_logits(self, features: Tensor) -> Tensor:
-        """
-        Calculates logits from features.
-        """
-        return features @ self.w.T + self.b
-
     def _residual_norm(self, x: Tensor) -> Tensor:
         """
         Projects centered features onto the residual subspace and returns the L2 norm.
