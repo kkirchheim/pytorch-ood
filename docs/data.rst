@@ -89,6 +89,7 @@ Contains datasets often used in anomaly detection, where the entire input is lab
    datasets/fractaldataset
    datasets/foolingimages
    datasets/ninco
+   datasets/openmibood
    datasets/featurevisdataset
    datasets/gaussiannoise
    datasets/uniformnoise

@@ -23,6 +23,8 @@ from PIL import Image
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_url
 
+from pytorch_ood.api import DatasetInfo, Paper, Role, Task
+
 log = logging.getLogger(__name__)
 
 
@@ -172,6 +174,20 @@ class KvasirSEG(OpenMIBOODDataset):
     :see Paper: `ArXiv <https://arxiv.org/abs/1911.07069>`__
     """
 
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        paper=Paper(
+            title="Kvasir-SEG: A Segmented Polyp Dataset",
+            venue="MMM",
+            year=2020,
+            url="https://arxiv.org/abs/1911.07069",
+        ),
+        homepage="https://datasets.simula.no/kvasir-seg/",
+        ai_coded=True,
+    )
+
     url = "https://datasets.simula.no/downloads/kvasir-seg.zip"
     filename = "kvasir-seg.zip"
     tgz_md5 = "6323d9094df93b35d43069a566ee1ca3"
@@ -211,6 +227,14 @@ class CATARACTS(OpenMIBOODDataset):
     :see Zenodo: `CATARACTS Cleaned Subset <https://doi.org/10.5281/zenodo.14924735>`__
     """
 
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        homepage="https://doi.org/10.5281/zenodo.14924735",
+        ai_coded=True,
+    )
+
     url = "https://zenodo.org/records/14924735/files/CATARACTS.zip?download=1"
     filename = "CATARACTS.zip"
     target_rel_dir = "far/CATARACTS"
@@ -238,6 +262,14 @@ class Cholec80(OpenMIBOODDataset):
     :see Zenodo: `Cholec80 Cropped <https://doi.org/10.5281/zenodo.14921670>`__
     """
 
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        homepage="https://doi.org/10.5281/zenodo.14921670",
+        ai_coded=True,
+    )
+
     url = "https://zenodo.org/records/14921670/files/Cholec80_cropped.zip?download=1"
     filename = "Cholec80_cropped.zip"
     target_rel_dir = "near/Cholec80_cropped"
@@ -260,12 +292,20 @@ class Cholec80(OpenMIBOODDataset):
 
 class PhaKIR(OpenMIBOODDataset):
     """
-    In-distribution laparoscopic surgical instrument classification dataset (6 classes).
+    In-distribution laparoscopic surgical instrument classification dataset (7 classes).
 
     .. warning::
         Automatic download of PhaKIR is not possible because the dataset has restricted access.
         Please request access at https://doi.org/10.5281/zenodo.16753918.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.IN_DISTRIBUTION},
+        license=None,
+        homepage="https://doi.org/10.5281/zenodo.16753918",
+        ai_coded=True,
+    )
 
     target_rel_dir = "Video_02"
 
@@ -289,6 +329,14 @@ class EndoVis2018(OpenMIBOODDataset):
         Please register at https://endovissub2018-roboticscenesegmentation.grand-challenge.org/
         and download test sequences 1-4.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        homepage="https://endovissub2018-roboticscenesegmentation.grand-challenge.org/",
+        ai_coded=True,
+    )
 
     target_rel_dir = "near/Endovis2018"
 
@@ -315,6 +363,19 @@ class MIDOG(OpenMIBOODDataset):
 
     :see Paper: `MIDOG++ <https://doi.org/10.1038/s41597-023-02327-4>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.IN_DISTRIBUTION},
+        license=None,
+        paper=Paper(
+            title="A comprehensive multi-domain dataset for mitotic figure detection",
+            venue="Scientific Data",
+            year=2023,
+            url="https://doi.org/10.1038/s41597-023-02327-4",
+        ),
+        ai_coded=True,
+    )
 
     target_rel_dir = "1a"
 
@@ -931,6 +992,14 @@ class CCAgT(OpenMIBOODDataset):
     :see Mendeley: `CCAgT Dataset <https://data.mendeley.com/datasets/wg4bpm33hj/2>`__
     """
 
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        homepage="https://data.mendeley.com/datasets/wg4bpm33hj/2",
+        ai_coded=True,
+    )
+
     url = "https://data.mendeley.com/public-api/zip/wg4bpm33hj/download/2"
     filename = "ccagt.zip"
     target_rel_dir = "far/ccagt_crops"
@@ -1007,6 +1076,13 @@ class FNAC2019(OpenMIBOODDataset):
         Automatic download of FNAC 2019 requires manual setup due to dynamic token authentication.
     """
 
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        ai_coded=True,
+    )
+
     target_rel_dir = "far/fnac2019_crops"
 
     def download(self) -> None:
@@ -1036,6 +1112,14 @@ class CHAOS(OpenMIBOODDataset):
 
     :see Zenodo: `CHAOS Test Sets <https://zenodo.org/records/3431873>`__
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        homepage="https://zenodo.org/records/3431873",
+        ai_coded=True,
+    )
 
     url = "https://zenodo.org/records/3431873/files/CHAOS_Test_Sets.zip?download=1"
     filename = "CHAOS_Test_Sets.zip"
@@ -1091,6 +1175,14 @@ class Task02Heart(OpenMIBOODDataset):
     :see Medical Segmentation Decathlon: `MSD <http://medicaldecathlon.com/>`__
     """
 
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        homepage="http://medicaldecathlon.com/",
+        ai_coded=True,
+    )
+
     gdrive_id = "1wEB2I6S6tQBVEPxir8cA5kFB8gTQadYY"
     filename = "Task02_Heart.tar"
     target_rel_dir = "far/SegmentationDecathlon/Task02_Heart"
@@ -1119,13 +1211,21 @@ class Task02Heart(OpenMIBOODDataset):
 
 class OASIS3(OpenMIBOODDataset):
     """
-    In-distribution brain MRI dataset from OASIS-3 (3 classes: CN, MCI, AD).
+    In-distribution brain MRI dataset from OASIS-3 (2 classes).
 
     .. warning::
         Automatic download is not possible because data access requires registration.
         Request access at https://sites.wustl.edu/oasisbrains/home/access/ and download
         via your NITRC account.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.IN_DISTRIBUTION},
+        license=None,
+        homepage="https://sites.wustl.edu/oasisbrains/",
+        ai_coded=True,
+    )
 
     target_rel_dir = "OASIS3"
 
@@ -1145,6 +1245,13 @@ class BraTS(OpenMIBOODDataset):
     BraTS 2023 glioma MRI dataset (Near-OOD for OASIS-3).
     Requires Synapse challenge registration.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        ai_coded=True,
+    )
 
     target_rel_dir = "near/BraTS2023-GLI"
 
@@ -1168,6 +1275,14 @@ class ATLAS(OpenMIBOODDataset):
         Please agree to terms at https://fcon_1000.projects.nitrc.org/indi/retro/atlas.html
         and submit the form to acquire the decryption key.
     """
+
+    info = DatasetInfo(
+        task=Task.CLASSIFICATION,
+        roles={Role.OOD_TEST},
+        license=None,
+        homepage="https://fcon_1000.projects.nitrc.org/indi/retro/atlas.html",
+        ai_coded=True,
+    )
 
     target_rel_dir = "near/ATLAS"
 
