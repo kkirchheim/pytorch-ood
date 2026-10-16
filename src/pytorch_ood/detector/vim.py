@@ -12,23 +12,15 @@ from typing import Callable, Optional
 
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from ..api import (
-    DetectorInfo,
-    FeaturesDetector,
-    ModelNotSetException,
-    Paper,
-    RequiresFittingException,
-    Task,
-)
-from ..utils import extract_features
+from ..api import DetectorInfo, Paper, RequiresFittingException, Task
+from .residual import Residual
 
 log = logging.getLogger(__name__)
 
 
-class ViM(FeaturesDetector):
+class ViM(Residual):
     """
     Implements Virtual Logit Matching (ViM) from the paper *ViM: Out-Of-Distribution with Virtual-logit Matching*.
 
@@ -42,6 +34,8 @@ class ViM(FeaturesDetector):
     where :math:`x^{P\\perp}` is the residual of the features :math:`x` after centering at the origin
     :math:`u = -W^{+} b` and projecting out the principal subspace, :math:`W` and :math:`b` are the weights and
     biases of the last layer and :math:`l_i(x)` are the logits.
+
+    ViM extends :class:`Residual`, which uses the unscaled residual norm as outlier score.
 
     .. rubric:: Examples
 
@@ -64,14 +58,6 @@ class ViM(FeaturesDetector):
         tasks={Task.CLASSIFICATION},
     )
 
-    requires_fit = True
-
-    #: Default search space for :class:`pytorch_ood.utils.GridSearch`: the principal-subspace
-    #: dimension ``d``. If ``d`` exceeds the feature dimension :math:`D` during fitting, it is replaced by
-    #: :math:`D // 2`.
-    # This lets a single search space work across architectures of different width.
-    hyperparameter_space = {"d": [16, 32, 64, 128, 256, 512]}
-
     def __init__(
         self,
         encoder: Optional[Callable[[torch.Tensor], torch.Tensor]],
@@ -86,16 +72,8 @@ class ViM(FeaturesDetector):
         :param w: weights :math:`W` of the last layer of the network, of shape :math:`C \\times D`
         :param b: biases :math:`b` of the last layer of the network, of shape :math:`C`
         """
-        super(ViM, self).__init__()
-        self.encoder = encoder
-        self.d = d
-        w = w.detach().float()
-        b = b.detach().float()
-        self.w = w  # (C, D)
-        self.b = b  # (C,)
-        self.u = -(torch.linalg.pinv(w) @ b)  # (D,)  new origin
-        self.principal_subspace: Optional[Tensor] = None
-        self.alpha: Optional[float] = None  #: the computed :math:`\alpha` value
+        super(ViM, self).__init__(encoder=encoder, d=d, w=w, b=b)
+        self.alpha: Optional[float] = None  #: the computed :math:`\\alpha` value
 
     def _get_logits(self, features: Tensor) -> Tensor:
         """
@@ -103,57 +81,18 @@ class ViM(FeaturesDetector):
         """
         return features @ self.w.T + self.b
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: model input, will be passed through neural network
-        :return: outlier scores of shape :math:`B`
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-
-        if self.principal_subspace is None or self.alpha is None:
-            raise RequiresFittingException()
-
-        with torch.no_grad():
-            features = self.encoder(x)
-
-        return self.predict_features(features)
-
-    def __repr__(self):
-        return f"ViM(d={self.d})"
-
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Extracts features, computes the principal subspace and alpha. Ignores OOD samples.
-
-        :param data_loader: dataset to fit on
-        :return: self
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        features, labels = extract_features(data_loader, self.encoder, device)
-        return self.fit_features(features, labels)
-
     @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:
         """
         :param x: features of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`
         """
-        device = self.w.device
-        x = x.detach().to(device).float()
-        logits = self._get_logits(x)  # (N, C)
+        if self.principal_subspace is None or self.alpha is None:
+            raise RequiresFittingException()
 
-        # Project centered features onto the null subspace and take L2 norm
-        x_p_t = (x - self.u) @ self.principal_subspace  # (N, D-d)
-        vlogit = x_p_t.norm(dim=-1) * self.alpha  # (N,)
+        x = x.detach().to(self.w.device).float()
+        logits = self._get_logits(x)  # (N, C)
+        vlogit = self._residual_norm(x) * self.alpha  # (N,)
 
         # torch.logsumexp subtracts the max internally, so it is already numerically
         # stable without clamping -- clamping would distort the result for models
@@ -171,36 +110,13 @@ class ViM(FeaturesDetector):
         :param labels: class labels of shape :math:`N`
         :return: self
         """
-        device = self.device or self.w.device
-        features = features.detach().to(device).float()
+        super(ViM, self).fit_features(features, labels)
 
-        if features.shape[1] < self.d:
-            n = features.shape[1] // 2
-            log.warning(f"{features.shape[1]=} is smaller than {self.d=}. Will be adjusted to {n}")
-            self.d = n
-
+        features = features.detach().to(self.w.device).float()
         logits = self._get_logits(features)  # (N, C)
 
-        log.info("Computing principal space ...")
-        X = features - self.u  # (N, D)  centered features
-
-        # Empirical covariance (assume_centered=True → MLE: divide by n)
-        cov = (X.T @ X) / X.shape[0]  # (D, D)
-
-        # Eigendecomposition of the symmetric covariance matrix.
-        # torch.linalg.eigh returns eigenvalues in ascending order with
-        # corresponding eigenvectors as columns.
-        eig_vals, eig_vecs = torch.linalg.eigh(cov)  # vals: (D,), vecs: (D, D)
-
-        # Select the null subspace: the (D - d) eigenvectors that correspond
-        # to the *smallest* eigenvalues (i.e. directions least explained by the
-        # training data).  With ascending eigh output these are the first columns.
-        k = eig_vecs.shape[1] - self.d
-        self.principal_subspace = eig_vecs[:, :k].contiguous()  # (D, D-d)
-
         log.info("Computing alpha ...")
-        x_p_t = X @ self.principal_subspace  # (N, D-d)
-        vlogits = x_p_t.norm(dim=-1)  # (N,)
+        vlogits = self._residual_norm(features)  # (N,)
         self.alpha = (logits.max(dim=-1).values.mean() / vlogits.mean()).item()
         log.info(f"{self.alpha=:.4f}")
         return self
