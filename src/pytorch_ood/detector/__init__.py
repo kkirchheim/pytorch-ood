@@ -105,12 +105,12 @@ from .openmax import OpenMax
 from .pnml import PNML
 from .rankfeat import RankFeat
 from .react import ReAct
+from .residual import Residual
 from .rmd import RMD
 from .scale import SCALE
 from .she import SHE
 from .softmax import MaxSoftmax
 from .tscaling import TemperatureScaling
-from .residual import Residual
 from .vim import ViM
 from .vra import VRA
 from .webo import WeightedEBO

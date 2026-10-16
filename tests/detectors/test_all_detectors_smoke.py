@@ -37,6 +37,7 @@ from src.pytorch_ood.detector import (
     OpenMax,
     RankFeat,
     ReAct,
+    Residual,
     TemperatureScaling,
     ViM,
     WeightedEBO,
@@ -208,6 +209,17 @@ class TestAllDetectorsSmoke(unittest.TestCase):
             (
                 "RMD",
                 lambda: (lambda model: RMD(model.features))(eval_model()),
+            ),
+            (
+                "Residual",
+                lambda: (
+                    lambda model: Residual(
+                        model.features,
+                        d=4,
+                        w=model.classifier.weight,
+                        b=model.classifier.bias,
+                    )
+                )(eval_model()),
             ),
             (
                 "ViM",

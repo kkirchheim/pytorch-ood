@@ -1,10 +1,5 @@
 """
 
-.. image:: https://img.shields.io/badge/classification-yes-brightgreen?style=flat-square
-   :alt: classification badge
-.. image:: https://img.shields.io/badge/segmentation-no-red?style=flat-square
-   :alt: classification badge
-
 ..  autoclass:: pytorch_ood.detector.Residual
     :members:
     :inherited-members:
@@ -35,16 +30,29 @@ log = logging.getLogger(__name__)
 
 class Residual(FeaturesDetector):
     """
-    Implements the Residual detector from the paper
-    *ViM: Out-Of-Distribution with Virtual-logit Matching* (Wang et al., CVPR 2022).
+    Implements the Residual detector from the paper *ViM: Out-Of-Distribution with Virtual-logit Matching*.
 
-    Projects penultimate-layer features onto the **null subspace** — the subspace
-    spanned by the eigenvectors of the empirical covariance matrix that correspond
-    to the **smallest** eigenvalues (i.e. low-variance directions not explained by
-    the training data). The L2 norm of those projected features serves as the OOD score.
+    The (centered) features are decomposed into a principal subspace of dimension :math:`d` and its
+    orthogonal residual. The outlier score is the norm of the residual:
 
-    :see Paper: `CVPR 2022 <https://openaccess.thecvf.com/content/CVPR2022/papers/Wang_ViM_Out-Of-Distribution_With_Virtual-Logit_Matching_CVPR_2022_paper.pdf>`__
-    :see Implementation: `GitHub <https://github.com/haoqiwang/vim>`__
+    .. math::
+        \\lVert x^{P\\perp} \\rVert
+
+    where :math:`x^{P\\perp}` is the residual of the features :math:`x` after centering at the origin
+    :math:`u = -W^{+} b` and projecting out the principal subspace, and :math:`W` and :math:`b` are the
+    weights and biases of the last layer.
+
+    This detector serves as the base class of :class:`ViM`, which additionally scales the residual norm
+    by a factor :math:`\\alpha` and subtracts the energy of the logits.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        model = WideResNet()
+        detector = Residual(model.features, d=64, w=model.fc.weight, b=model.fc.bias)
+        detector.fit(train_loader)
+        scores = detector(images)
     """
 
     info = DetectorInfo(
@@ -60,6 +68,10 @@ class Residual(FeaturesDetector):
 
     requires_fit = True
 
+    #: Default search space for :class:`pytorch_ood.utils.GridSearch`: the principal-subspace
+    #: dimension ``d``. If ``d`` exceeds the feature dimension :math:`D` during fitting, it is replaced by
+    #: :math:`D // 2`.
+    # This lets a single search space work across architectures of different width.
     hyperparameter_space = {"d": [16, 32, 64, 128, 256, 512]}
 
     def __init__(
@@ -73,8 +85,8 @@ class Residual(FeaturesDetector):
         :param encoder: feature encoder. Can be
             ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param d: dimensionality of the principal subspace
-        :param w: weights :math:`W` of the last layer of the network
-        :param b: biases :math:`b` of the last layer of the network
+        :param w: weights :math:`W` of the last layer of the network, of shape :math:`C \\times D`
+        :param b: biases :math:`b` of the last layer of the network, of shape :math:`C`
         """
         super(Residual, self).__init__()
         self.encoder = encoder
@@ -91,6 +103,16 @@ class Residual(FeaturesDetector):
         Calculates logits from features.
         """
         return features @ self.w.T + self.b
+
+    def _residual_norm(self, x: Tensor) -> Tensor:
+        """
+        Projects centered features onto the residual subspace and returns the L2 norm.
+
+        :param x: features of shape :math:`N \\times D`
+        :return: residual norms of shape :math:`N`
+        """
+        x_p_t = (x - self.u) @ self.principal_subspace  # (N, D-d)
+        return x_p_t.norm(dim=-1)  # (N,)
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -113,7 +135,7 @@ class Residual(FeaturesDetector):
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
-        Extracts features and computes the principal subspace. Ignores OOD samples.
+        Extracts features and fits the detector. Ignores OOD samples.
 
         :param data_loader: dataset to fit on
         :return: self
@@ -133,25 +155,20 @@ class Residual(FeaturesDetector):
     @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:
         """
-        :param x: features of shape :math:`B \times D`
+        :param x: features of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`
         """
-        device = self.w.device
-        x = x.detach().to(device).float()
+        if self.principal_subspace is None:
+            raise RequiresFittingException()
 
-        # Project centered features onto the null subspace and take L2 norm
-        x_p_t = (x - self.u) @ self.principal_subspace  # (N, D-d)
-        vlogit = x_p_t.norm(dim=-1)  # (N,)
-
-        # Residual score is precisely the projection norm (vlogit).
-        # Higher score = more likely OOD.
-        return vlogit
+        x = x.detach().to(self.w.device).float()
+        return self._residual_norm(x)
 
     def fit_features(self, features: Tensor, labels: Tensor) -> Self:
         """
         Computes the principal subspace from pre-extracted features. Ignores OOD samples.
 
-        :param features: features of shape :math:`N \times D`
+        :param features: features of shape :math:`N \\times D`
         :param labels: class labels of shape :math:`N`
         :return: self
         """
@@ -170,9 +187,13 @@ class Residual(FeaturesDetector):
         cov = (X.T @ X) / X.shape[0]  # (D, D)
 
         # Eigendecomposition of the symmetric covariance matrix.
+        # torch.linalg.eigh returns eigenvalues in ascending order with
+        # corresponding eigenvectors as columns.
         eig_vals, eig_vecs = torch.linalg.eigh(cov)  # vals: (D,), vecs: (D, D)
 
+        # Select the null subspace: the (D - d) eigenvectors that correspond
+        # to the *smallest* eigenvalues (i.e. directions least explained by the
+        # training data).  With ascending eigh output these are the first columns.
         k = eig_vecs.shape[1] - self.d
         self.principal_subspace = eig_vecs[:, :k].contiguous()  # (D, D-d)
-
         return self
