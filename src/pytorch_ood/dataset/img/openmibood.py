@@ -34,8 +34,12 @@ def _is_nonempty_dir(path: str) -> bool:
 
 def _download_url_with_ssl_fallback(url: str, root: str, filename: str, md5: Optional[str] = None):
     """
-    Download a file from a URL to a local destination, with automatic SSL fallback
-    for servers that omit intermediate certificates in their TLS handshake (e.g. Simula).
+    Download a file from a URL to a local destination, with a fallback for servers that omit
+    intermediate certificates in their TLS handshake (e.g. Simula).
+
+    The download is only retried without certificate verification if it failed because the
+    certificate could not be verified and an MD5 checksum is given, so that the file can still be
+    verified after the download.
     """
     os.makedirs(root, exist_ok=True)
     fpath = join(root, filename)
@@ -47,17 +51,35 @@ def _download_url_with_ssl_fallback(url: str, root: str, filename: str, md5: Opt
     try:
         download_url(url, root, filename=filename, md5=md5)
     except Exception as e:
-        log.warning(f"Standard download failed ({e}). Retrying with SSL fallback context...")
+        if md5 is None or not _is_certificate_error(e):
+            raise
+        log.warning(
+            f"Could not verify the certificate of {url} ({e}). Retrying without certificate "
+            "verification, the file will be verified with its MD5 checksum."
+        )
         ctx = ssl._create_unverified_context()
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, context=ctx) as response, open(fpath, "wb") as out_file:
             shutil.copyfileobj(response, out_file)
 
-        if md5 and not check_integrity(fpath, md5):
+        if not check_integrity(fpath, md5):
             os.remove(fpath)
             raise RuntimeError(f"Downloaded file {fpath} failed MD5 integrity check.")
 
     return fpath
+
+
+def _is_certificate_error(e: BaseException) -> bool:
+    """
+    Whether the exception, or an exception it was raised from, is an SSL certificate error.
+    """
+    while e is not None:
+        if isinstance(e, ssl.SSLCertVerificationError):
+            return True
+        if isinstance(getattr(e, "reason", None), ssl.SSLCertVerificationError):
+            return True
+        e = e.__cause__ or e.__context__
+    return False
 
 
 def _validate_patch(img_dims, annotations, additional_bbox):
