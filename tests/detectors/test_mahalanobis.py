@@ -101,3 +101,30 @@ class MahalanobisEpsTest(unittest.TestCase):
             torch.isfinite(model_safe.precision).all(),
             "With eps=1e-3, precision matrix should be finite even for constant inputs.",
         )
+
+
+class MahalanobisPinvTest(unittest.TestCase):
+    """
+    Tests for the use_pinv parameter of the Mahalanobis detector.
+    """
+
+    def setUp(self) -> None:
+        torch.manual_seed(42)
+        self.x = torch.randn(size=(40, 10))
+        self.y = torch.cat([torch.zeros(size=(20,)), torch.ones(size=(20,))]).long()
+
+    def test_default_is_inv(self):
+        self.assertFalse(Mahalanobis(None).use_pinv)
+
+    def test_pinv_precision(self):
+        model = Mahalanobis(None, use_pinv=True).fit_features(self.x, self.y)
+        torch.testing.assert_close(model.precision, torch.linalg.pinv(model.cov))
+
+    def test_pinv_matches_inv(self):
+        """For a well-conditioned covariance matrix, inv and pinv should give the same scores."""
+        model_inv = Mahalanobis(None).fit_features(self.x, self.y)
+        model_pinv = Mahalanobis(None, use_pinv=True).fit_features(self.x, self.y)
+        x = torch.randn(size=(16, 10))
+        torch.testing.assert_close(
+            model_pinv.predict_features(x), model_inv.predict_features(x), rtol=1e-4, atol=1e-4
+        )
