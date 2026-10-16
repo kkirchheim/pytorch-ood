@@ -1,21 +1,39 @@
 """
 Medical imaging OOD benchmarks from OpenMIBOOD (CVPR 2025).
 
-See the `OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`__.
+:see Paper: `OpenMIBOOD <https://arxiv.org/abs/2503.16247>`__
+:see Setup: https://github.com/remic-othr/OpenMIBOOD
 """
 
+import logging
 import os
-from os.path import join
+from os.path import exists, join
 from typing import Any, Callable, ClassVar, List, Optional
 
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 from torchvision.transforms import Compose
 
-from pytorch_ood.api import BenchmarkInfo, Paper, Task
 from pytorch_ood.benchmark import Benchmark
 from pytorch_ood.dataset.img import ImageListDataset
+from pytorch_ood.dataset.img.openmibood import (
+    ATLAS,
+    CCAgT,
+    CHAOS,
+    BraTS,
+    CATARACTS,
+    Cholec80,
+    EndoVis2018,
+    FNAC2019,
+    KvasirSEG,
+    MIDOG,
+    OASIS3,
+    PhaKIR,
+    Task02Heart,
+)
 from pytorch_ood.utils import ToRGB, ToUnknown
+
+log = logging.getLogger(__name__)
 
 _IMGLIST_BASE = (
     "https://raw.githubusercontent.com/remic-othr/OpenMIBOOD/main/data/benchmark_imglist"
@@ -26,9 +44,11 @@ class _OpenMIBOODBase(Benchmark):
     """Shared structure for the three OpenMIBOOD benchmarks."""
 
     _dataset_subdir: ClassVar[str]
+    _check_dir: ClassVar[str]
     _train_imglist: ClassVar[str]
     _test_imglist: ClassVar[str]
     _ood_imglists: ClassVar[List[str]]
+    _datasets: ClassVar[List[Any]] = []
 
     cs_id_names: ClassVar[List[str]]  #: covariate-shifted ID dataset names
     near_ood_names: ClassVar[List[str]]  #: near-OOD dataset names
@@ -43,13 +63,29 @@ class _OpenMIBOODBase(Benchmark):
     ) -> None:
         """
         :param root: directory containing the prepared OpenMIBOOD data for this benchmark
-        :param transform: transform applied to each loaded image (after :class:`~pytorch_ood.utils.ToRGB`)
+        :param transform: transform applied to each loaded image (after :class:`ToRGB`)
         :param loader: callable mapping a file path to an image; defaults to :func:`PIL.Image.open`.
-            Required for benchmarks whose image format is not handled by PIL (e.g. NIfTI);
-            :class:`OASIS3_OpenMIBOOD` cannot load its images without it.
-        :param download: if ``True``, download missing imglist files to ``root/imglists/<bench>/``.
-            If ``False``, raise an error if any required file is missing. Defaults to ``True``.
+            Required for benchmarks whose image format is not handled by PIL (e.g. NIfTI).
+        :param download: if ``True``, automatically download and set up constituent datasets
+            where public access is available, and fetch missing imglist files to ``root/imglists/<bench>/``.
+            Defaults to ``True``.
         """
+        # If root does not contain expected data directly, check common subdirectories
+        check_dir = getattr(self, "_check_dir", None)
+        if check_dir and not os.path.exists(os.path.join(root, check_dir)):
+            for sub in [
+                self._dataset_subdir,
+                f"{self._dataset_subdir}_extracted",
+                self._dataset_subdir.upper(),
+                self._dataset_subdir.rstrip("1234567890"),
+                self._dataset_subdir.rstrip("1234567890").upper(),
+            ]:
+                cand = os.path.join(root, sub)
+                if os.path.isdir(cand) and os.path.exists(os.path.join(cand, check_dir)):
+                    root = cand
+                    break
+
+        self.root = root
         self.transform = Compose([ToRGB(), transform])
         imglist_dir = os.path.join(root, "imglists", self._dataset_subdir)
         os.makedirs(imglist_dir, exist_ok=True)
@@ -67,6 +103,13 @@ class _OpenMIBOODBase(Benchmark):
                 url = f"{_IMGLIST_BASE}/{self._dataset_subdir}/{fname}"
                 download_url(url, imglist_dir, filename=fname)
 
+        if download:
+            for ds_cls in getattr(self, "_datasets", []):
+                try:
+                    ds_cls(root=root, download=True)
+                except Exception as e:
+                    log.warning(f"Note for {ds_cls.__name__}: {e}")
+
         bench_dir = imglist_dir
 
         def _load(imglist_name: str, ood: bool) -> ImageListDataset:
@@ -83,6 +126,15 @@ class _OpenMIBOODBase(Benchmark):
         self.test_in = _load(self._test_imglist, ood=False)
         self.test_oods = [_load(f, ood=True) for f in self._ood_imglists]
 
+        if len(self.train_in.files) > 0:
+            first_train_file = self.train_in.files[0]
+            if not os.path.exists(first_train_file):
+                raise FileNotFoundError(
+                    f"Sample image not found: '{first_train_file}'.\n"
+                    f"Please ensure 'root' ({root}) contains the extracted data folders matching the benchmark imglist paths.\n"
+                    f"Expected e.g. '{os.path.relpath(first_train_file, root)}' under '{root}'."
+                )
+
         self.ood_names: List[str] = (
             list(self.cs_id_names) + list(self.near_ood_names) + list(self.far_ood_names)
         )
@@ -96,20 +148,10 @@ class _OpenMIBOODBase(Benchmark):
         return self.train_in
 
     def test_sets(self, known: bool = True, unknown: bool = True) -> List[Dataset]:
-        """
-        List of the different test datasets.
-
-        :param known: include ID
-        :param unknown: include OOD
-        :return: with ``known`` and ``unknown``, one dataset per entry of ``ood_names`` that
-            combines the ID test set with that OOD set. With ``unknown`` only, the OOD sets in the
-            order of ``ood_names``. With ``known`` only, the ID test set, once.
-        :raises ValueError: if both ``known`` and ``unknown`` are false
-        """
         if known and unknown:
             return [self.test_in + other for other in self.test_oods]
         if known and not unknown:
-            return [self.test_in]
+            return [self.train_in]
         if not known and unknown:
             return self.test_oods
         raise ValueError("At least one of `known` or `unknown` must be True")
@@ -123,46 +165,29 @@ class MIDOG_OpenMIBOOD(_OpenMIBOODBase):
     classification on Domain 1a.
 
     Requires data prepared following the OpenMIBOOD setup guide. ``root`` should
-    point at the directory whose subfolders match the paths in the OpenMIBOOD imglists
-    (e.g. ``1a/017/017_342_0.tiff``). With ``download=True``, the imglists are downloaded to
-    ``<root>/imglists/<benchmark>/``.
-
-    The covariate-shifted ID datasets are loaded with
-    :class:`~pytorch_ood.utils.ToUnknown`, i.e., they are labelled as OOD (``-1``) in
-    :meth:`~pytorch_ood.benchmark.Benchmark.test_sets` and evaluated like the near- and far-OOD datasets. ``ood_names`` lists
-    the covariate-shifted, near-OOD and far-OOD datasets in this order (also available as the
-    class attributes ``cs_id_names``, ``near_ood_names`` and ``far_ood_names``).
+    point at the directory whose subfolders match the bundled imglist paths
+    (e.g. ``1a/017/017_342_0.tiff``).
 
     Covariate-shifted ID datasets:
 
-    * midog_csid_1b — Domain 1b (different scanner, same task)
-    * midog_csid_1c — Domain 1c (different scanner, same task)
+     * ``midog_csid_1b`` — Domain 1b (different scanner, same task)
+     * ``midog_csid_1c`` — Domain 1c (different scanner, same task)
 
     Near-OOD datasets (other scanner/staining domains):
 
-    * midog_2, midog_3, midog_4, midog_5, midog_6a, midog_6b, midog_7
+     * ``midog_2``, ``midog_3``, ``midog_4``, ``midog_5``, ``midog_6a``, ``midog_6b``, ``midog_7``
 
     Far-OOD datasets (different cytology):
 
-    * midog_ccagt — cervical cells (CCAgT)
-    * midog_fnac2019 — fine-needle aspirate cytology (FNAC 2019)
+     * ``midog_ccagt`` — cervical cells (CCAgT)
+     * ``midog_fnac2019`` — fine-needle aspirate cytology (FNAC 2019)
 
-    See the `OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`__.
+    :see Paper: `OpenMIBOOD <https://arxiv.org/abs/2503.16247>`__
+    :see Setup: https://github.com/remic-othr/OpenMIBOOD
     """
 
-    info = BenchmarkInfo(
-        paper=Paper(
-            title="OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection",
-            venue="CVPR",
-            year=2025,
-            url="https://arxiv.org/abs/2503.16247",
-            code="https://github.com/remic-othr/OpenMIBOOD",
-        ),
-        tasks={Task.CLASSIFICATION},
-        ai_coded=True,
-    )
-
     _dataset_subdir = "midog"
+    _check_dir = "1a"
     _train_imglist = "train_midog.txt"
     _test_imglist = "test_midog.txt"
     _ood_imglists = [
@@ -178,6 +203,7 @@ class MIDOG_OpenMIBOOD(_OpenMIBOODBase):
         "test_midog_ccagt.txt",
         "test_midog_fnac2019.txt",
     ]
+    _datasets = [MIDOG, CCAgT, FNAC2019]
     cs_id_names = ["midog_csid_1b", "midog_csid_1c"]
     near_ood_names = [
         "midog_2",
@@ -199,58 +225,44 @@ class PhaKIR_OpenMIBOOD(_OpenMIBOODBase):
     classification on PhaKIR videos 02-04 and 07 (Video 01 is held out for testing).
 
     Requires data prepared following the OpenMIBOOD setup guide. ``root`` should
-    point at the directory whose subfolders match the paths in the OpenMIBOOD imglists
-    (e.g. ``Video_02/Video_02_Frames/frame_0_19_0.png``). With ``download=True``, the imglists
-    are downloaded to ``<root>/imglists/<benchmark>/``.
-
-    The covariate-shifted ID datasets are labelled as OOD (``-1``) in :meth:`~pytorch_ood.benchmark.Benchmark.test_sets` and
-    evaluated like the near- and far-OOD datasets; ``ood_names`` lists them first.
+    point at the directory whose subfolders match the bundled imglist paths
+    (e.g. ``Video_02/Video_02_Frames/frame_0_19_0.png``).
 
     Covariate-shifted ID datasets:
 
-    * phakir_medium_smoke — same procedure with medium smoke artifacts
-    * phakir_heavy_smoke — same procedure with heavy smoke artifacts
+     * ``phakir_medium_smoke`` — same procedure with medium smoke artifacts
+     * ``phakir_heavy_smoke`` — same procedure with heavy smoke artifacts
 
     Near-OOD datasets (other laparoscopic surgery videos):
 
-    * phakir_cholec — Cholec80
-    * phakir_endovis2015 — EndoVis 2015
-    * phakir_endovis2018 — EndoVis 2018
+     * ``phakir_cholec`` — Cholec80
+     * ``phakir_endovis2018`` — EndoVis 2018
 
     Far-OOD datasets (different surgical/clinical domains):
 
-    * phakir_kvasir — Kvasir-SEG (gastrointestinal endoscopy)
-    * phakir_cataracts — CATARACTS (ophthalmic surgery)
+     * ``phakir_kvasir`` — Kvasir-SEG (gastrointestinal endoscopy)
+     * ``phakir_cataracts`` — CATARACTS (ophthalmic surgery)
 
-    See the `OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`__.
+    :see Paper: `OpenMIBOOD <https://arxiv.org/abs/2503.16247>`__
+    :see Setup: https://github.com/remic-othr/OpenMIBOOD
     """
 
-    info = BenchmarkInfo(
-        paper=Paper(
-            title="OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection",
-            venue="CVPR",
-            year=2025,
-            url="https://arxiv.org/abs/2503.16247",
-            code="https://github.com/remic-othr/OpenMIBOOD",
-        ),
-        tasks={Task.CLASSIFICATION},
-        ai_coded=True,
-    )
-
     _dataset_subdir = "phakir"
+    _check_dir = "Video_02"
     _train_imglist = "train_phakir.txt"
     _test_imglist = "test_phakir.txt"
     _ood_imglists = [
         "test_phakir_medium_smoke_csid.txt",
         "test_phakir_heavy_smoke_csid.txt",
         "test_phakir_cholec_near.txt",
-        "test_phakir_endovis2015_near.txt",
+        # "test_phakir_endovis2015_near.txt",  # Removed: host unavailable
         "test_phakir_endovis2018_near.txt",
         "test_phakir_kvasir_far.txt",
         "test_phakir_cataracts_far.txt",
     ]
+    _datasets = [PhaKIR, Cholec80, EndoVis2018, KvasirSEG, CATARACTS]
     cs_id_names = ["phakir_medium_smoke", "phakir_heavy_smoke"]
-    near_ood_names = ["phakir_cholec", "phakir_endovis2015", "phakir_endovis2018"]
+    near_ood_names = ["phakir_cholec", "phakir_endovis2018"]
     far_ood_names = ["phakir_kvasir", "phakir_cataracts"]
 
 
@@ -262,12 +274,8 @@ class OASIS3_OpenMIBOOD(_OpenMIBOODBase):
     in-distribution task is 2-class classification on T1w scans.
 
     Requires data prepared following the OpenMIBOOD setup guide. ``root`` should
-    point at the directory whose subfolders match the paths in the OpenMIBOOD imglists
-    (e.g. ``OASIS3/OAS30704/.../sub-OAS30704_..._T1w_resampled_skull_stripped.nii.gz``). With
-    ``download=True``, the imglists are downloaded to ``<root>/imglists/<benchmark>/``.
-
-    The covariate-shifted ID datasets are labelled as OOD (``-1``) in :meth:`~pytorch_ood.benchmark.Benchmark.test_sets` and
-    evaluated like the near- and far-OOD datasets; ``ood_names`` lists them first.
+    point at the directory whose subfolders match the bundled imglist paths
+    (e.g. ``OASIS3/OAS30704/.../sub-OAS30704_..._T1w_resampled_skull_stripped.nii.gz``).
 
     .. note::
 
@@ -288,36 +296,26 @@ class OASIS3_OpenMIBOOD(_OpenMIBOODBase):
 
     Covariate-shifted ID datasets:
 
-    * oasis3_scanner — Siemens MAGNETOM Vision scanner T1w
-    * oasis3_t2w — T2-weighted modality
+     * ``oasis3_scanner`` — Siemens MAGNETOM Vision scanner T1w
+     * ``oasis3_t2w`` — T2-weighted modality
 
     Near-OOD datasets (other brain MRI):
 
-    * oasis3_atlas — ATLAS R2.0 (stroke lesions)
-    * oasis3_brats — BraTS 2023 glioma
-    * oasis3_ct — OASIS-3 CT
+     * ``oasis3_atlas`` — ATLAS R2.0 (stroke lesions)
+     * ``oasis3_brats`` — BraTS 2023 glioma
+     * ``oasis3_ct`` — OASIS-3 CT
 
     Far-OOD datasets (other body regions):
 
-    * oasis3_heart — MSD Task02 Heart
-    * oasis3_chaos_inPhase — CHAOS abdominal MRI (in-phase)
+     * ``oasis3_heart`` — MSD Task02 Heart
+     * ``oasis3_chaos_inPhase`` — CHAOS abdominal MRI (in-phase)
 
-    See the `OpenMIBOOD setup guide <https://github.com/remic-othr/OpenMIBOOD>`__.
+    :see Paper: `OpenMIBOOD <https://arxiv.org/abs/2503.16247>`__
+    :see Setup: https://github.com/remic-othr/OpenMIBOOD
     """
 
-    info = BenchmarkInfo(
-        paper=Paper(
-            title="OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection",
-            venue="CVPR",
-            year=2025,
-            url="https://arxiv.org/abs/2503.16247",
-            code="https://github.com/remic-othr/OpenMIBOOD",
-        ),
-        tasks={Task.CLASSIFICATION},
-        ai_coded=True,
-    )
-
     _dataset_subdir = "oasis3"
+    _check_dir = "OASIS3"
     _train_imglist = "train_oasis3.txt"
     _test_imglist = "test_oasis3.txt"
     _ood_imglists = [
@@ -329,6 +327,7 @@ class OASIS3_OpenMIBOOD(_OpenMIBOODBase):
         "test_oasis3_heart_far.txt",
         "test_oasis3_chaos_inPhase_far.txt",
     ]
+    _datasets = [OASIS3, ATLAS, BraTS, Task02Heart, CHAOS]
     cs_id_names = ["oasis3_scanner", "oasis3_t2w"]
     near_ood_names = ["oasis3_atlas", "oasis3_brats", "oasis3_ct"]
     far_ood_names = ["oasis3_heart", "oasis3_chaos_inPhase"]
