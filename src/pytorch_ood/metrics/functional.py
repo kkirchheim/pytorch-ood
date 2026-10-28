@@ -20,6 +20,9 @@ __all__ = [
     "pr_curve",
     "auroc",
     "aupr",
+    "average_precision",
+    "aupr_from_curve",
+    "average_precision_from_curve",
     "fpr_at_tpr",
     "autc",
     "accuracy",
@@ -128,15 +131,74 @@ def _pr(tps: Tensor, fps: Tensor) -> Tuple[Tensor, Tensor]:
     return torch.cat([precision.flip(0), one]), torch.cat([recall.flip(0), one - 1])
 
 
-def _aupr(counts: _Counts, positive: str) -> Tensor:
+def _pr_from_counts(counts: _Counts, positive: str) -> Tuple[Tensor, Tensor]:
     if positive == "ood":
-        precision, recall = _pr(counts.tps, counts.fps)
-    elif positive == "id":
-        precision, recall = _pr(*counts.reversed())
-    else:
-        raise ValueError(f"positive must be 'ood' or 'id', got {positive!r}")
+        return _pr(counts.tps, counts.fps)
+    if positive == "id":
+        return _pr(*counts.reversed())
+    raise ValueError(f"positive must be 'ood' or 'id', got {positive!r}")
+
+
+def _trapezoid_pr_area(precision: Tensor, recall: Tensor) -> Tensor:
     # recall is decreasing, so the area is negative
     return -_area(recall, precision)
+
+
+def _step_pr_area(precision: Tensor, recall: Tensor) -> Tensor:
+    # as sklearn.metrics.average_precision_score: each decrease in recall is weighted with the
+    # precision at the higher recall, i.e., at the lower threshold where the recall is reached;
+    # the precision of the final point (recall 0) is not used
+    return -((recall[1:] - recall[:-1]) * precision[:-1]).sum()
+
+
+def _aupr(counts: _Counts, positive: str) -> Tensor:
+    return _trapezoid_pr_area(*_pr_from_counts(counts, positive))
+
+
+def _average_precision(counts: _Counts, positive: str) -> Tensor:
+    # the curve is valid by construction, so it skips the checks of the public functions
+    return _step_pr_area(*_pr_from_counts(counts, positive))
+
+
+def _check_pr_curve(
+    precision: Tensor, recall: Tensor, ends_at_precision_one: bool
+) -> Tuple[Tensor, Tensor]:
+    if precision.dim() != 1 or recall.dim() != 1:
+        raise ValueError(
+            f"precision and recall must be one-dimensional, got shapes {tuple(precision.shape)} "
+            f"and {tuple(recall.shape)}"
+        )
+    if precision.shape != recall.shape:
+        raise ValueError(
+            f"precision and recall must have the same length, got {precision.shape[0]} and "
+            f"{recall.shape[0]}"
+        )
+    if precision.shape[0] < 2:
+        raise ValueError(f"the curve needs at least two points, got {precision.shape[0]}")
+    precision = _float64(precision.detach())
+    recall = _float64(recall.detach().to(precision.device))
+    # all checks run on the device, so that a valid curve costs a single synchronization;
+    # comparisons with NaN are false, so NaN fails the range checks
+    checks = {
+        "precision contains NaN or values outside [0, 1]; drop thresholds that accept no "
+        "samples (0 / 0), as pytorch_ood.metrics.functional.pr_curve does": ~(
+            (precision >= 0) & (precision <= 1)
+        ).all(),
+        "recall contains NaN or values outside [0, 1]": ~((recall >= 0) & (recall <= 1)).all(),
+        "recall must be non-increasing, as returned by pytorch_ood.metrics.functional.pr_curve": (
+            recall[1:] > recall[:-1]
+        ).any(),
+        "the curve must start at recall 1, the threshold that accepts all samples": (
+            recall[0] != 1
+        ),
+        "the curve must end at recall 0": recall[-1] != 0,
+    }
+    if ends_at_precision_one:
+        checks["the curve must end at precision 1, as returned by pr_curve"] = precision[-1] != 1
+    failed = torch.stack(list(checks.values()))
+    if bool(failed.any()):
+        raise ValueError(next(msg for msg, bad in zip(checks, failed.tolist()) if bad))
+    return precision, recall
 
 
 def _fpr_at_tpr(counts: _Counts, tpr: float) -> Tensor:
@@ -190,14 +252,8 @@ def pr_curve(
         samples, or ``positive`` is invalid
     """
     counts = _counts(scores, labels)
-    if positive == "ood":
-        precision, recall = _pr(counts.tps, counts.fps)
-        thresholds = counts.thresholds.flip(0)
-    elif positive == "id":
-        precision, recall = _pr(*counts.reversed())
-        thresholds = counts.thresholds
-    else:
-        raise ValueError(f"positive must be 'ood' or 'id', got {positive!r}")
+    precision, recall = _pr_from_counts(counts, positive)
+    thresholds = counts.thresholds.flip(0) if positive == "ood" else counts.thresholds
     return precision, recall, thresholds
 
 
@@ -221,6 +277,13 @@ def aupr(scores: Tensor, labels: Tensor, positive: str = "ood") -> Tensor:
     Area under the precision-recall curve (see :func:`pr_curve`), by the trapezoidal rule, as
     ``sklearn.metrics.auc(recall, precision)``.
 
+    Interpolating linearly between the points of the curve is optimistic when many scores are
+    tied or take few distinct values, e.g., for binary, saturated or binned scores (`Davis and
+    Goadrich, ICML 2006
+    <https://ftp.cs.wisc.edu/machine-learning/shavlik-group/davis.icml06.pdf>`__): a constant
+    score gets :math:`(1 + \\pi) / 2` instead of the fraction of positive samples
+    :math:`\\pi`. For such scores, use :func:`average_precision`, which does not interpolate.
+
     :param scores: outlier scores of any shape
     :param labels: labels of the same shape; labels :math:`< 0` mark OOD samples
     :param positive: the positive class, ``"ood"`` (AUPR-OUT) or ``"id"`` (AUPR-IN)
@@ -229,6 +292,80 @@ def aupr(scores: Tensor, labels: Tensor, positive: str = "ood") -> Tensor:
         samples, or ``positive`` is invalid
     """
     return _aupr(_counts(scores, labels), positive)
+
+
+def average_precision(scores: Tensor, labels: Tensor, positive: str = "ood") -> Tensor:
+    """
+    Average precision (AP): the area under the precision-recall curve (see :func:`pr_curve`)
+    as a step function, as :func:`sklearn.metrics.average_precision_score`,
+
+    .. math::
+
+        \\sum_n (R_n - R_{n-1}) P_n,
+
+    where :math:`P_n` and :math:`R_n` are the precision and recall at the :math:`n`-th
+    threshold, in the order of increasing recall, and :math:`R_0 = 0`. Unlike :func:`aupr`, it
+    does not interpolate between the points of the curve, so tied scores are not rewarded: a
+    constant score gets the fraction of positive samples. When the scores take many distinct
+    values, the two are close.
+
+    :param scores: outlier scores of any shape
+    :param labels: labels of the same shape; labels :math:`< 0` mark OOD samples
+    :param positive: the positive class, ``"ood"`` (AP-OUT) or ``"id"`` (AP-IN). For
+        ``"id"``, lower scores mean more likely positive.
+    :return: AP as a float64 scalar tensor
+    :raises ValueError: if the shapes differ, the scores contain NaN, there are no ID or no OOD
+        samples, or ``positive`` is invalid
+    """
+    return _average_precision(_counts(scores, labels), positive)
+
+
+def aupr_from_curve(precision: Tensor, recall: Tensor) -> Tensor:
+    """
+    Area under a precision-recall curve by the trapezoidal rule, as :func:`aupr`, for a curve
+    you computed yourself, e.g., from histograms of scores that are too many to keep in memory.
+    The curve follows the convention of :func:`pr_curve`: one point per threshold, with
+    non-increasing recall, ending at recall :math:`0` and precision :math:`1`.
+    ``aupr_from_curve(*pr_curve(scores, labels)[:2])`` equals ``aupr(scores, labels)``.
+
+    Interpolating linearly between the points of the curve is optimistic when the curve has few
+    points, e.g., when it is computed from a few bins. For such curves, use
+    :func:`average_precision_from_curve`.
+
+    :param precision: precisions, one-dimensional, in :math:`[0, 1]`, ending at :math:`1`. The
+        trapezoidal rule uses this last value.
+    :param recall: recalls of the same length, non-increasing, in :math:`[0, 1]`, starting at
+        :math:`1` and ending at :math:`0`. They are moved to the device of ``precision``.
+    :return: AUPR as a float64 scalar tensor
+    :raises ValueError: if the inputs are not one-dimensional, differ in length, have fewer
+        than two points or values that are NaN or outside :math:`[0, 1]`, the recall increases,
+        does not start at :math:`1` or does not end at :math:`0`, or the precision does not end
+        at :math:`1`
+    """
+    return _trapezoid_pr_area(*_check_pr_curve(precision, recall, ends_at_precision_one=True))
+
+
+def average_precision_from_curve(precision: Tensor, recall: Tensor) -> Tensor:
+    """
+    Average precision, as :func:`average_precision`, for a precision-recall curve you computed
+    yourself, e.g., from histograms of scores that are too many to keep in memory. The curve
+    follows the convention of :func:`pr_curve`: one point per threshold, with non-increasing
+    recall, ending at recall :math:`0`.
+    ``average_precision_from_curve(*pr_curve(scores, labels)[:2])`` equals
+    ``average_precision(scores, labels)``.
+
+    Unlike :func:`aupr_from_curve`, it does not interpolate between the points of the curve.
+
+    :param precision: precisions, one-dimensional, in :math:`[0, 1]`. The last value, at
+        recall :math:`0`, is not used.
+    :param recall: recalls of the same length, non-increasing, in :math:`[0, 1]`, starting at
+        :math:`1` and ending at :math:`0`. They are moved to the device of ``precision``.
+    :return: AP as a float64 scalar tensor
+    :raises ValueError: if the inputs are not one-dimensional, differ in length, have fewer
+        than two points or values that are NaN or outside :math:`[0, 1]`, or the recall
+        increases, does not start at :math:`1` or does not end at :math:`0`
+    """
+    return _step_pr_area(*_check_pr_curve(precision, recall, ends_at_precision_one=False))
 
 
 def fpr_at_tpr(scores: Tensor, labels: Tensor, tpr: float = 0.95) -> Tensor:

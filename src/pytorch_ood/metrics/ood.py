@@ -13,7 +13,7 @@ from ..utils.utils import _check_fraction
 from . import functional as F
 from .base import BufferedMetric, Device, MetricCollection, StreamingMetric, _Data
 
-__all__ = ["AUROC", "AUPR", "FPRAtTPR", "AUTC", "Accuracy", "OODMetrics"]
+__all__ = ["AUROC", "AUPR", "AveragePrecision", "FPRAtTPR", "AUTC", "Accuracy", "OODMetrics"]
 
 
 class AUROC(BufferedMetric):
@@ -85,6 +85,12 @@ class AUPR(BufferedMetric):
     ``positive="id"`` (AUPR-IN), ID samples are, and lower outlier scores mean more likely
     positive. See :func:`~pytorch_ood.metrics.functional.aupr`.
 
+    Interpolating linearly between the points of the curve is optimistic when many scores are
+    tied or take few distinct values, e.g., for binary, saturated or binned scores (`Davis and
+    Goadrich, ICML 2006
+    <https://ftp.cs.wisc.edu/machine-learning/shavlik-group/davis.icml06.pdf>`__). For such
+    scores, use :class:`~pytorch_ood.metrics.AveragePrecision`, which does not interpolate.
+
     .. rubric:: Examples
 
     .. code-block:: python
@@ -136,7 +142,7 @@ class AUPR(BufferedMetric):
 
         :return: ``{"AUPR-OUT": value}`` for ``positive="ood"`` and ``{"AUPR-IN": value}`` for
             ``positive="id"``, with a value in :math:`[0, 1]`. Higher is better; a detector
-            that guesses gets the fraction of positive samples.
+            with random continuous scores gets about the fraction of positive samples.
         :raises ValueError: if no data was given, there are no ID or no OOD samples, or the
             scores contain NaN
         """
@@ -148,6 +154,89 @@ class AUPR(BufferedMetric):
 
     def _compute_from(self, data: _Data) -> Dict[str, Tensor]:
         return {self.keys[0]: F._aupr(data.counts, self.positive)}
+
+
+class AveragePrecision(BufferedMetric):
+    """
+    Average precision (AP): the area under the precision-recall curve as a step function, as
+    :func:`sklearn.metrics.average_precision_score`. Unlike :class:`~pytorch_ood.metrics.AUPR`, it
+    does not interpolate between the points of the curve, so tied scores are not rewarded. With
+    ``positive="ood"`` (AP-OUT), OOD samples (labels :math:`< 0`) are the positive class; with
+    ``positive="id"`` (AP-IN), ID samples are, and lower outlier scores mean more likely
+    positive. See :func:`~pytorch_ood.metrics.functional.average_precision`.
+
+    It is not part of :class:`~pytorch_ood.metrics.OODMetrics`; to compute it together with
+    other metrics, combine them in a :class:`~pytorch_ood.metrics.MetricCollection`.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        from pytorch_ood.metrics import AUPR, AveragePrecision, MetricCollection
+
+        metric = AveragePrecision()
+        for x, y in loader:
+            metric.update(detector(x), y)
+        print(metric.compute())  # {"AP-OUT": ...}
+
+        metrics = MetricCollection([AUPR("ood"), AveragePrecision("ood")])
+        for x, y in loader:
+            metrics.update(scores=detector(x), labels=y)
+        print(metrics.compute())  # {"AUPR-OUT": ..., "AP-OUT": ...}
+    """
+
+    inputs = ("scores", "labels")
+    needs_id = True
+    needs_ood = True
+
+    def __init__(
+        self,
+        positive: str = "ood",
+        *,
+        device: Optional[Device] = None,
+        void_label: Optional[int] = None,
+    ):
+        """
+        :param positive: the positive class, ``"ood"`` or ``"id"``
+        :param device: see :class:`~pytorch_ood.metrics.Metric`
+        :param void_label: see :class:`~pytorch_ood.metrics.Metric`
+        :raises ValueError: if ``positive`` is invalid or ``void_label`` is negative
+        """
+        if positive not in ("ood", "id"):
+            raise ValueError(f"positive must be 'ood' or 'id', got {positive!r}")
+        super().__init__(device=device, void_label=void_label)
+        self.positive = positive
+
+    def update(self, scores: Tensor, labels: Tensor) -> Self:
+        """
+        Adds a batch.
+
+        :param scores: outlier scores of any shape; larger means more likely OOD
+        :param labels: labels of the same shape; labels :math:`< 0` mark OOD samples
+        :return: self
+        :raises ValueError: if the shapes differ
+        """
+        return super().update(scores, labels)
+
+    def compute(self) -> Dict[str, float]:
+        """
+        Computes the AP from all batches added so far.
+
+        :return: ``{"AP-OUT": value}`` for ``positive="ood"`` and ``{"AP-IN": value}`` for
+            ``positive="id"``, with a value in :math:`[0, 1]`. Higher is better; a detector
+            with constant scores gets the fraction of positive samples, one with random scores
+            about that.
+        :raises ValueError: if no data was given, there are no ID or no OOD samples, or the
+            scores contain NaN
+        """
+        return super().compute()
+
+    @property
+    def keys(self) -> Tuple[str, ...]:
+        return ("AP-OUT",) if self.positive == "ood" else ("AP-IN",)
+
+    def _compute_from(self, data: _Data) -> Dict[str, Tensor]:
+        return {self.keys[0]: F._average_precision(data.counts, self.positive)}
 
 
 class FPRAtTPR(BufferedMetric):

@@ -18,11 +18,12 @@ outlier scores and labels of each batch, and read all commonly reported metrics 
 
 Every metric works this way (see :class:`~pytorch_ood.metrics.Metric`), so you can also
 compute a single one, such as :class:`~pytorch_ood.metrics.AUROC`, or combine your own
-selection in a :class:`~pytorch_ood.metrics.MetricCollection`. Metrics based on curves need
-all scores at once, so they keep the scores and labels in memory until the end; with large
-datasets or segmentation, pass ``device="cpu"`` to keep them off the GPU. If you already have
-all scores, the functions in :mod:`pytorch_ood.metrics.functional` compute the metrics
-directly.
+selection in a :class:`~pytorch_ood.metrics.MetricCollection`, e.g., to add
+:class:`~pytorch_ood.metrics.AveragePrecision`, which ``OODMetrics`` does not include. Metrics
+based on curves need all scores at once, so they keep the scores and labels in memory until the
+end; with large datasets or segmentation, pass ``device="cpu"`` to keep them off the GPU. If you
+already have all scores, the functions in :mod:`pytorch_ood.metrics.functional` compute the
+metrics directly.
 
 For anomaly segmentation, where each pixel is a sample,
 :class:`~pytorch_ood.metrics.OODSegmentationMetrics` computes the metrics over the pixels of all
@@ -33,7 +34,7 @@ for each image and reports the mean.
 from . import functional
 from .base import BufferedMetric, Metric, MetricCollection, StreamingMetric
 from .functional import aurra, calc_openness, calibration_error, oscr_score
-from .ood import AUPR, AUROC, AUTC, Accuracy, FPRAtTPR, OODMetrics
+from .ood import AUPR, AUROC, AUTC, Accuracy, AveragePrecision, FPRAtTPR, OODMetrics
 from .segmentation import OODPerImageSegmentationMetrics, OODSegmentationMetrics, PerImage
 
 __all__ = [
@@ -43,6 +44,7 @@ __all__ = [
     "MetricCollection",
     "AUROC",
     "AUPR",
+    "AveragePrecision",
     "FPRAtTPR",
     "AUTC",
     "Accuracy",

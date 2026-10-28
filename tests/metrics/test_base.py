@@ -12,6 +12,7 @@ from src.pytorch_ood.metrics import (
     AUROC,
     AUTC,
     Accuracy,
+    AveragePrecision,
     FPRAtTPR,
     MetricCollection,
     OODMetrics,
@@ -41,7 +42,15 @@ class TestMetricUpdates(unittest.TestCase):
     def test_streaming_equals_single_update(self):
         batches = _batches()
         scores, labels, predictions = _cat(batches)
-        for metric_cls in (AUROC, AUTC, lambda: AUPR("id"), lambda: AUPR("ood"), FPRAtTPR):
+        for metric_cls in (
+            AUROC,
+            AUTC,
+            lambda: AUPR("id"),
+            lambda: AUPR("ood"),
+            lambda: AveragePrecision("id"),
+            lambda: AveragePrecision("ood"),
+            FPRAtTPR,
+        ):
             batched = metric_cls()
             for s, y, _ in batches:
                 batched.update(s, y)
@@ -60,6 +69,14 @@ class TestMetricUpdates(unittest.TestCase):
         self.assertEqual(
             AUPR("id").update(scores, labels).compute()["AUPR-IN"],
             float(F.aupr(scores, labels, positive="id")),
+        )
+        self.assertEqual(
+            AveragePrecision("id").update(scores, labels).compute()["AP-IN"],
+            float(F.average_precision(scores, labels, positive="id")),
+        )
+        self.assertEqual(
+            AveragePrecision("ood").update(scores, labels).compute()["AP-OUT"],
+            float(F.average_precision(scores, labels, positive="ood")),
         )
         self.assertEqual(
             FPRAtTPR(0.8).update(scores, labels).compute()["FPR80TPR"],
@@ -100,7 +117,15 @@ class TestMetricUpdates(unittest.TestCase):
             AUROC().update(scores.tolist(), labels)
 
     def test_compute_without_data_raises(self):
-        for metric in (AUROC(), AUTC(), AUPR(), FPRAtTPR(), Accuracy(), OODMetrics()):
+        for metric in (
+            AUROC(),
+            AUTC(),
+            AUPR(),
+            AveragePrecision(),
+            FPRAtTPR(),
+            Accuracy(),
+            OODMetrics(),
+        ):
             with self.subTest(type(metric).__name__):
                 with self.assertRaises(ValueError):
                     metric.compute()
@@ -122,7 +147,7 @@ class TestMetricUpdates(unittest.TestCase):
 
     def test_reset(self):
         batches = _batches()
-        for metric in (AUROC(), Accuracy(), OODMetrics()):
+        for metric in (AUROC(), AveragePrecision(), Accuracy(), OODMetrics()):
             with self.subTest(type(metric).__name__):
                 args = (
                     (lambda b: (b[2], b[1])) if isinstance(metric, Accuracy) else (lambda b: b[:2])
@@ -188,6 +213,8 @@ class TestMetricUpdates(unittest.TestCase):
         with self.assertRaises(TypeError):
             AUPR("id", "cpu")
         with self.assertRaises(TypeError):
+            AveragePrecision("id", "cpu")
+        with self.assertRaises(TypeError):
             FPRAtTPR(0.95, "cpu")
         with self.assertRaises(TypeError):
             MetricCollection([AUROC()], "cpu")
@@ -232,6 +259,11 @@ class TestVoidLabel(unittest.TestCase):
     def test_single_metrics(self):
         scores, labels, predictions = self._batch()
         self.assertEqual(AUROC(void_label=0).update(scores, labels).compute()["AUROC"], 1.0)
+        for positive, key in (("ood", "AP-OUT"), ("id", "AP-IN")):
+            metric = AveragePrecision(positive, void_label=0).update(scores, labels)
+            self.assertEqual(metric.compute()[key], 1.0)
+            # the void samples count as ID with the highest scores otherwise
+            self.assertLess(AveragePrecision(positive).update(scores, labels).compute()[key], 1)
         self.assertEqual(Accuracy(void_label=0).update(predictions, labels).compute()["ACC"], 1.0)
 
     def test_only_void_raises(self):
@@ -245,7 +277,7 @@ class TestVoidLabel(unittest.TestCase):
             metric.compute()
 
     def test_negative_void_label_raises(self):
-        for cls in (AUROC, Accuracy, OODMetrics):
+        for cls in (AUROC, AveragePrecision, Accuracy, OODMetrics):
             with self.assertRaises(ValueError):
                 cls(void_label=-1)
 
@@ -290,6 +322,16 @@ class TestDevices(unittest.TestCase):
         self.assertEqual(metric._buffers["scores"][0].device.type, "cpu")
         metric = AUROC(device="cuda").update(scores, labels)
         self.assertEqual(metric._buffers["scores"][0].device.type, "cuda")
+        metric = AveragePrecision(device="cpu").update(scores.cuda(), labels.cuda())
+        self.assertEqual(metric._buffers["scores"][0].device.type, "cpu")
+        metric = AveragePrecision(device="cuda").update(scores, labels)
+        self.assertEqual(metric._buffers["scores"][0].device.type, "cuda")
+        self.assertEqual(metric._compute()["AP-OUT"].device.type, "cuda")
+        self.assertAlmostEqual(
+            metric.compute()["AP-OUT"],
+            AveragePrecision().update(scores, labels).compute()["AP-OUT"],
+            places=12,
+        )
 
     @unittest.skipUnless(CUDA, "requires CUDA")
     def test_reset_fixes_the_device_again(self):
@@ -310,13 +352,14 @@ class TestDevices(unittest.TestCase):
 class TestCollection(unittest.TestCase):
     def test_results_equal_single_metrics(self):
         scores, labels, predictions = _cat(_batches())
-        metrics = [AUROC(), AUPR("ood"), FPRAtTPR(0.9), AUTC(), Accuracy()]
+        metrics = [AUROC(), AUPR("ood"), AveragePrecision("id"), FPRAtTPR(0.9), AUTC(), Accuracy()]
         collection = MetricCollection(metrics)
         collection.update(scores=scores, labels=labels, predictions=predictions)
         expected = {}
         for metric_cls, args in (
             (AUROC, ()),
             (lambda: AUPR("ood"), ()),
+            (lambda: AveragePrecision("id"), ()),
             (lambda: FPRAtTPR(0.9), ()),
             (AUTC, ()),
         ):
@@ -324,7 +367,8 @@ class TestCollection(unittest.TestCase):
         expected.update(Accuracy().update(predictions, labels).compute())
         self.assertEqual(collection.compute(), expected)
         self.assertEqual(
-            list(collection.compute()), ["AUROC", "AUPR-OUT", "FPR90TPR", "AUTC", "ACC"]
+            list(collection.compute()),
+            ["AUROC", "AUPR-OUT", "AP-IN", "FPR90TPR", "AUTC", "ACC"],
         )
 
     def test_each_input_stored_once_per_update(self):
@@ -372,7 +416,9 @@ class TestCollection(unittest.TestCase):
 
     def test_inputs_buffered_once(self):
         scores, labels, predictions = _cat(_batches())
-        collection = MetricCollection([AUROC(), AUPR("id"), AUPR("ood"), FPRAtTPR(), Accuracy()])
+        collection = MetricCollection(
+            [AUROC(), AUPR("id"), AUPR("ood"), AveragePrecision(), FPRAtTPR(), Accuracy()]
+        )
         collection.update(scores=scores, labels=labels, predictions=predictions)
         # only the inputs of the buffered metrics, each once; predictions only feed the accuracy
         self.assertEqual(set(collection._buffers), {"scores", "labels"})
@@ -385,6 +431,12 @@ class TestCollection(unittest.TestCase):
         # computes it
         scores, labels, predictions = _cat(_batches())
         collection = OODMetrics().update(scores, labels, predictions)
+        with mock.patch("torch.argsort", wraps=torch.argsort) as argsort:
+            collection.compute()
+        self.assertEqual(argsort.call_count, 1)
+        collection = MetricCollection(
+            [AUROC(), AveragePrecision("id"), AveragePrecision("ood"), AUPR("ood"), FPRAtTPR()]
+        ).update(scores=scores, labels=labels)
         with mock.patch("torch.argsort", wraps=torch.argsort) as argsort:
             collection.compute()
         self.assertEqual(argsort.call_count, 1)
@@ -432,6 +484,7 @@ class TestCollection(unittest.TestCase):
 
     def test_defaults(self):
         self.assertEqual(AUPR().keys, ("AUPR-OUT",))
+        self.assertEqual(AveragePrecision().keys, ("AP-OUT",))
         self.assertEqual(FPRAtTPR().keys, ("FPR95TPR",))
 
     def test_keys(self):
@@ -440,6 +493,8 @@ class TestCollection(unittest.TestCase):
         self.assertEqual(FPRAtTPR(0.925).keys, ("FPR92.5TPR",))
         self.assertEqual(AUPR("id").keys, ("AUPR-IN",))
         self.assertEqual(AUPR("ood").keys, ("AUPR-OUT",))
+        self.assertEqual(AveragePrecision("id").keys, ("AP-IN",))
+        self.assertEqual(AveragePrecision("ood").keys, ("AP-OUT",))
         self.assertEqual(
             OODMetrics().keys, ("AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR", "ACC")
         )
@@ -448,6 +503,8 @@ class TestCollection(unittest.TestCase):
     def test_invalid_parameters(self):
         with self.assertRaises(ValueError):
             AUPR("out")
+        with self.assertRaises(ValueError):
+            AveragePrecision("out")
         for tpr in (-0.1, 1.1, 95):
             with self.assertRaises(ValueError):
                 FPRAtTPR(tpr)

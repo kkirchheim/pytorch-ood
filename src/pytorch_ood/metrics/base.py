@@ -244,7 +244,7 @@ class MetricCollection(Metric):
     """
     Computes several metrics from the same inputs, with the memory of a single metric: each
     input of the buffered metrics is stored once, streaming metrics only keep their state, and
-    the curve that AUROC, AUPR and FPR@TPR are based on is computed once.
+    the scores are sorted only once for all curves that AUROC, AUPR, AP and FPR@TPR are based on.
 
     :meth:`~pytorch_ood.metrics.Metric.update` takes the inputs as keyword arguments. Each metric receives the inputs it
     declares in :attr:`~pytorch_ood.metrics.Metric.inputs`.
