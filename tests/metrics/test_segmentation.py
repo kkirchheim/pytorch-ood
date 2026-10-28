@@ -13,6 +13,7 @@ from src.pytorch_ood.metrics import (
     AUROC,
     AUTC,
     Accuracy,
+    AveragePrecision,
     FPRAtTPR,
     MetricCollection,
     OODMetrics,
@@ -72,6 +73,43 @@ class TestPerImage(unittest.TestCase):
         metric.update(scores[:3], labels[:3]).update(scores[3:], labels[3:])
         self.assertAlmostEqual(metric.compute()["AUROC"], self._expected(scores, labels))
 
+    def test_average_precision(self):
+        scores, labels = _images()
+        # few-valued scores, where AP and AUPR differ
+        scores = scores.round()
+        for positive, key in (("ood", "AP-OUT"), ("id", "AP-IN")):
+            with self.subTest(positive=positive):
+                metric = PerImage(AveragePrecision(positive))
+                metric.update(scores[:3], labels[:3]).update(scores[3:], labels[3:])
+                fn = lambda s, y: F.average_precision(s, y, positive)  # noqa: E731
+                self.assertAlmostEqual(
+                    metric.compute()[key], self._expected(scores, labels, fn), places=12
+                )
+                pooled = AveragePrecision(positive).update(scores, labels).compute()[key]
+                self.assertNotAlmostEqual(metric.compute()[key], pooled)
+
+    def test_average_precision_skips_images_without_ood(self):
+        scores, labels = _images()
+        labels[1] = labels[1].clamp(min=0)  # only ID
+        metric = PerImage(AveragePrecision()).update(scores, labels)
+        keep = [0, 2, 3]
+        with self.assertWarnsRegex(UserWarning, "Skipped 1 of 4 images"):
+            result = metric.compute()
+        expected = self._expected(scores[keep], labels[keep], F.average_precision)
+        self.assertAlmostEqual(result["AP-OUT"], expected, places=12)
+
+    @unittest.skipUnless(CUDA, "CUDA not available")
+    def test_average_precision_cuda(self):
+        scores, labels = _images()
+        scores = scores.round()
+        for positive in ("ood", "id"):
+            with self.subTest(positive=positive):
+                expected = PerImage(AveragePrecision(positive)).update(scores, labels).compute()
+                metric = PerImage(AveragePrecision(positive)).update(scores.cuda(), labels)
+                self.assertTrue(all(v.device.type == "cuda" for v in metric._sums.values()))
+                for key, value in metric.compute().items():
+                    self.assertAlmostEqual(value, expected[key], places=12, msg=key)
+
     def test_differs_from_pooled(self):
         # the second image is shifted, which changes the pooled AUROC but not the per-image one
         scores, labels = _images(n=2)
@@ -84,6 +122,8 @@ class TestPerImage(unittest.TestCase):
     def test_collection_matches_single_metrics(self):
         scores, labels = _images()
         result = OODPerImageSegmentationMetrics().update(scores, labels).compute()
+        # AP is not part of the collection
+        self.assertEqual(tuple(result), ("AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR"))
         for key, fn in (
             ("AUROC", F.auroc),
             ("AUTC", F.autc),
@@ -197,7 +237,7 @@ class TestPerImage(unittest.TestCase):
         self.assertAlmostEqual(result["AUROC"], self._expected(scores[keep], labels[keep]))
 
     def test_needs(self):
-        for metric in (AUROC(), AUPR(), FPRAtTPR(), AUTC(), OODMetrics()):
+        for metric in (AUROC(), AUPR(), AveragePrecision(), FPRAtTPR(), AUTC(), OODMetrics()):
             self.assertEqual((metric.needs_id, metric.needs_ood), (True, True))
         for metric in (Accuracy(), MetricCollection([Accuracy()])):
             self.assertEqual((metric.needs_id, metric.needs_ood), (True, False))
