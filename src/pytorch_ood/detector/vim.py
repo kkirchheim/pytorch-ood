@@ -35,7 +35,7 @@ class ViM(Residual):
     :math:`u = -W^{+} b` and projecting out the principal subspace, :math:`W` and :math:`b` are the weights and
     biases of the last layer and :math:`l_i(x)` are the logits.
 
-    ViM extends :class:`Residual`, which uses the unscaled residual norm as outlier score.
+    ViM extends :class:`Residual <pytorch_ood.detector.Residual>`, which uses the unscaled residual norm as outlier score.
 
     .. rubric:: Examples
 
@@ -87,7 +87,7 @@ class ViM(Residual):
         :param x: features of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`
         """
-        if self.principal_subspace is None or self.alpha is None:
+        if self.residual_subspace is None or self.alpha is None:
             raise RequiresFittingException()
 
         x = x.detach().to(self.w.device).float()

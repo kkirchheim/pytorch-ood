@@ -8,6 +8,7 @@
 """
 
 import logging
+import warnings
 from typing import Callable, Optional
 
 import torch
@@ -42,8 +43,9 @@ class Residual(FeaturesDetector):
     :math:`u = -W^{+} b` and projecting out the principal subspace, and :math:`W` and :math:`b` are the
     weights and biases of the last layer.
 
-    This detector serves as the base class of :class:`ViM`, which additionally scales the residual norm
-    by a factor :math:`\\alpha` and subtracts the energy of the logits.
+    This detector serves as the base class of :class:`ViM <pytorch_ood.detector.ViM>`, which
+    additionally scales the residual norm by a factor :math:`\\alpha` and subtracts the energy of
+    the logits.
 
     .. rubric:: Examples
 
@@ -96,7 +98,8 @@ class Residual(FeaturesDetector):
         self.w = w  # (C, D)
         self.b = b  # (C,)
         self.u = -(torch.linalg.pinv(w) @ b)  # (D,)  new origin
-        self.principal_subspace: Optional[Tensor] = None
+        #: orthonormal basis of the residual subspace, of shape :math:`D \\times (D - d)`
+        self.residual_subspace: Optional[Tensor] = None
 
     def _residual_norm(self, x: Tensor) -> Tensor:
         """
@@ -105,7 +108,7 @@ class Residual(FeaturesDetector):
         :param x: features of shape :math:`N \\times D`
         :return: residual norms of shape :math:`N`
         """
-        x_p_t = (x - self.u) @ self.principal_subspace  # (N, D-d)
+        x_p_t = (x - self.u) @ self.residual_subspace  # (N, D-d)
         return x_p_t.norm(dim=-1)  # (N,)
 
     def predict(self, x: Tensor) -> Tensor:
@@ -116,7 +119,7 @@ class Residual(FeaturesDetector):
         if self.encoder is None:
             raise ModelNotSetException
 
-        if self.principal_subspace is None:
+        if self.residual_subspace is None:
             raise RequiresFittingException()
 
         with torch.no_grad():
@@ -126,6 +129,18 @@ class Residual(FeaturesDetector):
 
     def __repr__(self):
         return f"{self.__class__.__name__}(d={self.d})"
+
+    @property
+    def principal_subspace(self) -> Optional[Tensor]:
+        """
+        Deprecated alias of :attr:`residual_subspace <pytorch_ood.detector.Residual.residual_subspace>`.
+        """
+        warnings.warn(
+            "'principal_subspace' is deprecated, use 'residual_subspace' instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.residual_subspace
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
@@ -152,7 +167,7 @@ class Residual(FeaturesDetector):
         :param x: features of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`
         """
-        if self.principal_subspace is None:
+        if self.residual_subspace is None:
             raise RequiresFittingException()
 
         x = x.detach().to(self.w.device).float()
@@ -189,5 +204,5 @@ class Residual(FeaturesDetector):
         # to the *smallest* eigenvalues (i.e. directions least explained by the
         # training data).  With ascending eigh output these are the first columns.
         k = eig_vecs.shape[1] - self.d
-        self.principal_subspace = eig_vecs[:, :k].contiguous()  # (D, D-d)
+        self.residual_subspace = eig_vecs[:, :k].contiguous()  # (D, D-d)
         return self

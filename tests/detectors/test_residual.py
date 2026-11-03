@@ -56,8 +56,10 @@ class TestResidual(unittest.TestCase):
         Features that lie entirely in the principal subspace (after centering) have a residual norm of zero.
         """
         detector = Residual(None, d=4, w=self.w, b=self.b).fit_features(self.train, self.labels)
+        ns = detector.residual_subspace
         x = self.test - detector.u
-        x = x - (x @ detector.principal_subspace) @ detector.principal_subspace.T + detector.u
+        # remove the component in the residual subspace, keeping only the principal component
+        x = x - (x @ ns) @ ns.T + detector.u
         torch.testing.assert_close(
             detector.predict_features(x), torch.zeros(64), atol=1e-4, rtol=0
         )
@@ -75,6 +77,11 @@ class TestResidual(unittest.TestCase):
         energy = torch.logsumexp(self.test @ self.w.T + self.b, dim=-1)
         expected = vim.alpha * residual.predict_features(self.test) - energy
         torch.testing.assert_close(vim.predict_features(self.test), expected)
+
+    def test_principal_subspace_alias_is_deprecated(self):
+        detector = Residual(None, d=4, w=self.w, b=self.b).fit_features(self.train, self.labels)
+        with self.assertWarns(DeprecationWarning):
+            self.assertIs(detector.principal_subspace, detector.residual_subspace)
 
     def test_repr(self):
         self.assertEqual(repr(Residual(None, d=4, w=self.w, b=self.b)), "Residual(d=4)")

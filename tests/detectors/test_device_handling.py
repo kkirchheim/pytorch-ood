@@ -332,7 +332,7 @@ class TestDetectorDeviceHandling(unittest.TestCase):
         self.assertEqual(detector.u.device, self.device)
 
         detector.fit(self.classification_loader)
-        self.assertEqual(detector.principal_subspace.device, self.device)
+        self.assertEqual(detector.residual_subspace.device, self.device)
 
         scores = detector(torch.randn(8, 10, device=self.device))
         self._assert_scores(scores, self.device, batch_size=8)
