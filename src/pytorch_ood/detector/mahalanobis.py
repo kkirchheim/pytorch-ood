@@ -68,16 +68,22 @@ class Mahalanobis(FeaturesDetector):
         self,
         encoder: Optional[Callable[[Tensor], Tensor]],
         eps: float = 1e-6,
+        use_pinv: bool = False,
     ):
         """
         :param encoder: feature encoder that maps inputs to features of shape :math:`B \\times D`. Can be
             ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param eps: regularization constant :math:`\\epsilon` added to the diagonal of the covariance matrix
             before inversion, so that the matrix is invertible. Set to ``0`` to disable regularization.
+        :param use_pinv: if ``True``, the precision matrix is computed with the Moore-Penrose pseudo-inverse
+            (``torch.linalg.pinv``) instead of the regular inverse (``torch.linalg.inv``). Since the covariance
+            matrix is regularized with ``eps``, this is usually not required, but may be more robust for
+            ill-conditioned covariance matrices or when ``eps=0``. Defaults to ``False``.
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder
         self.eps = eps
+        self.use_pinv = use_pinv
         self.mu: Tensor = None  #: Centers
         self.cov: Tensor = None  #: Covariance Matrix
         self.precision: Tensor = None  #: Precision Matrix
@@ -132,7 +138,10 @@ class Mahalanobis(FeaturesDetector):
 
         # the covariance is the sum of the centered outer products (not divided by N), plus a small ridge term
         self.cov += torch.eye(self.cov.shape[0], device=self.cov.device) * self.eps
-        self.precision = torch.linalg.inv(self.cov)
+        if self.use_pinv:
+            self.precision = torch.linalg.pinv(self.cov)
+        else:
+            self.precision = torch.linalg.inv(self.cov)
         return self
 
     def _calc_gaussian_scores(self, z: Tensor) -> Tensor:
