@@ -54,6 +54,7 @@ Feature-based
    detectors/mahalanobis
    detectors/mmahalanobis
    detectors/rmd
+   detectors/residual
    detectors/vim
    detectors/knn
    detectors/nnguide
