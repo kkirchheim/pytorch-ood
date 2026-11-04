@@ -96,3 +96,33 @@ class PNMLTest(unittest.TestCase):
 
         self.assertTrue(torch.allclose(scores, expected, atol=1e-6))
         self.assertGreater(scores[1].item(), scores[0].item())
+
+
+class PNMLNumericsTest(unittest.TestCase):
+    """Ill-conditioned training features: float32 inputs must give the scores of a float64 computation."""
+
+    def test_ill_conditioned_features_match_float64_reference(self):
+        torch.manual_seed(0)
+        n, d, c = 500, 64, 3
+        scales = torch.logspace(0, -5, d)  # Gram eigenvalues span 10 orders of magnitude
+        z_train = torch.randn(n, d) * scales
+        z_test = torch.randn(16, d) * scales
+        head = torch.nn.Linear(d, c)
+
+        detector = PNML(encoder=None, head=head).fit_features(z_train, torch.zeros(n).long())
+        scores = detector.predict_features(z_test)
+
+        zn = torch.nn.functional.normalize(z_train.double(), dim=1)
+        xn = torch.nn.functional.normalize(z_test.double(), dim=1)
+        projector = torch.linalg.pinv(zn.T @ zn, hermitian=True)
+        x_proj = (xn @ projector * xn).sum(dim=1)
+        x_t_g = x_proj / (1.0 + x_proj)
+        with torch.no_grad():
+            probs = torch.softmax(head(xn.float()), dim=1).double().clamp(1e-12, 1 - 1e-12)
+        terms = probs / (probs + (1.0 - probs) * probs.pow(x_t_g.unsqueeze(1)))
+        expected = torch.log(terms.sum(dim=1)) / torch.log(
+            torch.tensor(float(c), dtype=torch.float64)
+        )
+
+        self.assertEqual(scores.dtype, torch.float32)
+        torch.testing.assert_close(scores.double(), expected, rtol=1e-4, atol=1e-5)

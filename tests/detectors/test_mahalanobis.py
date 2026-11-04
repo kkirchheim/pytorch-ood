@@ -63,9 +63,9 @@ class MahalanobisEpsTest(unittest.TestCase):
         torch.manual_seed(42)
 
     def test_default_eps(self):
-        """Mahalanobis should use eps=1e-6 by default."""
+        """Mahalanobis should use eps=1e-10 by default."""
         model = Mahalanobis(None)
-        self.assertEqual(model.eps, 1e-6)
+        self.assertEqual(model.eps, 1e-10)
 
     def test_custom_eps(self):
         """Mahalanobis should accept a custom eps value."""
@@ -81,7 +81,8 @@ class MahalanobisEpsTest(unittest.TestCase):
         model_b = Mahalanobis(None, eps=1e-2).fit_features(x, y)
 
         torch.testing.assert_close(model_b.cov - model_a.cov, torch.eye(10) * 1e-2)
-        torch.testing.assert_close(model_b.precision, torch.linalg.inv(model_b.cov))
+        expected = torch.linalg.inv(model_b.cov.double()).float()
+        torch.testing.assert_close(model_b.precision, expected)
 
     def test_eps_makes_singular_covariance_invertible(self):
         """
@@ -118,7 +119,15 @@ class MahalanobisPinvTest(unittest.TestCase):
 
     def test_pinv_precision(self):
         model = Mahalanobis(None, use_pinv=True).fit_features(self.x, self.y)
-        torch.testing.assert_close(model.precision, torch.linalg.pinv(model.cov))
+        expected = torch.linalg.pinv(model.cov.double(), hermitian=True).float()
+        torch.testing.assert_close(model.precision, expected)
+
+    def test_pinv_ignores_eps(self):
+        """With pinv, no ridge is added: directions without variance are discarded instead."""
+        model_a = Mahalanobis(None, eps=0.0, use_pinv=True).fit_features(self.x, self.y)
+        model_b = Mahalanobis(None, eps=1e-2, use_pinv=True).fit_features(self.x, self.y)
+        torch.testing.assert_close(model_a.cov, model_b.cov)
+        torch.testing.assert_close(model_a.precision, model_b.precision)
 
     def test_pinv_matches_inv(self):
         """For a well-conditioned covariance matrix, inv and pinv should give the same scores."""
@@ -128,3 +137,61 @@ class MahalanobisPinvTest(unittest.TestCase):
         torch.testing.assert_close(
             model_pinv.predict_features(x), model_inv.predict_features(x), rtol=1e-4, atol=1e-4
         )
+
+
+def _reference_scores(z, y, x, eps, use_pinv):
+    """Float64 reference: half the squared distance to the closest center under the shared
+    within-class covariance (sum of centered outer products / N), like sklearn's EmpiricalCovariance."""
+    z, x = z.double(), x.double()
+    n_classes = int(y.max()) + 1
+    mu = torch.stack([z[y == k].mean(dim=0) for k in range(n_classes)])
+    centered = z - mu[y]
+    cov = centered.T @ centered / len(z)
+    if use_pinv:
+        precision = torch.linalg.pinv(cov, hermitian=True)
+    else:
+        precision = torch.linalg.inv(cov + eps * torch.eye(z.shape[1], dtype=torch.float64))
+    d = torch.stack([((x - m) @ precision * (x - m)).sum(dim=1) for m in mu], dim=1)
+    return 0.5 * d.min(dim=1).values
+
+
+class MahalanobisNumericsTest(unittest.TestCase):
+    """
+    Rank-deficient covariance (fewer samples than feature dimensions): float32 inputs must give
+    the scores of a float64 computation.
+    """
+
+    def setUp(self) -> None:
+        torch.manual_seed(0)
+        n, d = 60, 80
+        # decaying feature scales make the covariance ill-conditioned, like penultimate CNN features
+        scales = torch.logspace(0, -3, d)
+        self.y = torch.arange(n) % 3
+        self.z = (torch.randn(n, d) * scales + torch.randn(3, d)[self.y]).relu()
+        self.x = (torch.randn(16, d) * scales + torch.randn(3, d)[torch.arange(16) % 3]).relu()
+
+    def _check(self, **kwargs):
+        detector = Mahalanobis(None, **kwargs).fit_features(self.z, self.y)
+        scores = detector.predict_features(self.x)
+        self.assertEqual(scores.dtype, torch.float32)
+        expected = _reference_scores(
+            self.z, self.y, self.x, eps=detector.eps, use_pinv=detector.use_pinv
+        )
+        torch.testing.assert_close(scores.double(), expected, rtol=1e-3, atol=1e-3)
+
+    def test_inv_matches_float64_reference(self):
+        self._check()
+
+    def test_pinv_matches_float64_reference(self):
+        self._check(use_pinv=True)
+
+    def test_float64_input_stays_float64(self):
+        detector = Mahalanobis(None).fit_features(self.z.double(), self.y)
+        self.assertEqual(detector.mu.dtype, torch.float64)
+        self.assertEqual(detector.precision.dtype, torch.float64)
+        self.assertEqual(detector.predict_features(self.x.double()).dtype, torch.float64)
+
+    def test_float32_input_gives_float32_parameters(self):
+        detector = Mahalanobis(None).fit_features(self.z, self.y)
+        self.assertEqual(detector.mu.dtype, torch.float32)
+        self.assertEqual(detector.precision.dtype, torch.float32)

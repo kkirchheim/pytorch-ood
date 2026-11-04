@@ -24,6 +24,7 @@ from ..api import (
     Task,
 )
 from ..utils import contains_unknown, extract_feature_avg
+from ..utils.utils import _fit_gaussian
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +45,12 @@ class MultiMahalanobis(StructuredDetector):
     Here, :math:`f_i(x)` is the spatial mean of the output of the first :math:`i` layers.
     The final outlier score is the sum of all per-layer scores, :math:`\\sum_i \\alpha_i M_i(x)`,
     where :math:`\\alpha_i` is ``alpha[i]``.
+
+    :math:`\\Sigma_i` is the shared within-class covariance (centered outer products divided by the
+    number of samples), regularized or pseudo-inverted as in
+    :class:`~pytorch_ood.detector.Mahalanobis`. The parameters are estimated in
+    double precision (single precision on MPS, which does not support double precision) and stored
+    in the dtype of the features.
 
     .. note ::
         This does not yet support ODIN preprocessing. Also, the :math:`\\alpha` values have to be determined manually.
@@ -66,11 +73,23 @@ class MultiMahalanobis(StructuredDetector):
 
     requires_fit = True
 
-    def __init__(self, model: List[Module], alpha: Optional[List[float]] = None):
+    def __init__(
+        self,
+        model: List[Module],
+        alpha: Optional[List[float]] = None,
+        eps: float = 1e-10,
+        use_pinv: bool = False,
+    ):
         """
         :param model: list of consecutive neural network layers :math:`f_1(\\cdot),...,f_n(\\cdot)`;
             layer :math:`i` is evaluated on the output of all previous layers.
         :param alpha: weighting of the individual layers. Defaults to uniform weighting.
+        :param eps: regularization constant added to the diagonal of each covariance matrix before
+            inversion, so that the matrix is invertible. Not used if ``use_pinv`` is ``True``.
+        :param use_pinv: if ``True``, each precision matrix is the Moore-Penrose pseudo-inverse
+            (``torch.linalg.pinv``) of the unregularized covariance matrix instead of the inverse
+            (``torch.linalg.inv``) of the regularized one. Directions without variance in the training
+            features then do not contribute to the distance.
         """
         super(MultiMahalanobis, self).__init__()
 
@@ -78,6 +97,8 @@ class MultiMahalanobis(StructuredDetector):
             raise ValueError("No modules given")
 
         self.model = model
+        self.eps = eps
+        self.use_pinv = use_pinv
 
         # parameters of Gaussians
         self.mu: List[Tensor] = []  #: Centers
@@ -152,18 +173,9 @@ class MultiMahalanobis(StructuredDetector):
                 f"Calculating mahalanobis parameters for layer {layer_idx} with {n_classes=} {z.shape=} {y.shape=}"
             )
 
-            mu = torch.zeros(size=(n_classes, z.shape[-1]), device=device)
-            cov = torch.zeros(size=(z.shape[-1], z.shape[-1]), device=device)
-
-            for clazz in range(n_classes):
-                idxs = y.eq(clazz)
-                assert idxs.sum() != 0
-                z_c = z[idxs]
-                mu[clazz] = z_c.mean(dim=0)
-                cov += (z_c - mu[clazz]).T.mm(z_c - mu[clazz])
-
-            cov += torch.eye(cov.shape[0], device=cov.device) * 1e-6
-            precision = torch.linalg.inv(cov)
+            mu, cov, precision = _fit_gaussian(
+                z, y, n_classes=n_classes, eps=self.eps, use_pinv=self.use_pinv
+            )
 
             self.mu.append(mu)
             self.cov.append(cov)
@@ -175,7 +187,7 @@ class MultiMahalanobis(StructuredDetector):
     def _calc_gaussian_scores(self, z: Tensor, layer_idx) -> Tensor:
         """ """
         features = z.view(z.size(0), z.size(1), -1)
-        features = torch.mean(features, 2)
+        features = torch.mean(features, 2).to(self.mu[layer_idx].dtype)
         md_k = []
 
         # calculate per class scores

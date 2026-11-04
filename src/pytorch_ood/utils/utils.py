@@ -72,6 +72,74 @@ def _check_fraction(name: str, value: float) -> float:
     return value
 
 
+def _linalg_dtype(device) -> torch.dtype:
+    """
+    Dtype for covariance estimates, inverses and log-determinants: float64, since float32 breaks down
+    on ill-conditioned matrices; MPS does not support float64.
+    """
+    return torch.float32 if torch.device(device).type == "mps" else torch.float64
+
+
+def _gram_matrix(x: Tensor, transform: Optional[Callable[[Tensor], Tensor]] = None) -> Tensor:
+    """
+    :math:`X^\\top X` in :func:`_linalg_dtype`, computed in chunks of rows so that only one chunk at a
+    time is held in that dtype.
+
+    :param x: matrix :math:`X` of shape :math:`N \\times D`
+    :param transform: applied to each chunk of rows after the conversion, e.g. centering
+    :return: matrix of shape :math:`D \\times D`
+    """
+    dtype = _linalg_dtype(x.device)
+    gram = torch.zeros(x.shape[1], x.shape[1], device=x.device, dtype=dtype)
+    # 16384 rows of 2048 float64 features take 256 MB
+    for chunk in x.detach().split(16384):
+        chunk = chunk.to(dtype)
+        if transform is not None:
+            chunk = transform(chunk)
+        gram += chunk.T @ chunk
+    return gram
+
+
+def _fit_gaussian(
+    z: Tensor, y: Tensor, n_classes: int, eps: float, use_pinv: bool
+) -> Tuple[Tensor, Tensor, Tensor]:
+    """
+    Class means and shared within-class covariance (centered outer products divided by :math:`N`,
+    as sklearn's ``EmpiricalCovariance``), plus its inverse. Computed in :func:`_linalg_dtype`,
+    returned in the dtype of ``z``.
+
+    With ``use_pinv``, the pseudo-inverse discards directions without variance and ``eps`` is not
+    used: a ridge would turn them into directions of precision ``1 / eps``, and whether ``pinv`` keeps
+    those depends on its relative cutoff, i.e. on the scale of the features.
+
+    :param z: features of shape :math:`N \\times D`
+    :param y: class labels of shape :math:`N`, in :math:`0, \\ldots, C-1`
+    :param n_classes: number of classes :math:`C`; all of them have to occur
+    :param eps: added to the diagonal of the covariance before ``inv``
+    :param use_pinv: use ``pinv`` instead of a regularized ``inv``
+    :return: means :math:`C \\times D`, covariance :math:`D \\times D`, precision :math:`D \\times D`
+    """
+    dtype = _linalg_dtype(z.device)
+    z = z.detach()
+    y = y.long()
+    d = z.shape[1]
+    mu = torch.zeros(n_classes, d, device=z.device, dtype=dtype)
+    cov = torch.zeros(d, d, device=z.device, dtype=dtype)
+    # per class, so only one class at a time is held in float64
+    for k in range(n_classes):
+        z_k = z[y == k].to(dtype)
+        mu[k] = z_k.mean(dim=0)
+        centered = z_k - mu[k]
+        cov += centered.T @ centered
+    cov /= z.shape[0]
+    if use_pinv:
+        precision = torch.linalg.pinv(cov, hermitian=True)
+    else:
+        cov = cov + eps * torch.eye(cov.shape[0], device=cov.device, dtype=dtype)
+        precision = torch.linalg.inv(cov)
+    return mu.to(z.dtype), cov.to(z.dtype), precision.to(z.dtype)
+
+
 #######################################
 # Helpers for labels
 #######################################

@@ -24,6 +24,7 @@ from ..api import (
     Task,
 )
 from ..utils import extract_features, is_known
+from ..utils.utils import _linalg_dtype
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +43,9 @@ class GMM(FeaturesDetector):
 
     This extends :class:`~pytorch_ood.detector.Mahalanobis` by allowing **per-class covariance matrices** and
     using the full mixture likelihood (logsumexp) instead of the max over classes.
+
+    The parameters are estimated and stored in double precision (single precision on MPS, which does
+    not support double precision).
     """
 
     # a classical baseline (class-conditional Gaussians); no single paper introduced it
@@ -104,7 +108,7 @@ class GMM(FeaturesDetector):
             raise ValueError("No ID samples found.")
 
         device = self.device or z.device
-        dtype = _dtype(device)
+        dtype = _linalg_dtype(device)
         z = z[known].detach().to(device, dtype)
         y = labels[known].to(device).long()
 
@@ -167,8 +171,3 @@ class GMM(FeaturesDetector):
             mahal + self._log_det + d * math.log(2 * math.pi)
         )
         return -torch.logsumexp(log_likelihood, dim=1)
-
-
-def _dtype(device) -> torch.dtype:
-    # float64 for stable covariances and log-determinants; MPS does not support it
-    return torch.float32 if torch.device(device).type == "mps" else torch.float64

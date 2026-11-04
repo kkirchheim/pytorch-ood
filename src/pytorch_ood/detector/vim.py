@@ -24,6 +24,7 @@ from ..api import (
     Task,
 )
 from ..utils import extract_features
+from ..utils.utils import _gram_matrix, _linalg_dtype
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +43,9 @@ class ViM(FeaturesDetector):
     where :math:`x^{P\\perp}` is the residual of the features :math:`x` after centering at the origin
     :math:`u = -W^{+} b` and projecting out the principal subspace, :math:`W` and :math:`b` are the weights and
     biases of the last layer and :math:`l_i(x)` are the logits.
+
+    The principal subspace is computed in double precision (single precision on MPS, which does not
+    support double precision).
 
     .. rubric:: Examples
 
@@ -93,7 +97,8 @@ class ViM(FeaturesDetector):
         b = b.detach().float()
         self.w = w  # (C, D)
         self.b = b  # (C,)
-        self.u = -(torch.linalg.pinv(w) @ b)  # (D,)  new origin
+        dtype = _linalg_dtype(w.device)
+        self.u = -(torch.linalg.pinv(w.to(dtype)) @ b.to(dtype)).float()  # (D,)  new origin
         self.principal_subspace: Optional[Tensor] = None
         self.alpha: Optional[float] = None  #: the computed :math:`\alpha` value
 
@@ -184,8 +189,10 @@ class ViM(FeaturesDetector):
         log.info("Computing principal space ...")
         X = features - self.u  # (N, D)  centered features
 
-        # Empirical covariance (assume_centered=True → MLE: divide by n)
-        cov = (X.T @ X) / X.shape[0]  # (D, D)
+        # Empirical covariance (assume_centered=True → MLE: divide by n), in float64: centered at u, not
+        # at the mean, its leading eigenvalue is large and float32 eigenvectors of the small ones inaccurate
+        u = self.u.to(_linalg_dtype(features.device))
+        cov = _gram_matrix(features, transform=lambda c: c - u) / features.shape[0]  # (D, D)
 
         # Eigendecomposition of the symmetric covariance matrix.
         # torch.linalg.eigh returns eigenvalues in ascending order with
@@ -196,7 +203,7 @@ class ViM(FeaturesDetector):
         # to the *smallest* eigenvalues (i.e. directions least explained by the
         # training data).  With ascending eigh output these are the first columns.
         k = eig_vecs.shape[1] - self.d
-        self.principal_subspace = eig_vecs[:, :k].contiguous()  # (D, D-d)
+        self.principal_subspace = eig_vecs[:, :k].float().contiguous()  # (D, D-d)
 
         log.info("Computing alpha ...")
         x_p_t = X @ self.principal_subspace  # (N, D-d)

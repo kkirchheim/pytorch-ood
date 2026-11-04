@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from src.pytorch_ood.api import RequiresFittingException
-from src.pytorch_ood.detector import MultiMahalanobis
+from src.pytorch_ood.detector import Mahalanobis, MultiMahalanobis
 from tests.helpers import ClassificationModel
 from tests.helpers.model import ConvClassifier
 
@@ -81,3 +81,20 @@ class MultiMahalanobisScoreTest(unittest.TestCase):
         # layer 1: squared distances (5, 13) and (9, 1); layer 2: (2, 2) and (9, 13)
         expected = 1.0 * torch.tensor([2.5, 0.5]) + 2.0 * torch.tensor([1.0, 4.5])
         torch.testing.assert_close(detector.predict_structured([x, x]), expected)
+
+
+class MultiMahalanobisSingleLayerTest(unittest.TestCase):
+    def test_single_layer_equals_mahalanobis(self):
+        """One identity layer with weight 1 fits the same Gaussian as Mahalanobis."""
+        torch.manual_seed(0)
+        y = torch.arange(60) % 3
+        z = torch.randn(60, 80) + torch.randn(3, 80)[y]  # fewer samples than dimensions
+        x = torch.randn(16, 80)
+        for kwargs in [{}, {"eps": 1e-2}, {"use_pinv": True}]:
+            with self.subTest(**kwargs):
+                multi = MultiMahalanobis([torch.nn.Identity()], **kwargs).fit_structured([z], y)
+                single = Mahalanobis(None, **kwargs).fit_features(z, y)
+                torch.testing.assert_close(multi.precision[0], single.precision)
+                torch.testing.assert_close(
+                    multi.predict_structured([x]), single.predict_features(x)
+                )
