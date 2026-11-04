@@ -36,6 +36,7 @@ class ViM(Residual):
     biases of the last layer and :math:`l_i(x)` are the logits.
 
     ViM extends :class:`Residual <pytorch_ood.detector.Residual>`, which uses the unscaled residual norm as outlier score.
+    As there, the residual subspace is computed in double precision (single precision on MPS).
 
     .. rubric:: Examples
 

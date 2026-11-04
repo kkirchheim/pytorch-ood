@@ -24,6 +24,7 @@ from ..api import (
     Task,
 )
 from ..utils import extract_features, is_known
+from ..utils.utils import _gram_matrix
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +50,9 @@ class PNML(FeaturesDetector):
 
     Intuitively, the score is low when a sample is well supported by the training feature geometry
     and the classifier is confident, and high when the sample falls in weakly supported directions.
+
+    :math:`X^+ X^{+\\top}` is computed and applied in double precision (single precision on MPS,
+    which does not support double precision).
     """
 
     info = DetectorInfo(
@@ -120,16 +124,12 @@ class PNML(FeaturesDetector):
 
         target_device = self.device or z.device
 
-        z = z[known].detach().to(target_device).float()
-        z = torch.nn.functional.normalize(z, p=2, dim=1)
+        z = z[known].detach().to(target_device)
 
-        # X^+ (X^+)^T == pinv(X^T X) for any X, and equals (X^T X)^{-1} exactly whenever
-        # X^T X is invertible (the practically-always-true case for real feature data).
-        # Computing it this way -- pinv on the small (D, D) Gram matrix -- instead of
-        # pinv(X) directly avoids an SVD over the full (N, D) training-feature matrix,
-        # which is intractable at full-dataset scale (e.g. N=1.28M for ImageNet-1K)
-        # even though D is typically just a few thousand.
-        self._feature_projector = torch.linalg.pinv(z.T @ z)
+        # X^+ (X^+)^T == pinv(X^T X): pinv of the (D, D) Gram matrix avoids an SVD of the (N, D)
+        # features. In float64, since the float32 pinv cutoff discards directions the features span.
+        gram = _gram_matrix(z, transform=lambda c: torch.nn.functional.normalize(c, p=2, dim=1))
+        self._feature_projector = torch.linalg.pinv(gram, hermitian=True)
         self._log_num_classes = None
         return self
 
@@ -159,14 +159,16 @@ class PNML(FeaturesDetector):
             raise RequiresFittingException()
 
         device = self._feature_projector.device
-        z = z.detach().to(device).float()
+        # the projector has large entries for directions of small variance, so the quadratic form is
+        # evaluated in its (double) precision
+        z = z.detach().to(device, self._feature_projector.dtype)
         z = torch.nn.functional.normalize(z, p=2, dim=1)
 
-        probs = torch.softmax(self.head(z), dim=1)
+        probs = torch.softmax(self.head(z.float()), dim=1)
         probs = probs.clamp(min=self.eps, max=1.0 - self.eps)
 
         x_proj = (z @ self._feature_projector * z).sum(dim=1)
-        x_t_g = x_proj / (1.0 + x_proj)
+        x_t_g = (x_proj / (1.0 + x_proj)).float()
 
         regret_terms = probs / (probs + (1.0 - probs) * probs.pow(x_t_g.unsqueeze(1)))
         regret = torch.log(regret_terms.sum(dim=1))

@@ -29,6 +29,7 @@ from ..utils import (
     contains_unknown,
     extract_features,
 )
+from ..utils.utils import _fit_gaussian
 
 log = logging.getLogger(__name__)
 
@@ -46,9 +47,15 @@ class Mahalanobis(FeaturesDetector):
 
     The paper uses the negated distance as a confidence score, so the sign is flipped.
 
-    To ensure that the covariance matrix is invertible, a small value :math:`\\epsilon` is added to its
-    diagonal before inversion, i.e., :math:`\\Sigma + \\epsilon I` is used. :math:`\\epsilon` can be
-    set via the ``eps`` parameter.
+    :math:`\\Sigma` is the shared within-class covariance, i.e., the centered outer products of the
+    features divided by the number of samples. To ensure that it is invertible, a small value
+    :math:`\\epsilon` is added to its diagonal before inversion, i.e., :math:`\\Sigma + \\epsilon I` is
+    used. Alternatively, the pseudo-inverse of :math:`\\Sigma` can be used (``use_pinv``), which
+    ignores directions in which the training features do not vary. This is preferable when there are
+    fewer training samples than feature dimensions.
+
+    The parameters are estimated in double precision (single precision on MPS, which does not support
+    double precision) and stored in the dtype of the features.
     """
 
     info = DetectorInfo(
@@ -67,7 +74,8 @@ class Mahalanobis(FeaturesDetector):
     def __init__(
         self,
         encoder: Optional[Callable[[Tensor], Tensor]],
-        eps: float = 1e-6,
+        # tiny, since the covariance is divided by N and inverted in float64
+        eps: float = 1e-10,
         use_pinv: bool = False,
     ):
         """
@@ -75,10 +83,11 @@ class Mahalanobis(FeaturesDetector):
             ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param eps: regularization constant :math:`\\epsilon` added to the diagonal of the covariance matrix
             before inversion, so that the matrix is invertible. Set to ``0`` to disable regularization.
-        :param use_pinv: if ``True``, the precision matrix is computed with the Moore-Penrose pseudo-inverse
-            (``torch.linalg.pinv``) instead of the regular inverse (``torch.linalg.inv``). Since the covariance
-            matrix is regularized with ``eps``, this is usually not required, but may be more robust for
-            ill-conditioned covariance matrices or when ``eps=0``. Defaults to ``False``.
+            Not used if ``use_pinv`` is ``True``.
+        :param use_pinv: if ``True``, the precision matrix is the Moore-Penrose pseudo-inverse
+            (``torch.linalg.pinv``) of the unregularized covariance matrix instead of the inverse
+            (``torch.linalg.inv``) of the regularized one. Directions without variance in the training
+            features then do not contribute to the distance.
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder
@@ -125,29 +134,16 @@ class Mahalanobis(FeaturesDetector):
         assert len(classes) == classes.max().item() + 1
         assert not contains_unknown(classes)
 
-        n_classes = len(classes)
-        self.mu = torch.zeros(size=(n_classes, z.shape[-1]), device=device)
-        self.cov = torch.zeros(size=(z.shape[-1], z.shape[-1]), device=device)
-
-        for clazz in range(n_classes):
-            idxs = y.eq(clazz)
-            assert idxs.sum() != 0
-            zs = z[idxs]
-            self.mu[clazz] = zs.mean(dim=0)
-            self.cov += (zs - self.mu[clazz]).T.mm(zs - self.mu[clazz])
-
-        # the covariance is the sum of the centered outer products (not divided by N), plus a small ridge term
-        self.cov += torch.eye(self.cov.shape[0], device=self.cov.device) * self.eps
-        if self.use_pinv:
-            self.precision = torch.linalg.pinv(self.cov)
-        else:
-            self.precision = torch.linalg.inv(self.cov)
+        # as the reference implementation (sklearn EmpiricalCovariance): divided by N, float64
+        self.mu, self.cov, self.precision = _fit_gaussian(
+            z, y, n_classes=len(classes), eps=self.eps, use_pinv=self.use_pinv
+        )
         return self
 
     def _calc_gaussian_scores(self, z: Tensor) -> Tensor:
         """ """
         features = z.view(z.size(0), z.size(1), -1)
-        features = torch.mean(features, 2)
+        features = torch.mean(features, 2).to(self.mu.dtype)
         md_k = []
 
         # calculate per class scores

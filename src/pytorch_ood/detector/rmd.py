@@ -21,6 +21,7 @@ from ..utils import (
     extract_features,
     is_known,
 )
+from ..utils.utils import _fit_gaussian
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +42,9 @@ class RMD(Mahalanobis):
     where :math:`f(x)` are the features of :math:`x`, :math:`d_k(z) = (z - \\mu_k)^\\top \\Sigma^{-1} (z - \\mu_k)` is
     the squared Mahalanobis distance to class :math:`k` and :math:`d_0` is the
     squared Mahalanobis distance under the background gaussian.
+
+    Both covariances are estimated as in :class:`~pytorch_ood.detector.Mahalanobis`, in double
+    precision (single precision on MPS, which does not support double precision).
     """
 
     info = DetectorInfo(
@@ -104,13 +108,12 @@ class RMD(Mahalanobis):
         z_known = z[known].to(device)
 
         log.debug("Fitting background gaussian.")
-        self.background_mu = z_known.mean(dim=0)
-        self.background_cov = (z_known - self.background_mu).T.mm(z_known - self.background_mu)
-        self.background_cov += (
-            torch.eye(self.background_cov.shape[0], device=self.background_cov.device) * 1e-6
+        # one class covering all known samples
+        background_y = torch.zeros(len(z_known), dtype=torch.long, device=device)
+        mu, self.background_cov, self.background_precision = _fit_gaussian(
+            z_known, background_y, n_classes=1, eps=self.eps, use_pinv=self.use_pinv
         )
-
-        self.background_precision = torch.linalg.inv(self.background_cov)
+        self.background_mu = mu[0]
         return self
 
     def _background_score(self, z: Tensor) -> Tensor:
@@ -149,6 +152,7 @@ class RMD(Mahalanobis):
         if self.mu is None:
             raise RequiresFittingException
 
+        z = z.to(self.mu.dtype)
         md_k = self._calc_gaussian_scores(z)
         md_0 = self._background_score(z)
 
