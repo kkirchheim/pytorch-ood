@@ -14,6 +14,7 @@ OOD Detection
    metrics/oodmetrics
    metrics/auroc
    metrics/aupr
+   metrics/average_precision
    metrics/fpr_at_tpr
    metrics/autc
 

@@ -35,6 +35,8 @@ def _reference(scores: torch.Tensor, labels: torch.Tensor, tpr: float = 0.95) ->
         "auroc": skm.roc_auc_score(ood, s),
         "aupr_out": skm.auc(recall, precision),
         "aupr_in": skm.auc(recall_in, precision_in),
+        "ap_out": skm.average_precision_score(ood, s),
+        "ap_in": skm.average_precision_score(~ood, -s),
         "fpr": fpr[np.searchsorted(tpr_curve, tpr, side="left")],
     }
 
@@ -44,6 +46,8 @@ def _ours(scores: torch.Tensor, labels: torch.Tensor, tpr: float = 0.95) -> dict
         "auroc": float(F.auroc(scores, labels)),
         "aupr_out": float(F.aupr(scores, labels, positive="ood")),
         "aupr_in": float(F.aupr(scores, labels, positive="id")),
+        "ap_out": float(F.average_precision(scores, labels, positive="ood")),
+        "ap_in": float(F.average_precision(scores, labels, positive="id")),
         "fpr": float(F.fpr_at_tpr(scores, labels, tpr)),
     }
 
@@ -104,7 +108,15 @@ class TestAgainstSklearn(unittest.TestCase):
                 labels = torch.tensor([0, 0, -1, -1])
                 result = _ours(scores, labels)
                 self.assertEqual(
-                    result, {"auroc": 1.0, "aupr_out": 1.0, "aupr_in": 1.0, "fpr": 0.0}
+                    result,
+                    {
+                        "auroc": 1.0,
+                        "aupr_out": 1.0,
+                        "aupr_in": 1.0,
+                        "ap_out": 1.0,
+                        "ap_in": 1.0,
+                        "fpr": 0.0,
+                    },
                 )
 
     def test_imbalance(self):
@@ -190,7 +202,15 @@ class TestEdgeCases(unittest.TestCase):
     def test_nan_raises(self):
         scores = torch.tensor([0.0, float("nan"), 1.0, 2.0])
         labels = torch.tensor([0, 0, -1, -1])
-        for fn in (F.auroc, F.aupr, F.fpr_at_tpr, F.roc_curve, F.pr_curve, F.autc):
+        for fn in (
+            F.auroc,
+            F.aupr,
+            F.average_precision,
+            F.fpr_at_tpr,
+            F.roc_curve,
+            F.pr_curve,
+            F.autc,
+        ):
             with self.subTest(fn=fn.__name__):
                 with self.assertRaises(ValueError):
                     fn(scores, labels)
@@ -216,21 +236,25 @@ class TestEdgeCases(unittest.TestCase):
 
     def test_one_class_raises(self):
         for labels in (torch.zeros(5).long(), -torch.ones(5).long()):
-            for fn in (F.auroc, F.aupr, F.fpr_at_tpr, F.autc):
+            for fn in (F.auroc, F.aupr, F.average_precision, F.fpr_at_tpr, F.autc):
                 with self.subTest(fn=fn.__name__, label=int(labels[0])):
                     with self.assertRaises(ValueError):
                         fn(torch.arange(5.0), labels)
 
     def test_shape_mismatch_raises(self):
-        with self.assertRaises(ValueError):
-            F.auroc(torch.zeros(4), torch.zeros(5))
-        with self.assertRaises(ValueError):
-            F.auroc(torch.zeros(2, 3), torch.zeros(3, 2))
+        for fn in (F.auroc, F.aupr, F.average_precision):
+            with self.subTest(fn=fn.__name__):
+                with self.assertRaises(ValueError):
+                    fn(torch.zeros(4), torch.zeros(5))
+                with self.assertRaises(ValueError):
+                    fn(torch.zeros(2, 3), torch.zeros(3, 2))
 
     def test_invalid_arguments(self):
         scores, labels = torch.arange(4.0), torch.tensor([0, 0, -1, -1])
         with self.assertRaises(ValueError):
             F.aupr(scores, labels, positive="out")
+        with self.assertRaises(ValueError):
+            F.average_precision(scores, labels, positive="out")
         with self.assertRaises(ValueError):
             F.pr_curve(scores, labels, positive="in")
         for tpr in (-0.1, 1.5, 95):
@@ -312,10 +336,315 @@ class TestEdgeCases(unittest.TestCase):
                 self.assertEqual(counts.tps.tolist(), [0, 1001, 1001, n_ood])
                 self.assertAlmostEqual(float(F.auroc(s, y)), float(expected), places=12)
                 self.assertEqual(float(F.fpr_at_tpr(s, y, 0.5)), 2001 / n_id)
+                # thresholds 1 (1001 of 2001 OOD, 2001 ID above) and -1 (all samples) raise
+                # the recall of OOD; 0 (n_low ID) and 2 (the remaining ID) that of ID
+                ap_out = Fraction(1001, 2001) * Fraction(1001, 3002) + Fraction(
+                    1000, 2001
+                ) * Fraction(n_ood, n_id + n_ood)
+                ap_in = Fraction(n_low, n_id) * Fraction(n_low, n_low + 1000) + Fraction(
+                    2001, n_id
+                ) * Fraction(n_id, n_id + n_ood)
+                self.assertAlmostEqual(
+                    float(F.average_precision(s, y, "ood")), float(ap_out), places=12
+                )
+                self.assertAlmostEqual(
+                    float(F.average_precision(s, y, "id")), float(ap_in), places=12
+                )
                 # the same with the classes swapped, so that the OOD counts are large
                 counts = F._Counts(-s, y >= 0)
                 self.assertEqual(counts.tps.tolist(), [0, n_low, n_low, n_id])
                 self.assertEqual(counts.fps.tolist(), [1000, 1000, 2001, 2001])
+
+
+def _exact_pr_areas(scores, positive):
+    """
+    Average precision and trapezoidal AUPR as exact fractions, from the definitions: one point
+    of the curve per unique score, counted directly, without sorting or cumulative sums.
+    """
+    scores, positive = scores.tolist(), positive.tolist()
+    n_pos = sum(positive)
+    points = [(Fraction(0), Fraction(1))]  # (recall, precision), by decreasing threshold
+    for t in sorted(set(scores), reverse=True):
+        tp = sum(1 for s, p in zip(scores, positive) if s >= t and p)
+        fp = sum(1 for s, p in zip(scores, positive) if s >= t and not p)
+        points.append((Fraction(tp, n_pos), Fraction(tp, tp + fp)))
+    ap = sum((r - r_prev) * p for (r_prev, _), (r, p) in zip(points, points[1:]))
+    trapezoid = sum(
+        (r - r_prev) * (p + p_prev) / 2 for (r_prev, p_prev), (r, p) in zip(points, points[1:])
+    )
+    return ap, trapezoid
+
+
+class TestAveragePrecision(unittest.TestCase):
+    def test_hand_computed(self):
+        # thresholds 5, 4, 3, 2 raise the OOD recall to 1/4, 2/4, 3/4, 1 at the precisions
+        # 1, 2/3, 3/4, 4/6; for ID (thresholds 1, 2, 4 on the negated scores) to 1/3, 2/3, 1 at
+        # 1, 2/3, 3/6
+        scores = torch.tensor([5.0, 4.0, 4.0, 3.0, 2.0, 2.0, 1.0])
+        labels = torch.tensor([-1, 0, -1, -1, 0, -1, 0])
+        ap_out = Fraction(1, 4) * (1 + Fraction(2, 3) + Fraction(3, 4) + Fraction(4, 6))
+        ap_in = Fraction(1, 3) * (1 + Fraction(2, 3) + Fraction(3, 6))
+        self.assertEqual(ap_out, Fraction(37, 48))
+        self.assertAlmostEqual(float(F.average_precision(scores, labels)), 37 / 48, places=15)
+        self.assertAlmostEqual(
+            float(F.average_precision(scores, labels, positive="id")), float(ap_in), places=15
+        )
+        # the trapezoidal rule interpolates between the same points
+        self.assertAlmostEqual(float(F.aupr(scores, labels)), 13 / 16, places=15)
+
+    def test_matches_definition(self):
+        for seed, levels in itertools.product(range(3), (2, 5, 30, None)):
+            with self.subTest(seed=seed, levels=levels):
+                scores, labels = _data(seed, 300, tie_levels=levels)
+                for positive, mask, s in (
+                    ("ood", labels < 0, scores),
+                    ("id", labels >= 0, -scores),
+                ):
+                    ap, trapezoid = _exact_pr_areas(s, mask)
+                    self.assertAlmostEqual(
+                        float(F.average_precision(scores, labels, positive)),
+                        float(ap),
+                        places=12,
+                    )
+                    self.assertAlmostEqual(
+                        float(F.aupr(scores, labels, positive)), float(trapezoid), places=12
+                    )
+
+    def _uninformative(self, n=10000, seed=0):
+        g = torch.Generator().manual_seed(seed)
+        labels = torch.where(torch.rand(n, generator=g) < 0.1, -1, 0)
+        return labels, g
+
+    def test_constant_scores_give_positive_rate(self):
+        labels, _ = self._uninformative()
+        n_ood = int((labels < 0).sum())
+        pi = n_ood / labels.numel()
+        scores = torch.zeros(labels.shape)
+        self.assertEqual(float(F.average_precision(scores, labels)), pi)
+        self.assertAlmostEqual(
+            float(F.average_precision(scores, labels, positive="id")), 1 - pi, places=15
+        )
+        # the trapezoidal rule interpolates from (0, 1) to the single point (1, pi)
+        self.assertAlmostEqual(float(F.aupr(scores, labels)), (1 + pi) / 2, places=15)
+        self.assertAlmostEqual(
+            float(F.aupr(scores, labels, positive="id")), (1 + (1 - pi)) / 2, places=15
+        )
+
+    def test_binary_scores(self):
+        labels, g = self._uninformative()
+        ood = labels < 0
+        pi = float(ood.double().mean())
+        scores = (torch.rand(labels.shape, generator=g) < 0.99).float()
+        # two points: the flagged samples, with recall r and precision p, then all samples
+        flagged = scores == 1
+        r = Fraction(int((flagged & ood).sum()), int(ood.sum()))
+        p = Fraction(int((flagged & ood).sum()), int(flagged.sum()))
+        pi_exact = Fraction(int(ood.sum()), labels.numel())
+        ap = r * p + (1 - r) * pi_exact
+        trapezoid = r * (1 + p) / 2 + (1 - r) * (p + pi_exact) / 2
+        self.assertAlmostEqual(float(F.average_precision(scores, labels)), float(ap), places=12)
+        self.assertAlmostEqual(float(F.aupr(scores, labels)), float(trapezoid), places=12)
+        self.assertLess(abs(float(F.average_precision(scores, labels)) - pi), 0.005)
+        self.assertGreater(float(F.aupr(scores, labels)), 0.5)
+
+    def test_few_valued_scores(self):
+        labels, g = self._uninformative()
+        pi = float((labels < 0).double().mean())
+        for levels in (2, 3, 5):
+            with self.subTest(levels=levels):
+                scores = torch.randint(0, levels, labels.shape, generator=g).float()
+                ap = float(F.average_precision(scores, labels))
+                aupr = float(F.aupr(scores, labels))
+                self.assertLess(abs(ap - pi), 0.005)
+                # the trapezoidal rule rewards the ties
+                self.assertGreater(aupr, pi + 0.08)
+                exact_ap, exact_trapezoid = _exact_pr_areas(scores[:2000], labels[:2000] < 0)
+                self.assertAlmostEqual(
+                    float(F.average_precision(scores[:2000], labels[:2000])),
+                    float(exact_ap),
+                    places=12,
+                )
+                self.assertAlmostEqual(
+                    float(F.aupr(scores[:2000], labels[:2000])), float(exact_trapezoid), places=12
+                )
+
+    def test_continuous_scores_close_to_aupr(self):
+        scores, labels = _data(0, 20000)
+        for positive in ("ood", "id"):
+            with self.subTest(positive=positive):
+                self.assertAlmostEqual(
+                    float(F.average_precision(scores, labels, positive)),
+                    float(F.aupr(scores, labels, positive)),
+                    places=2,
+                )
+
+    def test_results_are_detached_scalars(self):
+        scores = torch.randn(20, requires_grad=True)
+        labels = torch.tensor([0] * 10 + [-1] * 10)
+        precision = torch.tensor([0.4, 0.75, 1.0], requires_grad=True)
+        recall = torch.tensor([1.0, 0.75, 0.0], requires_grad=True)
+        for value in (
+            F.average_precision(scores, labels),
+            F.average_precision_from_curve(precision, recall),
+            F.aupr_from_curve(precision, recall),
+        ):
+            self.assertFalse(value.requires_grad)
+            self.assertEqual(value.dim(), 0)
+            self.assertEqual(value.dtype, torch.float64)
+
+    def test_perfect_detector(self):
+        labels = torch.cat([torch.zeros(70), -torch.ones(30)]).long()
+        for scores in (torch.arange(100.0), (labels < 0).float()):
+            for positive in ("ood", "id"):
+                with self.subTest(positive=positive, binary=bool(scores.max() == 1)):
+                    self.assertEqual(float(F.average_precision(scores, labels, positive)), 1.0)
+
+    def test_worst_detector(self):
+        # every OOD sample below every ID sample: the k-th OOD sample is found with all ID
+        labels = torch.cat([torch.zeros(3), -torch.ones(2)]).long()
+        scores = torch.tensor([5.0, 4.0, 3.0, 2.0, 1.0])
+        expected = Fraction(1, 2) * (Fraction(1, 4) + Fraction(2, 5))
+        self.assertAlmostEqual(
+            float(F.average_precision(scores, labels)), float(expected), places=15
+        )
+
+    def test_from_curve_equals_functional(self):
+        for seed, levels in itertools.product(range(3), (1, 2, 10, None)):
+            scores, labels = _data(seed, 1000, tie_levels=levels)
+            for positive in ("ood", "id"):
+                with self.subTest(seed=seed, levels=levels, positive=positive):
+                    precision, recall, _ = F.pr_curve(scores, labels, positive)
+                    self.assertEqual(
+                        float(F.average_precision_from_curve(precision, recall)),
+                        float(F.average_precision(scores, labels, positive)),
+                    )
+                    self.assertEqual(
+                        float(F.aupr_from_curve(precision, recall)),
+                        float(F.aupr(scores, labels, positive)),
+                    )
+
+    def test_from_curve_of_histogram(self):
+        # a curve from two bins: 30 OOD and 10 ID samples in the upper bin, 10 OOD and 50 ID in
+        # the lower bin, plus the final point at recall 0
+        precision = torch.tensor([40 / 100, 30 / 40, 1.0], dtype=torch.float32)
+        recall = torch.tensor([1.0, 30 / 40, 0.0], dtype=torch.float32)
+        ap = F.average_precision_from_curve(precision, recall)
+        self.assertEqual(ap.dtype, torch.float64)
+        self.assertAlmostEqual(float(ap), 0.75 * 0.75 + 0.25 * 0.4, places=7)
+        self.assertAlmostEqual(
+            float(F.aupr_from_curve(precision, recall)),
+            0.75 * (1 + 0.75) / 2 + 0.25 * (0.75 + 0.4) / 2,
+            places=7,
+        )
+        # the same as from the samples
+        scores = torch.cat([torch.ones(40), torch.zeros(60)])
+        labels = torch.cat([-torch.ones(30), torch.zeros(10), -torch.ones(10), torch.zeros(50)])
+        self.assertAlmostEqual(float(F.average_precision(scores, labels)), float(ap), places=7)
+        # a plateau of recall (a threshold that adds only negatives) adds no step; the step
+        # below it uses the precision of its last point, the highest threshold with that recall
+        precision = torch.tensor([0.4, 0.3, 0.75, 1.0])
+        recall = torch.tensor([1.0, 0.75, 0.75, 0.0])
+        self.assertAlmostEqual(
+            float(F.average_precision_from_curve(precision, recall)),
+            0.25 * 0.4 + 0.75 * 0.75,
+            places=7,
+        )
+
+    def test_from_curve_rejects_invalid_curves(self):
+        precision = torch.tensor([0.4, 0.75, 1.0])
+        recall = torch.tensor([1.0, 0.75, 0.0])
+        p4 = torch.tensor([0.4, 0.5, 0.75, 1.0])
+        # each case violates only the check named by the expected message
+        cases = {
+            "length mismatch": (precision, recall[1:], "same length"),
+            "2-D": (precision.view(1, 3), recall.view(1, 3), "one-dimensional"),
+            "0-D": (precision[0], recall[0], "one-dimensional"),
+            "single point": (precision[-1:], recall[-1:], "at least two points"),
+            "precision above 1": (torch.tensor([0.4, 1.5, 1.0]), recall, "precision contains"),
+            "negative precision": (torch.tensor([-0.4, 0.75, 1.0]), recall, "precision contains"),
+            "NaN precision": (torch.tensor([0.4, float("nan"), 1.0]), recall, "0 / 0"),
+            "recall above 1": (precision, torch.tensor([1.0, 1.5, 0.0]), "recall contains"),
+            "recall below 0": (p4, torch.tensor([1.0, 0.5, -0.5, 0.0]), "recall contains"),
+            "NaN recall": (precision, torch.tensor([1.0, float("nan"), 0.0]), "recall contains"),
+            "increasing recall": (precision, torch.tensor([0.5, 1.0, 0.0]), "non-increasing"),
+            "unsorted recall": (p4, torch.tensor([1.0, 0.5, 0.75, 0.0]), "non-increasing"),
+            "slightly increasing recall": (
+                p4,
+                torch.tensor([1.0, 0.5, 0.5 + 1e-9, 0.0], dtype=torch.float64),
+                "non-increasing",
+            ),
+            "not starting at recall 1": (precision, torch.tensor([0.9, 0.5, 0.0]), "start at"),
+            "not ending at recall 0": (
+                precision,
+                torch.tensor([1.0, 0.75, 0.25]),
+                "end at recall",
+            ),
+        }
+        for fn in (F.average_precision_from_curve, F.aupr_from_curve):
+            for name, (p, r, message) in cases.items():
+                with self.subTest(fn=fn.__name__, case=name):
+                    with self.assertRaisesRegex(ValueError, message):
+                        fn(p, r)
+
+    def test_from_curve_accepts_valid_edge_cases(self):
+        precision = torch.tensor([0.4, 0.5, 0.75, 1.0])
+        cases = {
+            # a final -0.0 equals 0
+            "ends at -0.0": (
+                torch.tensor([1.0, 0.5, 0.25, -0.0]),
+                0.5 * 0.4 + 0.25 * 0.5 + 0.25 * 0.75,
+            ),
+            # a threshold that adds only negatives at full recall
+            "start plateau": (torch.tensor([1.0, 1.0, 0.5, 0.0]), 0.5 * 0.5 + 0.5 * 0.75),
+        }
+        for name, (recall, expected) in cases.items():
+            with self.subTest(name):
+                ap = F.average_precision_from_curve(precision, recall)
+                self.assertAlmostEqual(float(ap), expected, places=7)
+                F.aupr_from_curve(precision, recall)
+
+    def test_from_curve_final_precision(self):
+        recall = torch.tensor([1.0, 0.75, 0.0])
+        ones = torch.tensor([0.4, 0.75, 1.0])
+        other = torch.tensor([0.4, 0.75, 0.3])
+        # AP does not use the precision at recall 0
+        self.assertEqual(
+            float(F.average_precision_from_curve(other, recall)),
+            float(F.average_precision_from_curve(ones, recall)),
+        )
+        # the trapezoidal rule does, so it requires the end point of pr_curve
+        with self.assertRaisesRegex(ValueError, "end at precision 1"):
+            F.aupr_from_curve(other, recall)
+
+    def test_from_curve_dtypes(self):
+        precision = torch.tensor([0.5, 0.75, 1.0])
+        recall = torch.tensor([1.0, 0.5, 0.0])
+        expected = 0.5 * 0.5 + 0.5 * 0.75
+        for dtype in (torch.float16, torch.bfloat16, torch.float32, torch.float64):
+            with self.subTest(dtype=dtype):
+                ap = F.average_precision_from_curve(precision.to(dtype), recall.to(dtype))
+                self.assertEqual(ap.dtype, torch.float64)
+                self.assertEqual(float(ap), expected)
+                aupr = F.aupr_from_curve(precision.to(dtype), recall.to(dtype))
+                self.assertEqual(aupr.dtype, torch.float64)
+        ap = F.average_precision_from_curve(torch.tensor([0.5, 1.0]), torch.tensor([1, 0]))
+        self.assertEqual(ap.dtype, torch.float64)
+        self.assertEqual(float(ap), 0.5)
+
+    def test_from_curve_of_long_float32_curve(self):
+        g = torch.Generator().manual_seed(0)
+        n = 2**20
+        labels = -(torch.rand(n, generator=g) < 0.3).long()
+        scores = torch.randn(n, generator=g, dtype=torch.float64) + (labels < 0).double()
+        precision, recall, _ = F.pr_curve(scores, labels)
+        self.assertGreater(precision.numel(), n // 2)
+        expected = float(F.average_precision_from_curve(precision, recall))
+        self.assertEqual(expected, float(F.average_precision(scores, labels)))
+        for fn in (F.average_precision_from_curve, F.aupr_from_curve):
+            with self.subTest(fn=fn.__name__):
+                full = float(fn(precision, recall))
+                single = float(fn(precision.float(), recall.float()))
+                self.assertAlmostEqual(single, full, delta=1e-6)
 
 
 class TestMixedDevices(unittest.TestCase):
@@ -324,8 +653,32 @@ class TestMixedDevices(unittest.TestCase):
         g = torch.Generator().manual_seed(0)
         labels = torch.randint(-1, 3, (200,), generator=g)
         scores = torch.randn(200, generator=g) + (labels < 0).float()
-        for fn in (F.auroc, F.autc, lambda s, y: F.fpr_at_tpr(s, y, 0.95)):
+        for fn in (
+            F.auroc,
+            F.autc,
+            lambda s, y: F.fpr_at_tpr(s, y, 0.95),
+            lambda s, y: F.aupr(s, y, "id"),
+            lambda s, y: F.average_precision(s, y, "ood"),
+            lambda s, y: F.average_precision(s, y, "id"),
+        ):
             self.assertAlmostEqual(float(fn(scores.cuda(), labels)), float(fn(scores, labels)))
+
+    @unittest.skipUnless(CUDA, "CUDA not available")
+    def test_result_stays_on_device(self):
+        scores, labels = _data(0, 500, tie_levels=20)
+        scores, labels = scores.cuda(), labels.cuda()
+        precision, recall, _ = F.pr_curve(scores, labels)
+        self.assertEqual(precision.device.type, "cuda")
+        for value in (
+            F.aupr(scores, labels),
+            F.average_precision(scores, labels),
+            F.average_precision(scores, labels, positive="id"),
+            F.aupr_from_curve(precision, recall),
+            F.average_precision_from_curve(precision, recall),
+            F.average_precision_from_curve(precision, recall.cpu()),
+        ):
+            self.assertEqual(value.device.type, "cuda")
+            self.assertEqual(value.dtype, torch.float64)
 
 
 class TestAUTC(unittest.TestCase):
