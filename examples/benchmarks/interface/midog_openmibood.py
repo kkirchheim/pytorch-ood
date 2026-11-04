@@ -4,37 +4,32 @@ OpenMIBOOD - MIDOG (Microscopy / Mitosis)
 
 Reproduces the MIDOG benchmark from
 *OpenMIBOOD: Open Medical Imaging Benchmarks for Out-Of-Distribution Detection*
-(CVPR 2025).
+(CVPR 2025) with the pre-trained classifier and the detector hyperparameters of the paper.
 
 .. note::
-    Hyperparameters for KNN, DICE, fDBD, GEN, ASH, ReAct, NNGuide, and RankFeat
-    are tuned on the validation set according to the paper's protocol.
+    With ``download=True``, the MIDOG++ slides (65 GB) and CCAgT are downloaded and cut into
+    patches, which takes several hours. FNAC 2019 can not be downloaded automatically, see
+    :class:`~pytorch_ood.benchmark.MIDOG_OpenMIBOOD`. With ``skip_missing=True``, the benchmark is
+    evaluated without it.
 """
 
-import os
+# sphinx_gallery_thumbnail_path = "_static/thumbs/benchmarks.png"
 
-import pandas as pd
+import pandas as pd  # additional dependency, used here for convenience
 import torch
+from torch.utils.data import DataLoader
 from torchvision import transforms
-from torchvision.datasets.utils import download_url
 from torchvision.models import resnet50
 
-from pytorch_ood.api import Detector
 from pytorch_ood.benchmark import MIDOG_OpenMIBOOD
-from pytorch_ood.dataset.img import ImageListDataset
 from pytorch_ood.detector import (
-    # --- activation pruning ---
     ASH,
     DICE,
-    # --- probability-based ---
     GEN,
-    # --- feature-based ---
     KNN,
-    # --- originally implemented ---
     EnergyBased,
     KLMatching,
     Mahalanobis,
-    # --- logit-based ---
     MaxLogit,
     MaxSoftmax,
     NNGuide,
@@ -43,7 +38,7 @@ from pytorch_ood.detector import (
     ViM,
     fDBD,
 )
-from pytorch_ood.utils import ToRGB, fix_random_seed
+from pytorch_ood.utils import fix_random_seed
 
 fix_random_seed(123)
 
@@ -51,37 +46,27 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 loader_kwargs = {"batch_size": 64, "num_workers": 4}
 
 # %%
-# Load the OpenMIBOOD pretrained MIDOG classifier (3 classes).
+# Load the ResNet-50 trained by the OpenMIBOOD authors on the MIDOG patches (3 classes).
 # See https://zenodo.org/records/14982267
-# A local copy of the checkpoint next to this script is used if present, otherwise it is downloaded.
 model = resnet50(num_classes=3)
-checkpoint = os.path.join(os.path.dirname(os.path.abspath(__file__)), "midog_classifier.pth")
-if os.path.exists(checkpoint):
-    state_dict = torch.load(checkpoint, map_location="cpu")
-else:
-    state_dict = torch.hub.load_state_dict_from_url(
-        "https://zenodo.org/records/14982267/files/midog_classifier.pth?download=1",
-        map_location="cpu",
-        file_name="midog_classifier.pth",
-    )
+state_dict = torch.hub.load_state_dict_from_url(
+    "https://zenodo.org/records/14982267/files/midog_classifier.pth?download=1",
+    map_location="cpu",
+    file_name="midog_classifier.pth",
+)
 model.load_state_dict(state_dict)
 model = model.eval().to(device)
 
-# Feature extractor (all layers except final FC) — flattened 2048-d, used by most detectors
-feature_extractor = torch.nn.Sequential(*list(model.children())[:-1], torch.nn.Flatten())
+# pooled 2048-dimensional features, used by the feature-based detectors
+encoder = torch.nn.Sequential(*list(model.children())[:-1], torch.nn.Flatten())
+# ReAct and ASH shape the pooled features, passed as feature maps of shape B x 2048 x 1 x 1
+pooled = torch.nn.Sequential(*list(model.children())[:-1])
+pooled_head = torch.nn.Sequential(torch.nn.Flatten(), model.fc)
+# RankFeat operates on the feature maps of the last block
+backbone = torch.nn.Sequential(*list(model.children())[:-2])
+head = torch.nn.Sequential(model.avgpool, torch.nn.Flatten(), model.fc)
 
-
-# 4D backbone for activation-pruning detectors (ASH, ReAct, RankFeat).
-# Stops before avgpool so it outputs spatial feature maps [N, 2048, H, W].
-# The matching head runs avgpool + flatten + fc to produce logits.
-conv_backbone = torch.nn.Sequential(*list(model.children())[:-2])  # up to & incl. layer4
-act_head = torch.nn.Sequential(
-    list(model.children())[-2],  # avgpool  [N,2048,1,1]
-    torch.nn.Flatten(),  # → [N,2048]
-    model.fc,
-)  # → [N, num_classes]
-
-# OpenMIBOOD paper uses 50x50 crops with MIDOG-specific normalisation
+# The patches are 50x50 pixels, normalized with the MIDOG statistics of the paper
 trans = transforms.Compose(
     [
         transforms.Resize(50),
@@ -92,143 +77,62 @@ trans = transforms.Compose(
 )
 
 # %%
-root = "/data/openmibood/midog"
 benchmark = MIDOG_OpenMIBOOD(
-    root=root,
-    transform=trans,
-    download=True,
+    root="data/openmibood/midog", transform=trans, download=True, skip_missing=True
 )
-train_loader = torch.utils.data.DataLoader(benchmark.train_set(), batch_size=64)
-
-# OpenMIBOOD fits some detectors (KLMatching, ReAct) on the ID validation set instead of the training set
-imglist_dir = os.path.join(root, "imglists", "midog")
-download_url(
-    "https://raw.githubusercontent.com/remic-othr/OpenMIBOOD/main/data/benchmark_imglist/midog/valid_midog.txt",
-    imglist_dir,
-)
-val_set = ImageListDataset(
-    root=root,
-    imglist_path=os.path.join(imglist_dir, "valid_midog.txt"),
-    transform=transforms.Compose([ToRGB(), trans]),
-)
-val_loader = torch.utils.data.DataLoader(val_set, batch_size=64)
-
+train_loader = DataLoader(benchmark.train_set(), **loader_kwargs)
+# OpenMIBOOD fits KLMatching and ReAct on the ID validation set
+val_loader = DataLoader(benchmark.val_set(), **loader_kwargs)
 
 # %%
-# Detectors with the hyperparameters tuned on the MIDOG validation set, following the OpenMIBOOD protocol.
-
-vim = ViM(feature_extractor, d=128, w=model.fc.weight, b=model.fc.bias)
-mds = Mahalanobis(feature_extractor)
-
-knn = KNN(feature_extractor, k=5, normalize=True)
-nnguide = NNGuide(feature_extractor, model.fc, k=1)
-fdbd = fDBD(feature_extractor, model.fc)
-dice = DICE(feature_extractor, w=model.fc.weight, b=model.fc.bias, p=0.85)
-klm = KLMatching(model)
-react = ReAct(conv_backbone, act_head, percentile=0.95)
-
-print("Fitting ViM...")
-vim.fit(train_loader)
-print("Fitting Mahalanobis...")
-mds.fit(train_loader)
-print("Fitting KNN...")
-knn.fit(train_loader)
-print("Fitting NNGuide...")
-nnguide.fit(train_loader)
-print("Fitting fDBD...")
-fdbd.fit(train_loader)
-print("Fitting DICE...")
-dice.fit(train_loader)
-print("Fitting KLMatching...")
-klm.fit(val_loader)
-print("Fitting ReAct...")
-react.fit(val_loader)
-
-
-# %%
-# The standard pytorch-ood RankFeat removes the rank-1 subspace from the *final* feature map.
-# OpenMIBOOD's RankFeat specifically intercepts ResNet's intermediate layer3 and layer4 feature maps,
-# removes their rank-1 subspaces independently, passes them through the rest of the network,
-# and averages the resulting logits. This architectural interception requires a custom implementation.
-class OpenMIBOOD_RankFeat(Detector):
-    def __init__(self, model, temperature=1.0):
-        super().__init__()
-        self.model = model
-        self.temperature = temperature
-
-    def _remove_rank1(self, x):
-        B, C, H, W = x.shape
-        m = x.view(B, C, H * W)
-        u, s, v = torch.linalg.svd(m, full_matrices=False)
-        rank1 = s[:, 0:1].unsqueeze(2) * u[:, :, 0:1].bmm(v[:, 0:1, :])
-        return (m - rank1).view(B, C, H, W)
-
-    def predict(self, x):
-        return self.forward(x)
-
-    def forward(self, x):
-        device = next(self.model.parameters()).device
-        x = x.to(device)
-
-        # Forward up to layer 3
-        out = self.model.conv1(x)
-        out = self.model.bn1(out)
-        out = self.model.relu(out)
-        out = self.model.maxpool(out)
-        out = self.model.layer1(out)
-        out = self.model.layer2(out)
-        feat2 = self.model.layer3(out)
-
-        # Block 3 branch
-        feat2_r = self._remove_rank1(feat2)
-        feat2_out = self.model.layer4(feat2_r)
-        logits2 = self.model.fc(torch.flatten(self.model.avgpool(feat2_out), 1))
-
-        # Block 4 branch
-        feat1 = self.model.layer4(feat2)
-        feat1_r = self._remove_rank1(feat1)
-        logits1 = self.model.fc(torch.flatten(self.model.avgpool(feat1_r), 1))
-
-        logits = (logits1 + logits2) / 2.0
-        conf = self.temperature * torch.logsumexp(logits / self.temperature, dim=1)
-        return -conf
-
-
+# Detectors with the hyperparameters that OpenMIBOOD tuned on the MIDOG validation set.
+#
+# With 1,896 training samples and 2,048 features, the covariance matrix is singular, so
+# Mahalanobis uses its pseudo-inverse.
+#
+# OpenMIBOOD builds the NNGuide bank from a random half of the training set. Here, the bank
+# holds all training samples, so the results differ by up to one point from the paper.
+#
+# OpenMIBOOD applies RankFeat to the feature maps of both the third and the fourth block and
+# averages the logits. :class:`~pytorch_ood.detector.RankFeat` only uses the last block, so its
+# results differ from the paper.
 detectors = {
-    # Probability-based
     "MSP": MaxSoftmax(model),
     "GEN": GEN(model, gamma=0.01, M=2),
-    "KLMatching": klm,
-    # Logit-based
+    "KLMatching": KLMatching(model).fit(val_loader),
     "MaxLogit": MaxLogit(model),
     "Energy": EnergyBased(model, t=2.0),
-    # Feature-based
-    "Mahalanobis": mds,
-    "ViM": vim,
-    "KNN": knn,
-    "NNGuide": nnguide,
-    "fDBD": fdbd,
-    "DICE": dice,
-    # Activation pruning
-    "ASH": ASH(conv_backbone, act_head, percentile=0.65),
-    "ReAct": react,
-    "RankFeat": OpenMIBOOD_RankFeat(model, temperature=0.1),
+    "Mahalanobis": Mahalanobis(encoder, use_pinv=True).fit(train_loader),
+    "ViM": ViM(encoder, d=128, w=model.fc.weight, b=model.fc.bias).fit(train_loader),
+    "KNN": KNN(encoder, k=5, normalize=True).fit(train_loader),
+    "NNGuide": NNGuide(encoder, model.fc, k=5).fit(train_loader),
+    "fDBD": fDBD(encoder, model.fc, distance_as_normalizer=False).fit(train_loader),
+    "DICE": DICE(encoder, w=model.fc.weight, b=model.fc.bias, p=0.85).fit(train_loader),
+    "ASH": ASH(pooled, pooled_head, percentile=0.65),
+    "ReAct": ReAct(pooled, pooled_head, percentile=0.95).fit(val_loader),
+    "RankFeat": RankFeat(backbone, head, detector=lambda z: EnergyBased.score(z, t=0.1)),
 }
 
+# %%
 results = []
 with torch.no_grad():
-    for detector_name, detector in detectors.items():
-        print(f"> Evaluating {detector_name}")
+    for name, detector in detectors.items():
+        print(f"Evaluating {name}")
         res = benchmark.evaluate(detector, loader_kwargs=loader_kwargs, device=device)
         for r in res:
-            r.update({"Detector": detector_name})
+            r.update({"Detector": name})
         results += res
 
 # %%
+# AUROC in percent, with one row per test set and one column per detector:
 df = pd.DataFrame(results)
-print("\n=== COMPLETE BENCHMARK RESULTS (AUROC & FPR95) ===")
-summary = df.pivot(index="Dataset", columns="Detector", values="AUROC") * 100
-print(summary.to_string(float_format="%.2f"))
+auroc = df.pivot(index="Dataset", columns="Detector", values="AUROC") * 100
+print(auroc.to_string(float_format="%.2f"))
 
-print("\n=== FULL CSV OUTPUT ===")
-print((df.set_index(["Dataset", "Detector"]) * 100).to_csv(float_format="%.2f"))
+# %%
+# This produces a table with rows for the following test sets:
+#
+# * covariate-shifted ID: ``midog_csid_1b``, ``midog_csid_1c`` (other scanners, same task)
+# * near-OOD: ``midog_2`` ... ``midog_7`` (other cancer types and species)
+# * far-OOD: ``midog_ccagt`` (cervical cells), ``midog_fnac2019`` (fine-needle aspiration
+#   cytology, only if prepared manually)
