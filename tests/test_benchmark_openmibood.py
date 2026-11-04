@@ -6,10 +6,12 @@ the benchmark classes (split counts, ood_names ordering, train/test loading, cus
 loader for non-PIL formats). They do not download any real medical imaging data.
 """
 
+import contextlib
 import os
 import tempfile
 import unittest
 from os.path import join
+from unittest import mock
 
 from PIL import Image
 from torchvision import transforms
@@ -74,6 +76,12 @@ class _FixtureBase:
         for rel, _ in train_entries:
             _write_png(join(cls.data_root, rel))
         _write_imglist(join(bench_resource_dir, bench._train_imglist), train_entries)
+
+        # Validation ID set
+        val_entries = [(f"val_{i}.png", i % cls.num_classes) for i in range(3)]
+        for rel, _ in val_entries:
+            _write_png(join(cls.data_root, rel))
+        _write_imglist(join(bench_resource_dir, bench._val_imglist), val_entries)
 
         # Test ID set
         test_entries = [
@@ -147,6 +155,78 @@ class _BenchmarkContractMixin:
         bench = self._make_benchmark()
         _, label = bench.test_in[0]
         self.assertGreaterEqual(label, 0)
+
+    def test_default_does_not_download(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch("pytorch_ood.benchmark.img.openmibood.download_url") as download_url:
+                with self.assertRaises(RuntimeError):
+                    self.benchmark_cls(root=tmp, transform=transforms.ToTensor())
+                download_url.assert_not_called()
+
+    def test_val_set(self):
+        bench = self._make_benchmark()
+        self.assertEqual(len(bench.val_set()), 3)
+        _, label = bench.val_set()[0]
+        self.assertGreaterEqual(label, 0)
+
+    @contextlib.contextmanager
+    def _without(self, relpath):
+        """
+        Temporarily removes a fixture file.
+        """
+        path = join(self.data_root, relpath)
+        os.rename(path, path + ".bak")
+        try:
+            yield
+        finally:
+            os.rename(path + ".bak", path)
+
+    def test_missing_ood_data_raises(self):
+        with self._without("ood_0.png"):
+            with self.assertRaises(FileNotFoundError) as ctx:
+                self._make_benchmark()
+        all_names = self.benchmark_cls.cs_id_names + self.benchmark_cls.near_ood_names
+        self.assertIn(all_names[0], str(ctx.exception))
+        self.assertIn("skip_missing", str(ctx.exception))
+
+    def test_skip_missing_ood_data(self):
+        with self._without("ood_0.png"):
+            with self.assertLogs("pytorch_ood.benchmark.img.openmibood", "WARNING") as logs:
+                bench = self._make_benchmark(skip_missing=True)
+        first = self.benchmark_cls.cs_id_names[0]
+        self.assertIn(first, logs.output[0])
+        self.assertNotIn(first, bench.ood_names)
+        self.assertEqual(len(bench.ood_names), len(bench.test_oods))
+        self.assertEqual(len(bench.test_sets()), len(bench._ood_imglists) - 1)
+
+    def test_missing_id_data_raises(self):
+        with self._without("train_0.png"):
+            with self.assertRaises(FileNotFoundError):
+                self._make_benchmark(skip_missing=True)
+
+    def test_download_only_fetches_missing_downloadable_sources(self):
+        def make(name, download, present):
+            source = mock.Mock()
+            source.name = name
+            source.download = download
+            source.is_present.return_value = present
+            return source
+
+        missing = make("missing", mock.Mock(), present=False)
+        present = make("present", mock.Mock(), present=True)
+        manual = make("manual", None, present=False)
+        with mock.patch.object(self.benchmark_cls, "_sources", [missing, present, manual]):
+            self._make_benchmark(download=True)
+        missing.download.assert_called_once_with(self.data_root)
+        present.download.assert_not_called()
+
+    def test_download_errors_propagate(self):
+        source = mock.Mock()
+        source.download.side_effect = RuntimeError("MD5 mismatch")
+        source.is_present.return_value = False
+        with mock.patch.object(self.benchmark_cls, "_sources", [source]):
+            with self.assertRaises(RuntimeError):
+                self._make_benchmark(download=True)
 
 
 class MIDOGOpenMIBOODTest(_FixtureBase, _BenchmarkContractMixin, unittest.TestCase):

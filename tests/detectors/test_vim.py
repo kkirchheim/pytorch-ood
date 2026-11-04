@@ -145,7 +145,7 @@ class ViMNumericsTest(unittest.TestCase):
         w, b = torch.randn(c, dim), torch.randn(c)
 
         detector = ViM(None, d=d, w=w, b=b).fit_features(features, torch.zeros(n).long())
-        residual = ((x - detector.u) @ detector.principal_subspace).norm(dim=1)
+        residual = ((x - detector.u) @ detector.residual_subspace).norm(dim=1)
 
         u = -(torch.linalg.pinv(w.double()) @ b.double())
         centered = features.double() - u
