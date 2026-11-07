@@ -3,7 +3,7 @@ import unittest
 import torch
 
 from src.pytorch_ood.detector import MaxSoftmax
-from tests.helpers import ClassificationModel, SegmentationModel
+from tests.helpers import ClassificationModel, SegmentationModel, requires
 
 
 class TestSoftmax(unittest.TestCase):
@@ -48,7 +48,7 @@ class TestSoftmax(unittest.TestCase):
         expected = -(logits / 2.0).softmax(dim=1).max(dim=1).values
         torch.testing.assert_close(detector.predict_logits(logits), expected)
 
-    @unittest.skipUnless(torch.cuda.is_available(), "requires CUDA")
+    @requires(cuda=1)
     def test_cuda_model_without_to(self):
         # the temperature must not pin the detector to the CPU when the model is on the GPU
         model = ClassificationModel().cuda()

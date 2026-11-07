@@ -37,7 +37,7 @@ from src.pytorch_ood.detector import (
     WeightedEBO,
     fDBD,
 )
-from tests.helpers import ClassificationModel
+from tests.helpers import ClassificationModel, requires
 
 
 class TinyConvDetectorModel(torch.nn.Module):
@@ -73,7 +73,7 @@ class TinyConvDetectorModel(torch.nn.Module):
         return self.fc(self.features(x))
 
 
-@unittest.skipUnless(torch.cuda.is_available(), "CUDA required for device handling tests")
+@requires(cuda=1)
 class TestDetectorDeviceHandling(unittest.TestCase):
     def setUp(self) -> None:
         torch.manual_seed(123)

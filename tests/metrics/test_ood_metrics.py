@@ -11,8 +11,7 @@ import torch
 
 from src.pytorch_ood.metrics import AUPR, AUTC, AveragePrecision, MetricCollection, OODMetrics
 from src.pytorch_ood.metrics import functional as F
-
-CUDA = torch.cuda.is_available()
+from tests.helpers import requires
 
 
 def _separated(n=10):
@@ -251,7 +250,7 @@ class TestAveragePrecision(unittest.TestCase):
         with self.assertRaises(ValueError):
             MetricCollection([AveragePrecision(), AveragePrecision("ood")])
 
-    @unittest.skipUnless(CUDA, "requires CUDA")
+    @requires(cuda=1)
     def test_cuda(self):
         scores, labels = _tied()
         expected = AveragePrecision("id").update(scores, labels).compute()

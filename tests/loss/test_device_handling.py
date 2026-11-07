@@ -15,6 +15,7 @@ from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood import loss
+from tests.helpers import requires
 from tests.test_info import LOSS_INPUTS, LOSSES, SHAPES
 
 # the last GPU, so that code hard-coded to cuda:0 fails on machines with several GPUs
@@ -107,7 +108,7 @@ def _run(cls, task, all_ood, reduction, device, move_loss: bool):
     return criterion, args, value
 
 
-@unittest.skipUnless(torch.cuda.is_available(), "CUDA required for device handling tests")
+@requires(cuda=1)
 class TestLossDeviceHandling(unittest.TestCase):
     def _check_on_device(self, cls, task, all_ood, reduction, move_loss: bool):
         criterion, args, value = _run(cls, task, all_ood, reduction, DEVICE, move_loss)

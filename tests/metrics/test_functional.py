@@ -12,6 +12,7 @@ import torch
 
 from src.pytorch_ood.metrics import aurra, calc_openness, calibration_error, oscr_score
 from src.pytorch_ood.metrics import functional as F
+from tests.helpers import requires
 
 try:
     from sklearn import metrics as skm
@@ -167,7 +168,7 @@ class TestAgainstSklearn(unittest.TestCase):
             with self.subTest(tpr=tpr):
                 self.assertMatches(scores, labels, tpr=tpr)
 
-    @unittest.skipUnless(CUDA, "requires CUDA")
+    @requires(cuda=1)
     def test_cuda(self):
         scores, labels = _data(7, 50000, tie_levels=1000)
         expected = _ours(scores, labels)
@@ -648,7 +649,7 @@ class TestAveragePrecision(unittest.TestCase):
 
 
 class TestMixedDevices(unittest.TestCase):
-    @unittest.skipUnless(CUDA, "CUDA not available")
+    @requires(cuda=1)
     def test_labels_on_other_device(self):
         g = torch.Generator().manual_seed(0)
         labels = torch.randint(-1, 3, (200,), generator=g)
@@ -663,7 +664,7 @@ class TestMixedDevices(unittest.TestCase):
         ):
             self.assertAlmostEqual(float(fn(scores.cuda(), labels)), float(fn(scores, labels)))
 
-    @unittest.skipUnless(CUDA, "CUDA not available")
+    @requires(cuda=1)
     def test_result_stays_on_device(self):
         scores, labels = _data(0, 500, tie_levels=20)
         scores, labels = scores.cuda(), labels.cuda()
@@ -812,7 +813,7 @@ class TestMovedFunctions(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     call()
 
-    @unittest.skipUnless(CUDA, "CUDA not available")
+    @requires(cuda=1)
     def test_calibration_error_on_cuda(self):
         conf, correct = self._three_bins()
         self.assertAlmostEqual(
@@ -841,7 +842,7 @@ class TestMovedFunctions(unittest.TestCase):
         with self.assertRaises(ValueError):
             aurra(torch.tensor([0.5, float("nan")]), torch.ones(2))
 
-    @unittest.skipUnless(CUDA, "CUDA not available")
+    @requires(cuda=1)
     def test_aurra_on_cuda(self):
         confidence = torch.rand(100, generator=torch.Generator().manual_seed(0))
         correct = (confidence > 0.3).long()
@@ -869,7 +870,7 @@ class TestMovedFunctions(unittest.TestCase):
         with self.assertRaises(ValueError):
             oscr_score(torch.tensor([0.0, 1.0, float("nan"), 2.0]), predictions, labels)
 
-    @unittest.skipUnless(CUDA, "CUDA not available")
+    @requires(cuda=1)
     def test_oscr_on_cuda(self):
         g = torch.Generator().manual_seed(0)
         labels = torch.randint(-1, 3, (100,), generator=g)

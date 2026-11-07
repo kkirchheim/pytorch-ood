@@ -22,8 +22,7 @@ from src.pytorch_ood.metrics import (
     PerImage,
 )
 from src.pytorch_ood.metrics import functional as F
-
-CUDA = torch.cuda.is_available()
+from tests.helpers import requires
 
 
 def _images(n=4, size=8, seed=0):
@@ -98,7 +97,7 @@ class TestPerImage(unittest.TestCase):
         expected = self._expected(scores[keep], labels[keep], F.average_precision)
         self.assertAlmostEqual(result["AP-OUT"], expected, places=12)
 
-    @unittest.skipUnless(CUDA, "CUDA not available")
+    @requires(cuda=1)
     def test_average_precision_cuda(self):
         scores, labels = _images()
         scores = scores.round()
@@ -267,7 +266,7 @@ class TestPerImage(unittest.TestCase):
         self.assertTrue(math.isnan(result["AUTC"]))
         self.assertEqual(result["AUROC"], 0.5)
 
-    @unittest.skipUnless(CUDA, "CUDA not available")
+    @requires(cuda=1)
     def test_cuda(self):
         scores, labels = _images()
         expected = OODPerImageSegmentationMetrics().update(scores, labels).compute()
