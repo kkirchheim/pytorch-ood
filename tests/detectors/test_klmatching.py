@@ -9,7 +9,7 @@ from pytorch_ood.loss import CrossEntropyLoss
 from pytorch_ood.metrics import OODMetrics
 from src.pytorch_ood.api import RequiresFittingException
 from src.pytorch_ood.detector.klmatching import KLMatching
-from tests.helpers import ClassificationModel, sample_dataset
+from tests.helpers import ClassificationModel, requires, sample_dataset
 
 
 class TestKLMatching(unittest.TestCase):
@@ -240,7 +240,7 @@ class TestKLMatching(unittest.TestCase):
             results["AUROC"], 0.95, f"Expected AUROC > 0.95, got {results['AUROC']:.4f}"
         )
 
-    @unittest.skip(reason="Requires GPU")
+    @requires(cuda=1)
     def test_gpu(self):
         device = "cuda:0"
         model = ClassificationModel().to(device)

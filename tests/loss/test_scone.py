@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from src.pytorch_ood.loss import EnergyMarginLoss
 from src.pytorch_ood.utils import evaluate_energy_logistic_loss
+from tests.helpers import requires
 
 torch.manual_seed(123)
 
@@ -129,7 +130,8 @@ class TestEvaluateEnergyLogisticLoss(unittest.TestCase):
         self.assertAlmostEqual(sigmoid, expected_sigmoid, places=6)
         self.assertAlmostEqual(ce, expected_ce, places=6)
 
-    @unittest.skipUnless(torch.cuda.is_available(), "the old implementation required CUDA")
+    # the old implementation required CUDA
+    @requires(cuda=1)
     def test_identical_to_old_implementation(self):
         # batch size divides the data, the only case the old implementation handled
         model, phi = self.model.cuda(), self.phi.cuda()

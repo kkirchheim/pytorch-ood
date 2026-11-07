@@ -19,8 +19,7 @@ from src.pytorch_ood.metrics import (
 )
 from src.pytorch_ood.metrics import base as base_module
 from src.pytorch_ood.metrics import functional as F
-
-CUDA = torch.cuda.is_available()
+from tests.helpers import requires
 
 
 def _batches(seed=0, n_batches=5, size=64):
@@ -293,7 +292,7 @@ class TestDevices(unittest.TestCase):
         metric = AUROC(device="cpu").update(scores, labels)
         self.assertEqual(metric._buffers["labels"][0].device.type, "cpu")
 
-    @unittest.skipUnless(CUDA, "requires CUDA")
+    @requires(cuda=1)
     def test_mixed_devices_in_one_update(self):
         scores, labels, predictions = _cat(_batches())
         expected = OODMetrics().update(scores, labels, predictions).compute()
@@ -303,7 +302,7 @@ class TestDevices(unittest.TestCase):
         for key in expected:
             self.assertAlmostEqual(result[key], expected[key], places=12, msg=key)
 
-    @unittest.skipUnless(CUDA, "requires CUDA")
+    @requires(cuda=1)
     def test_devices_across_updates(self):
         batches = _batches()
         metric = OODMetrics()
@@ -315,7 +314,7 @@ class TestDevices(unittest.TestCase):
         for key, value in metric.compute().items():
             self.assertAlmostEqual(value, expected[key], places=12, msg=key)
 
-    @unittest.skipUnless(CUDA, "requires CUDA")
+    @requires(cuda=1)
     def test_explicit_device_wins(self):
         scores, labels, _ = _cat(_batches())
         metric = AUROC(device="cpu").update(scores.cuda(), labels.cuda())
@@ -333,7 +332,7 @@ class TestDevices(unittest.TestCase):
             places=12,
         )
 
-    @unittest.skipUnless(CUDA, "requires CUDA")
+    @requires(cuda=1)
     def test_reset_fixes_the_device_again(self):
         scores, labels, _ = _cat(_batches())
         metric = AUROC().update(scores.cuda(), labels)
@@ -341,7 +340,7 @@ class TestDevices(unittest.TestCase):
         metric.update(scores, labels)
         self.assertEqual(metric._buffers["scores"][0].device.type, "cpu")
 
-    @unittest.skipUnless(CUDA, "requires CUDA")
+    @requires(cuda=1)
     def test_accuracy_on_cuda(self):
         _, labels, predictions = _cat(_batches())
         metric = Accuracy().update(predictions.cuda(), labels)
