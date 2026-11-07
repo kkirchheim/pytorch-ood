@@ -3,8 +3,8 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.api import ModelNotSetException, RequiresFittingException
-from src.pytorch_ood.detector import KNN
+from pytorch_ood.api import ModelNotSetException, RequiresFittingException
+from pytorch_ood.detector import KNN
 from tests.helpers import ClassificationModel, sample_dataset
 
 

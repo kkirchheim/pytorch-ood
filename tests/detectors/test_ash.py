@@ -2,9 +2,9 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.detector import ASH
-from src.pytorch_ood.detector.ash import ash_s
-from src.pytorch_ood.model import WideResNet
+from pytorch_ood.detector import ASH
+from pytorch_ood.detector.ash import ash_s
+from pytorch_ood.model import WideResNet
 
 
 class TestASH(unittest.TestCase):

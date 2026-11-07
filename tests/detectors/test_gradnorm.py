@@ -4,9 +4,9 @@ from unittest import mock
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.detector import GradNorm
-from src.pytorch_ood.detector import gradnorm as gradnorm_module
-from src.pytorch_ood.model import WideResNet
+from pytorch_ood.detector import GradNorm
+from pytorch_ood.detector import gradnorm as gradnorm_module
+from pytorch_ood.model import WideResNet
 from tests.helpers import ClassificationModel
 
 

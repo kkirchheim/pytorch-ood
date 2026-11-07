@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import IILoss
+from pytorch_ood.loss import IILoss
 
 
 class TestIILoss(unittest.TestCase):

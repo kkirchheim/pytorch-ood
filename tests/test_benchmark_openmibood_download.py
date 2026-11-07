@@ -17,7 +17,7 @@ from unittest import mock
 
 from PIL import Image
 
-from src.pytorch_ood.benchmark.img import _openmibood_download as data
+from pytorch_ood.benchmark.img import _openmibood_download as data
 
 URL = "https://example.org/data.zip"
 CONTENT = b"some data"

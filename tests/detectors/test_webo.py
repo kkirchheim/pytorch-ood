@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.detector import WeightedEBO
+from pytorch_ood.detector import WeightedEBO
 from tests.helpers import ClassificationModel, SegmentationModel
 
 torch.manual_seed(123)

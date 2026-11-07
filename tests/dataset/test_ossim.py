@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.utils.data import TensorDataset
 
-from src.pytorch_ood.dataset.ossim import DynamicOSS
+from pytorch_ood.dataset.ossim import DynamicOSS
 
 
 class TestOSSIM(unittest.TestCase):

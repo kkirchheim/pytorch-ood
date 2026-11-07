@@ -6,8 +6,8 @@ wrapped predict_* methods, which the docs show.
 import inspect
 import unittest
 
-from src.pytorch_ood import detector as detector_module
-from src.pytorch_ood.api import Detector
+from pytorch_ood import detector as detector_module
+from pytorch_ood.api import Detector
 
 METHODS = ("predict_logits", "predict_features", "predict_feature_maps")
 

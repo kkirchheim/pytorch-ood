@@ -9,7 +9,7 @@ import unittest
 import torch
 from torch.utils.data import TensorDataset
 
-from src.pytorch_ood.benchmark import (
+from pytorch_ood.benchmark import (
     CIFAR10_ODIN,
     CIFAR100_ODIN,
     CUB_SSB,

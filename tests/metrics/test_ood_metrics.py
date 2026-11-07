@@ -9,8 +9,8 @@ from unittest import mock
 
 import torch
 
-from src.pytorch_ood.metrics import AUPR, AUTC, AveragePrecision, MetricCollection, OODMetrics
-from src.pytorch_ood.metrics import functional as F
+from pytorch_ood.metrics import AUPR, AUTC, AveragePrecision, MetricCollection, OODMetrics
+from pytorch_ood.metrics import functional as F
 from tests.helpers import requires
 
 

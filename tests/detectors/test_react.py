@@ -4,9 +4,9 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.api import RequiresFittingException
-from src.pytorch_ood.detector import ReAct
-from src.pytorch_ood.model import WideResNet
+from pytorch_ood.api import RequiresFittingException
+from pytorch_ood.detector import ReAct
+from pytorch_ood.model import WideResNet
 from tests.helpers import sample_dataset
 
 

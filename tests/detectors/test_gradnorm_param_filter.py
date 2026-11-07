@@ -8,10 +8,10 @@ from unittest import mock
 
 import torch
 
-from src.pytorch_ood.detector import GradNorm, GradUncertainty
-from src.pytorch_ood.detector import gradnorm as gradnorm_module
-from src.pytorch_ood.detector import graduncertainty as graduncertainty_module
-from src.pytorch_ood.model import WideResNet
+from pytorch_ood.detector import GradNorm, GradUncertainty
+from pytorch_ood.detector import gradnorm as gradnorm_module
+from pytorch_ood.detector import graduncertainty as graduncertainty_module
+from pytorch_ood.model import WideResNet
 from tests.helpers import ClassificationModel
 
 DETECTORS = ((GradUncertainty, graduncertainty_module), (GradNorm, gradnorm_module))

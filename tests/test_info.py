@@ -218,12 +218,11 @@ class TestDetectorTasks(unittest.TestCase):
         # tests/detectors/test_all_detectors_smoke.py runs every detector it builds
         smoke = TestAllDetectorsSmoke("test_all_classification_detectors_smoke")
         registries = smoke._classification_detector_registry() + smoke._image_detector_registry()
-        # by name: the smoke test imports the package as src.pytorch_ood
-        tested = {type(build()).__qualname__ for _, build in registries}
+        tested = {type(build()) for _, build in registries}
         for cls in DETECTORS:
             if Task.CLASSIFICATION in cls.info.tasks:
                 with self.subTest(cls.__name__):
-                    self.assertIn(cls.__qualname__, tested, "missing from the smoke test")
+                    self.assertIn(cls, tested, "missing from the smoke test")
 
     def test_segmentation(self):
         torch.manual_seed(0)

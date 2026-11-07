@@ -3,8 +3,8 @@ import unittest
 import torch
 from torch.utils.data import DataLoader
 
-from src.pytorch_ood.api import RequiresFittingException
-from src.pytorch_ood.detector import TemperatureScaling
+from pytorch_ood.api import RequiresFittingException
+from pytorch_ood.detector import TemperatureScaling
 from tests.helpers import ClassificationModel, sample_dataset
 
 

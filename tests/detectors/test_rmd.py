@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.detector import RMD
+from pytorch_ood.detector import RMD
 
 
 class RMDBackgroundTest(unittest.TestCase):

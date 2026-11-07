@@ -3,8 +3,8 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.api import RequiresFittingException
-from src.pytorch_ood.detector import Mahalanobis, MultiMahalanobis
+from pytorch_ood.api import RequiresFittingException
+from pytorch_ood.detector import Mahalanobis, MultiMahalanobis
 from tests.helpers import ClassificationModel
 from tests.helpers.model import ConvClassifier
 

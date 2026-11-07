@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.pytorch_ood.detector import RankFeat
-from src.pytorch_ood.detector.rankfeat import _remove_rank1
+from pytorch_ood.detector import RankFeat
+from pytorch_ood.detector.rankfeat import _remove_rank1
 
 
 class SimpleCNN(nn.Module):
@@ -154,7 +154,7 @@ class TestRankFeat(unittest.TestCase):
             scores_rf = rankfeat(x)
             # Plain energy without rank-1 removal
             logits_plain = model(x)
-            from src.pytorch_ood.detector import EnergyBased
+            from pytorch_ood.detector import EnergyBased
 
             scores_plain = EnergyBased.score(logits_plain)
 
@@ -179,7 +179,7 @@ class TestRankFeat(unittest.TestCase):
             scores = detector(x)
             z = _remove_rank1(model.backbone(x))
             logits = model.head(z)
-            from src.pytorch_ood.detector import EnergyBased
+            from pytorch_ood.detector import EnergyBased
 
             expected = EnergyBased.score(logits)
 

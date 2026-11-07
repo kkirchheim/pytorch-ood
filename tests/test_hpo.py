@@ -4,11 +4,11 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.api import Detector, FeaturesDetector
-from src.pytorch_ood.detector import ASH, GEN, KNN, ODIN, ReAct
-from src.pytorch_ood.metrics import AUROC, FPRAtTPR, MetricCollection
-from src.pytorch_ood.model import WideResNet
-from src.pytorch_ood.utils import GridSearch
+from pytorch_ood.api import Detector, FeaturesDetector
+from pytorch_ood.detector import ASH, GEN, KNN, ODIN, ReAct
+from pytorch_ood.metrics import AUROC, FPRAtTPR, MetricCollection
+from pytorch_ood.model import WideResNet
+from pytorch_ood.utils import GridSearch
 from tests.helpers import ClassificationModel
 
 

@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch import nn
 
-from src.pytorch_ood.detector import ODIN, odin_preprocessing
+from pytorch_ood.detector import ODIN, odin_preprocessing
 from tests.helpers import ClassificationModel
 from tests.helpers.model import ConvClassifier
 

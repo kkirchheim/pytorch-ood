@@ -3,8 +3,8 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.api import RequiresFittingException
-from src.pytorch_ood.detector import Gram
+from pytorch_ood.api import RequiresFittingException
+from pytorch_ood.detector import Gram
 from tests.helpers.model import ConvClassifier
 
 
@@ -81,7 +81,7 @@ class GramTest(unittest.TestCase):
         receive higher outlier scores than the fitting data (higher = more OOD).
         The previous implementation returned inverted scores.
         """
-        from src.pytorch_ood.metrics import OODMetrics
+        from pytorch_ood.metrics import OODMetrics
 
         model = InitGram().model
         y = torch.cat([torch.zeros(50, dtype=torch.int), torch.ones(50, dtype=torch.int)])

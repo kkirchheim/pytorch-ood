@@ -5,10 +5,10 @@ import torch
 from torch.optim import SGD
 from torch.utils.data import DataLoader, TensorDataset, random_split
 
+from pytorch_ood.api import RequiresFittingException
+from pytorch_ood.detector.klmatching import KLMatching
 from pytorch_ood.loss import CrossEntropyLoss
 from pytorch_ood.metrics import OODMetrics
-from src.pytorch_ood.api import RequiresFittingException
-from src.pytorch_ood.detector.klmatching import KLMatching
 from tests.helpers import ClassificationModel, requires, sample_dataset
 
 

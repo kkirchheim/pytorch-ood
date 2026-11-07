@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch import nn
 
-from src.pytorch_ood.detector import MCD
+from pytorch_ood.detector import MCD
 from tests.helpers import ClassificationModel, SegmentationModel
 
 

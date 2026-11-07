@@ -3,9 +3,9 @@ from unittest import mock
 
 import torch
 
-from src.pytorch_ood.detector import GradUncertainty
-from src.pytorch_ood.detector import graduncertainty as graduncertainty_module
-from src.pytorch_ood.model import WideResNet
+from pytorch_ood.detector import GradUncertainty
+from pytorch_ood.detector import graduncertainty as graduncertainty_module
+from pytorch_ood.model import WideResNet
 
 
 def _linear_head(bias: torch.Tensor) -> torch.nn.Linear:

@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.detector import MaxLogit
+from pytorch_ood.detector import MaxLogit
 from tests.helpers import ClassificationModel, SegmentationModel
 
 

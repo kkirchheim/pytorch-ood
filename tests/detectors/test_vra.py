@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.detector import VRA
+from pytorch_ood.detector import VRA
 from tests.helpers import ClassificationModel, sample_dataset
 
 

@@ -2,8 +2,8 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.detector import SHE
-from src.pytorch_ood.model import WideResNet
+from pytorch_ood.detector import SHE
+from pytorch_ood.model import WideResNet
 
 
 class TestASH(unittest.TestCase):
@@ -52,7 +52,7 @@ class SHEScoreTest(unittest.TestCase):
     def test_fit_without_encoder(self):
         from torch.utils.data import DataLoader, TensorDataset
 
-        from src.pytorch_ood.api import ModelNotSetException
+        from pytorch_ood.api import ModelNotSetException
 
         loader = DataLoader(TensorDataset(torch.randn(8, 4), torch.arange(8) % 2), batch_size=4)
         with self.assertRaises(ModelNotSetException):

@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.detector import (
+from pytorch_ood.detector import (
     ASH,
     DICE,
     GEN,

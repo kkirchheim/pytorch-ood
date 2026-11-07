@@ -4,8 +4,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from src.pytorch_ood.detector import LTS
-from src.pytorch_ood.detector.energy import EnergyBased
+from pytorch_ood.detector import LTS
+from pytorch_ood.detector.energy import EnergyBased
 from tests.helpers import ClassificationModel
 
 
