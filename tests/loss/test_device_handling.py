@@ -16,7 +16,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood import loss
 from tests.helpers import requires
-from tests.test_info import LOSS_INPUTS, LOSSES, SHAPES
+from tests.helpers.components import LOSSES
+from tests.helpers.losses import LOSS_INPUTS, SHAPES
 
 # the last GPU, so that code hard-coded to cuda:0 fails on machines with several GPUs
 DEVICE = torch.device("cuda", max(torch.cuda.device_count() - 1, 0))

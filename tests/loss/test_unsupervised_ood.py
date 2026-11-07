@@ -11,7 +11,8 @@ import torch.nn.functional as F
 
 from pytorch_ood import loss
 from pytorch_ood.api import Task
-from tests.test_info import LOSS_INPUTS, LOSSES, SHAPES
+from tests.helpers.components import LOSSES
+from tests.helpers.losses import LOSS_INPUTS, SHAPES
 
 UNSUPERVISED = [cls for cls in LOSSES if not cls.info.supervised]
 

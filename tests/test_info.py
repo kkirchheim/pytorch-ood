@@ -4,171 +4,24 @@ every exported component has its own record of the right type, and that detector
 and losses really support the tasks their ``info`` claims.
 """
 
-import inspect
 import unittest
 
 import torch
-from torch import nn
-from torch.utils.data import DataLoader, Dataset, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood import benchmark, detector, loss
 from pytorch_ood.api import (
     BenchmarkInfo,
     DatasetInfo,
-    Detector,
     DetectorInfo,
     LogitsDetector,
     LossInfo,
     Role,
     Task,
 )
-from pytorch_ood.dataset import audio, img, txt
-from tests.detectors.test_all_detectors_smoke import TestAllDetectorsSmoke
-from tests.helpers import SegmentationModel
-
-
-def _exported(module, base, prefix):
-    # a set of objects, so re-exported aliases count once
-    return sorted(
-        {
-            obj
-            for obj in vars(module).values()
-            if inspect.isclass(obj)
-            and issubclass(obj, base)
-            and not inspect.isabstract(obj)
-            and not obj.__name__.startswith("_")
-            and obj.__module__.startswith(prefix)
-        },
-        key=lambda cls: cls.__name__,
-    )
-
-
-DETECTORS = _exported(detector, Detector, "pytorch_ood.detector")
-LOSSES = _exported(loss, nn.Module, "pytorch_ood.loss")
-BENCHMARKS = _exported(benchmark, benchmark.Benchmark, "pytorch_ood.benchmark")
-# generic loaders for the user's own data describe no dataset of their own
-DATASETS = [
-    cls
-    for package in (img, txt, audio)
-    for cls in _exported(package, Dataset, "pytorch_ood.dataset")
-    if cls is not img.ImageListDataset
-]
-
-B, C, D = 8, 3, 5  # batch size, classes, feature dimension
-SHAPES = {Task.CLASSIFICATION: (B,), Task.SEGMENTATION: (2, 4, 4)}
-
-
-def _outputs(shape, channels):
-    # channels second, as in (B, C) and (B, C, H, W)
-    return torch.randn(shape[0], channels, *shape[1:])
-
-
-def _targets(shape, outliers=True):
-    targets = torch.arange(torch.Size(shape).numel()).reshape(shape) % (C + 1) - 1
-    return targets if outliers else targets.clamp(min=0)
-
-
-# Builds a loss and its arguments for outputs of the given shape (see SHAPES).
-LOSS_INPUTS = {
-    loss.BackgroundClassLoss: lambda s: (
-        loss.BackgroundClassLoss(n_classes=C),
-        (_outputs(s, C + 1), _targets(s)),
-    ),
-    loss.CACLoss: lambda s: (
-        loss.CACLoss(n_classes=C),
-        (_outputs(s, C).abs(), _targets(s, False)),
-    ),
-    loss.CenterLoss: lambda s: (
-        loss.CenterLoss(n_classes=C, n_dim=D),
-        (_outputs(s, C).abs(), _targets(s, False)),
-    ),
-    loss.ConfidenceLoss: lambda s: (
-        loss.ConfidenceLoss(),
-        (_outputs(s, C), torch.rand(s[0], 1), _targets(s, False)),
-    ),
-    loss.CrossEntropyLoss: lambda s: (loss.CrossEntropyLoss(), (_outputs(s, C), _targets(s))),
-    loss.DeepSVDDLoss: lambda s: (
-        loss.DeepSVDDLoss(n_dim=D),
-        (_outputs(s, D), _targets(s, False)),
-    ),
-    loss.EnergyMarginLoss: lambda s: (
-        loss.EnergyMarginLoss(full_train_loss=1.0),
-        (_outputs(s, C), _targets(s), nn.Linear(1, 2)),
-    ),
-    loss.EnergyRegularizedLoss: lambda s: (
-        loss.EnergyRegularizedLoss(),
-        (_outputs(s, C), _targets(s)),
-    ),
-    loss.EntropicOpenSetLoss: lambda s: (
-        loss.EntropicOpenSetLoss(),
-        (_outputs(s, C), _targets(s)),
-    ),
-    loss.IILoss: lambda s: (
-        loss.IILoss(n_classes=C, n_embedding=D),
-        (_outputs(s, D), _targets(s, False)),
-    ),
-    loss.LogitNorm: lambda s: (loss.LogitNorm(), (_outputs(s, C), _targets(s, False))),
-    loss.MCHADLoss: lambda s: (
-        loss.MCHADLoss(n_classes=C, n_dim=D),
-        (_outputs(s, C).abs(), _targets(s)),
-    ),
-    loss.ObjectosphereLoss: lambda s: (
-        loss.ObjectosphereLoss(),
-        (_outputs(s, C), _outputs(s, D), _targets(s)),
-    ),
-    loss.OutlierExposureLoss: lambda s: (
-        loss.OutlierExposureLoss(),
-        (_outputs(s, C), _targets(s)),
-    ),
-    loss.DeepSADLoss: lambda s: (
-        loss.DeepSADLoss(n_dim=D),
-        (_outputs(s, D), _targets(s)),
-    ),
-    loss.VOSRegLoss: lambda s: (
-        loss.VOSRegLoss(nn.Linear(1, 2), nn.Linear(C, 1)),
-        (_outputs(s, C), _targets(s, False)),
-    ),
-    loss.VirtualOutlierSynthesizingRegLoss: lambda s: (
-        loss.VirtualOutlierSynthesizingRegLoss(
-            nn.Linear(1, 2),
-            nn.Linear(C, 1),
-            fc=nn.Linear(D, C),
-            sample_number=4,
-            sample_from=20,
-        ),
-        (_outputs(s, C), _outputs(s, D), _targets(s)),
-    ),
-}
-
-
-class _ConvBackbone(nn.Module):
-    """Feature maps (B, 8, H, W) and a per-pixel head (B, C, H, W), for segmentation."""
-
-    def __init__(self):
-        super().__init__()
-        self.features = nn.Sequential(nn.Conv2d(3, 8, 1), nn.ReLU())
-        self.head = nn.Conv2d(8, C, 1)
-
-
-def _with_backbone(cls):
-    def build():
-        model = _ConvBackbone().eval()
-        return cls(backbone=model.features, head=model.head)
-
-    return build
-
-
-# Builds each detector that claims segmentation, for (B, 3, H, W) inputs.
-SEGMENTATION_DETECTORS = {
-    detector.EnergyBased: lambda: detector.EnergyBased(SegmentationModel().eval()),
-    detector.Entropy: lambda: detector.Entropy(SegmentationModel().eval()),
-    detector.GEN: lambda: detector.GEN(SegmentationModel().eval()),
-    detector.MaxLogit: lambda: detector.MaxLogit(SegmentationModel().eval()),
-    detector.MaxSoftmax: lambda: detector.MaxSoftmax(SegmentationModel().eval()),
-    detector.MCD: lambda: detector.MCD(SegmentationModel(), samples=4),
-    detector.ReAct: _with_backbone(detector.ReAct),
-    detector.WeightedEBO: lambda: detector.WeightedEBO(SegmentationModel().eval(), torch.ones(C)),
-}
+from tests.helpers.components import BENCHMARKS, DATASETS, DETECTORS, LOSSES
+from tests.helpers.detectors import DETECTOR_CASES
+from tests.helpers.losses import LOSS_INPUTS, SHAPES, C
+from tests.helpers.segmentation import SEGMENTATION_DETECTORS
 
 
 class TestInfoRecords(unittest.TestCase):
@@ -215,10 +68,8 @@ class TestDetectorTasks(unittest.TestCase):
     """Every task a detector's ``info`` lists must work."""
 
     def test_classification_claims_are_smoke_tested(self):
-        # tests/detectors/test_all_detectors_smoke.py runs every detector it builds
-        smoke = TestAllDetectorsSmoke("test_all_classification_detectors_smoke")
-        registries = smoke._classification_detector_registry() + smoke._image_detector_registry()
-        tested = {type(build()) for _, build in registries}
+        # the smoke test (test_all_detectors_smoke.py) runs every case in DETECTOR_CASES
+        tested = {type(case.build()) for case in DETECTOR_CASES}
         for cls in DETECTORS:
             if Task.CLASSIFICATION in cls.info.tasks:
                 with self.subTest(cls.__name__):
