@@ -1,7 +1,7 @@
 PyTorch Out-of-Distribution Detection
 ****************************************
 
-|docs| |version| |license| |python-version| |build-status| |coverage-status| |binder-demo| |downloads| |paper|
+|docs| |version| |license| |python-version| |build-status| |coverage-status| |binder-demo| |downloads| |joss| |paper|
 
 
 .. |docs| image:: https://img.shields.io/badge/docs-online-blue?style=for-the-badge
@@ -28,6 +28,9 @@ PyTorch Out-of-Distribution Detection
 .. |downloads| image:: https://img.shields.io/pepy/dt/pytorch-ood?style=for-the-badge
    :target: https://pepy.tech/project/pytorch-ood
    :alt: Downloads
+.. |joss| image:: https://img.shields.io/badge/paper-joss-blue?style=for-the-badge
+   :target: https://doi.org/10.21105/joss.10806
+   :alt: JOSS Paper
 .. |paper| image:: https://img.shields.io/badge/paper-cvpr-blue?style=for-the-badge
    :target: https://openaccess.thecvf.com/content/CVPR2022W/HCIS/papers/Kirchheim_PyTorch-OOD_A_Library_for_Out-of-Distribution_Detection_Based_on_PyTorch_CVPRW_2022_paper.pdf
    :alt: Paper
@@ -181,6 +184,21 @@ The package can be installed via PyPI:
 ^^^^^^^^^^
 
 If you use this project, please cite:
+
+::
+
+  @article{kirchheim2026pytorch,
+    title={pytorch-ood: A Unified PyTorch Library for Out-of-Distribution Detection},
+    author={Kirchheim, Konstantin and Langer, Theo and Ortmeier, Frank},
+    journal={Journal of Open Source Software},
+    volume={11},
+    number={126},
+    pages={10806},
+    year={2026},
+    doi={10.21105/joss.10806}
+  }
+
+The original workshop paper:
 
 ::
 
