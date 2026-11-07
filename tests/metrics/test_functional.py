@@ -10,8 +10,8 @@ from fractions import Fraction
 import numpy as np
 import torch
 
-from src.pytorch_ood.metrics import aurra, calc_openness, calibration_error, oscr_score
-from src.pytorch_ood.metrics import functional as F
+from pytorch_ood.metrics import aurra, calc_openness, calibration_error, oscr_score
+from pytorch_ood.metrics import functional as F
 from tests.helpers import requires
 
 try:

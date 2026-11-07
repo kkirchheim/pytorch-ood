@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import EnergyRegularizedLoss
+from pytorch_ood.loss import EnergyRegularizedLoss
 from tests.helpers.model import SegmentationModel
 
 torch.manual_seed(123)

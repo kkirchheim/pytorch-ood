@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import torch
 
-from src.pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss, VOSRegLoss
+from pytorch_ood.loss import VirtualOutlierSynthesizingRegLoss, VOSRegLoss
 from tests.helpers.model import ClassificationModel, SegmentationModel
 
 torch.manual_seed(123)

@@ -7,7 +7,7 @@ from unittest import mock
 
 import torch
 
-from src.pytorch_ood.metrics import (
+from pytorch_ood.metrics import (
     AUPR,
     AUROC,
     AUTC,
@@ -17,8 +17,8 @@ from src.pytorch_ood.metrics import (
     MetricCollection,
     OODMetrics,
 )
-from src.pytorch_ood.metrics import base as base_module
-from src.pytorch_ood.metrics import functional as F
+from pytorch_ood.metrics import base as base_module
+from pytorch_ood.metrics import functional as F
 from tests.helpers import requires
 
 

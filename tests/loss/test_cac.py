@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import CACLoss
+from pytorch_ood.loss import CACLoss
 
 
 class TestCAC(unittest.TestCase):

@@ -4,8 +4,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.pytorch_ood.loss import EnergyMarginLoss
-from src.pytorch_ood.utils import evaluate_energy_logistic_loss
+from pytorch_ood.loss import EnergyMarginLoss
+from pytorch_ood.utils import evaluate_energy_logistic_loss
 from tests.helpers import requires
 
 torch.manual_seed(123)

@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import CrossEntropyLoss
+from pytorch_ood.loss import CrossEntropyLoss
 from tests.helpers import ClassificationModel, SegmentationModel
 
 

@@ -10,7 +10,7 @@ import warnings
 import torch
 
 from pytorch_ood import loss
-from tests.test_info import LOSSES
+from tests.helpers.components import LOSSES
 
 # losses whose contract differs from loss(logits, targets), so they need a usage example
 NEED_EXAMPLE = {

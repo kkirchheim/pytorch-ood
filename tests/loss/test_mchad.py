@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import MCHADLoss
+from pytorch_ood.loss import MCHADLoss
 
 
 class TestMCHAD(unittest.TestCase):

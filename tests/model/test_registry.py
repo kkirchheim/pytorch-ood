@@ -2,13 +2,13 @@ import unittest
 
 from torch.hub import HASH_REGEX
 
-from src.pytorch_ood.model import (
+from pytorch_ood.model import (
     ImagePreprocessing,
     get_model_info,
     list_models,
     load_transform,
 )
-from src.pytorch_ood.model.registry import _ENTRIES
+from pytorch_ood.model.registry import _ENTRIES
 
 
 class TestRegistryIntegrity(unittest.TestCase):

@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import EntropicOpenSetLoss
+from pytorch_ood.loss import EntropicOpenSetLoss
 from tests.helpers.model import SegmentationModel
 
 

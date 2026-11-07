@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import CenterLoss
+from pytorch_ood.loss import CenterLoss
 from tests.helpers import ClassificationModel
 
 
