@@ -7,7 +7,7 @@ line-length = 99
 exclude = [".git", "__pycache__", "venv", "docs"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "TID253"]
+select = ["E", "F", "W", "I", "TID251", "TID253"]
 ignore = [
     "F401",  # imported but unused (intentional re-exports in __init__.py)
     "F841",  # local variable assigned but never used
@@ -20,6 +20,11 @@ ignore = [
 # plain `pip install pytorch-ood` works; see the minimal-install CI job.
 [tool.ruff.lint.flake8-tidy-imports]
 banned-module-level-imports = ["sklearn", "gdown", "pandas", "segmentation_models_pytorch"]
+
+# `src.pytorch_ood` is a second copy of the package: exceptions and isinstance checks do not match
+# across the two. pytest's `pythonpath = src .` makes `import pytorch_ood` use this checkout.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"src".msg = "import `pytorch_ood`, not `src.pytorch_ood`"
 
 [tool.ruff.lint.per-file-ignores]
 # only library code is bound by the install_requires policy
