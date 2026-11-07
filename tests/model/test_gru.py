@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.model import GRUClassifier
+from pytorch_ood.model import GRUClassifier
 
 
 class TestGRUClassifier(unittest.TestCase):

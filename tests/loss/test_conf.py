@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import ConfidenceLoss
+from pytorch_ood.loss import ConfidenceLoss
 
 
 class TestConfidenceLoss(unittest.TestCase):

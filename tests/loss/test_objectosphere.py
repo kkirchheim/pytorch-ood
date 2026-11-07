@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import ObjectosphereLoss
+from pytorch_ood.loss import ObjectosphereLoss
 from tests.helpers import ClassificationModel
 
 

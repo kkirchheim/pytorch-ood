@@ -2,7 +2,7 @@ import os
 import unittest
 from urllib.request import Request, urlopen
 
-from src.pytorch_ood.dataset.img import (
+from pytorch_ood.dataset.img import (
     CIFAR10C,
     CIFAR100C,
     MNISTC,
@@ -22,7 +22,7 @@ from src.pytorch_ood.dataset.img import (
     StreetHazards,
     iNaturalist,
 )
-from src.pytorch_ood.dataset.txt import (
+from pytorch_ood.dataset.txt import (
     Multi30k,
     NewsGroup20,
     Reuters8,

@@ -3,8 +3,8 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.model import list_models, load_model
-from src.pytorch_ood.model.registry import get_model_info
+from pytorch_ood.model import list_models, load_model
+from pytorch_ood.model.registry import get_model_info
 
 
 @unittest.skipUnless(

@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.optim import SGD
 
-from src.pytorch_ood.loss import DeepSADLoss, DeepSVDDLoss
+from pytorch_ood.loss import DeepSADLoss, DeepSVDDLoss
 from tests.helpers import ClassificationModel
 
 
@@ -59,7 +59,7 @@ class TestDeepSAD(unittest.TestCase):
         self.assertFalse((loss == 0).any())
 
     def test_deprecated_name(self):
-        import src.pytorch_ood.loss as losses
+        import pytorch_ood.loss as losses
 
         with self.assertWarns(DeprecationWarning):
             self.assertIs(losses.SSDeepSVDDLoss, DeepSADLoss)

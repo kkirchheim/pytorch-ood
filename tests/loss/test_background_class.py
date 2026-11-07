@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from src.pytorch_ood.loss import BackgroundClassLoss
+from pytorch_ood.loss import BackgroundClassLoss
 from tests.helpers import ClassificationModel
 
 
