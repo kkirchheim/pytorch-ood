@@ -1,9 +1,9 @@
 """
 One working instance of every detector, for tests that run over all of them.
 
-Each :class:`DetectorCase` builds a fresh detector on a small model in ``eval()`` mode, for inputs
-of ``input_shape`` per sample. Tests that check something for every detector parametrize over
-:data:`DETECTOR_CASES`.
+Each :class:`DetectorCase` creates a small model in ``eval()`` mode and wraps it in a detector, for
+inputs of ``input_shape`` per sample. Tests that check something for every detector parametrize
+over :data:`DETECTOR_CASES`.
 """
 
 from dataclasses import dataclass
@@ -62,13 +62,23 @@ IMAGE = (3, 8, 8)
 @dataclass(frozen=True)
 class DetectorCase:
     name: str
-    build: Callable[[], Detector]
+    #: creates a fresh model in ``eval()`` mode
+    model: Callable[[], nn.Module]
+    #: wraps a model from :attr:`model` in the detector
+    detector: Callable[[nn.Module], Detector]
     input_shape: Tuple[int, ...]
     #: replaces the default fit data of :func:`make_loader` for detectors that need special data
     fit_loader: Optional[Callable[[], DataLoader]] = None
 
     def __str__(self) -> str:
         return self.name
+
+    def build(self) -> Detector:
+        return self.detector(self.model())
+
+    def make_fit_loader(self, **kwargs) -> DataLoader:
+        """:attr:`fit_loader` if set, otherwise :func:`make_loader` with ``kwargs``."""
+        return self.fit_loader() if self.fit_loader else make_loader(self.input_shape, **kwargs)
 
 
 def make_loader(
@@ -149,162 +159,137 @@ def _she_loader() -> DataLoader:
     return DataLoader(TensorDataset(x, y), batch_size=6)
 
 
-def _on(model_factory, make_detector):
-    """A builder that creates a fresh model and wraps it in a detector."""
-    return lambda: make_detector(model_factory())
-
-
 DETECTOR_CASES = [
     # logits
-    DetectorCase("MSP", _on(_classifier, MaxSoftmax), VECTOR),
-    DetectorCase("TemperatureScaling", _on(_classifier, TemperatureScaling), VECTOR),
-    DetectorCase("Entropy", _on(_classifier, Entropy), VECTOR),
-    DetectorCase("EnergyBased", _on(_classifier, EnergyBased), VECTOR),
-    DetectorCase("MaxLogit", _on(_classifier, MaxLogit), VECTOR),
-    DetectorCase("GEN", _on(_classifier, GEN), VECTOR),
-    DetectorCase("KLMatching", _on(_classifier, KLMatching), VECTOR),
-    DetectorCase("ODIN", _on(_classifier, lambda m: ODIN(m, eps=0.001)), VECTOR),
-    DetectorCase("OpenMax", _on(_classifier, lambda m: OpenMax(m, tailsize=3, alpha=2)), VECTOR),
-    DetectorCase(
-        "WeightedEBO", _on(_classifier, lambda m: WeightedEBO(m, torch.ones(1, 3))), VECTOR
-    ),
-    DetectorCase("MCD", _on(_classifier, lambda m: MCD(m, samples=4, mode="var")), VECTOR),
+    DetectorCase("MSP", _classifier, MaxSoftmax, VECTOR),
+    DetectorCase("TemperatureScaling", _classifier, TemperatureScaling, VECTOR),
+    DetectorCase("Entropy", _classifier, Entropy, VECTOR),
+    DetectorCase("EnergyBased", _classifier, EnergyBased, VECTOR),
+    DetectorCase("MaxLogit", _classifier, MaxLogit, VECTOR),
+    DetectorCase("GEN", _classifier, GEN, VECTOR),
+    DetectorCase("KLMatching", _classifier, KLMatching, VECTOR),
+    DetectorCase("ODIN", _classifier, lambda m: ODIN(m, eps=0.001), VECTOR),
+    DetectorCase("OpenMax", _classifier, lambda m: OpenMax(m, tailsize=3, alpha=2), VECTOR),
+    DetectorCase("WeightedEBO", _classifier, lambda m: WeightedEBO(m, torch.ones(1, 3)), VECTOR),
+    DetectorCase("MCD", _classifier, lambda m: MCD(m, samples=4, mode="var"), VECTOR),
     # features
-    DetectorCase("KNN", _on(_classifier, lambda m: KNN(m.features, k=3)), VECTOR),
-    DetectorCase("GMM", _on(_classifier, lambda m: GMM(m.features)), VECTOR),
+    DetectorCase("KNN", _classifier, lambda m: KNN(m.features, k=3), VECTOR),
+    DetectorCase("GMM", _classifier, lambda m: GMM(m.features), VECTOR),
     DetectorCase(
         "MCM",
-        _on(
-            _classifier,
-            lambda m: MCM(
-                encoder=m.features,
-                text_embeddings=F.normalize(torch.randn(3, 10), dim=-1),
-                temperature=1.0,
-            ),
+        _classifier,
+        lambda m: MCM(
+            encoder=m.features,
+            text_embeddings=F.normalize(torch.randn(3, 10), dim=-1),
+            temperature=1.0,
         ),
         VECTOR,
     ),
-    DetectorCase("PNML", _on(_classifier, lambda m: PNML(m.features, m.classifier)), VECTOR),
-    DetectorCase(
-        "NNGuide", _on(_classifier, lambda m: NNGuide(m.features, m.classifier, k=3)), VECTOR
-    ),
-    DetectorCase("fDBD", _on(_classifier, lambda m: fDBD(m.features, m.classifier)), VECTOR),
-    DetectorCase("Mahalanobis", _on(_classifier, lambda m: Mahalanobis(m.features)), VECTOR),
-    DetectorCase("RMD", _on(_classifier, lambda m: RMD(m.features)), VECTOR),
+    DetectorCase("PNML", _classifier, lambda m: PNML(m.features, m.classifier), VECTOR),
+    DetectorCase("NNGuide", _classifier, lambda m: NNGuide(m.features, m.classifier, k=3), VECTOR),
+    DetectorCase("fDBD", _classifier, lambda m: fDBD(m.features, m.classifier), VECTOR),
+    DetectorCase("Mahalanobis", _classifier, lambda m: Mahalanobis(m.features), VECTOR),
+    DetectorCase("RMD", _classifier, lambda m: RMD(m.features), VECTOR),
     DetectorCase(
         "Residual",
-        _on(
-            _classifier,
-            lambda m: Residual(m.features, d=4, w=m.classifier.weight, b=m.classifier.bias),
-        ),
+        _classifier,
+        lambda m: Residual(m.features, d=4, w=m.classifier.weight, b=m.classifier.bias),
         VECTOR,
     ),
     DetectorCase(
         "ViM",
-        _on(
-            _classifier,
-            lambda m: ViM(m.features, d=4, w=m.classifier.weight, b=m.classifier.bias),
-        ),
+        _classifier,
+        lambda m: ViM(m.features, d=4, w=m.classifier.weight, b=m.classifier.bias),
         VECTOR,
     ),
     DetectorCase(
         "NCI",
-        _on(_classifier, lambda m: NCI(encoder=m.features, head=m.classifier, alpha=0.0)),
+        _classifier,
+        lambda m: NCI(encoder=m.features, head=m.classifier, alpha=0.0),
         VECTOR,
     ),
     DetectorCase(
         "SHE",
-        _on(_she_classifier, lambda m: SHE(m.features, m.classifier)),
+        _she_classifier,
+        lambda m: SHE(m.features, m.classifier),
         VECTOR,
         fit_loader=_she_loader,
     ),
     DetectorCase(
         "DICE",
-        _on(
-            _classifier,
-            lambda m: DICE(encoder=m.features, w=m.classifier.weight, b=m.classifier.bias, p=0.65),
-        ),
+        _classifier,
+        lambda m: DICE(encoder=m.features, w=m.classifier.weight, b=m.classifier.bias, p=0.65),
         VECTOR,
     ),
-    DetectorCase(
-        "LTS", _on(_classifier, lambda m: LTS(encoder=m.features, head=m.classifier)), VECTOR
-    ),
+    DetectorCase("LTS", _classifier, lambda m: LTS(encoder=m.features, head=m.classifier), VECTOR),
     DetectorCase(
         "ReAct",
-        _on(
-            _classifier,
-            lambda m: ReAct(backbone=m.features, head=m.classifier, threshold=1.0),
-        ),
+        _classifier,
+        lambda m: ReAct(backbone=m.features, head=m.classifier, threshold=1.0),
         VECTOR,
     ),
     DetectorCase(
-        "VRA", _on(_classifier, lambda m: VRA(backbone=m.features, head=m.classifier)), VECTOR
+        "VRA", _classifier, lambda m: VRA(backbone=m.features, head=m.classifier), VECTOR
     ),
     DetectorCase(
         "MahalanobisODIN",
-        _on(_classifier, lambda m: MahalanobisODIN(m.features, eps=0.001)),
+        _classifier,
+        lambda m: MahalanobisODIN(m.features, eps=0.001),
         VECTOR,
     ),
     # gradients
     DetectorCase(
         "GradUncertainty",
-        _on(
-            _gradient_classifier,
-            lambda m: GradUncertainty(m, param_filter=lambda n: n.startswith("classifier")),
-        ),
+        _gradient_classifier,
+        lambda m: GradUncertainty(m, param_filter=lambda n: n.startswith("classifier")),
         VECTOR,
     ),
     DetectorCase(
         "GradNorm",
-        _on(
-            _gradient_classifier,
-            lambda m: GradNorm(m, param_filter=lambda n: n.startswith("classifier")),
-        ),
+        _gradient_classifier,
+        lambda m: GradNorm(m, param_filter=lambda n: n.startswith("classifier")),
         VECTOR,
     ),
     # feature maps and per-layer inputs
     DetectorCase(
         "ASH",
-        _on(_conv, lambda m: ASH(backbone=m.feature_maps, head=m.forward_feature_maps)),
+        _conv,
+        lambda m: ASH(backbone=m.feature_maps, head=m.forward_feature_maps),
         IMAGE,
     ),
     DetectorCase(
         "SCALE",
-        _on(_conv, lambda m: SCALE(backbone=m.feature_maps, head=m.forward_feature_maps)),
+        _conv,
+        lambda m: SCALE(backbone=m.feature_maps, head=m.forward_feature_maps),
         IMAGE,
     ),
     DetectorCase(
         "RankFeat",
-        _on(_conv, lambda m: RankFeat(backbone=m.feature_maps, head=m.forward_feature_maps)),
+        _conv,
+        lambda m: RankFeat(backbone=m.feature_maps, head=m.forward_feature_maps),
         IMAGE,
     ),
-    DetectorCase(
-        "MultiMahalanobis", _on(_conv, lambda m: MultiMahalanobis([m.conv1, m.relu])), IMAGE
-    ),
+    DetectorCase("MultiMahalanobis", _conv, lambda m: MultiMahalanobis([m.conv1, m.relu]), IMAGE),
     DetectorCase(
         "Gram",
-        _on(
-            _conv,
-            lambda m: Gram(
-                head=nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), m.fc),
-                feature_layers=[m.conv1, m.relu],
-                num_classes=3,
-                num_poles_list=[1, 2],
-            ),
+        _conv,
+        lambda m: Gram(
+            head=nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), m.fc),
+            feature_layers=[m.conv1, m.relu],
+            num_classes=3,
+            num_poles_list=[1, 2],
         ),
         IMAGE,
     ),
     DetectorCase(
         "NACUE",
-        _on(
-            _conv,
-            lambda m: NACUE(
-                model=m,
-                layers=[m.conv1, m.relu],
-                m_bins=[10, 10],
-                alpha=[5.0, 5.0],
-                o_star=[2, 2],
-            ),
+        _conv,
+        lambda m: NACUE(
+            model=m,
+            layers=[m.conv1, m.relu],
+            m_bins=[10, 10],
+            alpha=[5.0, 5.0],
+            o_star=[2, 2],
         ),
         IMAGE,
     ),
