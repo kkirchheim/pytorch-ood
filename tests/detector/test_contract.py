@@ -6,7 +6,7 @@ instance is needed, for each exported detector class.
 import copy
 import inspect
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple, Type
+from typing import Dict, Iterable, Optional, Tuple, Type
 
 import pytest
 import torch
@@ -127,8 +127,8 @@ def _fitted(case: DetectorCase, model: Optional[nn.Module] = None, **loader_kwar
     return detector
 
 
-def _concatenated(loader: DataLoader) -> Tuple[Tensor, Tensor]:
-    x, y = zip(*loader)
+def _concatenated(batches: Iterable[Tuple[Tensor, Tensor]]) -> Tuple[Tensor, Tensor]:
+    x, y = zip(*batches)
     return torch.cat(x), torch.cat(y)
 
 
@@ -185,9 +185,11 @@ def test_fit_equals_fit_on_representation(case: DetectorCase, seed: torch.Genera
     loader = case.make_fit_loader()
 
     detector.fit(loader)
-    x, y = _concatenated(loader)
+    # batch by batch, like fit(): one large batch rounds differently in float32, which
+    # ill-conditioned covariances (GMM, RMD) amplify beyond any sensible tolerance
+    producer = getattr(twin, representation.producer)
     with torch.no_grad():
-        z = getattr(twin, representation.producer)(x)
+        z, y = _concatenated([(producer(xb), yb) for xb, yb in loader])
     getattr(twin, f"fit_{representation.kind}")(z, y)
 
     x = _inputs(case, seed)
