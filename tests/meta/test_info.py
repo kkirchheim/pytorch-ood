@@ -68,12 +68,12 @@ class TestDetectorTasks(unittest.TestCase):
     """Every task a detector's ``info`` lists must work."""
 
     def test_classification_claims_are_smoke_tested(self):
-        # the smoke test (test_all_detectors_smoke.py) runs every case in DETECTOR_CASES
+        # tests/detector/test_contract.py runs every case in DETECTOR_CASES
         tested = {type(case.build()) for case in DETECTOR_CASES}
         for cls in DETECTORS:
             if Task.CLASSIFICATION in cls.info.tasks:
                 with self.subTest(cls.__name__):
-                    self.assertIn(cls, tested, "missing from the smoke test")
+                    self.assertIn(cls, tested, "missing from DETECTOR_CASES")
 
     def test_segmentation(self):
         torch.manual_seed(0)
