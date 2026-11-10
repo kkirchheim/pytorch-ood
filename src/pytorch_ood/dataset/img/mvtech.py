@@ -95,6 +95,14 @@ class MVTechAD(ImageDatasetBase):
         else:
             self.split = split
 
+        if subset:
+            if subset in self.subsets:
+                self.subset = subset
+            else:
+                raise ValueError(f"Invalid subset: {subset}, possible values: {self.subsets}")
+        else:
+            self.subset = None
+
         if download:
             self.download()
 
@@ -102,14 +110,6 @@ class MVTechAD(ImageDatasetBase):
             raise RuntimeError(
                 "Dataset not found or corrupted." + " You can use download=True to download it"
             )
-
-        if subset:
-            if subset in self.subsets:
-                self.subset = subset
-            else:
-                raise ValueError(f"Invalid subset: {subset}, possible values: {self.subset}")
-        else:
-            self.subset = None
 
         self.files = None
         self.labels = None

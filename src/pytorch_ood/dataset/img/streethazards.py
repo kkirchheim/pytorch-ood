@@ -96,15 +96,15 @@ class StreetHazards(ImageDatasetBase):
         root = join(root, self.root_dir_name)
         super(ImageDatasetBase, self).__init__(root, transform=transform)
 
+        if subset not in self.subset_list:
+            raise ValueError(f"Invalid subset: {subset}")
+
         self.base_folder = self.base_folders[subset]
         self.url = self.url_list[subset]
         self.filename, self.tgz_md5 = self.filename_list[subset]
 
         if download:
             self.download()
-
-        if subset not in self.subset_list:
-            raise ValueError(f"Invalid subset: {subset}")
 
         if not self._check_integrity():
             raise RuntimeError(

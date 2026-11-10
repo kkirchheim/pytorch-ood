@@ -40,9 +40,9 @@ def _ids(cls: type) -> str:
     return cls.__name__
 
 
-def _construct(cls: type, root: Path):
+def _construct(cls: type, root: Path, **overrides):
     kwargs = {k: str(root) if v is ROOT else v for k, v in REQUIRED.get(cls, {}).items()}
-    return cls(str(root), **kwargs)
+    return cls(str(root), **{**kwargs, **overrides})
 
 
 class NetworkAttempt(BaseException):
@@ -82,6 +82,29 @@ def test_missing_data_raises_without_downloading(cls: type, tmp_path: Path, no_n
     # FileNotFoundError for some datasets, RuntimeError for most; no decision on one type yet
     with pytest.raises((RuntimeError, OSError)):
         _construct(cls, tmp_path)
+
+
+CHECKS_SUBSET_LATE = pytest.mark.xfail(
+    strict=True, reason="subset is checked after the data, so missing data raises RuntimeError"
+)
+INVALID_SUBSET_BROKEN = {
+    img.CIFAR10C: CHECKS_SUBSET_LATE,
+    img.CIFAR100C: CHECKS_SUBSET_LATE,
+    img.OpenImagesO: pytest.mark.xfail(strict=True, reason="an invalid subset fails an assert"),
+}
+
+
+@pytest.mark.parametrize(
+    "cls",
+    [
+        pytest.param(cls, id=cls.__name__, marks=INVALID_SUBSET_BROKEN.get(cls, ()))
+        for cls in ROOTED
+        if "subset" in _parameters(cls)
+    ],
+)
+def test_invalid_subset_raises_value_error(cls: type, tmp_path: Path, no_network):
+    with pytest.raises(ValueError):
+        _construct(cls, tmp_path, subset="no such subset")
 
 
 @pytest.mark.parametrize(
