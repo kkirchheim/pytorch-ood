@@ -86,8 +86,8 @@ class TemperatureScaling(MaxSoftmax):
 
     def fit_logits(self, logits: Tensor, labels: Tensor) -> Self:
         """
-        Optimize the temperature by minimizing the negative log-likelihood using L-BFGS
-        (50 iterations, so the optimum is only approximately reached). Ignores OOD inputs.
+        Find the temperature that minimizes the negative log-likelihood of the labels, using L-BFGS.
+        Every fit starts again from :math:`T = 1`. Ignores OOD inputs.
 
         :param logits: logits of shape :math:`N \\times C`
         :param labels: labels of shape :math:`N`
@@ -95,36 +95,27 @@ class TemperatureScaling(MaxSoftmax):
         :raise ValueError: if there are no ID samples
         """
         known = is_known(labels)
-
         if not known.any():
             raise ValueError("No ID samples")
 
-        optimizer = LBFGS([self.t], lr=0.01, max_iter=50)
-
         device = self.t.device
-
-        logits = logits[known].to(device)
+        logits = logits[known].detach().to(device)
         labels = labels[known].to(device)
 
-        with torch.no_grad():
-            loss = nll_loss(log_softmax(logits / self.t, dim=1), labels).item()
-
-        log.info(f"Initial T/NLL: {self.t.item():.3f}/{loss:.3f}")
+        # optimize log T, which keeps T positive; the strong Wolfe line search makes the step size
+        # adaptive, so the optimum is reached for temperatures far from 1
+        log_t = torch.zeros((), device=device, requires_grad=True)
+        optimizer = LBFGS([log_t], lr=1.0, max_iter=100, line_search_fn="strong_wolfe")
 
         def closure():
             optimizer.zero_grad()
-            loss = nll_loss(log_softmax(logits / self.t, dim=1), labels)
+            loss = nll_loss(log_softmax(logits / log_t.exp(), dim=1), labels)
             loss.backward()
             return loss
 
         optimizer.step(closure)
-
         with torch.no_grad():
-            loss = nll_loss(log_softmax(logits / self.t, dim=1), labels).item()
-
-        log.info(f"Optimal temperature: {self.t.item()}")
-        log.info(f"NLL after scaling: {loss:.2f}'")
-
+            self.t.copy_(log_t.exp())
+        log.info(f"Optimal temperature: {self.t.item():.3f}")
         self._is_fitted = True
-
         return self
