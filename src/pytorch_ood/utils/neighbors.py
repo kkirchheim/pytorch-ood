@@ -8,6 +8,7 @@
 
 """
 
+import numbers
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Union
 
@@ -40,7 +41,7 @@ class NearestNeighborSearch(ABC):
 
 
         class CdistSearch(NearestNeighborSearch):
-            metric = "sqeuclidean"
+            metric = "sqeuclidean"  # "inner_product" would return the largest values first
 
             def fit(self, reference):
                 self.reference = reference
@@ -287,3 +288,23 @@ class TorchNearestNeighbors(NearestNeighborSearch):
             budget = _CPU_BLOCK_BYTES
         # the distance block plus about as much workspace for topk
         return max(1, budget // (2 * n * reference.element_size()))
+
+
+def _check_search(search: object, metric: str, owner: str) -> None:
+    # for detectors that take a search instance; the metric decides how they use the values
+    if not isinstance(search, NearestNeighborSearch):
+        raise TypeError(f"search must be an instance of NearestNeighborSearch, got {search!r}")
+    actual = getattr(search, "metric", None)
+    if actual != metric:
+        raise ValueError(f"{owner} needs a search with metric {metric!r}, got {actual!r}")
+
+
+def _check_k(k: object, n: Optional[int] = None, what: str = "samples") -> None:
+    # detectors check k at construction, fit and predict, since it can change in between
+    # (e.g. by GridSearch)
+    if not isinstance(k, numbers.Integral) or isinstance(k, bool):
+        raise TypeError(f"k must be an integer, got {k!r}")
+    if k < 1:
+        raise ValueError(f"k must be at least 1, got k={k}")
+    if n is not None and k > n:
+        raise ValueError(f"k={k} exceeds the number of {what} ({n})")

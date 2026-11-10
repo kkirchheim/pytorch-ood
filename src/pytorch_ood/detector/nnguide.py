@@ -6,7 +6,6 @@
 """
 
 import logging
-import numbers
 from typing import Callable, Optional, Union
 
 import torch
@@ -24,7 +23,12 @@ from pytorch_ood.api import (
     Task,
 )
 from pytorch_ood.utils import extract_features, is_known
-from pytorch_ood.utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors
+from pytorch_ood.utils.neighbors import (
+    NearestNeighborSearch,
+    TorchNearestNeighbors,
+    _check_k,
+    _check_search,
+)
 
 log = logging.getLogger(__name__)
 
@@ -61,14 +65,16 @@ class NNGuide(FeaturesDetector):
 
     .. code-block:: python
 
-        model = WideResNet()
-        detector = NNGuide(
-            encoder=model.features,
-            head=model.fc,
-            k=10
-        )
-        detector.fit(train_loader)
-        scores = detector(images)
+        import torch
+        from pytorch_ood.detector import NNGuide
+        from pytorch_ood.utils import TorchNearestNeighbors
+
+        encoder, head = torch.nn.Linear(10, 16), torch.nn.Linear(16, 3)
+        # the bank stays on the CPU, also if the detector is moved to a GPU
+        search = TorchNearestNeighbors(device="cpu", metric="inner_product")
+        detector = NNGuide(encoder, head, k=5, search=search)
+        detector.fit_features(torch.randn(100, 16), torch.zeros(100, dtype=torch.long))
+        scores = detector(torch.randn(8, 10))
     """
 
     info = DetectorInfo(
@@ -108,15 +114,11 @@ class NNGuide(FeaturesDetector):
             :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>`
         """
         super(NNGuide, self).__init__()
+        _check_k(k)
         self.k = k
-        self._check_k()
         if search is None:
             search = TorchNearestNeighbors(metric="inner_product")
-        if not isinstance(search, NearestNeighborSearch):
-            raise TypeError(f"search must be an instance of NearestNeighborSearch, got {search!r}")
-        metric = getattr(search, "metric", None)
-        if metric != "inner_product":
-            raise ValueError(f"NNGuide needs a search with metric 'inner_product', got {metric!r}")
+        _check_search(search, "inner_product", "NNGuide")
         self.encoder = encoder
         self.head = head
         #: The nearest-neighbor search, fitted with the energy-scaled bank of the ID samples.
@@ -159,10 +161,11 @@ class NNGuide(FeaturesDetector):
         :param batch_size: number of samples passed through ``head`` at once; lower it to reduce
             peak GPU memory
         :return: self
-        :raise ValueError: if fewer than :math:`k` ID samples are given
+        :raise ValueError: if fewer than :math:`k` ID samples are given or :math:`k` is below 1
+        :raise TypeError: if :math:`k` is not an integer
         """
         known = is_known(labels).to(z.device)
-        self._check_k(int(known.sum()), "ID samples")
+        _check_k(self.k, int(known.sum()), "ID samples")
 
         device = self.device or z.device
         z = z[known].detach().float()
@@ -206,11 +209,12 @@ class NNGuide(FeaturesDetector):
         :param z: features of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`
         :raise RequiresFittingException: if the detector has not been fitted
-        :raise ValueError: if ``k`` exceeds the number of fitted samples
+        :raise ValueError: if ``k`` is below 1 or exceeds the number of fitted samples
+        :raise TypeError: if ``k`` is not an integer
         """
         if not self._is_fitted:
             raise RequiresFittingException()
-        self._check_k(self.search.n_samples, "fitted samples")
+        _check_k(self.k, self.search.n_samples, "fitted samples")
 
         device = self.device or z.device
         z = z.to(device)
@@ -238,12 +242,3 @@ class NNGuide(FeaturesDetector):
         # in place; the return value is not needed
         self.search.to(device)
         return self
-
-    def _check_k(self, n: Optional[int] = None, what: str = "samples") -> None:
-        # k can be changed after construction, so fit and predict check again
-        if not isinstance(self.k, numbers.Integral) or isinstance(self.k, bool):
-            raise TypeError(f"k must be an integer, got {self.k!r}")
-        if self.k < 1:
-            raise ValueError(f"k must be at least 1, got k={self.k}")
-        if n is not None and self.k > n:
-            raise ValueError(f"k={self.k} exceeds the number of {what} ({n})")

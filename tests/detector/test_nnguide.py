@@ -6,7 +6,8 @@ from torch.utils.data import DataLoader
 from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import NNGuide
 from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
-from tests.helpers import ClassificationModel, sample_dataset
+from tests.helpers import ClassificationModel, requires, sample_dataset
+from tests.helpers.components import code_blocks
 
 
 class TestNNGuide(unittest.TestCase):
@@ -230,3 +231,49 @@ class TestNNGuideSearch(unittest.TestCase):
         detector.to("meta")
         self.assertEqual(next(detector.head.parameters()).device.type, "meta")
         self.assertEqual(detector.search.reference.device.type, "cpu")
+
+    def test_bank_is_float32(self):
+        detector = NNGuide(None, self.head, k=3)
+        detector.fit_features(self.z_train.double(), self.labels)
+        self.assertEqual(detector.search.reference.dtype, torch.float32)
+
+    def test_docstring_example_runs(self):
+        blocks = list(code_blocks(NNGuide.__doc__))
+        self.assertTrue(blocks)
+        for code in blocks:
+            exec(compile(code, "<NNGuide example>", "exec"), {})
+
+
+def test_fit_and_predict_match_features_path(seed):
+    """``fit(loader)`` and ``detector(x)`` score like ``fit_features`` and ``predict_features``
+    on the encoder's features."""
+    model = ClassificationModel(num_inputs=10, n_hidden=10, num_outputs=3).eval()
+    x_train = torch.randn(60, 10, generator=seed)
+    labels = torch.cat([torch.zeros(50, dtype=torch.long), -torch.ones(10, dtype=torch.long)])
+    x = torch.randn(8, 10, generator=seed)
+    loader = DataLoader(list(zip(x_train, labels)), batch_size=16)
+
+    detector = NNGuide(model.features, model.classifier, k=5).fit(loader)
+    with torch.no_grad():
+        expected = (
+            NNGuide(None, model.classifier, k=5)
+            .fit_features(model.features(x_train), labels)
+            .predict_features(model.features(x))
+        )
+    torch.testing.assert_close(detector(x), expected)
+
+
+@requires(cuda=1)
+def test_on_accelerator_matches_cpu(seed, accelerator):
+    head = torch.nn.Linear(6, 4)
+    z_train = torch.randn(200, 6, generator=seed)
+    labels = torch.zeros(200, dtype=torch.long)
+    z = torch.randn(16, 6, generator=seed)
+    expected = NNGuide(None, head, k=10).fit_features(z_train, labels).predict_features(z)
+
+    detector = NNGuide(None, head, k=10).to(accelerator)
+    detector.fit_features(z_train, labels)
+    assert detector.search.reference.device == accelerator
+    scores = detector.predict_features(z)
+    assert scores.device == accelerator
+    torch.testing.assert_close(scores.cpu(), expected)
