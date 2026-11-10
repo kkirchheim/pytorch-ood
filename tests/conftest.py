@@ -1,3 +1,4 @@
+import logging
 import os
 import socket
 
@@ -7,6 +8,9 @@ import torch
 from tests.helpers.hardware import missing_hardware
 
 DOWNLOAD_TESTS = "PYTORCH_OOD_DOWNLOAD_TESTS"
+
+# PIL logs every image plugin it loads at DEBUG level
+logging.getLogger("PIL").setLevel(logging.WARNING)
 
 
 def pytest_addoption(parser):
