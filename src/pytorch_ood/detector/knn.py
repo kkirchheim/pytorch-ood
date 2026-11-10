@@ -20,7 +20,6 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
-from ..utils import is_known
 from ..utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors, _check_k, _check_search
 
 
@@ -147,14 +146,9 @@ class KNN(FeaturesDetector):
         :raises ValueError: if ``labels`` contains no or fewer than ``k`` in-distribution
             samples
         """
-        known = is_known(labels).to(z.device)
+        _check_k(self.k, len(labels), "ID samples")
 
-        if not known.any():
-            raise ValueError("No ID samples")
-        n_known = int(known.sum())
-        _check_k(self.k, n_known, "ID samples")
-
-        self.search.fit(self._prepare(z.detach()[known]))
+        self.search.fit(self._prepare(z.detach()))
         # an unpinned backend follows the detector, like its other state
         device = self.device
         if device is not None:

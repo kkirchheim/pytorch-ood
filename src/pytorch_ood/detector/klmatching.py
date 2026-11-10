@@ -23,7 +23,6 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
-from ..utils import is_known
 
 log = logging.getLogger()
 
@@ -82,8 +81,6 @@ class KLMatching(LogitsDetector):
         """
         device = self.device or logits.device
         logits = logits.to(device)
-        if labels is not None:
-            logits = logits[is_known(labels.to(device))]
         probabilities = logits.softmax(dim=1)
         predictions = probabilities.argmax(dim=1)
 

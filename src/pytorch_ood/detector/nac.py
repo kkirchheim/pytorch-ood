@@ -24,6 +24,8 @@ from pytorch_ood.api import (
     Task,
 )
 
+from ..utils.utils import _id_batches
+
 
 def _default_feature_reduce(z: Tensor) -> Tensor:
     """
@@ -184,9 +186,10 @@ class NACUE(GradientDetector):
         Collect the activation histograms of all neurons. Calls ``model.eval()``.
 
         :param data_loader: loader with ID samples; batches may be tensors or ``(x, y)`` tuples.
-            Labels are ignored, so the loader must not contain OOD samples. Gradients are required,
-            so the call must not be wrapped in ``torch.no_grad``.
+            In tuples, OOD samples (labels :math:`< 0`) are ignored. Gradients are required, so the
+            call must not be wrapped in ``torch.no_grad``.
         :return: self
+        :raises ValueError: if the loader contains no ID samples
         """
         if self.model is None:
             raise ModelNotSetException("NACUE requires a model.")
@@ -197,12 +200,18 @@ class NACUE(GradientDetector):
 
         self._init_hooks()
 
+        def id_inputs():
+            # batches may be plain tensors, without labels
+            batches = (
+                (b[0], b[1]) if isinstance(b, (tuple, list)) else (b, None) for b in data_loader
+            )
+            for x, _ in _id_batches(batches):
+                yield x.to(self.device) if self.device is not None else x
+
         # First pass: initialize histograms (need N per layer)
         self._stats = []
         with torch.enable_grad():
-            for batch in data_loader:
-                x = batch[0] if isinstance(batch, (tuple, list)) else batch
-                x = x.to(self.device) if self.device is not None else x
+            for x in id_inputs():
                 self._captured.clear()
                 logits = self.model(x)
                 _ = logits.sum()
@@ -218,10 +227,7 @@ class NACUE(GradientDetector):
                 break
 
         # Second pass: accumulate histograms
-        for batch in data_loader:
-            x = batch[0] if isinstance(batch, (tuple, list)) else batch
-            x = x.to(self.device) if self.device is not None else x
-
+        for x in id_inputs():
             with torch.enable_grad():
                 self._captured.clear()
                 logits = self.model(x)

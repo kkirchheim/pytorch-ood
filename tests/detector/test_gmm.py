@@ -87,15 +87,6 @@ class GMMTest(unittest.TestCase):
         self.assertFalse(torch.allclose(balanced, weighted))
         torch.testing.assert_close(weighted.double(), _mixture_nll(z_dup, y_dup, test, reg=1e-6))
 
-    def test_ignores_ood_samples(self):
-        z, y = _classes()
-        z_ood = torch.randn(50, 8) * 10
-        test = torch.randn(16, 8)
-        detector = GMM(None).fit_features(torch.cat([z, z_ood]), torch.cat([y, -torch.ones(50)]))
-        torch.testing.assert_close(
-            detector.predict_features(test), GMM(None).fit_features(z, y).predict_features(test)
-        )
-
     def test_fewer_samples_than_dimensions(self):
         """Singular class covariances are regularized and give finite scores."""
         z, y = _classes(sizes=(5, 5), scales=(1.0, 1.0), dim=32)

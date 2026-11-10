@@ -5,7 +5,7 @@ import random
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, KeysView, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Iterator, KeysView, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -245,6 +245,67 @@ def drop_unknown(target: Tensor, *tensors: Tensor) -> Tuple[Tensor, ...]:
     return (target[known], *(t[known] for t in tensors))
 
 
+_NO_ID_SAMPLES = "No ID samples to fit on (all labels are < 0)"
+
+
+def _known_for_fit(labels: Tensor) -> Tensor:
+    """
+    :func:`is_known` for the labels of fitting data, with a warning if there are OOD samples.
+    The message is constant, so Python shows it once per call site.
+    """
+    known = is_known(labels)
+    if not known.all():
+        warnings.warn(
+            "Ignoring samples with labels < 0 (OOD) for fitting; this detector uses only ID samples.",
+            stacklevel=3,
+        )
+    return known
+
+
+def _id_rows_for_fit(representation, labels: Tensor):
+    """
+    The ID samples of fitting data, see :func:`_known_for_fit`.
+
+    :param representation: tensor, or list of tensors, with first dimension :math:`N`
+    :param labels: labels of shape :math:`N`
+    :return: tuple ``(representation, labels)`` restricted to the ID samples
+    :raises ValueError: if there is no ID sample
+    """
+    known = _known_for_fit(labels)
+    if known.all():
+        return representation, labels
+    if not known.any():
+        raise ValueError(_NO_ID_SAMPLES)
+
+    def rows(t: Tensor) -> Tensor:
+        return t[known.to(t.device)]
+
+    if isinstance(representation, (list, tuple)):
+        return [rows(t) for t in representation], labels[known]
+    return rows(representation), labels[known]
+
+
+def _id_batches(batches: Iterable) -> Iterator[Tuple[Tensor, Optional[Tensor]]]:
+    """
+    The ID samples of each batch ``(x, y)`` of fitting data, see :func:`_known_for_fit`. Batches
+    without ID samples are skipped; ``y`` may be ``None``, then the batch is used as it is.
+
+    :raises ValueError: if there is no ID sample
+    """
+    found = False
+    for x, y in batches:
+        if y is not None:
+            known = _known_for_fit(y)
+            if not known.any():
+                continue
+            if not known.all():
+                x, y = x[known], y[known]
+        found = True
+        yield x, y
+    if not found:
+        raise ValueError(_NO_ID_SAMPLES)
+
+
 def contains_known_and_unknown(labels) -> Union[bool, Tensor]:
     """
     :param labels: tensor of labels
@@ -466,21 +527,11 @@ def extract_feature_avg(
     buffer = TensorBuffer()
 
     with torch.no_grad():
-        for batch in data_loader:
-            x, y = batch
-            x = x.to(device)
-            y = y.to(device)
-            known = is_known(y)
-            if known.any():
-                z = model(x[known])
-
-                # average and flatten
-                z = z.mean(dim=(2, 3)).view(known.sum(), -1)
-                buffer.append("embedding", z)
-                buffer.append("label", y[known])
-
-        if buffer.is_empty():
-            raise ValueError("No ID instances in loader")
+        for x, y in _id_batches(data_loader):
+            z = model(x.to(device))
+            # average and flatten
+            buffer.append("embedding", z.mean(dim=(2, 3)).view(len(z), -1))
+            buffer.append("label", y.to(device))
 
     z = buffer.get("embedding")
     y = buffer.get("label")
@@ -505,19 +556,10 @@ def extract_features(
     buffer = TensorBuffer()
 
     with torch.no_grad():
-        for batch in data_loader:
-            x, y = batch
-            x = x.to(device)
-            y = y.to(device)
-            known = is_known(y)
-            if known.any():
-                z = model(x[known])
-                z = z.view(known.sum(), -1)  # flatten
-                buffer.append("embedding", z)
-                buffer.append("label", y[known])
-
-        if buffer.is_empty():
-            raise ValueError("No ID instances in loader")
+        for x, y in _id_batches(data_loader):
+            z = model(x.to(device))
+            buffer.append("embedding", z.view(len(z), -1))  # flatten
+            buffer.append("label", y.to(device))
 
     z = buffer.get("embedding")
     y = buffer.get("label")

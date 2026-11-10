@@ -16,8 +16,6 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from pytorch_ood.utils import is_known
-
 from ..api import (
     DetectorInfo,
     FeatureMapsDetector,
@@ -26,7 +24,7 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
-from ..utils.utils import _check_fraction
+from ..utils.utils import _check_fraction, _id_batches
 from .energy import EnergyBased
 
 log = logging.getLogger(__name__)
@@ -136,12 +134,7 @@ class VRA(FeatureMapsDetector):
         :return: self
         :raise ValueError: if there are no ID samples
         """
-        known = is_known(y)
-
-        if not known.any():
-            raise ValueError("No ID data")
-
-        z = z[known].detach().cpu().numpy()
+        z = z.detach().cpu().numpy()
 
         self._lower_threshold = torch.from_numpy(
             np.quantile(z, self.lower_percentile, axis=0).astype(np.float32)
@@ -181,15 +174,9 @@ class VRA(FeatureMapsDetector):
         # feature maps of that same shape.
         zs, ys = [], []
         with torch.no_grad():
-            for x, y in data_loader:
-                known = is_known(y)
-                if not known.any():
-                    continue
-                zs.append(backbone(x[known].to(device)).detach().cpu())
-                ys.append(y[known].cpu())
-
-        if not zs:
-            raise ValueError("No ID data")
+            for x, y in _id_batches(data_loader):
+                zs.append(backbone(x.to(device)).detach().cpu())
+                ys.append(y.cpu())
 
         z = torch.cat(zs, dim=0)
         y = torch.cat(ys, dim=0)

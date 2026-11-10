@@ -21,7 +21,7 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
-from ..utils import apply_in_batches, extract_features, is_known
+from ..utils import apply_in_batches, extract_features
 from ..utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors, _check_k, _check_search
 
 log = logging.getLogger(__name__)
@@ -149,11 +149,10 @@ class NNGuide(FeaturesDetector):
         :return: self
         :raise ValueError: if fewer than :math:`k` ID samples are given
         """
-        known = is_known(labels).to(z.device)
-        _check_k(self.k, int(known.sum()), "ID samples")
+        _check_k(self.k, len(labels), "ID samples")
 
         device = self.device or z.device
-        z = z[known].detach()
+        z = z.detach()
 
         if isinstance(self.head, torch.nn.Module):
             self.head.to(device)

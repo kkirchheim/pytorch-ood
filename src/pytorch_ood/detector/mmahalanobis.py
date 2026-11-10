@@ -23,7 +23,7 @@ from ..api import (
     StructuredDetector,
     Task,
 )
-from ..utils import contains_unknown, extract_feature_avg
+from ..utils import extract_feature_avg
 from ..utils.utils import _fit_gaussian, _squared_mahalanobis
 
 log = logging.getLogger(__name__)
@@ -170,7 +170,6 @@ class MultiMahalanobis(StructuredDetector):
 
         # we assume here that all class 0 >= labels <= classes.max() exist
         assert len(classes) == classes.max().item() + 1
-        assert not contains_unknown(classes)
 
         n_classes = len(classes)
 

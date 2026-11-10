@@ -1,4 +1,5 @@
 import functools
+import inspect
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -12,6 +13,8 @@ from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
+
+_NAMED = (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
 
 
 class RequiresFittingException(Exception):
@@ -231,13 +234,24 @@ class Detector(ABC):
     #: ``backbone``), or ``None`` if there is no single one.
     _producer_name: ClassVar[Optional[str]] = None
 
+    fit_uses_ood: ClassVar[bool] = False
+    """
+    Whether fitting uses OOD samples (labels :math:`< 0`). If ``False``, ``fit(...)`` and
+    ``fit_*(...)`` ignore them with a warning, and raise :class:`ValueError` if no ID sample is left.
+    """
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        if cls._kind is not None:
-            name = f"predict_{cls._kind}"
-            method = cls.__dict__.get(name)
-            if method is not None:
-                setattr(cls, name, Detector._wrap_representation_method(method))
+        if cls._kind is None:
+            return
+        name = f"predict_{cls._kind}"
+        method = cls.__dict__.get(name)
+        if method is not None:
+            setattr(cls, name, Detector._wrap_representation_method(method))
+        name = f"fit_{cls._kind}"
+        method = cls.__dict__.get(name)
+        if method is not None:
+            setattr(cls, name, Detector._wrap_fit_method(method))
 
     @staticmethod
     def _wrap_representation_method(method):
@@ -250,6 +264,33 @@ class Detector(ABC):
                 args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
             with torch.no_grad():
                 return method(self, *args, **kwargs)
+
+        return wrapped
+
+    @staticmethod
+    def _wrap_fit_method(method):
+        # fit_<kind>(representation, labels, ...): the wrapper drops the OOD rows of both, unless
+        # the detector uses them
+        signature = inspect.signature(method)
+        parameters = list(signature.parameters.values())[1:3]
+        if len(parameters) < 2 or any(p.kind not in _NAMED for p in parameters):
+            raise TypeError(
+                f"{method.__qualname__} must take the representation and the labels as its first "
+                f"two parameters, e.g. fit_features(self, z, y), got {signature}"
+            )
+        representation, labels = (p.name for p in parameters)
+
+        @functools.wraps(method)
+        def wrapped(self, *args, **kwargs):
+            bound = signature.bind(self, *args, **kwargs)
+            y = bound.arguments.get(labels)
+            if not self.fit_uses_ood and isinstance(y, Tensor):
+                from .utils.utils import _id_rows_for_fit
+
+                bound.arguments[representation], bound.arguments[labels] = _id_rows_for_fit(
+                    bound.arguments[representation], y
+                )
+            return method(*bound.args, **bound.kwargs)
 
         return wrapped
 
@@ -699,12 +740,14 @@ class StructuredDetector(Detector):
 
     _kind = "structured"
 
-    def fit_structured(self, *args, **kwargs) -> Self:
+    def fit_structured(self, representation, y: Tensor, *args, **kwargs) -> Self:
         """
         Fit the detector directly on structured intermediate representations.
 
-        The expected arguments depend on the detector, see its documentation.
+        The expected representation depends on the detector, see its documentation.
 
+        :param representation: the structured representation, e.g. a list of per-layer features
+        :param y: labels of shape :math:`N`
         :return: the fitted detector
         """
         if not self.requires_fit:

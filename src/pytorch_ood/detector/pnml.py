@@ -21,7 +21,6 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
-from ..utils import is_known
 from ..utils.utils import _gram_matrix
 
 
@@ -95,13 +94,9 @@ class PNML(FeaturesDetector):
         :return: self
         :raise ValueError: if the labels contain no ID samples
         """
-        known = is_known(labels)
-        if not known.any():
-            raise ValueError("No ID samples found.")
-
         target_device = self.device or z.device
 
-        z = z[known].detach().to(target_device)
+        z = z.detach().to(target_device)
 
         # X^+ (X^+)^T == pinv(X^T X): pinv of the (D, D) Gram matrix avoids an SVD of the (N, D)
         # features. In float64, since the float32 pinv cutoff discards directions the features span.

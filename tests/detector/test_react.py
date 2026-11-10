@@ -6,7 +6,6 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.detector import ReAct
 from pytorch_ood.model import WideResNet
-from tests.helpers import sample_dataset
 
 
 class TestReAct(unittest.TestCase):
@@ -53,15 +52,6 @@ class TestReAct(unittest.TestCase):
 
         expected = float(np.percentile(feature_maps.numpy(), 90))
         self.assertAlmostEqual(detector.threshold, expected, places=4)
-
-    def test_ood_samples_ignored_in_fit(self):
-        """OOD samples in the loader must not break fitting."""
-        ds = sample_dataset(n_dim=8, seed=5)
-        loader = DataLoader(ds, batch_size=32)
-
-        detector = ReAct(backbone=lambda x: x, head=lambda x: x, percentile=0.9)
-        detector.fit(loader)
-        self.assertIsNotNone(detector.threshold)
 
 
 if __name__ == "__main__":

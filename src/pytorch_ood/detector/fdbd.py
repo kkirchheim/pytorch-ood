@@ -7,6 +7,8 @@
 
 """
 
+from typing import Optional
+
 import torch
 from torch import Tensor
 from torch.nn import Linear, Module
@@ -96,11 +98,13 @@ class fDBD(FeaturesDetector):
         denom[torch.arange(n_classes), torch.arange(n_classes)] = 1.0
         self._denom_matrix = denom
 
-    def fit_features(self, z: Tensor, *args, **kwargs) -> Self:
+    def fit_features(self, z: Tensor, y: Optional[Tensor] = None) -> Self:
         """
         Compute the training feature mean directly from features.
 
-        :param z: in-distribution training features of shape :math:`N \\times D`
+        :param z: training features of shape :math:`N \\times D`
+        :param y: labels of shape :math:`N`; only used to ignore OOD samples (labels :math:`< 0`).
+            If ``None``, all features are used.
         :return: the fitted detector
         """
         device = self.device or z.device

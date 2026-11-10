@@ -18,7 +18,6 @@ from torch.optim import LBFGS
 from typing_extensions import Self
 
 from pytorch_ood.detector.softmax import MaxSoftmax
-from pytorch_ood.utils import is_known
 
 from ..api import DetectorInfo, Paper, RequiresFittingException, Task
 
@@ -94,13 +93,9 @@ class TemperatureScaling(MaxSoftmax):
         :return: self
         :raise ValueError: if there are no ID samples
         """
-        known = is_known(labels)
-        if not known.any():
-            raise ValueError("No ID samples")
-
         device = self.t.device
-        logits = logits[known].detach().to(device)
-        labels = labels[known].to(device)
+        logits = logits.detach().to(device)
+        labels = labels.to(device)
 
         # optimize log T, which keeps T positive; the strong Wolfe line search makes the step size
         # adaptive, so the optimum is reached for temperatures far from 1

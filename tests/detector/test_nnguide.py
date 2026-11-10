@@ -43,16 +43,6 @@ class TestNNGuide(unittest.TestCase):
 
         self.assertEqual(scores.shape, (8,))
 
-    def test_ignores_ood_in_fit(self):
-        detector = self._make_detector()
-        features = torch.randn(100, 10)
-        labels = torch.cat([torch.zeros(50, dtype=torch.long), torch.full((50,), -1)])
-
-        detector.fit_features(features, labels)
-
-        # only 50 ID samples should be in the bank
-        self.assertEqual(detector.search.n_samples, 50)
-
 
 def _reference_scores(head, z_train, z, k):
     # the paper, written out: normalized training features scaled by their energy, mean of the

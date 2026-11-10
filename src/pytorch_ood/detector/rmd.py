@@ -16,9 +16,6 @@ from typing_extensions import Self
 from pytorch_ood.detector.mahalanobis import Mahalanobis
 
 from ..api import DetectorInfo, Paper, RequiresFittingException, Task
-from ..utils import (
-    is_known,
-)
 from ..utils.utils import _fit_gaussian, _squared_mahalanobis
 
 log = logging.getLogger(__name__)
@@ -84,12 +81,9 @@ class RMD(Mahalanobis):
         """
         device = self.device or z.device
 
-        # y = y.to(device)
-        known = is_known(y)
-
         super(RMD, self).fit_features(z, y)
 
-        z_known = z[known].to(device)
+        z_known = z.to(device)
 
         log.debug("Fitting background gaussian.")
         # one class covering all known samples
