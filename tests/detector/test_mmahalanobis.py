@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import Mahalanobis, MultiMahalanobis
-from tests.helpers import ClassificationModel
+from tests.helpers import ClassificationModel, points_with_covariance
 from tests.helpers.model import ConvClassifier
 
 
@@ -71,12 +71,17 @@ class MultiMahalanobisTest(unittest.TestCase):
 
 class MultiMahalanobisScoreTest(unittest.TestCase):
     def test_weighted_sum_of_half_squared_distances_to_closest_center(self):
-        detector = MultiMahalanobis([torch.nn.Identity(), torch.nn.Identity()], alpha=[1.0, 2.0])
-        detector.mu = [
-            torch.tensor([[0.0, 0.0], [4.0, 0.0]]),
-            torch.tensor([[0.0, 0.0], [0.0, 2.0]]),
-        ]
-        detector.precision = [torch.diag(torch.tensor([1.0, 4.0])), torch.eye(2)]
+        detector = MultiMahalanobis(
+            [torch.nn.Identity(), torch.nn.Identity()], alpha=[1.0, 2.0], eps=0.0
+        )
+        # layer 1: centers (0, 0), (4, 0), precision diag(1, 4); layer 2: (0, 0), (0, 2), identity
+        z1, y = points_with_covariance(
+            torch.tensor([[0.0, 0.0], [4.0, 0.0]]), torch.tensor([1.0, 0.25])
+        )
+        z2, _ = points_with_covariance(torch.tensor([[0.0, 0.0], [0.0, 2.0]]), torch.ones(2))
+        detector.fit_structured([z1, z2], y)
+        torch.testing.assert_close(detector.precision[0], torch.diag(torch.tensor([1.0, 4.0])))
+        torch.testing.assert_close(detector.precision[1], torch.eye(2))
         x = torch.tensor([[1.0, 1.0], [3.0, 0.0]])
         # layer 1: squared distances (5, 13) and (9, 1); layer 2: (2, 2) and (9, 13)
         expected = 1.0 * torch.tensor([2.5, 0.5]) + 2.0 * torch.tensor([1.0, 4.5])

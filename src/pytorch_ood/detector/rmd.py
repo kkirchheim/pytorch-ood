@@ -21,7 +21,7 @@ from ..utils import (
     extract_features,
     is_known,
 )
-from ..utils.utils import _fit_gaussian
+from ..utils.utils import _fit_gaussian, _squared_mahalanobis
 
 log = logging.getLogger(__name__)
 
@@ -72,6 +72,8 @@ class RMD(Mahalanobis):
         self.background_mu = None
         self.background_cov = None
         self.background_precision = None
+        self._background_whitening: Tensor = None
+        self._background_whitened_mu: Tensor = None
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
@@ -110,19 +112,20 @@ class RMD(Mahalanobis):
         log.debug("Fitting background gaussian.")
         # one class covering all known samples
         background_y = torch.zeros(len(z_known), dtype=torch.long, device=device)
-        mu, self.background_cov, self.background_precision = _fit_gaussian(
+        background = _fit_gaussian(
             z_known, background_y, n_classes=1, eps=self.eps, use_pinv=self.use_pinv
         )
-        self.background_mu = mu[0]
+        self.background_mu = background.mu[0]
+        self.background_cov = background.cov
+        self.background_precision = background.precision
+        self._background_whitening = background.whitening
+        self._background_whitened_mu = background.whitened_mu
         return self
 
     def _background_score(self, z: Tensor) -> Tensor:
-        centered_z = z - self.background_mu
-        return ((centered_z @ self.background_precision) * centered_z).sum(dim=1)
-
-    def _class_score(self, z, k):
-        centered_z = z - self.mu[k]
-        return ((centered_z @ self.precision) * centered_z).sum(dim=1)
+        return _squared_mahalanobis(
+            z, self._background_whitening, self._background_whitened_mu
+        ).squeeze(1)
 
     def _calc_gaussian_scores(self, z: Tensor) -> Tensor:
         """
@@ -131,13 +134,7 @@ class RMD(Mahalanobis):
         # mean over feature maps
         features = z.view(z.size(0), z.size(1), -1)
         features = torch.mean(features, 2)
-        md_k = []
-
-        for clazz in range(self.n_classes):
-            score = self._class_score(features, clazz)
-            md_k.append(score.view(-1, 1))
-
-        return torch.cat(md_k, 1)
+        return _squared_mahalanobis(features, self._whitening, self._whitened_mu)
 
     @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:

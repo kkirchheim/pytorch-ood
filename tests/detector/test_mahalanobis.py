@@ -1,11 +1,12 @@
 import unittest
 
+import pytest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.api import RequiresFittingException
-from pytorch_ood.detector import Mahalanobis
-from tests.helpers import ClassificationModel
+from pytorch_ood.detector import Mahalanobis, MahalanobisODIN
+from tests.helpers import ClassificationModel, points_with_covariance
 
 
 class MahalanobisTest(unittest.TestCase):
@@ -46,9 +47,11 @@ class MahalanobisTest(unittest.TestCase):
 
 class MahalanobisScoreTest(unittest.TestCase):
     def test_half_squared_distance_to_closest_center(self):
-        detector = Mahalanobis(None)
-        detector.mu = torch.tensor([[0.0, 0.0], [4.0, 0.0]])
-        detector.precision = torch.diag(torch.tensor([1.0, 4.0]))
+        centers = torch.tensor([[0.0, 0.0], [4.0, 0.0]])
+        z, y = points_with_covariance(centers, torch.tensor([1.0, 0.25]))
+        detector = Mahalanobis(None, eps=0.0).fit_features(z, y)
+        torch.testing.assert_close(detector.mu, centers)
+        torch.testing.assert_close(detector.precision, torch.diag(torch.tensor([1.0, 4.0])))
         x = torch.tensor([[1.0, 1.0], [3.0, 0.0]])
         # squared distances: (5, 13) and (9, 1)
         torch.testing.assert_close(detector.predict_features(x), torch.tensor([2.5, 0.5]))
@@ -195,3 +198,54 @@ class MahalanobisNumericsTest(unittest.TestCase):
         detector = Mahalanobis(None).fit_features(self.z, self.y)
         self.assertEqual(detector.mu.dtype, torch.float32)
         self.assertEqual(detector.precision.dtype, torch.float32)
+
+
+def _features_with_dead_units(n: int, d: int = 50, n_classes: int = 10, n_dead: int = 5):
+    """Post-ReLU-like features of ``n_classes`` classes in which ``n_dead`` units never fire, so
+    that the covariance has exact zero-variance directions (and is rank-deficient for ``n < d``)."""
+    g = torch.Generator().manual_seed(0)
+    y = torch.arange(n) % n_classes
+    z = (torch.randn(n, d, generator=g) + 2 * torch.randn(n_classes, d, generator=g)[y]).relu()
+    z[:, :n_dead] = 0
+    x = (torch.randn(32, d, generator=g) + torch.randn(32, d, generator=g)).relu()
+    return z, y, x
+
+
+def _half_squared_distances(x: torch.Tensor, mu: torch.Tensor, precision: torch.Tensor):
+    """Float64 loop over classes: :math:`B \\times C` half squared Mahalanobis distances."""
+    x, mu, precision = x.double(), mu.double(), precision.double()
+    return 0.5 * torch.stack([((x - m) @ precision * (x - m)).sum(dim=1) for m in mu], dim=1)
+
+
+@pytest.mark.parametrize("use_pinv", [False, True], ids=["inv", "pinv"])
+@pytest.mark.parametrize("n", [200, 40], ids=["n>d", "n<d"])
+def test_scores_follow_fitted_mean_and_precision(use_pinv, n):
+    """The score is half the squared distance to the closest center under the fitted ``mu`` and
+    ``precision``, also with zero-variance units and fewer samples than dimensions."""
+    z, y, x = _features_with_dead_units(n)
+    detector = Mahalanobis(None, use_pinv=use_pinv).fit_features(z, y)
+    expected = _half_squared_distances(x, detector.mu, detector.precision).min(dim=1).values
+    torch.testing.assert_close(
+        detector.predict_features(x).double(), expected, rtol=1e-4, atol=1e-4
+    )
+
+
+def test_mahalanobis_odin_steps_against_gradient_of_closest_class_distance():
+    """MahalanobisODIN moves the input by ``eps`` against the sign of the gradient of the half
+    squared distance to the closest center, then scores it with Mahalanobis."""
+    torch.manual_seed(0)
+    encoder = torch.nn.Linear(6, 4)
+    y = torch.arange(60) % 3
+    with torch.no_grad():
+        z = encoder(torch.randn(60, 6) + 2 * torch.randn(3, 6)[y])
+    detector = MahalanobisODIN(encoder, eps=0.01).fit_features(z, y)
+    reference = Mahalanobis(encoder).fit_features(z, y)
+
+    x = torch.randn(8, 6, requires_grad=True)
+    f = encoder(x)
+    closest = _half_squared_distances(f.detach(), reference.mu, reference.precision).argmin(dim=1)
+    centered = f - reference.mu[closest]
+    (0.5 * ((centered @ reference.precision) * centered).sum(dim=1)).mean().backward()
+    expected = reference.predict_features(encoder(x.detach() - 0.01 * x.grad.sign()))
+
+    torch.testing.assert_close(detector.predict(x.detach()), expected)

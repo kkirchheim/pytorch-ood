@@ -24,7 +24,7 @@ from ..api import (
     Task,
 )
 from ..utils import contains_unknown, extract_feature_avg
-from ..utils.utils import _fit_gaussian
+from ..utils.utils import _fit_gaussian, _squared_mahalanobis
 
 log = logging.getLogger(__name__)
 
@@ -104,6 +104,9 @@ class MultiMahalanobis(StructuredDetector):
         self.mu: List[Tensor] = []  #: Centers
         self.cov: List[Tensor] = []  #: Covariance Matrices
         self.precision: List[Tensor] = []  #: Precision Matrices
+        # per layer: factor L of the precision (P = L L^T) and mu @ L, used for scoring
+        self._whitening: List[Tensor] = []
+        self._whitened_mu: List[Tensor] = []
 
         if alpha is None:
             # uniform weighting by default if alpha is not given
@@ -157,6 +160,8 @@ class MultiMahalanobis(StructuredDetector):
         self.mu = []
         self.cov = []
         self.precision = []
+        self._whitening = []
+        self._whitened_mu = []
 
         classes = y.unique()
 
@@ -173,13 +178,15 @@ class MultiMahalanobis(StructuredDetector):
                 f"Calculating mahalanobis parameters for layer {layer_idx} with {n_classes=} {z.shape=} {y.shape=}"
             )
 
-            mu, cov, precision = _fit_gaussian(
+            gaussian = _fit_gaussian(
                 z, y, n_classes=n_classes, eps=self.eps, use_pinv=self.use_pinv
             )
 
-            self.mu.append(mu)
-            self.cov.append(cov)
-            self.precision.append(precision)
+            self.mu.append(gaussian.mu)
+            self.cov.append(gaussian.cov)
+            self.precision.append(gaussian.precision)
+            self._whitening.append(gaussian.whitening)
+            self._whitened_mu.append(gaussian.whitened_mu)
             z = z.to(org_device)
 
         return self
@@ -188,19 +195,10 @@ class MultiMahalanobis(StructuredDetector):
         """ """
         features = z.view(z.size(0), z.size(1), -1)
         features = torch.mean(features, 2).to(self.mu[layer_idx].dtype)
-        md_k = []
-
-        # calculate per class scores
-        for clazz in range(self.n_classes):
-            centered_z = features.data - self.mu[layer_idx][clazz]
-            # the factor -0.5 (Gaussian log-density term) is taken from the reference implementation
-            term_gau = (
-                -0.5
-                * torch.mm(torch.mm(centered_z, self.precision[layer_idx]), centered_z.t()).diag()
-            )
-            md_k.append(term_gau.view(-1, 1))
-
-        return torch.cat(md_k, 1)
+        # the factor -0.5 (Gaussian log-density term) is taken from the reference implementation
+        return -0.5 * _squared_mahalanobis(
+            features, self._whitening[layer_idx], self._whitened_mu[layer_idx]
+        )
 
     @torch.no_grad()
     def predict_structured(self, zs: List[Tensor], device=None) -> Tensor:

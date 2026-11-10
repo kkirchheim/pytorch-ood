@@ -29,7 +29,7 @@ from ..utils import (
     contains_unknown,
     extract_features,
 )
-from ..utils.utils import _fit_gaussian
+from ..utils.utils import _fit_gaussian, _squared_mahalanobis
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +96,9 @@ class Mahalanobis(FeaturesDetector):
         self.mu: Tensor = None  #: Centers
         self.cov: Tensor = None  #: Covariance Matrix
         self.precision: Tensor = None  #: Precision Matrix
+        # factor L of the precision (P = L L^T) and mu @ L, used for scoring
+        self._whitening: Tensor = None
+        self._whitened_mu: Tensor = None
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
@@ -135,25 +138,19 @@ class Mahalanobis(FeaturesDetector):
         assert not contains_unknown(classes)
 
         # as the reference implementation (sklearn EmpiricalCovariance): divided by N, float64
-        self.mu, self.cov, self.precision = _fit_gaussian(
+        gaussian = _fit_gaussian(
             z, y, n_classes=len(classes), eps=self.eps, use_pinv=self.use_pinv
         )
+        self.mu, self.cov, self.precision = gaussian.mu, gaussian.cov, gaussian.precision
+        self._whitening, self._whitened_mu = gaussian.whitening, gaussian.whitened_mu
         return self
 
     def _calc_gaussian_scores(self, z: Tensor) -> Tensor:
         """ """
         features = z.view(z.size(0), z.size(1), -1)
         features = torch.mean(features, 2).to(self.mu.dtype)
-        md_k = []
-
-        # calculate per class scores
-        for clazz in range(self.n_classes):
-            centered_z = features.data - self.mu[clazz]
-            # the factor -0.5 (Gaussian log-density term) is taken from the reference implementation
-            term_gau = -0.5 * ((centered_z @ self.precision) * centered_z).sum(dim=1)
-            md_k.append(term_gau.view(-1, 1))
-
-        return torch.cat(md_k, 1)
+        # the factor -0.5 (Gaussian log-density term) is taken from the reference implementation
+        return -0.5 * _squared_mahalanobis(features, self._whitening, self._whitened_mu)
 
     @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:
@@ -295,26 +292,15 @@ class MahalanobisODIN(GradientDetector):
                 x = Variable(x, requires_grad=True)
                 features = self._base.encoder(x)
                 features = features.view(features.shape[0], -1)
-                score = None
-
-                for clazz in range(self._base.n_classes):
-                    centered_features = features.data - self._base.mu[clazz]
-                    term_gau = -0.5 * (
-                        (centered_features @ self._base.precision) * centered_features
-                    ).sum(dim=1)
-
-                    if clazz == 0:
-                        score = term_gau.view(-1, 1)
-                    else:
-                        score = torch.cat((score, term_gau.view(-1, 1)), dim=1)
-
-                sample_pred = score.max(dim=1).indices
+                whitening = self._base._whitening
+                distances = _squared_mahalanobis(
+                    features.detach(), whitening, self._base._whitened_mu
+                )
+                sample_pred = distances.argmin(dim=1)
                 batch_sample_mean = self._base.mu.index_select(0, sample_pred)
-                centered_features = features - Variable(batch_sample_mean)
-                pure_gau = -0.5 * (
-                    (centered_features @ Variable(self._base.precision)) * centered_features
-                ).sum(dim=1)
-                loss = torch.mean(-pure_gau)
+                # half the squared distance to the closest center, ||(f - mu_k) L||^2 / 2
+                whitened = (features - batch_sample_mean) @ whitening
+                loss = torch.mean(0.5 * whitened.square().sum(dim=1))
                 loss.backward()
 
                 gradient = torch.sign(x.grad.data)

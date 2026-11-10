@@ -42,3 +42,23 @@ def sample_dataset(
         y_parts.append(torch.full((n_samples,), c, dtype=torch.long))
 
     return TensorDataset(torch.cat(x_parts), torch.cat(y_parts))
+
+
+def points_with_covariance(centers: torch.Tensor, variances: torch.Tensor):
+    """
+    Points whose class means are exactly ``centers`` and whose shared within-class covariance
+    (centered outer products divided by the number of points) is exactly ``diag(variances)``.
+
+    Each class gets the :math:`2D` points :math:`c \\pm a_i e_i`; with :math:`a_i^2 = D v_i` the
+    pooled covariance is :math:`\\mathrm{diag}(v)`.
+
+    :param centers: class means of shape :math:`C \\times D`
+    :param variances: diagonal of the covariance, shape :math:`D`
+    :return: features of shape :math:`2CD \\times D` and labels of shape :math:`2CD`
+    """
+    n_classes, d = centers.shape
+    offsets = torch.diag((variances * d).sqrt())
+    offsets = torch.cat([offsets, -offsets])
+    z = (centers[:, None, :] + offsets[None]).reshape(-1, d)
+    y = torch.arange(n_classes).repeat_interleave(2 * d)
+    return z, y
