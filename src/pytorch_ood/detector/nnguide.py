@@ -22,7 +22,7 @@ from pytorch_ood.api import (
     RequiresFittingException,
     Task,
 )
-from pytorch_ood.utils import extract_features, is_known
+from pytorch_ood.utils import apply_in_batches, extract_features, is_known
 from pytorch_ood.utils.neighbors import (
     NearestNeighborSearch,
     TorchNearestNeighbors,
@@ -154,7 +154,8 @@ class NNGuide(FeaturesDetector):
     def fit_features(self, z: Tensor, labels: Tensor, batch_size: int = 4096) -> Self:
         """
         Build the energy-scaled feature bank from pre-extracted features and fit the search
-        with it.
+        with it. The bank is assembled on the device of ``z`` (the CPU for features from
+        :meth:`fit`), so a search pinned to the CPU never needs the whole bank on the GPU.
 
         :param z: features of shape :math:`N \\times D`
         :param labels: class labels of shape :math:`N`; OOD samples (label below zero) are ignored
@@ -173,14 +174,13 @@ class NNGuide(FeaturesDetector):
         if isinstance(self.head, torch.nn.Module):
             self.head.to(device)
 
-        # chunked, so that peak GPU memory scales with batch_size, not with the size of the bank
-        chunks = []
-        with torch.no_grad():
-            for start in range(0, z.shape[0], batch_size):
-                z_batch = z[start : start + batch_size].to(device)
-                energy = torch.logsumexp(self.head(z_batch), dim=1)
-                chunks.append(F.normalize(z_batch, dim=1) * energy[:, None])
-        self.search.fit(torch.cat(chunks))
+        def scaled(z_batch: Tensor) -> Tensor:
+            energy = torch.logsumexp(self.head(z_batch), dim=1)
+            return F.normalize(z_batch, dim=1) * energy[:, None]
+
+        self.search.fit(apply_in_batches(scaled, z, batch_size, device))
+        # an unpinned search follows the detector, like its other state; a pinned one stays
+        self.search.to(device)
         self._is_fitted = True
 
         return self

@@ -5,4 +5,6 @@ Feature Extraction
 
 .. autofunction:: pytorch_ood.utils.extract_feature_avg
 
+.. autofunction:: pytorch_ood.utils.apply_in_batches
+
 .. autofunction:: pytorch_ood.utils.estimate_class_centers
