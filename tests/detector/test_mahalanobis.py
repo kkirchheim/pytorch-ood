@@ -230,15 +230,17 @@ def test_scores_follow_fitted_mean_and_precision(use_pinv, n):
     )
 
 
-def test_mahalanobis_odin_steps_against_gradient_of_closest_class_distance():
+@pytest.mark.parametrize("norm_std", [None, [0.5, 2.0]], ids=["no-norm-std", "norm-std"])
+def test_mahalanobis_odin_steps_against_gradient_of_closest_class_distance(norm_std):
     """MahalanobisODIN moves the input by ``eps`` against the sign of the gradient of the half
-    squared distance to the closest center, then scores it with Mahalanobis."""
+    squared distance to the closest center, with the step of channel ``i`` divided by
+    ``norm_std[i]``, then scores it with Mahalanobis."""
     torch.manual_seed(0)
     encoder = torch.nn.Linear(6, 4)
     y = torch.arange(60) % 3
     with torch.no_grad():
         z = encoder(torch.randn(60, 6) + 2 * torch.randn(3, 6)[y])
-    detector = MahalanobisODIN(encoder, eps=0.01).fit_features(z, y)
+    detector = MahalanobisODIN(encoder, eps=0.01, norm_std=norm_std).fit_features(z, y)
     reference = Mahalanobis(encoder).fit_features(z, y)
 
     x = torch.randn(8, 6, requires_grad=True)
@@ -246,7 +248,10 @@ def test_mahalanobis_odin_steps_against_gradient_of_closest_class_distance():
     closest = _half_squared_distances(f.detach(), reference.mu, reference.precision).argmin(dim=1)
     centered = f - reference.mu[closest]
     (0.5 * ((centered @ reference.precision) * centered).sum(dim=1)).mean().backward()
-    expected = reference.predict_features(encoder(x.detach() - 0.01 * x.grad.sign()))
+    step = x.grad.sign()
+    for i, std in enumerate(norm_std or []):
+        step[:, i] /= std
+    expected = reference.predict_features(encoder(x.detach() - 0.01 * step))
 
     torch.testing.assert_close(detector.predict(x.detach()), expected)
 
@@ -290,3 +295,60 @@ def test_distances_of_wide_features_are_summed_accurately():
     detector = Mahalanobis(None, eps=0.0).fit_features(z, y)
     expected = 0.5 * (x.double() - centers[0].double()).square().sum(dim=1)
     torch.testing.assert_close(detector.predict_features(x).double(), expected, rtol=2e-7, atol=0)
+
+
+def test_feature_maps_are_averaged_spatially():
+    """Feature maps of shape B x C x H x W score like their spatial means."""
+    g = torch.Generator().manual_seed(0)
+    y = torch.arange(60) % 3
+    detector = Mahalanobis(None).fit_features(torch.randn(60, 8, generator=g), y)
+    x = torch.randn(5, 8, 4, 3, generator=g)
+    torch.testing.assert_close(
+        detector.predict_features(x), detector.predict_features(x.mean((2, 3)))
+    )
+
+
+def test_pinv_discards_exactly_the_eigenvalues_below_its_cutoff():
+    """``use_pinv`` drops the directions whose variance is below ``D * finfo(float64).eps`` times the
+    largest variance, as :func:`torch.linalg.pinv` does: here 5e-16 is dropped (cutoff 8.9e-16) and
+    1e-14 is kept."""
+    variances = torch.tensor([1.0, 1e-8, 1e-14, 5e-16])
+    z, y = points_with_covariance(torch.tensor([[0.0, 0, 0, 0], [2.0, 0, 0, 0]]), variances)
+    detector = Mahalanobis(None, use_pinv=True).fit_features(z, y)
+    expected = torch.diag(torch.tensor([1.0, 1e8, 1e14, 0.0]))
+    torch.testing.assert_close(detector.precision, expected, rtol=1e-5, atol=0)
+    pinv = torch.linalg.pinv(detector.cov.double(), hermitian=True).float()
+    torch.testing.assert_close(detector.precision, pinv, rtol=1e-5, atol=0)
+
+
+@pytest.mark.parametrize(
+    "features",
+    [
+        pytest.param(lambda z: z.index_fill(1, torch.tensor([0]), 0.0), id="dead-unit"),
+        pytest.param(lambda z: torch.cat([z, z[:, :1]], dim=1), id="duplicate-unit"),
+        pytest.param(lambda z: torch.cat([z] * 10, dim=1), id="fewer-samples-than-dims"),
+    ],
+)
+def test_eps_zero_with_singular_covariance_raises(features):
+    """Without regularization a singular covariance has no inverse; this raises instead of
+    producing NaN or arbitrary scores."""
+    g = torch.Generator().manual_seed(0)
+    z = features(torch.randn(40, 6, generator=g))
+    y = torch.arange(40) % 2
+    with pytest.raises(ValueError, match="use_pinv"):
+        Mahalanobis(None, eps=0.0).fit_features(z, y)
+
+
+def test_parameters_set_by_hand_require_fit():
+    """``mu`` and ``precision`` are results of fitting; setting them by hand does not fit."""
+    detector = Mahalanobis(None)
+    detector.mu = torch.zeros(2, 3)
+    detector.precision = torch.eye(3)
+    with pytest.raises(RequiresFittingException):
+        detector.predict_features(torch.randn(4, 3))
+
+
+def test_mahalanobis_odin_without_fit_raises():
+    detector = MahalanobisODIN(torch.nn.Linear(6, 4))
+    with pytest.raises(RequiresFittingException):
+        detector.predict(torch.randn(4, 6))

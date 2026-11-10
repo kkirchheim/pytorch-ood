@@ -101,9 +101,12 @@ class MultiMahalanobis(StructuredDetector):
         self.use_pinv = use_pinv
 
         # parameters of Gaussians
-        self.mu: List[Tensor] = []  #: Centers
-        self.cov: List[Tensor] = []  #: Covariance Matrices
-        self.precision: List[Tensor] = []  #: Precision Matrices
+        #: Centers (result of fit; changing it does not change the scores)
+        self.mu: List[Tensor] = []
+        #: Covariance Matrices (result of fit; changing it does not change the scores)
+        self.cov: List[Tensor] = []
+        #: Precision Matrices (result of fit; changing it does not change the scores)
+        self.precision: List[Tensor] = []
         # per layer: factor L of the precision (P = L L^T) and mu @ L, used for scoring
         self._whitening: List[Tensor] = []
         self._whitened_mu: List[Tensor] = []
@@ -120,6 +123,7 @@ class MultiMahalanobis(StructuredDetector):
 
         :param data_loader: dataset to fit on.
         :return: self
+        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
         """
         device = self.device
         if device is None:
@@ -150,6 +154,7 @@ class MultiMahalanobis(StructuredDetector):
             and no OOD labels (below zero); OOD samples are not ignored and an ``AssertionError``
             is raised otherwise
         :return: self
+        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
         """
         device = self.device or zs[0].device
 
@@ -212,7 +217,9 @@ class MultiMahalanobis(StructuredDetector):
             or the device of ``zs[0]``.
         :return: outlier scores of shape :math:`B`
         """
-        if not self.mu:
+        # scoring needs the whitening computed by fit: mu/precision set by hand do not suffice, and
+        # objects pickled before it existed lack the attribute
+        if not getattr(self, "_whitening", None):
             raise RequiresFittingException
 
         if device is None:
@@ -242,7 +249,7 @@ class MultiMahalanobis(StructuredDetector):
         if not self.model:
             raise ModelNotSetException
 
-        if not self.mu:
+        if not getattr(self, "_whitening", None):
             raise RequiresFittingException
 
         device = self.device or x.device

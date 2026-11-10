@@ -1,7 +1,9 @@
 import unittest
 
+import pytest
 import torch
 
+from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import RMD
 
 
@@ -39,3 +41,13 @@ def test_scores_follow_fitted_parameters():
     torch.testing.assert_close(
         detector.predict_features(x).double(), expected, rtol=1e-4, atol=1e-4
     )
+
+
+def test_parameters_set_by_hand_require_fit():
+    detector = RMD(None)
+    detector.mu = torch.zeros(2, 3)
+    detector.precision = torch.eye(3)
+    detector.background_mu = torch.zeros(3)
+    detector.background_precision = torch.eye(3)
+    with pytest.raises(RequiresFittingException):
+        detector.predict_features(torch.randn(4, 3))

@@ -82,6 +82,7 @@ class RMD(Mahalanobis):
 
         :param data_loader: data loader with training data
         :return: self
+        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
         """
         device = self.device
         if device is None:
@@ -99,6 +100,7 @@ class RMD(Mahalanobis):
         :param z: features of shape :math:`N \\times D`
         :param y: class labels of shape :math:`N`
         :return: self
+        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
         """
         device = self.device or z.device
 
@@ -121,6 +123,9 @@ class RMD(Mahalanobis):
         self._background_whitening = background.whitening
         self._background_whitened_mu = background.whitened_mu
         return self
+
+    def _is_fitted(self) -> bool:
+        return super()._is_fitted() and getattr(self, "_background_whitening", None) is not None
 
     def _background_score(self, z: Tensor) -> Tensor:
         return _squared_mahalanobis(
@@ -146,7 +151,7 @@ class RMD(Mahalanobis):
         :return: relative Mahalanobis scores of shape :math:`B`
         """
 
-        if self.mu is None:
+        if not self._is_fitted():
             raise RequiresFittingException
 
         z = z.to(self.mu.dtype)

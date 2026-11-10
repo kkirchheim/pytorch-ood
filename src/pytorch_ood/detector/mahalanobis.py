@@ -93,9 +93,12 @@ class Mahalanobis(FeaturesDetector):
         self.encoder = encoder
         self.eps = eps
         self.use_pinv = use_pinv
-        self.mu: Tensor = None  #: Centers
-        self.cov: Tensor = None  #: Covariance Matrix
-        self.precision: Tensor = None  #: Precision Matrix
+        #: Centers (result of fit; changing it does not change the scores)
+        self.mu: Tensor = None
+        #: Covariance Matrix (result of fit; changing it does not change the scores)
+        self.cov: Tensor = None
+        #: Precision Matrix (result of fit; changing it does not change the scores)
+        self.precision: Tensor = None
         # factor L of the precision (P = L L^T) and mu @ L, used for scoring
         self._whitening: Tensor = None
         self._whitened_mu: Tensor = None
@@ -107,6 +110,7 @@ class Mahalanobis(FeaturesDetector):
         :param data_loader: dataset to fit on. Should only contain in-distribution samples, with
             contiguous class labels :math:`0, \\ldots, C-1`, all of which have to occur.
         :return: the fitted detector
+        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
         """
         device = self.device
         if device is None:
@@ -125,6 +129,7 @@ class Mahalanobis(FeaturesDetector):
         :param y: class labels of shape :math:`N`, contiguous :math:`0, \\ldots, C-1`; all classes have to
             occur. OOD samples (labels below zero) are not supported and raise an ``AssertionError``.
         :return: the fitted detector
+        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
         """
         device = self.device or z.device
         z = z.detach().to(device)
@@ -162,7 +167,7 @@ class Mahalanobis(FeaturesDetector):
         :return: outlier scores of shape :math:`B`
         :raises RequiresFittingException: if the detector was not fitted
         """
-        if self.mu is None:
+        if not self._is_fitted():
             raise RequiresFittingException
 
         md_k = self._calc_gaussian_scores(z)
@@ -182,6 +187,11 @@ class Mahalanobis(FeaturesDetector):
 
         features = self.encoder(x)
         return self.predict_features(features)
+
+    def _is_fitted(self) -> bool:
+        # scoring needs the whitening computed by fit: mu/precision set by hand do not suffice, and
+        # objects pickled before it existed lack the attribute
+        return getattr(self, "_whitening", None) is not None
 
     @property
     def n_classes(self):
@@ -274,6 +284,8 @@ class MahalanobisODIN(GradientDetector):
         :return: outlier scores of shape :math:`B`
         :raises RequiresFittingException: if the detector was not fitted
         """
+        if not self._base._is_fitted():
+            raise RequiresFittingException
         x = self._odin_preprocess(x, x.device)
         return self._base.predict(x)
 
@@ -292,14 +304,11 @@ class MahalanobisODIN(GradientDetector):
                 x = Variable(x, requires_grad=True)
                 features = self._base.encoder(x)
                 features = features.view(features.shape[0], -1)
-                whitening = self._base._whitening
-                distances = _squared_mahalanobis(
-                    features.detach(), whitening, self._base._whitened_mu
-                )
+                whitening, whitened_mu = self._base._whitening, self._base._whitened_mu
+                distances = _squared_mahalanobis(features.detach(), whitening, whitened_mu)
                 sample_pred = distances.argmin(dim=1)
-                batch_sample_mean = self._base.mu.index_select(0, sample_pred)
-                # half the squared distance to the closest center, ||(f - mu_k) L||^2 / 2
-                whitened = (features - batch_sample_mean) @ whitening
+                # half the squared distance to the closest center, ||f L - mu_k L||^2 / 2
+                whitened = features @ whitening - whitened_mu.index_select(0, sample_pred)
                 loss = torch.mean(0.5 * whitened.square().sum(dim=1))
                 loss.backward()
 

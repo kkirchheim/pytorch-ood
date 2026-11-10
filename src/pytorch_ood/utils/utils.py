@@ -131,6 +131,7 @@ def _fit_gaussian(z: Tensor, y: Tensor, n_classes: int, eps: float, use_pinv: bo
     :param eps: added to the diagonal of the covariance before inversion
     :param use_pinv: use the pseudo-inverse instead of the inverse of the regularized covariance
     :return: the fitted Gaussians
+    :raises ValueError: if not ``use_pinv`` and the regularized covariance is singular
     """
     dtype = _linalg_dtype(z.device)
     z = z.detach()
@@ -159,6 +160,11 @@ def _fit_gaussian(z: Tensor, y: Tensor, n_classes: int, eps: float, use_pinv: bo
         # the default cutoff of torch.linalg.pinv(hermitian=True)
         keep = lam > torch.finfo(dtype).eps * d * lam.abs().max()
         lam, vec = lam[keep], vec[:, keep]
+    elif lam.min() <= 0:
+        raise ValueError(
+            f"The covariance matrix plus eps * I is singular (smallest eigenvalue {lam.min():.1e}, "
+            f"eps={eps}); increase eps or use use_pinv=True"
+        )
     whitening = vec * lam.rsqrt()
     return _Gaussian(
         mu=mu.to(z.dtype),
