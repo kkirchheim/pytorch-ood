@@ -24,6 +24,7 @@ class _SortingSearch(NearestNeighborSearch):
 
     def __init__(self):
         self.calls = 0
+        self.reference = None
 
     def fit(self, reference):
         self.reference = reference
@@ -32,6 +33,10 @@ class _SortingSearch(NearestNeighborSearch):
     def search(self, queries, k):
         self.calls += 1
         return (torch.cdist(queries, self.reference) ** 2).topk(k, dim=1, largest=False)
+
+    @property
+    def n_samples(self):
+        return 0 if self.reference is None else len(self.reference)
 
 
 class TestKNN(unittest.TestCase):
@@ -208,6 +213,15 @@ class TestKNN(unittest.TestCase):
         ):
             detector.predict_features(z)
         self.assertEqual(search.calls, 0)
+
+    def test_k_checked_against_the_search(self):
+        """The fitted size comes from the search, not from a copy in the detector."""
+        search = _SortingSearch()
+        detector = KNN(None, k=3, search=search)
+        detector.fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
+        search.fit(torch.randn(20, 4))
+        detector.k = 15
+        self.assertEqual(detector.predict_features(torch.randn(5, 4)).shape, (5,))
 
     def test_k_below_one_raises(self):
         for k in (0, -1):

@@ -53,6 +53,10 @@ class NearestNeighborSearch(ABC):
                 d2 = torch.cdist(queries, self.reference) ** 2
                 return d2.topk(k, dim=1, largest=False)  # ascending, nearest first
 
+            @property
+            def n_samples(self):
+                return len(self.reference)
+
         detector = KNN(encoder, search=CdistSearch())
 
     """
@@ -83,6 +87,13 @@ class NearestNeighborSearch(ABC):
             ``metric`` (squared distances for ``"sqeuclidean"``), ordered from the nearest
             neighbor to the :math:`k`-th, and in the dtype of ``queries``. The indices refer to
             the reference set.
+        """
+
+    @property
+    @abstractmethod
+    def n_samples(self) -> int:
+        """
+        Number of samples in the reference set, :math:`N`.
         """
 
     def to(self, device: Union[str, torch.device]) -> Self:
@@ -167,9 +178,17 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         """
         return self._reference
 
+    @property
+    def n_samples(self) -> int:
+        """
+        Number of samples in the reference set, :math:`N`; 0 before fitting.
+        """
+        return 0 if self._reference is None else self._reference.shape[0]
+
     def fit(self, reference: Tensor) -> Self:
         """
-        Store the reference set, on ``device`` if one was given.
+        Store the reference set, on ``device`` if one was given. The tensor is stored without
+        copying unless it is moved to ``device``, so do not modify it in place afterwards.
 
         :param reference: reference samples of shape :math:`N \\times D`
         :return: the fitted backend

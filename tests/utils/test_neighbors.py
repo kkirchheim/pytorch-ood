@@ -33,6 +33,29 @@ def test_base_class_is_abstract():
         NearestNeighborSearch()
 
 
+def test_subclass_must_implement_n_samples():
+    class NoSize(NearestNeighborSearch):
+        metric = "sqeuclidean"
+
+        def fit(self, reference):
+            return self
+
+        def search(self, queries, k):
+            raise NotImplementedError
+
+    with pytest.raises(TypeError, match="n_samples"):
+        NoSize()
+
+
+def test_n_samples(data):
+    search = TorchNearestNeighbors()
+    assert search.n_samples == 0
+    search.fit(data[0])
+    assert search.n_samples == 300
+    search.fit(data[0][:7])
+    assert search.n_samples == 7
+
+
 def test_base_to_is_a_no_op(data):
     class Minimal(NearestNeighborSearch):
         metric = "sqeuclidean"
@@ -43,6 +66,10 @@ def test_base_to_is_a_no_op(data):
 
         def search(self, queries, k):
             return (torch.cdist(queries, self.reference) ** 2).topk(k, dim=1, largest=False)
+
+        @property
+        def n_samples(self):
+            return len(self.reference)
 
     search = Minimal().fit(data[0])
     assert search.to("meta") is search

@@ -109,7 +109,7 @@ class KNN(FeaturesDetector):
         self.encoder = encoder
         self.normalize = normalize
         self.search = search
-        self._n_fitted: Optional[int] = None
+        self._is_fitted = False
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -135,9 +135,9 @@ class KNN(FeaturesDetector):
         :raises RequiresFittingException: if the detector was not fitted
         :raises ValueError: if ``k`` exceeds the number of fitted samples
         """
-        if self._n_fitted is None:
+        if not self._is_fitted:
             raise RequiresFittingException()
-        self._check_k(self._n_fitted, "fitted samples")
+        self._check_k(self.search.n_samples, "fitted samples")
 
         # squared distances, nearest first; the k-th is the last column
         values, _ = self.search.search(self._prepare(z), self.k)
@@ -171,7 +171,7 @@ class KNN(FeaturesDetector):
         device = self.device
         if device is not None:
             self.search.to(device)
-        self._n_fitted = n_known
+        self._is_fitted = True
 
         return self
 
