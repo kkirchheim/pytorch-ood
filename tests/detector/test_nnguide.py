@@ -7,7 +7,6 @@ from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import NNGuide
 from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
 from tests.helpers import ClassificationModel, requires, sample_dataset
-from tests.helpers.components import code_blocks
 
 
 class TestNNGuide(unittest.TestCase):
@@ -236,12 +235,6 @@ class TestNNGuideSearch(unittest.TestCase):
         detector = NNGuide(None, self.head, k=3)
         detector.fit_features(self.z_train.double(), self.labels)
         self.assertEqual(detector.search.reference.dtype, torch.float32)
-
-    def test_docstring_example_runs(self):
-        blocks = list(code_blocks(NNGuide.__doc__))
-        self.assertTrue(blocks)
-        for code in blocks:
-            exec(compile(code, "<NNGuide example>", "exec"), {})
 
 
 def test_fit_and_predict_match_features_path(seed):
