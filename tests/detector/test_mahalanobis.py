@@ -325,13 +325,13 @@ def test_pinv_discards_exactly_the_eigenvalues_below_its_cutoff():
     "features",
     [
         pytest.param(lambda z: z.index_fill(1, torch.tensor([0]), 0.0), id="dead-unit"),
-        pytest.param(lambda z: torch.cat([z, z[:, :1]], dim=1), id="duplicate-unit"),
-        pytest.param(lambda z: torch.cat([z] * 10, dim=1), id="fewer-samples-than-dims"),
+        pytest.param(lambda z: torch.zeros_like(z), id="constant-features"),
     ],
 )
-def test_eps_zero_with_singular_covariance_raises(features):
-    """Without regularization a singular covariance has no inverse; this raises instead of
-    producing NaN or arbitrary scores."""
+def test_eps_zero_with_zero_variance_raises(features):
+    """Without regularization, a unit without variance gives a covariance eigenvalue of exactly 0;
+    this raises instead of producing NaN scores. (Covariances that are singular only up to rounding,
+    e.g. with a duplicated unit, can have a tiny positive eigenvalue and do not raise.)"""
     g = torch.Generator().manual_seed(0)
     z = features(torch.randn(40, 6, generator=g))
     y = torch.arange(40) % 2

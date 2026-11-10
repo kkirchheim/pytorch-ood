@@ -121,7 +121,7 @@ class MultiMahalanobis(StructuredDetector):
 
         :param data_loader: dataset to fit on.
         :return: self
-        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
+        :raises ValueError: if the regularized covariance is not positive definite (e.g. ``eps=0``)
         """
         device = self.device
         if device is None:
@@ -152,7 +152,7 @@ class MultiMahalanobis(StructuredDetector):
             and no OOD labels (below zero); OOD samples are not ignored and an ``AssertionError``
             is raised otherwise
         :return: self
-        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
+        :raises ValueError: if the regularized covariance is not positive definite (e.g. ``eps=0``)
         """
         device = self.device or zs[0].device
 

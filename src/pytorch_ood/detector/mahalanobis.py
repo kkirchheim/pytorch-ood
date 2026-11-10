@@ -107,7 +107,7 @@ class Mahalanobis(FeaturesDetector):
         :param data_loader: dataset to fit on. Should only contain in-distribution samples, with
             contiguous class labels :math:`0, \\ldots, C-1`, all of which have to occur.
         :return: the fitted detector
-        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
+        :raises ValueError: if the regularized covariance is not positive definite (e.g. ``eps=0``)
         """
         device = self.device
         if device is None:
@@ -126,7 +126,7 @@ class Mahalanobis(FeaturesDetector):
         :param y: class labels of shape :math:`N`, contiguous :math:`0, \\ldots, C-1`; all classes have to
             occur. OOD samples (labels below zero) are not supported and raise an ``AssertionError``.
         :return: the fitted detector
-        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
+        :raises ValueError: if the regularized covariance is not positive definite (e.g. ``eps=0``)
         """
         device = self.device or z.device
         z = z.detach().to(device)
@@ -257,7 +257,7 @@ class MahalanobisODIN(GradientDetector):
 
         :param data_loader: dataset to fit on.
         :return: the fitted detector
-        :raises ValueError: if the regularized covariance is singular
+        :raises ValueError: if the regularized covariance is not positive definite
         """
         self._base.fit(data_loader)
         return self
@@ -269,7 +269,7 @@ class MahalanobisODIN(GradientDetector):
         :param z: features of shape :math:`N \\times D`
         :param y: class labels of shape :math:`N`
         :return: the fitted detector
-        :raises ValueError: if the regularized covariance is singular
+        :raises ValueError: if the regularized covariance is not positive definite
         """
         self._base.fit_features(z, y)
         return self

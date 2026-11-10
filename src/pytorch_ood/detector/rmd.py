@@ -82,7 +82,7 @@ class RMD(Mahalanobis):
 
         :param data_loader: data loader with training data
         :return: self
-        :raises ValueError: if the regularized covariance is singular
+        :raises ValueError: if the regularized covariance is not positive definite
         """
         device = self.device
         if device is None:
@@ -100,7 +100,7 @@ class RMD(Mahalanobis):
         :param z: features of shape :math:`N \\times D`
         :param y: class labels of shape :math:`N`
         :return: self
-        :raises ValueError: if the regularized covariance is singular
+        :raises ValueError: if the regularized covariance is not positive definite
         """
         device = self.device or z.device
 
