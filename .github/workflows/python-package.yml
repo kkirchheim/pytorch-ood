@@ -4,10 +4,12 @@
 name: Python package
 
 on:
+  # "**", not "*": in branch filters "*" does not match "/", so branches like fix/... got no runs,
+  # neither on push nor as the base of a stacked pull request
   push:
-    branches: ["*"]
+    branches: ["**"]
   pull_request:
-    branches: ["*"]
+    branches: ["**"]
 
 # Read-only token: this workflow only checks out, tests and uploads coverage (Codecov uses
 # its own token).
