@@ -53,6 +53,20 @@ class KNN(FeaturesDetector):
     CPU.
 
     The original paper found that using contrastive pre-training could increase the performance.
+
+    .. rubric:: Examples
+
+    .. code-block:: python
+
+        import torch
+        from pytorch_ood.detector import KNN
+        from pytorch_ood.utils import TorchNearestNeighbors
+
+        encoder = torch.nn.Linear(10, 16)
+        # the fitted features stay on the CPU, also if the detector is moved to a GPU
+        detector = KNN(encoder, k=5, search=TorchNearestNeighbors(device="cpu"))
+        detector.fit_features(torch.randn(100, 16), torch.zeros(100, dtype=torch.long))
+        scores = detector(torch.randn(8, 10))
     """
 
     info = DetectorInfo(
@@ -92,7 +106,8 @@ class KNN(FeaturesDetector):
             :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>` with
             ``metric == "sqeuclidean"`` (see there for writing your own). Defaults to
             :class:`TorchNearestNeighbors() <pytorch_ood.utils.TorchNearestNeighbors>`. Fitting
-            the detector fits this instance.
+            the detector fits this instance and replaces its reference set, so give each detector
+            its own instance.
         :raises ValueError: if ``k`` is below 1 or ``search`` uses another metric
         :raises TypeError: if ``k`` is not an integer or ``search`` is not an instance of
             :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>`

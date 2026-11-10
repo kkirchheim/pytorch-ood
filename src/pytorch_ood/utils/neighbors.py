@@ -25,22 +25,17 @@ _CPU_BLOCK_BYTES = 1 << 30
 
 class NearestNeighborSearch(ABC):
     """
-    Base class of the nearest-neighbor search used by detectors such as
-    :class:`KNN <pytorch_ood.detector.KNN>`. Subclass it to plug in another search, for example
-    a wrapper around an approximate search library, and pass an instance as the detector's
-    ``search``.
+    Base class of nearest-neighbor searches: :meth:`fit` stores a reference set, :meth:`search`
+    finds the :math:`k` nearest reference samples of queries. Subclass it to plug in another
+    search, for example a wrapper around an approximate search library.
 
-    The detector calls :meth:`fit` with its preprocessed features, which replaces the reference
-    set of the instance. Give each detector its own instance: detectors sharing one instance
-    score against whichever detector was fitted last.
+    .. rubric:: Examples
 
-    A minimal search for :class:`KNN <pytorch_ood.detector.KNN>`:
-
-    .. code:: python
+    .. code-block:: python
 
         import torch
-        from pytorch_ood.detector import KNN
         from pytorch_ood.utils import NearestNeighborSearch
+
 
         class CdistSearch(NearestNeighborSearch):
             metric = "sqeuclidean"
@@ -57,13 +52,13 @@ class NearestNeighborSearch(ABC):
             def n_samples(self):
                 return len(self.reference)
 
-        detector = KNN(encoder, search=CdistSearch())
 
+        search = CdistSearch().fit(torch.randn(100, 16))
+        distances, indices = search.search(torch.randn(8, 16), k=5)  # both 8 x 5
     """
 
     #: What the values returned by :meth:`search` measure. ``"sqeuclidean"``: squared Euclidean
-    #: distances, ascending (nearest first). This is the only metric
-    #: :class:`KNN <pytorch_ood.detector.KNN>` accepts.
+    #: distances, ascending (nearest first).
     metric: ClassVar[str]
 
     @abstractmethod
@@ -99,8 +94,7 @@ class NearestNeighborSearch(ABC):
     def to(self, device: Union[str, torch.device]) -> Self:
         """
         Move the search to ``device`` in place. The default does nothing; override it if the
-        search holds tensors that should follow the detector.
-        :meth:`KNN.to <pytorch_ood.detector.KNN.to>` calls it.
+        search holds tensors.
 
         :param device: target device
         :return: self
@@ -125,14 +119,16 @@ class TorchNearestNeighbors(NearestNeighborSearch):
     neighbors lose relative precision, more so for samples with large norms; use ``float64``
     samples if that matters.
 
-    Example: keep a large reference set on the CPU while the detector runs on the GPU. The
-    search then runs on the CPU:
+    .. rubric:: Examples
 
-    .. code:: python
+    .. code-block:: python
 
-        detector = KNN(model.features, search=TorchNearestNeighbors(device="cpu"))
-        detector.to("cuda")  # moves the encoder, not the reference set
+        import torch
+        from pytorch_ood.utils import TorchNearestNeighbors
 
+        search = TorchNearestNeighbors(batch_size=256).fit(torch.randn(1000, 16))
+        # squared distances to the 5 nearest reference samples, nearest first, and their indices
+        distances, indices = search.search(torch.randn(8, 16), k=5)
     """
 
     #: Squared Euclidean distances, ascending.

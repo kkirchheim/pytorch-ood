@@ -7,6 +7,7 @@ from pytorch_ood.api import ModelNotSetException, RequiresFittingException
 from pytorch_ood.detector import KNN
 from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
 from tests.helpers import ClassificationModel, sample_dataset
+from tests.helpers.components import code_blocks
 
 
 def _kth_distance(z_train, z_test, k, normalize=True):
@@ -177,6 +178,12 @@ class TestKNN(unittest.TestCase):
         detector.k = 101
         with self.assertRaisesRegex(ValueError, "k=101 exceeds"):
             detector.predict_features(z_test)
+
+    def test_docstring_example_runs(self):
+        blocks = list(code_blocks(KNN.__doc__))
+        self.assertTrue(blocks)
+        for code in blocks:
+            exec(compile(code, "<KNN example>", "exec"), {})
 
     def test_default_search_backend(self):
         self.assertIsInstance(KNN(None).search, TorchNearestNeighbors)

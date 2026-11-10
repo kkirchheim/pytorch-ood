@@ -4,6 +4,7 @@ import torch
 from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
 from tests.helpers import requires
+from tests.helpers.components import code_blocks
 
 
 def _reference_search(reference: torch.Tensor, queries: torch.Tensor, k: int):
@@ -284,3 +285,11 @@ def test_inputs_requiring_grad(data):
     reference, queries = (t.clone().requires_grad_() for t in data)
     values, _ = TorchNearestNeighbors().fit(reference).search(queries, 3)
     assert not values.requires_grad
+
+
+@pytest.mark.parametrize("cls", [NearestNeighborSearch, TorchNearestNeighbors])
+def test_docstring_examples_run(cls):
+    blocks = list(code_blocks(cls.__doc__))
+    assert blocks
+    for code in blocks:
+        exec(compile(code, f"<{cls.__name__} example>", "exec"), {})

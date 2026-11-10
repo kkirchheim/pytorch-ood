@@ -5,9 +5,8 @@ batches with ID and OOD targets.
 
 import copy
 import inspect
-import textwrap
 from dataclasses import dataclass
-from typing import Iterator, List, Optional
+from typing import List, Optional
 
 import pytest
 import torch
@@ -16,7 +15,7 @@ from torch import Tensor, nn
 from pytorch_ood import loss
 from pytorch_ood.api import Task
 from pytorch_ood.utils import is_known
-from tests.helpers.components import LOSSES
+from tests.helpers.components import LOSSES, code_blocks
 from tests.helpers.losses import LOSS_INPUTS, SHAPES
 
 
@@ -219,24 +218,9 @@ NEED_EXAMPLE = [
 ]
 
 
-def _code_blocks(doc: Optional[str]) -> Iterator[str]:
-    """The content of every ``.. code-block:: python`` directive in a docstring."""
-    lines = (doc or "").splitlines()
-    for i, line in enumerate(lines):
-        if line.strip() != ".. code-block:: python":
-            continue
-        indent = len(line) - len(line.lstrip())
-        block = []
-        for body in lines[i + 1 :]:
-            if body.strip() and len(body) - len(body.lstrip()) <= indent:
-                break
-            block.append(body)
-        yield textwrap.dedent("\n".join(block)).strip()
-
-
 @pytest.mark.parametrize("cls", NEED_EXAMPLE, ids=lambda cls: cls.__name__)
 def test_losses_with_a_different_signature_have_an_example(cls: type):
-    assert list(_code_blocks(cls.__doc__)), "no usage example"
+    assert list(code_blocks(cls.__doc__)), "no usage example"
 
 
 # unsupervised losses warn about the OOD samples they discard
@@ -246,7 +230,7 @@ def test_losses_with_a_different_signature_have_an_example(cls: type):
     [
         pytest.param(cls, code, id=f"{cls.__name__}-{i}")
         for cls in LOSSES
-        for i, code in enumerate(_code_blocks(cls.__doc__))
+        for i, code in enumerate(code_blocks(cls.__doc__))
     ],
 )
 def test_docstring_example_runs(cls: type, code: str):
