@@ -46,6 +46,14 @@ Features
 
    utils/features
    utils/tensorbuffer
+
+
+Nearest-Neighbor Search
+====================================
+
+.. toctree::
+   :maxdepth: 1
+
    utils/neighbors
 
 

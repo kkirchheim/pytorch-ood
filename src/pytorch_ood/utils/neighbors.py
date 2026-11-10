@@ -8,11 +8,12 @@
 
 """
 
-from typing import Optional, Tuple, Union
+from abc import ABC, abstractmethod
+from typing import ClassVar, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
-from typing_extensions import Literal, Protocol, Self, runtime_checkable
+from typing_extensions import Literal, Self
 
 from ..api import RequiresFittingException
 
@@ -22,24 +23,26 @@ __all__ = ["NearestNeighborSearch", "TorchNearestNeighbors"]
 _CPU_BLOCK_BYTES = 1 << 30
 
 
-@runtime_checkable
-class NearestNeighborSearch(Protocol):
+class NearestNeighborSearch(ABC):
     """
-    Interface of the nearest-neighbor search used by detectors such as
-    :class:`KNN <pytorch_ood.detector.KNN>`. Any object with these members can be passed as a
-    detector's ``search``, for example a wrapper around an approximate search library. The
-    detector calls :meth:`fit` itself, with its already preprocessed features, so one instance
-    belongs to one detector.
+    Base class of the nearest-neighbor search used by detectors such as
+    :class:`KNN <pytorch_ood.detector.KNN>`. Subclass it to plug in another search, for example
+    a wrapper around an approximate search library, and pass an instance as the detector's
+    ``search``.
 
-    A backend may also define ``to(device)``, which moves it in place; the detector's
-    :meth:`to <pytorch_ood.detector.KNN.to>` calls it and ignores the return value. A backend
-    without ``to`` stays where it is.
+    The detector calls :meth:`fit` with its preprocessed features, which replaces the reference
+    set of the instance. Give each detector its own instance: detectors sharing one instance
+    score against whichever detector was fitted last.
 
-    A minimal backend for :class:`KNN <pytorch_ood.detector.KNN>`:
+    A minimal search for :class:`KNN <pytorch_ood.detector.KNN>`:
 
     .. code:: python
 
-        class CdistSearch:
+        import torch
+        from pytorch_ood.detector import KNN
+        from pytorch_ood.utils import NearestNeighborSearch
+
+        class CdistSearch(NearestNeighborSearch):
             metric = "sqeuclidean"
 
             def fit(self, reference):
@@ -50,38 +53,51 @@ class NearestNeighborSearch(Protocol):
                 d2 = torch.cdist(queries, self.reference) ** 2
                 return d2.topk(k, dim=1, largest=False)  # ascending, nearest first
 
+        detector = KNN(encoder, search=CdistSearch())
+
     """
 
     #: What the values returned by :meth:`search` measure. ``"sqeuclidean"``: squared Euclidean
     #: distances, ascending (nearest first). This is the only metric
     #: :class:`KNN <pytorch_ood.detector.KNN>` accepts.
-    metric: str
+    metric: ClassVar[str]
 
+    @abstractmethod
     def fit(self, reference: Tensor) -> Self:
         """
         Store the reference set.
 
         :param reference: reference samples of shape :math:`N \\times D`
-        :return: the fitted backend
+        :return: the fitted search
         """
-        ...
 
+    @abstractmethod
     def search(self, queries: Tensor, k: int) -> Tuple[Tensor, Tensor]:
         """
-        Find the :math:`k` nearest reference samples of each query.
+        Find the :math:`k` nearest reference samples of each query, for :math:`1 \\le k \\le N`.
 
         :param queries: queries of shape :math:`B \\times D`
         :param k: number of neighbors :math:`k`
-        :return: values of shape :math:`B \\times k`, in units of ``metric`` (squared distances for
-            ``"sqeuclidean"``) and ordered from the nearest neighbor to the :math:`k`-th, and the
-            indices of the neighbors in the reference
-            set, of shape :math:`B \\times k`. Both on the device of ``queries``, the values in
-            their dtype.
+        :return: the values and the indices of the neighbors, both of shape
+            :math:`B \\times k` and on the device of ``queries``. The values are in units of
+            ``metric`` (squared distances for ``"sqeuclidean"``), ordered from the nearest
+            neighbor to the :math:`k`-th, and in the dtype of ``queries``. The indices refer to
+            the reference set.
         """
-        ...
+
+    def to(self, device: Union[str, torch.device]) -> Self:
+        """
+        Move the search to ``device`` in place. The default does nothing; override it if the
+        search holds tensors that should follow the detector.
+        :meth:`KNN.to <pytorch_ood.detector.KNN.to>` calls it.
+
+        :param device: target device
+        :return: self
+        """
+        return self
 
 
-class TorchNearestNeighbors:
+class TorchNearestNeighbors(NearestNeighborSearch):
     """
     Exact nearest-neighbor search in PyTorch, by brute force on the device of the reference set.
 
@@ -95,10 +111,12 @@ class TorchNearestNeighbors:
     (:math:`N \\times D` values on its device).
 
     Distances are computed in the dtype of the reference set. In ``float32``, the formula above
-    has absolute errors around :math:`10^{-6}`, so very close neighbors lose relative precision;
-    fit and query with ``float64`` samples if you need more.
+    has absolute errors proportional to :math:`\\lVert q \\rVert_2^2 + \\lVert r \\rVert_2^2`:
+    around :math:`10^{-6}` for unit-length samples, more for larger ones. Very close neighbors
+    lose relative precision; fit and query with ``float64`` samples if you need more.
 
-    Example: keep a large reference set on the CPU while the detector runs on the GPU:
+    Example: keep a large reference set on the CPU while the detector runs on the GPU. The
+    search then runs on the CPU:
 
     .. code:: python
 
@@ -136,7 +154,9 @@ class TorchNearestNeighbors:
             raise ValueError(
                 f"batch_size must be 'auto', None or a positive integer, got {batch_size!r}"
             )
+        #: Device the reference set is pinned to, or ``None`` if it follows :meth:`to`.
         self.device = torch.device(device) if device is not None else None
+        #: Number of queries per block: ``"auto"``, ``None`` (one block) or an integer.
         self.batch_size = batch_size
         self._reference: Optional[Tensor] = None
 

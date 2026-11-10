@@ -24,6 +24,34 @@ def test_is_a_nearest_neighbor_search():
     search = TorchNearestNeighbors()
     assert isinstance(search, NearestNeighborSearch)
     assert search.metric == "sqeuclidean"
+    # the class itself is not a search, only its instances
+    assert not isinstance(TorchNearestNeighbors, NearestNeighborSearch)
+
+
+def test_base_class_is_abstract():
+    with pytest.raises(TypeError):
+        NearestNeighborSearch()
+
+
+def test_base_to_is_a_no_op(data):
+    class Minimal(NearestNeighborSearch):
+        metric = "sqeuclidean"
+
+        def fit(self, reference):
+            self.reference = reference
+            return self
+
+        def search(self, queries, k):
+            return (torch.cdist(queries, self.reference) ** 2).topk(k, dim=1, largest=False)
+
+    search = Minimal().fit(data[0])
+    assert search.to("meta") is search
+    assert search.reference.device.type == "cpu"
+
+
+def test_fit_rejects_non_2d_reference():
+    with pytest.raises(ValueError, match="N x D"):
+        TorchNearestNeighbors().fit(torch.randn(5))
 
 
 @pytest.mark.parametrize("k", [1, 5, 50, 300])
@@ -144,7 +172,9 @@ def test_k_below_one_raises(data, k):
 
 @pytest.fixture
 def block_rows(monkeypatch):
-    """Records the number of queries in each distance block."""
+    """Records the number of queries in each distance block. Results do not depend on the block
+    size, so this is the only way to see it; it relies on the search calling ``torch.addmm``
+    once per block."""
     rows = []
     addmm = torch.addmm
 
@@ -163,6 +193,24 @@ def test_blocks_follow_batch_size(data, block_rows, batch_size, expected):
     reference, queries = data
     TorchNearestNeighbors(batch_size=batch_size).fit(reference).search(queries, 3)
     assert block_rows == expected
+
+
+@requires(cuda=1)
+def test_auto_batch_size_follows_free_gpu_memory(data, block_rows, monkeypatch, accelerator):
+    reference, queries = data
+    n, itemsize = reference.shape[0], reference.element_size()
+    calls = []
+
+    def mem_get_info(device=None):
+        calls.append(device)
+        # half of the free memory is the budget, for two distance blocks of 16 rows
+        return 2 * (2 * 16 * n * itemsize), 1 << 40
+
+    monkeypatch.setattr(torch.cuda, "mem_get_info", mem_get_info)
+    search = TorchNearestNeighbors().fit(reference.to(accelerator))
+    search.search(queries.to(accelerator), 3)
+    assert calls
+    assert block_rows == [16, 16, 8]
 
 
 def test_auto_batch_size_follows_memory_budget(data, block_rows, monkeypatch):

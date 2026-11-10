@@ -8,6 +8,7 @@
 """
 
 import logging
+import numbers
 from typing import Callable, Optional, Union
 
 import torch
@@ -44,10 +45,11 @@ class KNN(FeaturesDetector):
     the fitted data, sorted by increasing distance to :math:`z`.
 
     The neighbors are found by ``search``, by default an exact search with
-    :class:`TorchNearestNeighbors <pytorch_ood.utils.TorchNearestNeighbors>`. It keeps the
-    features of the :math:`N` fitted samples in memory (:math:`N \\times D` values), on the
-    detector's device: :meth:`to` moves them. For a fitted set too large for the GPU, pin it to the CPU with
-    ``search=TorchNearestNeighbors(device="cpu")``.
+    :class:`TorchNearestNeighbors <pytorch_ood.utils.TorchNearestNeighbors>`. That search keeps
+    the features of the :math:`N` fitted samples in memory (:math:`N \\times D` values) on the
+    detector's device, and :meth:`to` moves them. For a fitted set too large for the GPU, pin it
+    to the CPU with ``search=TorchNearestNeighbors(device="cpu")``; the search then runs on the
+    CPU.
 
     The original paper found that using contrastive pre-training could increase the performance.
     """
@@ -85,11 +87,13 @@ class KNN(FeaturesDetector):
         :param normalize: whether to normalize the features to unit length,
             :math:`z = f(x) / \\lVert f(x) \\rVert_2`. If ``False``, :math:`z = f(x)`, and the
             distances also depend on the feature norms.
-        :param search: nearest-neighbor search with ``metric == "sqeuclidean"``. Defaults to
-            :class:`TorchNearestNeighbors() <pytorch_ood.utils.TorchNearestNeighbors>`. The
-            detector fits it, so do not share one instance between detectors.
+        :param search: instance of a
+            :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>` with
+            ``metric == "sqeuclidean"`` (see there for writing your own). Defaults to
+            :class:`TorchNearestNeighbors() <pytorch_ood.utils.TorchNearestNeighbors>`. Fitting
+            the detector fits this instance.
         :raises ValueError: if ``k`` is below 1 or ``search`` uses another metric
-        :raises TypeError: if ``search`` is not a
+        :raises TypeError: if ``k`` is not an integer or ``search`` is not an instance of
             :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>`
         """
         # k = 50 is the paper's choice for CIFAR-10 (200 for CIFAR-100, 1000 for ImageNet)
@@ -98,14 +102,10 @@ class KNN(FeaturesDetector):
         if search is None:
             search = TorchNearestNeighbors()
         if not isinstance(search, NearestNeighborSearch):
-            raise TypeError(
-                f"search must implement NearestNeighborSearch (metric, fit, search), "
-                f"got {type(search).__name__}"
-            )
-        if search.metric != "sqeuclidean":
-            raise ValueError(
-                f"KNN needs a search with metric 'sqeuclidean', got {search.metric!r}"
-            )
+            raise TypeError(f"search must be an instance of NearestNeighborSearch, got {search!r}")
+        metric = getattr(search, "metric", None)
+        if metric != "sqeuclidean":
+            raise ValueError(f"KNN needs a search with metric 'sqeuclidean', got {metric!r}")
         self.encoder = encoder
         self.normalize = normalize
         self.search = search
@@ -141,9 +141,12 @@ class KNN(FeaturesDetector):
 
         # squared distances, nearest first; the k-th is the last column
         values, _ = self.search.search(self._prepare(z), self.k)
-        # In float32, the search's squared distances carry cancellation errors around 1e-6, which
+        # In float32, the squared distances carry cancellation errors proportional to the squared
+        # feature norms (around 1e-6 for normalized features, more with normalize=False), which
         # the sqrt magnifies near 0: near-duplicates of fitted samples (e.g. k=1 on training data)
-        # get scores around 1e-3 instead of 0. Pass float64 features if that matters.
+        # score around 1e-3 instead of 0. Pass float64 features if that matters.
+        # The reference code scores with the squared distance (faiss IndexFlatL2); the sqrt
+        # follows the paper and does not change the ranking.
         return values[:, -1].sqrt()
 
     def fit_features(self, z: Tensor, labels: Tensor) -> Self:
@@ -153,7 +156,8 @@ class KNN(FeaturesDetector):
         :param z: features of shape :math:`N \\times D`
         :param labels: labels for features, shape :math:`N`
         :return: the fitted detector
-        :raises ValueError: if ``labels`` contains fewer than ``k`` in-distribution samples
+        :raises ValueError: if ``labels`` contains no or fewer than ``k`` in-distribution
+            samples
         """
         known = is_known(labels).to(z.device)
 
@@ -166,7 +170,7 @@ class KNN(FeaturesDetector):
         # an unpinned backend follows the detector, like its other state
         device = self.device
         if device is not None:
-            self._move_search(device)
+            self.search.to(device)
         self._n_fitted = n_known
 
         return self
@@ -180,17 +184,14 @@ class KNN(FeaturesDetector):
         :return: self
         """
         super().to(device)
-        self._move_search(device)
+        # in place; the return value is not needed
+        self.search.to(device)
         return self
-
-    def _move_search(self, device: Union[str, torch.device]) -> None:
-        # backends move in place; ones without ``to`` (e.g. CPU-only libraries) stay where they are
-        move = getattr(self.search, "to", None)
-        if callable(move):
-            move(device)
 
     def _check_k(self, n: Optional[int] = None, what: str = "samples") -> None:
         # k can be changed after construction (e.g. by GridSearch), so fit and predict check again
+        if not isinstance(self.k, numbers.Integral) or isinstance(self.k, bool):
+            raise TypeError(f"k must be an integer, got {self.k!r}")
         if self.k < 1:
             raise ValueError(f"k must be at least 1, got k={self.k}")
         if n is not None and self.k > n:

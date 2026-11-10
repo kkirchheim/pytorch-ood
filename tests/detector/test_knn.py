@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.api import ModelNotSetException, RequiresFittingException
 from pytorch_ood.detector import KNN
-from pytorch_ood.utils import TorchNearestNeighbors
+from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
 from tests.helpers import ClassificationModel, sample_dataset
 
 
@@ -17,8 +17,8 @@ def _kth_distance(z_train, z_test, k, normalize=True):
     return torch.cdist(z_test.double(), z_train.double()).sort(dim=1).values[:, k - 1]
 
 
-class _SortingSearch:
-    """A minimal third-party backend: satisfies the protocol, has no ``to``."""
+class _SortingSearch(NearestNeighborSearch):
+    """A minimal third-party backend; keeps the base class's no-op ``to``."""
 
     metric = "sqeuclidean"
 
@@ -49,19 +49,17 @@ class TestKNN(unittest.TestCase):
             detector(x)
 
     def test_input(self):
-        """ """
-        model = ClassificationModel()
+        """``detector(x)`` scores the encoder's features of ``x``."""
+        model = ClassificationModel().eval()  # no dropout, so both forward passes agree
         detector = KNN(model)
-
-        ds = sample_dataset(n_dim=10)
-        loader = DataLoader(ds)
-        detector.fit(loader)
+        detector.fit(DataLoader(sample_dataset(n_dim=10)))
 
         x = torch.randn(size=(128, 10))
         scores = detector(x)
 
-        print(scores)
-        self.assertIsNotNone(scores)
+        self.assertEqual(scores.shape, (128,))
+        self.assertTrue(torch.isfinite(scores).all())
+        torch.testing.assert_close(scores, detector.predict_features(model(x)))
 
     def test_k_neighbors(self):
         """The k-th nearest neighbor distance is non-decreasing in k."""
@@ -151,6 +149,18 @@ class TestKNN(unittest.TestCase):
     def test_k_larger_than_fit_data_raises(self):
         with self.assertRaisesRegex(ValueError, "k=50 exceeds"):
             KNN(None).fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
+        # boundary: k = number of ID samples is fine, one more is not
+        KNN(None, k=10).fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
+        with self.assertRaisesRegex(ValueError, r"k=11 exceeds the number of ID samples \(10\)"):
+            KNN(None, k=11).fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
+
+    def test_no_id_samples_raises(self):
+        with self.assertRaisesRegex(ValueError, "No ID samples"):
+            KNN(None, k=1).fit_features(torch.randn(10, 4), -torch.ones(10, dtype=torch.long))
+
+    def test_non_integer_k_raises(self):
+        with self.assertRaisesRegex(TypeError, "k must be an integer"):
+            KNN(None, k=2.5)
 
     def test_k_can_change_after_fit(self):
         """k is a query-time parameter, so GridSearch can sweep it without refitting."""
@@ -181,7 +191,7 @@ class TestKNN(unittest.TestCase):
             detector.predict_features(z_test), _kth_distance(z_train, z_test, 4)
         )
         self.assertEqual(search.calls, 1)
-        # a backend without ``to`` is left alone
+        # the base class's ``to`` is a no-op
         detector.to("cpu")
         self.assertIs(detector.search, search)
 
@@ -192,9 +202,9 @@ class TestKNN(unittest.TestCase):
         z = torch.randn(20, 4)
         labels = torch.cat([torch.zeros(10, dtype=torch.long), -torch.ones(10, dtype=torch.long)])
         detector = KNN(None, k=3, search=search).fit_features(z, labels)
-        detector.k = 15
+        detector.k = 11
         with self.assertRaisesRegex(
-            ValueError, r"k=15 exceeds the number of fitted samples \(10\)"
+            ValueError, r"k=11 exceeds the number of fitted samples \(10\)"
         ):
             detector.predict_features(z)
         self.assertEqual(search.calls, 0)
@@ -212,6 +222,9 @@ class TestKNN(unittest.TestCase):
     def test_rejects_object_that_is_not_a_search(self):
         with self.assertRaisesRegex(TypeError, "NearestNeighborSearch"):
             KNN(None, search=object())
+        # the class instead of an instance
+        with self.assertRaisesRegex(TypeError, "NearestNeighborSearch"):
+            KNN(None, search=TorchNearestNeighbors)
 
     def test_to_calls_search_to_in_place(self):
         """``KNN.to`` calls the backend's ``to`` and keeps the backend, whatever ``to`` returns."""
