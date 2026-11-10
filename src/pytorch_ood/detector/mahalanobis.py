@@ -84,10 +84,11 @@ class Mahalanobis(FeaturesDetector):
         :param eps: regularization constant :math:`\\epsilon` added to the diagonal of the covariance matrix
             before inversion, so that the matrix is invertible. Set to ``0`` to disable regularization.
             Not used if ``use_pinv`` is ``True``.
-        :param use_pinv: if ``True``, the precision matrix is the Moore-Penrose pseudo-inverse
-            (``torch.linalg.pinv``) of the unregularized covariance matrix instead of the inverse
-            (``torch.linalg.inv``) of the regularized one. Directions without variance in the training
-            features then do not contribute to the distance.
+        :param use_pinv: if ``True``, the precision matrix is the Moore-Penrose pseudo-inverse of the
+            unregularized covariance matrix instead of the inverse of the regularized one.
+            Directions without variance in the training features (relative to the largest
+            variance, below the default cutoff of :func:`torch.linalg.pinv`) then do not
+            contribute to the distance.
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder

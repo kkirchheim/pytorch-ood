@@ -86,10 +86,11 @@ class MultiMahalanobis(StructuredDetector):
         :param alpha: weighting of the individual layers. Defaults to uniform weighting.
         :param eps: regularization constant added to the diagonal of each covariance matrix before
             inversion, so that the matrix is invertible. Not used if ``use_pinv`` is ``True``.
-        :param use_pinv: if ``True``, each precision matrix is the Moore-Penrose pseudo-inverse
-            (``torch.linalg.pinv``) of the unregularized covariance matrix instead of the inverse
-            (``torch.linalg.inv``) of the regularized one. Directions without variance in the training
-            features then do not contribute to the distance.
+        :param use_pinv: if ``True``, each precision matrix is the Moore-Penrose pseudo-inverse of the
+            unregularized covariance matrix instead of the inverse of the regularized one.
+            Directions without variance in the training features (relative to the largest
+            variance, below the default cutoff of :func:`torch.linalg.pinv`) then do not
+            contribute to the distance.
         """
         super(MultiMahalanobis, self).__init__()
 
