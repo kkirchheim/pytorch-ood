@@ -3,8 +3,6 @@ from os.path import dirname, join
 
 import torch
 
-from pytorch_ood import utils
-
 example_dir = join(dirname(__file__), "..", "examples")
 
 

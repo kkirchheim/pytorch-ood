@@ -4,8 +4,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from pytorch_ood.detector import NNGuide
-from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
-from tests.helpers import ClassificationModel, requires, sample_dataset
+from pytorch_ood.utils import TorchNearestNeighbors
+from tests.helpers import ClassificationModel, sample_dataset
 
 
 class TestNNGuide(unittest.TestCase):

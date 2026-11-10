@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from ..api import LossInfo, Paper, Representation, Task
 from ..loss.crossentropy import cross_entropy
-from ..utils import apply_reduction, is_known, is_unknown
+from ..utils import apply_reduction, is_known
 
 
 def _energy(logits: torch.Tensor) -> torch.Tensor:

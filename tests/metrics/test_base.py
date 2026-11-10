@@ -17,7 +17,6 @@ from pytorch_ood.metrics import (
     MetricCollection,
     OODMetrics,
 )
-from pytorch_ood.metrics import base as base_module
 from pytorch_ood.metrics import functional as F
 from tests.helpers import requires
 

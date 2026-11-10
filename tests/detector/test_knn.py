@@ -4,7 +4,6 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.detector import KNN
-from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
 from tests.helpers import ClassificationModel, sample_dataset
 
 

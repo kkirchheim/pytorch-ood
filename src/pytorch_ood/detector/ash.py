@@ -13,7 +13,6 @@ from typing import Callable, Optional
 import numpy as np
 import torch.nn
 from torch import Tensor
-from typing_extensions import Self
 
 from ..api import DetectorInfo, FeatureMapsDetector, Paper, Task
 from ..utils.utils import _check_fraction
