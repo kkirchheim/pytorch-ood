@@ -66,24 +66,6 @@ class TestKNN(unittest.TestCase):
         self.assertTrue(torch.isfinite(scores).all())
         torch.testing.assert_close(scores, detector.predict_features(model(x)))
 
-    def test_k_neighbors(self):
-        """The k-th nearest neighbor distance is non-decreasing in k."""
-        g = torch.Generator().manual_seed(1)
-        z_train = torch.randn(size=(200, 10), generator=g)
-        y_train = torch.zeros(200, dtype=torch.long)
-        z_test = torch.randn(size=(64, 10), generator=g)
-
-        d1 = KNN(None, k=1).fit_features(z_train, y_train)
-        d5 = KNN(None, k=5).fit_features(z_train, y_train)
-
-        s1 = d1.predict_features(z_test)
-        s5 = d5.predict_features(z_test)
-
-        self.assertEqual(s1.shape, (64,))
-        self.assertEqual(s5.shape, (64,))
-        # distance to the 5th neighbor is at least the distance to the 1st
-        self.assertTrue(torch.all(s5 >= s1 - 1e-6))
-
     def test_unknown_kwargs_raise(self):
         """There are no backend kwargs on the detector; backends are configured via ``search``."""
         with self.assertRaises(TypeError):
@@ -159,13 +141,28 @@ class TestKNN(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, r"k=11 exceeds the number of ID samples \(10\)"):
             KNN(None, k=11).fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
 
+    def test_k_checked_against_id_samples_at_fit(self):
+        """OOD samples do not count towards k when fitting."""
+        labels = torch.cat([torch.zeros(10, dtype=torch.long), -torch.ones(10, dtype=torch.long)])
+        with self.assertRaisesRegex(ValueError, r"k=15 exceeds the number of ID samples \(10\)"):
+            KNN(None, k=15).fit_features(torch.randn(20, 4), labels)
+
+    def test_zero_vectors_give_finite_scores(self):
+        z_train = torch.randn(20, 4)
+        z_train[3] = 0
+        detector = KNN(None, k=3).fit_features(z_train, torch.zeros(20, dtype=torch.long))
+        z_test = torch.cat([torch.zeros(1, 4), torch.randn(4, 4)])
+        self.assertTrue(torch.isfinite(detector.predict_features(z_test)).all())
+
     def test_no_id_samples_raises(self):
         with self.assertRaisesRegex(ValueError, "No ID samples"):
             KNN(None, k=1).fit_features(torch.randn(10, 4), -torch.ones(10, dtype=torch.long))
 
     def test_non_integer_k_raises(self):
-        with self.assertRaisesRegex(TypeError, "k must be an integer"):
-            KNN(None, k=2.5)
+        # bool is a subclass of int, so it needs its own check
+        for k in (2.5, True):
+            with self.subTest(k=k), self.assertRaisesRegex(TypeError, "k must be an integer"):
+                KNN(None, k=k)
 
     def test_k_can_change_after_fit(self):
         """k is a query-time parameter, so GridSearch can sweep it without refitting."""

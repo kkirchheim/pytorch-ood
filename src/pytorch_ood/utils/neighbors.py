@@ -93,7 +93,7 @@ class NearestNeighborSearch(ABC):
     @abstractmethod
     def n_samples(self) -> int:
         """
-        Number of samples in the reference set, :math:`N`.
+        Number of samples in the reference set, :math:`N`; 0 before fitting.
         """
 
     def to(self, device: Union[str, torch.device]) -> Self:
@@ -121,10 +121,9 @@ class TorchNearestNeighbors(NearestNeighborSearch):
     ``batch_size`` :math:`\\times N` matrix of distances. The reference set itself stays in memory
     (:math:`N \\times D` values on its device).
 
-    Distances are computed in the dtype of the reference set. In ``float32``, the formula above
-    has absolute errors proportional to :math:`\\lVert q \\rVert_2^2 + \\lVert r \\rVert_2^2`:
-    around :math:`10^{-6}` for unit-length samples, more for larger ones. Very close neighbors
-    lose relative precision; fit and query with ``float64`` samples if you need more.
+    Distances are computed in the dtype of the reference set. In ``float32``, very close
+    neighbors lose relative precision, more so for samples with large norms; use ``float64``
+    samples if that matters.
 
     Example: keep a large reference set on the CPU while the detector runs on the GPU. The
     search then runs on the CPU:
@@ -136,6 +135,7 @@ class TorchNearestNeighbors(NearestNeighborSearch):
 
     """
 
+    #: Squared Euclidean distances, ascending.
     metric = "sqeuclidean"
 
     def __init__(
@@ -191,7 +191,7 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         copying unless it is moved to ``device``, so do not modify it in place afterwards.
 
         :param reference: reference samples of shape :math:`N \\times D`
-        :return: the fitted backend
+        :return: the fitted search
         :raises ValueError: if ``reference`` is not two-dimensional
         """
         if reference.dim() != 2:
@@ -211,13 +211,17 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         :return: squared Euclidean distances of shape :math:`B \\times k`, ascending, and the
             indices of the neighbors in the reference set, of shape :math:`B \\times k`. Both on
             the device of ``queries``, the distances in their dtype.
-        :raises RequiresFittingException: if the backend was not fitted
-        :raises ValueError: if ``k`` is not between 1 and the size of the reference set
+        :raises RequiresFittingException: if the search was not fitted
+        :raises ValueError: if ``queries`` does not have shape :math:`B \\times D` with the
+            :math:`D` of the reference set, or ``k`` is not between 1 and the size of the
+            reference set
         """
         if self._reference is None:
             raise RequiresFittingException()
         reference = self._reference
-        n = reference.shape[0]
+        n, d = reference.shape
+        if queries.dim() != 2 or queries.shape[1] != d:
+            raise ValueError(f"queries must have shape B x {d}, got {tuple(queries.shape)}")
         if k < 1:
             raise ValueError(f"k must be at least 1, got k={k}")
         if k > n:
@@ -226,24 +230,22 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         # queries are cast to the reference dtype (cheap), not the reference to the queries'
         # dtype, which would copy the whole reference set
         q = queries.detach().to(device=reference.device, dtype=reference.dtype)
-        if q.shape[0] == 0:
-            values = q.new_empty((0, k))
-            indices = torch.empty((0, k), dtype=torch.long, device=q.device)
-        else:
-            # per call rather than cached at fit: costs 1/B of the distance computation
-            squared_norms = torch.einsum("nd,nd->n", reference, reference)
-            rows = self._rows_per_block(q.shape[0], n, reference)
-            values_list, indices_list = [], []
-            for block in q.split(rows):
-                # ||q||^2 + ||r||^2 - 2 q.r; cancellation can make it slightly negative for
-                # (near-)duplicates, hence the clamp. With TF32 matmuls enabled
-                # (torch.set_float32_matmul_precision("high")), errors grow to about 1e-3.
-                d2 = torch.addmm(squared_norms, block, reference.T, alpha=-2)
-                d2.add_(torch.einsum("bd,bd->b", block, block)[:, None]).clamp_(min=0)
-                v, i = d2.topk(k, dim=1, largest=False)
-                values_list.append(v)
-                indices_list.append(i)
-            values, indices = torch.cat(values_list), torch.cat(indices_list)
+        # per call rather than cached at fit: costs 1/B of the distance computation
+        squared_norms = torch.einsum("nd,nd->n", reference, reference)
+        rows = self._rows_per_block(q.shape[0], n, reference)
+        values_list, indices_list = [], []
+        # an empty batch is a single empty block
+        for block in q.split(rows):
+            # ||q||^2 + ||r||^2 - 2 q.r; cancellation can make it slightly negative for
+            # (near-)duplicates, hence the clamp. The absolute error grows with the squared norms.
+            # With TF32 matmuls enabled (torch.set_float32_matmul_precision("high")), errors grow
+            # to about 1e-3.
+            d2 = torch.addmm(squared_norms, block, reference.T, alpha=-2)
+            d2.add_(torch.einsum("bd,bd->b", block, block)[:, None]).clamp_(min=0)
+            v, i = d2.topk(k, dim=1, largest=False)
+            values_list.append(v)
+            indices_list.append(i)
+        values, indices = torch.cat(values_list), torch.cat(indices_list)
 
         return values.to(device=queries.device, dtype=queries.dtype), indices.to(queries.device)
 
@@ -260,7 +262,7 @@ class TorchNearestNeighbors(NearestNeighborSearch):
 
     def _rows_per_block(self, n_queries: int, n: int, reference: Tensor) -> int:
         if self.batch_size is None:
-            return n_queries
+            return max(1, n_queries)
         if self.batch_size != "auto":
             return self.batch_size
         if reference.device.type == "cuda":

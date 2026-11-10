@@ -42,7 +42,8 @@ class KNN(FeaturesDetector):
     .. math:: \\lVert z - z_{(k)} \\rVert_2 \\quad \\text{with} \\quad z = \\frac{f(x)}{\\lVert f(x) \\rVert_2}
 
     where :math:`f` is the ``encoder`` and :math:`z_{(1)}, \\dots, z_{(N)}` are the normalized features of
-    the fitted data, sorted by increasing distance to :math:`z`.
+    the fitted data, sorted by increasing distance to :math:`z`. The paper uses the negative
+    distance, which is larger for ID samples; the sign is flipped here.
 
     The neighbors are found by ``search``, by default an exact search with
     :class:`TorchNearestNeighbors <pytorch_ood.utils.TorchNearestNeighbors>`. That search keeps
@@ -108,6 +109,7 @@ class KNN(FeaturesDetector):
             raise ValueError(f"KNN needs a search with metric 'sqeuclidean', got {metric!r}")
         self.encoder = encoder
         self.normalize = normalize
+        #: The nearest-neighbor search, fitted with the features of the ID samples.
         self.search = search
         self._is_fitted = False
 

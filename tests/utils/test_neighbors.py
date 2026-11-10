@@ -257,9 +257,27 @@ def test_auto_batch_size_follows_memory_budget(data, block_rows, monkeypatch):
     assert block_rows == [1, 1, 1]
 
 
-def test_empty_queries(data):
-    values, indices = TorchNearestNeighbors().fit(data[0]).search(data[1][:0], 5)
+@pytest.mark.parametrize("batch_size", ["auto", None, 3])
+def test_empty_queries(data, batch_size):
+    search = TorchNearestNeighbors(batch_size=batch_size).fit(data[0])
+    values, indices = search.search(data[1][:0].float(), 5)
     assert values.shape == indices.shape == (0, 5)
+    assert values.dtype == torch.float32
+    assert indices.dtype == torch.long
+
+
+def test_none_is_one_block_for_many_queries(block_rows, seed):
+    reference = torch.randn(8, 4, generator=seed)
+    queries = torch.randn(5000, 4, generator=seed)
+    TorchNearestNeighbors(batch_size=None).fit(reference).search(queries, 3)
+    assert block_rows == [5000]
+
+
+@pytest.mark.parametrize("shape", [(5, 15), (5,), (2, 5, 16)])
+def test_queries_must_match_reference_dimension(data, shape):
+    search = TorchNearestNeighbors().fit(data[0])
+    with pytest.raises(ValueError, match="B x 16"):
+        search.search(torch.randn(shape, dtype=torch.float64), 3)
 
 
 def test_inputs_requiring_grad(data):
