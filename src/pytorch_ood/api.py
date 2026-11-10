@@ -3,7 +3,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import ClassVar, Dict, FrozenSet, Iterable, List, Optional, Union
+from typing import ClassVar, Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -222,6 +222,33 @@ class Detector(ABC):
     :mod:`pytorch_ood.detector` defines its own.
     """
 
+    #: Names of the methods that score an already-extracted representation, e.g.
+    #: ``predict_logits``. A subclass's own definitions of these methods are wrapped so that
+    #: they run under :func:`torch.no_grad` (scores are not differentiable) and tensor
+    #: arguments are moved to the detector's device.
+    _representation_methods: ClassVar[Tuple[str, ...]] = ()
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        for name in cls._representation_methods:
+            method = cls.__dict__.get(name)
+            if method is not None:
+                setattr(cls, name, Detector._wrap_representation_method(method))
+
+    @staticmethod
+    def _wrap_representation_method(method):
+        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
+        # the parameters of the wrapped method instead of *args, **kwargs
+        @functools.wraps(method)
+        def wrapped(self, *args, **kwargs):
+            device = self.device
+            if device is not None:
+                args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
+            with torch.no_grad():
+                return method(self, *args, **kwargs)
+
+        return wrapped
+
     @staticmethod
     def _move_value_to_device(value, device: torch.device):
         """
@@ -426,25 +453,7 @@ class LogitsDetector(Detector):
     forward raw inputs through ``self.model`` to obtain logits first.
     """
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-
-        predict_logits = cls.__dict__.get("predict_logits")
-        if predict_logits is not None:
-            cls.predict_logits = cls._wrap_representation_method(predict_logits)
-
-    @staticmethod
-    def _wrap_representation_method(method):
-        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
-        # the parameters of the wrapped method instead of *args, **kwargs
-        @functools.wraps(method)
-        def wrapped(self, *args, **kwargs):
-            device = self.device
-            if device is not None:
-                args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
-            return method(self, *args, **kwargs)
-
-        return wrapped
+    _representation_methods = ("predict_logits",)
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -465,7 +474,9 @@ class LogitsDetector(Detector):
         if detector_device is not None:
             x = x.to(detector_device)
 
-        return self.predict_logits(self.model(x))
+        with torch.no_grad():
+            logits = self.model(x)
+        return self.predict_logits(logits)
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
@@ -531,25 +542,7 @@ class FeaturesDetector(Detector):
     of shape :math:`B \\times D`, where :math:`B` is batch size and :math:`D` is feature dimension.
     """
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-
-        predict_features = cls.__dict__.get("predict_features")
-        if predict_features is not None:
-            cls.predict_features = cls._wrap_representation_method(predict_features)
-
-    @staticmethod
-    def _wrap_representation_method(method):
-        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
-        # the parameters of the wrapped method instead of *args, **kwargs
-        @functools.wraps(method)
-        def wrapped(self, *args, **kwargs):
-            device = self.device
-            if device is not None:
-                args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
-            return method(self, *args, **kwargs)
-
-        return wrapped
+    _representation_methods = ("predict_features",)
 
     def fit_features(self, x: Tensor, y: Tensor) -> Self:
         """
@@ -589,25 +582,7 @@ class FeatureMapsDetector(Detector):
     channels, and :math:`H, W` are spatial dimensions.
     """
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-
-        predict_feature_maps = cls.__dict__.get("predict_feature_maps")
-        if predict_feature_maps is not None:
-            cls.predict_feature_maps = cls._wrap_representation_method(predict_feature_maps)
-
-    @staticmethod
-    def _wrap_representation_method(method):
-        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
-        # the parameters of the wrapped method instead of *args, **kwargs
-        @functools.wraps(method)
-        def wrapped(self, *args, **kwargs):
-            device = self.device
-            if device is not None:
-                args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
-            return method(self, *args, **kwargs)
-
-        return wrapped
+    _representation_methods = ("predict_feature_maps",)
 
     def fit_feature_maps(self, feature_maps: Tensor, y: Tensor) -> Self:
         """
@@ -642,6 +617,8 @@ class StructuredDetector(Detector):
     by a single tensor family, for example lists of per-layer features or mixed
     inputs such as logits plus feature maps.
     """
+
+    _representation_methods = ("predict_structured",)
 
     def fit_structured(self, *args, **kwargs) -> Self:
         """

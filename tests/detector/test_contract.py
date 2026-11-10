@@ -174,6 +174,23 @@ def test_predict_equals_predict_on_representation(case: DetectorCase, seed: torc
     torch.testing.assert_close(detector(x), expected)
 
 
+@pytest.mark.parametrize("case", _cases())
+def test_scores_are_not_differentiable(case: DetectorCase, seed: torch.Generator):
+    assert not _fitted(case)(_inputs(case, seed)).requires_grad
+
+
+@pytest.mark.parametrize("case", _cases(_produced))
+def test_scores_on_a_differentiable_representation_are_not_differentiable(
+    case: DetectorCase, seed: torch.Generator
+):
+    detector = _fitted(case)
+    representation = _produced(type(detector))
+    z = getattr(detector, representation.producer)(_inputs(case, seed))
+    assert z.requires_grad  # the model's parameters require grad
+
+    assert not getattr(detector, f"predict_{representation.kind}")(z).requires_grad
+
+
 # --- fitting ------------------------------------------------------------------------------------
 
 
