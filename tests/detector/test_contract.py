@@ -259,6 +259,35 @@ def test_fit_equals_fit_on_representation(case: DetectorCase, seed: torch.Genera
     torch.testing.assert_close(detector(x), twin(x))
 
 
+#: enough samples that Gram holds out a validation split (10 % per class)
+REFIT_SAMPLES = 60
+
+
+@pytest.mark.parametrize("case", _cases(_fits))
+def test_fitting_twice_gives_the_same_scores(case: DetectorCase, seed: torch.Generator):
+    detector = case.build()
+    loader = case.make_fit_loader(n_samples=REFIT_SAMPLES)
+    x = _inputs(case, seed)
+
+    once = detector.fit(loader)(x)
+
+    torch.testing.assert_close(detector.fit(loader)(x), once)
+
+
+@pytest.mark.parametrize("case", _cases(_fits))
+def test_refit_equals_a_fresh_fit(case: DetectorCase, seed: torch.Generator):
+    # GridSearch refits one instance per candidate: nothing from an earlier fit may survive
+    detector = case.build()
+    fresh = copy.deepcopy(detector)
+    # different random data
+    earlier, loader = (case.make_fit_loader(n_samples=REFIT_SAMPLES) for _ in range(2))
+    x = _inputs(case, seed)
+
+    detector.fit(earlier).fit(loader)
+
+    torch.testing.assert_close(detector(x), fresh.fit(loader)(x))
+
+
 @pytest.mark.parametrize("case", _cases(_fits))
 def test_fit_ignores_ood_rows_in_the_loader(case: DetectorCase, seed: torch.Generator):
     detector = case.build()
