@@ -87,8 +87,7 @@ class MultiMahalanobis(StructuredDetector):
         :param eps: regularization constant added to the diagonal of each covariance matrix before
             inversion, so that the matrix is invertible. Not used if ``use_pinv`` is ``True``.
         :param use_pinv: if ``True``, use the pseudo-inverse of each unregularized covariance
-            instead of the inverse of the regularized one, ignoring directions without variance
-            (cutoff as in :func:`torch.linalg.pinv`).
+            instead of the inverse of the regularized one, ignoring directions without variance.
         """
         super(MultiMahalanobis, self).__init__()
 
@@ -100,11 +99,11 @@ class MultiMahalanobis(StructuredDetector):
         self.use_pinv = use_pinv
 
         # parameters of Gaussians
-        #: Centers (fitted; read-only)
+        #: Centers (set by fit; assigning it has no effect)
         self.mu: List[Tensor] = []
-        #: Covariance Matrices (fitted; read-only)
+        #: Covariance Matrices (set by fit; assigning it has no effect)
         self.cov: List[Tensor] = []
-        #: Precision Matrices (fitted; read-only)
+        #: Precision Matrices (set by fit; assigning it has no effect)
         self.precision: List[Tensor] = []
         # per layer: factor L of the precision (P = L L^T) and mu @ L, used for scoring
         self._whitening: List[Tensor] = []
@@ -208,13 +207,13 @@ class MultiMahalanobis(StructuredDetector):
     def predict_structured(self, zs: List[Tensor], device=None) -> Tensor:
         """
         Calculates the weighted sum of the per-layer Mahalanobis scores directly on features.
-        ODIN preprocessing will not be applied.
 
         :param zs: per-layer features, each of shape :math:`B \\times D_i` or
             :math:`B \\times C_i \\times H \\times W`
         :param device: device to use for computations. Defaults to the detector device,
             or the device of ``zs[0]``.
         :return: outlier scores of shape :math:`B`
+        :raises RequiresFittingException: if the detector was not fitted
         """
         # scoring needs the whitening computed by fit: mu/precision set by hand do not suffice, and
         # objects pickled before it existed lack the attribute
@@ -244,6 +243,8 @@ class MultiMahalanobis(StructuredDetector):
         :param x: input batch of shape :math:`B \\times C \\times H \\times W`.
             Every layer must output 4-dimensional feature maps.
         :return: outlier scores of shape :math:`B`
+        :raises ModelNotSetException: if ``model`` is empty
+        :raises RequiresFittingException: if the detector was not fitted
         """
         if not self.model:
             raise ModelNotSetException

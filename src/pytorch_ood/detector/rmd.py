@@ -82,7 +82,7 @@ class RMD(Mahalanobis):
 
         :param data_loader: data loader with training data
         :return: self
-        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
+        :raises ValueError: if the regularized covariance is singular
         """
         device = self.device
         if device is None:
@@ -100,7 +100,7 @@ class RMD(Mahalanobis):
         :param z: features of shape :math:`N \\times D`
         :param y: class labels of shape :math:`N`
         :return: self
-        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
+        :raises ValueError: if the regularized covariance is singular
         """
         device = self.device or z.device
 
@@ -149,6 +149,7 @@ class RMD(Mahalanobis):
         :param z: features of shape :math:`B \\times D` (or feature maps of shape
             :math:`B \\times C \\times H \\times W`, which are spatially averaged)
         :return: relative Mahalanobis scores of shape :math:`B`
+        :raises RequiresFittingException: if the detector was not fitted
         """
 
         if not self._is_fitted():
@@ -166,6 +167,8 @@ class RMD(Mahalanobis):
         """
         :param x: input batch, will be passed through the encoder
         :return: relative Mahalanobis scores of shape :math:`B`
+        :raises ModelNotSetException: if ``encoder`` is ``None``
+        :raises RequiresFittingException: if the detector was not fitted
         """
         if self.encoder is None:
             raise ModelNotSetException

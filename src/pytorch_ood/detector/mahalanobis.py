@@ -82,21 +82,19 @@ class Mahalanobis(FeaturesDetector):
         :param encoder: feature encoder that maps inputs to features of shape :math:`B \\times D`. Can be
             ``None`` when using ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param eps: regularization constant :math:`\\epsilon` added to the diagonal of the covariance matrix
-            before inversion, so that the matrix is invertible. Set to ``0`` to disable regularization.
-            Not used if ``use_pinv`` is ``True``.
+            before inversion, so that the matrix is invertible. Not used if ``use_pinv`` is ``True``.
         :param use_pinv: if ``True``, use the pseudo-inverse of the unregularized covariance
-            instead of the inverse of the regularized one, ignoring directions without variance
-            (cutoff as in :func:`torch.linalg.pinv`).
+            instead of the inverse of the regularized one, ignoring directions without variance.
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder
         self.eps = eps
         self.use_pinv = use_pinv
-        #: Centers (fitted; read-only)
+        #: Centers (set by fit; assigning it has no effect)
         self.mu: Tensor = None
-        #: Covariance Matrix (fitted; read-only)
+        #: Covariance Matrix (set by fit; assigning it has no effect)
         self.cov: Tensor = None
-        #: Precision Matrix (fitted; read-only)
+        #: Precision Matrix (set by fit; assigning it has no effect)
         self.precision: Tensor = None
         # factor L of the precision (P = L L^T) and mu @ L, used for scoring
         self._whitening: Tensor = None
@@ -160,7 +158,6 @@ class Mahalanobis(FeaturesDetector):
     def predict_features(self, z: Tensor) -> Tensor:
         """
         Calculates mahalanobis distance directly on features.
-        The input preprocessing of :class:`~pytorch_ood.detector.MahalanobisODIN` is not applied.
 
         :param z: features, as given by the model, of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`
@@ -260,6 +257,7 @@ class MahalanobisODIN(GradientDetector):
 
         :param data_loader: dataset to fit on.
         :return: the fitted detector
+        :raises ValueError: if the regularized covariance is singular
         """
         self._base.fit(data_loader)
         return self
@@ -271,6 +269,7 @@ class MahalanobisODIN(GradientDetector):
         :param z: features of shape :math:`N \\times D`
         :param y: class labels of shape :math:`N`
         :return: the fitted detector
+        :raises ValueError: if the regularized covariance is singular
         """
         self._base.fit_features(z, y)
         return self
