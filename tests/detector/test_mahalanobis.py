@@ -278,3 +278,15 @@ def test_near_singular_covariance_matches_float64_reference(multi):
     # onto a whitening direction of weight ~3e4 loses about 1e-3 (relative) to cancellation. A float32
     # quadratic form with the precision matrix is off by a factor of ~200 here.
     torch.testing.assert_close(scores.double(), expected, rtol=1e-2, atol=1e-2)
+
+
+def test_distances_of_wide_features_are_summed_accurately():
+    """With an identity covariance only the summation over the feature dimensions can lose
+    precision; float32 scores must be correctly rounded results of the float64 sums."""
+    d = 1024
+    centers = torch.stack([torch.full((d,), 3.0), torch.full((d,), -3.0)])
+    z, y = points_with_covariance(centers, torch.ones(d))
+    x = centers[0] + torch.randn(64, d, generator=torch.Generator().manual_seed(0))
+    detector = Mahalanobis(None, eps=0.0).fit_features(z, y)
+    expected = 0.5 * (x.double() - centers[0].double()).square().sum(dim=1)
+    torch.testing.assert_close(detector.predict_features(x).double(), expected, rtol=2e-7, atol=0)

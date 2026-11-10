@@ -181,8 +181,15 @@ def _squared_mahalanobis(z: Tensor, whitening: Tensor, whitened_mu: Tensor) -> T
     """
     # Costs B*D*R + B*C*R instead of C*B*D^2 for a loop over classes. The direct mode avoids
     # cdist's |a|^2 - 2ab + |b|^2 expansion, which cancels catastrophically near a class mean.
+    # cdist runs in _linalg_dtype: on the CPU it sums the R squared differences sequentially, which
+    # in float32 costs ~1e-6 relative error at R=2048, amplified ~100x by RMD's difference of
+    # distances. The B*C*R work is small next to the projection.
     w = z @ whitening
-    return torch.cdist(w, whitened_mu, compute_mode="donot_use_mm_for_euclid_dist").square()
+    dtype = _linalg_dtype(w.device)
+    d = torch.cdist(
+        w.to(dtype), whitened_mu.to(dtype), compute_mode="donot_use_mm_for_euclid_dist"
+    )
+    return d.square().to(z.dtype)
 
 
 #######################################
