@@ -203,6 +203,11 @@ class TestKNN(unittest.TestCase):
         for k in (0, -1):
             with self.subTest(k=k), self.assertRaisesRegex(ValueError, "k must be at least 1"):
                 KNN(None, k=k)
+        # k set after construction, e.g. by GridSearch, is checked when fitting
+        detector = KNN(None, k=3)
+        detector.k = 0
+        with self.assertRaisesRegex(ValueError, "k must be at least 1"):
+            detector.fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
 
     def test_rejects_object_that_is_not_a_search(self):
         with self.assertRaisesRegex(TypeError, "NearestNeighborSearch"):

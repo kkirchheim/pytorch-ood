@@ -93,8 +93,8 @@ class KNN(FeaturesDetector):
             :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>`
         """
         # k = 50 is the paper's choice for CIFAR-10 (200 for CIFAR-100, 1000 for ImageNet)
-        if k < 1:
-            raise ValueError(f"k must be at least 1, got k={k}")
+        self.k = k
+        self._check_k()
         if search is None:
             search = TorchNearestNeighbors()
         if not isinstance(search, NearestNeighborSearch):
@@ -107,7 +107,6 @@ class KNN(FeaturesDetector):
                 f"KNN needs a search with metric 'sqeuclidean', got {search.metric!r}"
             )
         self.encoder = encoder
-        self.k = k
         self.normalize = normalize
         self.search = search
         self._n_fitted: Optional[int] = None
@@ -190,8 +189,11 @@ class KNN(FeaturesDetector):
         if callable(move):
             move(device)
 
-    def _check_k(self, n: int, what: str) -> None:
-        if self.k > n:
+    def _check_k(self, n: Optional[int] = None, what: str = "samples") -> None:
+        # k can be changed after construction (e.g. by GridSearch), so fit and predict check again
+        if self.k < 1:
+            raise ValueError(f"k must be at least 1, got k={self.k}")
+        if n is not None and self.k > n:
             raise ValueError(f"k={self.k} exceeds the number of {what} ({n})")
 
     def _prepare(self, z: Tensor) -> Tensor:
