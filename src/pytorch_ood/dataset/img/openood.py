@@ -289,6 +289,10 @@ class ImageNetV2(OpenOOD):
     def __getitem__(self, index):
         img = Image.open(self.files[index])
         label = self.labels[index]
+        if self.transform is not None:
+            img = self.transform(img)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
         return img, label
 
 
@@ -376,6 +380,10 @@ class ImageNetES(OpenOOD):
     def __getitem__(self, index):
         img = Image.open(self.files[index])
         label = self.labels[index]
+        if self.transform is not None:
+            img = self.transform(img)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
         return img, label
 
 
