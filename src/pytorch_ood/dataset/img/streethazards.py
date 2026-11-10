@@ -137,7 +137,11 @@ class StreetHazards(ImageDatasetBase):
         :param index: index
         :return: tuple of the image and the target mask of shape :math:`H \\times W`, ``-1`` marks anomalies
         """
-        file, target = self.files[index], self.files[index].replace("images", "annotations")
+        file = self.files[index]
+        # only below ``root``, which may itself contain "images"
+        target = join(
+            self.root, os.path.relpath(file, self.root).replace("images", "annotations", 1)
+        )
 
         # to return a PIL Image
         img = Image.open(file)
