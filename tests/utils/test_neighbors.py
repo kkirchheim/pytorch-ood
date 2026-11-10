@@ -133,3 +133,61 @@ def test_unpinned_on_accelerator(data, accelerator):
     values, _ = search.search(queries, 5)
     assert values.device == queries.device
     torch.testing.assert_close(values, _reference_search(reference, queries, 5)[0])
+
+
+@pytest.mark.parametrize("k", [0, -1])
+def test_k_below_one_raises(data, k):
+    search = TorchNearestNeighbors().fit(data[0])
+    with pytest.raises(ValueError, match="k must be at least 1"):
+        search.search(data[1], k)
+
+
+@pytest.fixture
+def block_rows(monkeypatch):
+    """Records the number of queries in each distance block."""
+    rows = []
+    addmm = torch.addmm
+
+    def recording_addmm(input, mat1, mat2, **kwargs):
+        rows.append(mat1.shape[0])
+        return addmm(input, mat1, mat2, **kwargs)
+
+    monkeypatch.setattr(torch, "addmm", recording_addmm)
+    return rows
+
+
+@pytest.mark.parametrize(
+    "batch_size, expected", [(7, [7, 7, 7, 7, 7, 5]), (40, [40]), (100, [40]), (None, [40])]
+)
+def test_blocks_follow_batch_size(data, block_rows, batch_size, expected):
+    reference, queries = data
+    TorchNearestNeighbors(batch_size=batch_size).fit(reference).search(queries, 3)
+    assert block_rows == expected
+
+
+def test_auto_batch_size_follows_memory_budget(data, block_rows, monkeypatch):
+    from pytorch_ood.utils import neighbors
+
+    reference, queries = data
+    n, itemsize = reference.shape[0], reference.element_size()
+    # budget for two distance blocks of 16 rows
+    monkeypatch.setattr(neighbors, "_CPU_BLOCK_BYTES", 2 * 16 * n * itemsize)
+    TorchNearestNeighbors().fit(reference).search(queries, 3)
+    assert block_rows == [16, 16, 8]
+
+    # a budget below one row still processes one row at a time
+    block_rows.clear()
+    monkeypatch.setattr(neighbors, "_CPU_BLOCK_BYTES", 1)
+    TorchNearestNeighbors().fit(reference).search(queries[:3], 3)
+    assert block_rows == [1, 1, 1]
+
+
+def test_empty_queries(data):
+    values, indices = TorchNearestNeighbors().fit(data[0]).search(data[1][:0], 5)
+    assert values.shape == indices.shape == (0, 5)
+
+
+def test_inputs_requiring_grad(data):
+    reference, queries = (t.clone().requires_grad_() for t in data)
+    values, _ = TorchNearestNeighbors().fit(reference).search(queries, 3)
+    assert not values.requires_grad

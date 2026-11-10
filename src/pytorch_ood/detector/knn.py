@@ -8,8 +8,9 @@
 """
 
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
+import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
@@ -39,13 +40,13 @@ class KNN(FeaturesDetector):
 
     .. math:: \\lVert z - z_{(k)} \\rVert_2 \\quad \\text{with} \\quad z = \\frac{f(x)}{\\lVert f(x) \\rVert_2}
 
-    where :math:`f` is the ``encoder`` and :math:`z_{(1)}, \\dots, z_{(n)}` are the normalized features of
+    where :math:`f` is the ``encoder`` and :math:`z_{(1)}, \\dots, z_{(N)}` are the normalized features of
     the fitted data, sorted by increasing distance to :math:`z`.
 
     The neighbors are found by ``search``, by default an exact search with
     :class:`TorchNearestNeighbors <pytorch_ood.utils.TorchNearestNeighbors>`. It keeps the
-    features of the fitted data in memory (:math:`n \\times D` values), on the detector's device:
-    :meth:`to` moves them. For a fitted set too large for the GPU, pin it to the CPU with
+    features of the :math:`N` fitted samples in memory (:math:`N \\times D` values), on the
+    detector's device: :meth:`to` moves them. For a fitted set too large for the GPU, pin it to the CPU with
     ``search=TorchNearestNeighbors(device="cpu")``.
 
     The original paper found that using contrastive pre-training could increase the performance.
@@ -85,12 +86,22 @@ class KNN(FeaturesDetector):
             :math:`z = f(x) / \\lVert f(x) \\rVert_2`. If ``False``, :math:`z = f(x)`, and the
             distances also depend on the feature norms.
         :param search: nearest-neighbor search with ``metric == "sqeuclidean"``. Defaults to
-            :class:`TorchNearestNeighbors() <pytorch_ood.utils.TorchNearestNeighbors>`.
-        :raises ValueError: if ``search`` uses another metric
+            :class:`TorchNearestNeighbors() <pytorch_ood.utils.TorchNearestNeighbors>`. The
+            detector fits it, so do not share one instance between detectors.
+        :raises ValueError: if ``k`` is below 1 or ``search`` uses another metric
+        :raises TypeError: if ``search`` is not a
+            :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>`
         """
         # k = 50 is the paper's choice for CIFAR-10 (200 for CIFAR-100, 1000 for ImageNet)
+        if k < 1:
+            raise ValueError(f"k must be at least 1, got k={k}")
         if search is None:
             search = TorchNearestNeighbors()
+        if not isinstance(search, NearestNeighborSearch):
+            raise TypeError(
+                f"search must implement NearestNeighborSearch (metric, fit, search), "
+                f"got {type(search).__name__}"
+            )
         if search.metric != "sqeuclidean":
             raise ValueError(
                 f"KNN needs a search with metric 'sqeuclidean', got {search.metric!r}"
@@ -131,6 +142,9 @@ class KNN(FeaturesDetector):
 
         # squared distances, nearest first; the k-th is the last column
         values, _ = self.search.search(self._prepare(z), self.k)
+        # In float32, the search's squared distances carry cancellation errors around 1e-6, which
+        # the sqrt magnifies near 0: near-duplicates of fitted samples (e.g. k=1 on training data)
+        # get scores around 1e-3 instead of 0. Pass float64 features if that matters.
         return values[:, -1].sqrt()
 
     def fit_features(self, z: Tensor, labels: Tensor) -> Self:
@@ -153,10 +167,28 @@ class KNN(FeaturesDetector):
         # an unpinned backend follows the detector, like its other state
         device = self.device
         if device is not None:
-            self.search = self._move_value_to_device(self.search, device)
+            self._move_search(device)
         self._n_fitted = n_known
 
         return self
+
+    def to(self, device: Union[str, torch.device]) -> Self:
+        """
+        Move the detector's state to ``device``, including the fitted features of ``search``
+        unless the search is pinned to a device.
+
+        :param device: target device, e.g. ``"cuda:0"`` or a :class:`torch.device`
+        :return: self
+        """
+        super().to(device)
+        self._move_search(device)
+        return self
+
+    def _move_search(self, device: Union[str, torch.device]) -> None:
+        # backends move in place; ones without ``to`` (e.g. CPU-only libraries) stay where they are
+        move = getattr(self.search, "to", None)
+        if callable(move):
+            move(device)
 
     def _check_k(self, n: int, what: str) -> None:
         if self.k > n:

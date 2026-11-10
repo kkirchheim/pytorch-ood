@@ -27,15 +27,34 @@ class NearestNeighborSearch(Protocol):
     """
     Interface of the nearest-neighbor search used by detectors such as
     :class:`KNN <pytorch_ood.detector.KNN>`. Any object with these members can be passed as a
-    detector's ``search``, for example a wrapper around an approximate search library.
+    detector's ``search``, for example a wrapper around an approximate search library. The
+    detector calls :meth:`fit` itself, with its already preprocessed features, so one instance
+    belongs to one detector.
 
-    A backend may also define ``to(device)``, returning the moved backend. Then
-    :meth:`Detector.to <pytorch_ood.api.Detector.to>` calls it, like it moves the detector's
-    tensors.
+    A backend may also define ``to(device)``, which moves it in place; the detector's
+    :meth:`to <pytorch_ood.detector.KNN.to>` calls it and ignores the return value. A backend
+    without ``to`` stays where it is.
+
+    A minimal backend for :class:`KNN <pytorch_ood.detector.KNN>`:
+
+    .. code:: python
+
+        class CdistSearch:
+            metric = "sqeuclidean"
+
+            def fit(self, reference):
+                self.reference = reference
+                return self
+
+            def search(self, queries, k):
+                d2 = torch.cdist(queries, self.reference) ** 2
+                return d2.topk(k, dim=1, largest=False)  # ascending, nearest first
+
     """
 
-    #: Distance or similarity the backend uses. ``"sqeuclidean"``: squared Euclidean distance,
-    #: smaller is nearer.
+    #: What the values returned by :meth:`search` measure. ``"sqeuclidean"``: squared Euclidean
+    #: distances, ascending (nearest first). This is the only metric
+    #: :class:`KNN <pytorch_ood.detector.KNN>` accepts.
     metric: str
 
     def fit(self, reference: Tensor) -> Self:
@@ -53,8 +72,9 @@ class NearestNeighborSearch(Protocol):
 
         :param queries: queries of shape :math:`B \\times D`
         :param k: number of neighbors :math:`k`
-        :return: values of shape :math:`B \\times k`, in units of ``metric`` and ordered from the
-            nearest neighbor to the :math:`k`-th, and the indices of the neighbors in the reference
+        :return: values of shape :math:`B \\times k`, in units of ``metric`` (squared distances for
+            ``"sqeuclidean"``) and ordered from the nearest neighbor to the :math:`k`-th, and the
+            indices of the neighbors in the reference
             set, of shape :math:`B \\times k`. Both on the device of ``queries``, the values in
             their dtype.
         """
@@ -75,8 +95,8 @@ class TorchNearestNeighbors:
     (:math:`N \\times D` values on its device).
 
     Distances are computed in the dtype of the reference set. In ``float32``, the formula above
-    loses precision for very close neighbors (relative errors around :math:`10^{-4}`); fit and
-    query with ``float64`` samples if you need more.
+    has absolute errors around :math:`10^{-6}`, so very close neighbors lose relative precision;
+    fit and query with ``float64`` samples if you need more.
 
     Example: keep a large reference set on the CPU while the detector runs on the GPU:
 
@@ -99,8 +119,10 @@ class TorchNearestNeighbors:
             pinned there: :meth:`to` does not move it, queries on other devices are moved to it,
             and the results are moved back. If ``None``, the reference set stays where it was
             fitted and :meth:`to` moves it.
-        :param batch_size: number of queries per block. ``"auto"`` derives it from the free
-            memory on each call, ``None`` processes all queries in one block.
+        :param batch_size: number of queries per block. ``"auto"`` derives it on each call from
+            the free GPU memory, or from a fixed budget of 1 GiB on other devices. ``None``
+            processes all queries in one block, which needs memory for :math:`B \\times N`
+            distances.
         :raises ValueError: if ``batch_size`` is not ``"auto"``, ``None`` or a positive integer
         """
         valid_int = (
@@ -117,7 +139,6 @@ class TorchNearestNeighbors:
         self.device = torch.device(device) if device is not None else None
         self.batch_size = batch_size
         self._reference: Optional[Tensor] = None
-        self._squared_norms: Optional[Tensor] = None
 
     @property
     def reference(self) -> Optional[Tensor]:
@@ -140,7 +161,6 @@ class TorchNearestNeighbors:
         if self.device is not None:
             reference = reference.to(self.device)
         self._reference = reference
-        self._squared_norms = torch.einsum("nd,nd->n", reference, reference)
         return self
 
     def search(self, queries: Tensor, k: int) -> Tuple[Tensor, Tensor]:
@@ -157,7 +177,7 @@ class TorchNearestNeighbors:
         """
         if self._reference is None:
             raise RequiresFittingException()
-        reference, squared_norms = self._reference, self._squared_norms
+        reference = self._reference
         n = reference.shape[0]
         if k < 1:
             raise ValueError(f"k must be at least 1, got k={k}")
@@ -171,7 +191,9 @@ class TorchNearestNeighbors:
             values = q.new_empty((0, k))
             indices = torch.empty((0, k), dtype=torch.long, device=q.device)
         else:
-            rows = self._rows_per_block(n, reference)
+            # per call rather than cached at fit: costs 1/B of the distance computation
+            squared_norms = torch.einsum("nd,nd->n", reference, reference)
+            rows = self._rows_per_block(q.shape[0], n, reference)
             values_list, indices_list = [], []
             for block in q.split(rows):
                 # ||q||^2 + ||r||^2 - 2 q.r; cancellation can make it slightly negative for
@@ -195,12 +217,11 @@ class TorchNearestNeighbors:
         """
         if self.device is None and self._reference is not None:
             self._reference = self._reference.to(device)
-            self._squared_norms = self._squared_norms.to(device)
         return self
 
-    def _rows_per_block(self, n: int, reference: Tensor) -> int:
+    def _rows_per_block(self, n_queries: int, n: int, reference: Tensor) -> int:
         if self.batch_size is None:
-            return 2**62
+            return n_queries
         if self.batch_size != "auto":
             return self.batch_size
         if reference.device.type == "cuda":

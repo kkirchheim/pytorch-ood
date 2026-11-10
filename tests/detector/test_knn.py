@@ -185,6 +185,43 @@ class TestKNN(unittest.TestCase):
         detector.to("cpu")
         self.assertIs(detector.search, search)
 
+    def test_k_checked_before_search(self):
+        """The detector rejects a too large k itself, without calling the backend; OOD samples
+        do not count as fitted samples."""
+        search = _SortingSearch()
+        z = torch.randn(20, 4)
+        labels = torch.cat([torch.zeros(10, dtype=torch.long), -torch.ones(10, dtype=torch.long)])
+        detector = KNN(None, k=3, search=search).fit_features(z, labels)
+        detector.k = 15
+        with self.assertRaisesRegex(
+            ValueError, r"k=15 exceeds the number of fitted samples \(10\)"
+        ):
+            detector.predict_features(z)
+        self.assertEqual(search.calls, 0)
+
+    def test_k_below_one_raises(self):
+        for k in (0, -1):
+            with self.subTest(k=k), self.assertRaisesRegex(ValueError, "k must be at least 1"):
+                KNN(None, k=k)
+
+    def test_rejects_object_that_is_not_a_search(self):
+        with self.assertRaisesRegex(TypeError, "NearestNeighborSearch"):
+            KNN(None, search=object())
+
+    def test_to_calls_search_to_in_place(self):
+        """``KNN.to`` calls the backend's ``to`` and keeps the backend, whatever ``to`` returns."""
+
+        class InPlaceSearch(_SortingSearch):
+            def to(self, device):
+                self.moved_to = device  # returns None, like an in-place move
+
+        search = InPlaceSearch()
+        detector = KNN(torch.nn.Linear(4, 4), k=3, search=search)
+        self.assertIs(detector.to("meta"), detector)
+        self.assertIs(detector.search, search)
+        self.assertEqual(torch.device(search.moved_to).type, "meta")
+        self.assertEqual(next(detector.encoder.parameters()).device.type, "meta")
+
     def test_rejects_search_with_other_metric(self):
         search = _SortingSearch()
         search.metric = "inner_product"

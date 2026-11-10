@@ -253,13 +253,6 @@ class Detector(ABC):
                 value[key] = Detector._move_value_to_device(inner, device)
             return value
 
-        # other objects with their own ``to``, e.g. nested detectors or nearest-neighbor search
-        # backends; duck-typed so this module does not import them. Classes are excluded, as
-        # their ``to`` is an unbound function.
-        move = getattr(value, "to", None)
-        if callable(move) and not isinstance(value, type):
-            return move(device)
-
         return value
 
     @staticmethod
@@ -331,11 +324,7 @@ class Detector(ABC):
 
         This is a detector-level analogue of ``nn.Module.to(...)``. It moves
         modules, tensors, and common container-valued state stored on the
-        detector itself, and calls ``to(device)`` of other objects that define it,
-        such as nested detectors or a nearest-neighbor search backend. A backend
-        pinned to a device, like
-        :class:`TorchNearestNeighbors(device=...) <pytorch_ood.utils.TorchNearestNeighbors>`,
-        stays where it is.
+        detector itself.
 
         :param device: target device, e.g. ``"cuda:0"`` or a :class:`torch.device`
         :return: self
