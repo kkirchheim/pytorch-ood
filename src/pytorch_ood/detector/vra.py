@@ -110,23 +110,6 @@ class VRA(FeatureMapsDetector):
         self._lower_threshold = None
         self._upper_threshold = None
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input batch, will be passed through the backbone and head
-        :return: outlier scores of shape :math:`B`
-        :raise RequiresFittingException: if the detector was not fitted
-        """
-        if self.backbone is None:
-            raise ModelNotSetException()
-        if self._lower_threshold is None:
-            raise RequiresFittingException()
-
-        device = self.device
-        if device is not None:
-            x = x.to(device)
-        z = self.backbone(x)
-        return self.predict_feature_maps(z)
-
     @torch.no_grad()
     def predict_feature_maps(self, feature_maps: Tensor) -> Tensor:
         """
@@ -188,14 +171,8 @@ class VRA(FeatureMapsDetector):
         :return: self
         :raise ValueError: if the loader contains no ID samples
         """
-        if self.backbone is None:
-            raise ModelNotSetException()
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
+        backbone = self._require_producer()
+        device = self._fit_device()
 
         # NOTE: unlike pytorch_ood.utils.extract_features (which flattens each sample
         # to a 1-D vector, for pooled-feature detectors), the per-dimension clipping
@@ -208,7 +185,7 @@ class VRA(FeatureMapsDetector):
                 known = is_known(y)
                 if not known.any():
                     continue
-                zs.append(self.backbone(x[known].to(device)).detach().cpu())
+                zs.append(backbone(x[known].to(device)).detach().cpu())
                 ys.append(y[known].cpu())
 
         if not zs:

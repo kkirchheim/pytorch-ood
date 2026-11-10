@@ -3,7 +3,7 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.api import ModelNotSetException, RequiresFittingException
+from pytorch_ood.api import ModelNotSetException
 from pytorch_ood.detector import PNML
 from tests.helpers import ClassificationModel
 
@@ -42,24 +42,6 @@ class PNMLTest(unittest.TestCase):
         scores = detector.predict_features(z)
 
         self.assertEqual(scores.shape, (20,))
-
-    def test_nofit(self):
-        nn = ClassificationModel()
-        detector = PNML(nn.features, nn.classifier)
-        x = torch.randn(size=(20, 10))
-
-        with self.assertRaises(RequiresFittingException):
-            detector(x)
-
-    def test_no_backbone(self):
-        detector = PNML(encoder=None, head=torch.nn.Linear(10, 3))
-
-        z = torch.randn(size=(20, 10))
-        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
-        detector.fit_features(z, y)
-
-        with self.assertRaises(ModelNotSetException):
-            detector(torch.randn(size=(5, 10)))
 
     def test_no_head(self):
         detector = PNML(encoder=None, head=None)

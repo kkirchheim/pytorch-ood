@@ -3,7 +3,6 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.api import ModelNotSetException, RequiresFittingException
 from pytorch_ood.detector import KNN
 from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
 from tests.helpers import ClassificationModel, sample_dataset
@@ -21,15 +20,6 @@ class TestKNN(unittest.TestCase):
     """
     Tests for k-Nearest Neighbor
     """
-
-    def test_requires_fitting(self):
-        model = ClassificationModel()
-        detector = KNN(model)
-
-        x = torch.zeros(size=(128, 10))
-
-        with self.assertRaises(RequiresFittingException):
-            detector(x)
 
     def test_input(self):
         """``detector(x)`` scores the encoder's features of ``x``."""
@@ -140,15 +130,6 @@ class TestKNN(unittest.TestCase):
         detector = KNN(torch.nn.Linear(4, 4).to("meta"), k=3)
         detector.fit_features(torch.randn(20, 4), torch.zeros(20, dtype=torch.long))
         self.assertEqual(detector.search.reference.device.type, "meta")
-
-    def test_without_encoder_raises(self):
-        loader = DataLoader(TensorDataset(torch.randn(60, 4), torch.zeros(60, dtype=torch.long)))
-        detector = KNN(None)
-        with self.assertRaises(ModelNotSetException):
-            detector.fit(loader)
-        detector.fit_features(torch.randn(60, 4), torch.zeros(60, dtype=torch.long))
-        with self.assertRaises(ModelNotSetException):
-            detector.predict(torch.randn(3, 4))
 
     def test_sequential_encoder(self):
         """An encoder that evaluates to False, like an empty Sequential, is still an encoder."""

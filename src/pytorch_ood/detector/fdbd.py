@@ -7,25 +7,18 @@
 
 """
 
-import logging
-
 import torch
 from torch import Tensor
 from torch.nn import Linear, Module
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import (
     DetectorInfo,
     FeaturesDetector,
-    ModelNotSetException,
     Paper,
     RequiresFittingException,
     Task,
 )
-from ..utils import extract_features
-
-log = logging.getLogger(__name__)
 
 
 class fDBD(FeaturesDetector):
@@ -103,25 +96,6 @@ class fDBD(FeaturesDetector):
         denom[torch.arange(n_classes), torch.arange(n_classes)] = 1.0
         self._denom_matrix = denom
 
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Compute the training feature mean :math:`\\mu`.
-
-        :param data_loader: data loader with in-distribution training data. Labels are ignored.
-        :return: the fitted detector
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        z, y = extract_features(data_loader, self.encoder, device)
-        return self.fit_features(z)
-
     def fit_features(self, z: Tensor, *args, **kwargs) -> Self:
         """
         Compute the training feature mean directly from features.
@@ -134,17 +108,6 @@ class fDBD(FeaturesDetector):
         self.train_mean = z.mean(dim=0)
         self._precompute_denom_matrix()
         return self
-
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input tensor, will be passed through the encoder
-        :return: outlier scores of shape :math:`B`
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        z = self.encoder(x)
-        return self.predict_features(z)
 
     @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:

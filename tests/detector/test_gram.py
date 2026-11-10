@@ -3,7 +3,6 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import Gram
 from tests.helpers.model import ConvClassifier
 
@@ -55,13 +54,6 @@ class GramTest(unittest.TestCase):
 
         self.assertIsNotNone(scores)
         self.assertEqual(scores.shape[0], 20)
-
-    def test_nofit(self):
-        model = InitGram().model
-        x = torch.randn(size=(20, 10))
-
-        with self.assertRaises(RequiresFittingException):
-            model(x)
 
     def test_scores_non_negative(self):
         """

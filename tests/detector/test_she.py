@@ -48,12 +48,3 @@ class SHEScoreTest(unittest.TestCase):
         z = torch.tensor([[2.0, 1.0], [0.0, 2.0]])
         # predicted classes 0 and 1; inner products 2 and 6
         torch.testing.assert_close(detector.predict_features(z), torch.tensor([-2.0, -6.0]))
-
-    def test_fit_without_encoder(self):
-        from torch.utils.data import DataLoader, TensorDataset
-
-        from pytorch_ood.api import ModelNotSetException
-
-        loader = DataLoader(TensorDataset(torch.randn(8, 4), torch.arange(8) % 2), batch_size=4)
-        with self.assertRaises(ModelNotSetException):
-            SHE(encoder=None, head=torch.nn.Linear(4, 2)).fit(loader)

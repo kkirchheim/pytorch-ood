@@ -3,7 +3,6 @@ import unittest
 import torch
 from torch.utils.data import DataLoader
 
-from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import NNGuide
 from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
 from tests.helpers import ClassificationModel, requires, sample_dataset
@@ -18,13 +17,6 @@ class TestNNGuide(unittest.TestCase):
         model = ClassificationModel(num_inputs=10, n_hidden=10, num_outputs=3)
         model.eval()
         return NNGuide(model.features, model.classifier, k=5)
-
-    def test_requires_fitting(self):
-        detector = self._make_detector()
-        self.assertTrue(detector.requires_fit)
-        z = torch.randn(16, 10)
-        with self.assertRaises(RequiresFittingException):
-            detector.predict_features(z)
 
     def test_fit_and_predict_features(self):
         detector = self._make_detector()

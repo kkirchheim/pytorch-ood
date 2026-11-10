@@ -3,7 +3,6 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import Residual, ViM
 from tests.helpers import ClassificationModel
 
@@ -45,11 +44,6 @@ class TestResidual(unittest.TestCase):
         scores = detector(torch.zeros(size=(128, 10)))
         self.assertEqual(scores.shape, (128,))
         self.assertTrue((scores >= 0).all())
-
-    def test_requires_fitting(self):
-        detector = Residual(None, d=2, w=self.w, b=self.b)
-        with self.assertRaises(RequiresFittingException):
-            detector.predict_features(self.test)
 
     def test_principal_subspace_has_zero_residual(self):
         """

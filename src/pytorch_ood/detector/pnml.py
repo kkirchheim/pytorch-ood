@@ -7,12 +7,10 @@
 
 """
 
-import logging
 from typing import Callable, Optional
 
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import (
@@ -23,10 +21,8 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
-from ..utils import extract_features, is_known
+from ..utils import is_known
 from ..utils.utils import _gram_matrix
-
-log = logging.getLogger(__name__)
 
 
 class PNML(FeaturesDetector):
@@ -88,25 +84,6 @@ class PNML(FeaturesDetector):
         self._feature_projector = None
         self._log_num_classes = None
 
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Extract features and fit the pNML detector.
-
-        :param data_loader: data loader with training data
-        :return: self
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        z, y = extract_features(data_loader, self.encoder, device)
-        return self.fit_features(z, y)
-
     def fit_features(self, z: Tensor, labels: Tensor) -> Self:
         """
         Fit pNML directly on penultimate-layer features.
@@ -132,17 +109,6 @@ class PNML(FeaturesDetector):
         self._feature_projector = torch.linalg.pinv(gram, hermitian=True)
         self._log_num_classes = None
         return self
-
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input tensor, will be passed through the backbone
-        :return: outlier scores of shape :math:`B`
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        z = self.encoder(x)
-        return self.predict_features(z)
 
     @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:

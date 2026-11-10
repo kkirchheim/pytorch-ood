@@ -6,20 +6,16 @@
     :show-inheritance:
 """
 
-import logging
 from typing import Callable, Optional
 
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from pytorch_ood.api import RequiresFittingException
-from pytorch_ood.utils import TensorBuffer, extract_features, is_known
+from pytorch_ood.utils import TensorBuffer, is_known
 
 from ..api import DetectorInfo, FeaturesDetector, ModelNotSetException, Paper, Task
-
-log = logging.getLogger(__name__)
 
 
 class SHE(FeaturesDetector):
@@ -63,19 +59,6 @@ class SHE(FeaturesDetector):
         #: class, of shape :math:`K \times D`; ``None`` before fitting
         self.patterns: Optional[Tensor] = None
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: model inputs, will be passed through ``encoder``
-        :return: outlier scores of shape :math:`B`
-        :raises ModelNotSetException: if ``encoder`` or ``head`` is ``None``
-        :raises RequiresFittingException: if the detector was not fitted
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        z = self.encoder(x)
-        return self.predict_features(z)
-
     def predict_features(self, z: Tensor) -> Tensor:
         """
         :param z: features of shape :math:`B \\times D`
@@ -94,28 +77,6 @@ class SHE(FeaturesDetector):
 
         scores = torch.sum(torch.mul(z, self.patterns[y_hat]), dim=1)
         return -scores
-
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Extracts features and calculates mean patterns.
-
-        :param data_loader: data to fit
-        :return: self
-        :raises ModelNotSetException: if ``encoder`` is ``None``
-        :raises ValueError: if there are no ID samples, or a class has no correctly classified sample
-        :raises AssertionError: if the labels of the ID samples do not cover the classes :math:`0, ..., K-1`
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        x, y = extract_features(data_loader, self.encoder, device=device)
-        return self.fit_features(x, y)
 
     @torch.no_grad()
     def _filter_correct_predictions(self, z: Tensor, y: Tensor, batch_size: int = 1024):

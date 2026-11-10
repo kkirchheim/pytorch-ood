@@ -12,15 +12,13 @@ from typing import Callable, Optional
 
 import torch.nn
 from torch import Tensor
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from pytorch_ood.utils import extract_features, is_known
+from pytorch_ood.utils import is_known
 
 from ..api import (
     DetectorInfo,
     FeaturesDetector,
-    ModelNotSetException,
     Paper,
     RequiresFittingException,
     Task,
@@ -93,17 +91,6 @@ class DICE(FeaturesDetector):
         self.threshold = None
         self.mean_activation = None
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input, will be passed through ``encoder``
-        :return: outlier scores of shape :math:`B`
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        z = self.encoder(x)
-        return self.predict_features(z)
-
     @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:
         """
@@ -145,19 +132,4 @@ class DICE(FeaturesDetector):
         log.info(f"Threshold is {self.threshold:.2f}")
         self.masked_w = torch.where(contrib > self.threshold, weight, 0)
         self._is_fitted = True
-        return self
-
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        :param data_loader: data loader to extract features from. OOD inputs will be ignored.
-        :return: the fitted detector
-        """
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        z, y = extract_features(data_loader, self.encoder, device=device)
-        self.fit_features(z, y)
         return self

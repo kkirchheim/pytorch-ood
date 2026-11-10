@@ -161,12 +161,12 @@ class Gram(StructuredDetector):
 
         The held-out split is drawn with :func:`torch.randperm`, so results depend on the random seed. If a
         class has fewer than 10 samples, no data is held out for it.
+        :raises ModelNotSetException: if ``head`` is ``None``
         """
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
+        if self.head is None:
+            raise ModelNotSetException
+
+        device = self._fit_device()
 
         num_poles = len(self.num_poles_list)
 

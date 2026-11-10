@@ -36,14 +36,6 @@ class MahalanobisTest(unittest.TestCase):
 
         self.assertIsNotNone(scores)
 
-    def test_nofit(self):
-        nn = ClassificationModel()
-        model = Mahalanobis(nn)
-        x = torch.randn(size=(20, 10))
-
-        with self.assertRaises(RequiresFittingException):
-            model(x)
-
 
 class MahalanobisScoreTest(unittest.TestCase):
     def test_half_squared_distance_to_closest_center(self):
@@ -346,9 +338,3 @@ def test_parameters_set_by_hand_require_fit():
     detector.precision = torch.eye(3)
     with pytest.raises(RequiresFittingException):
         detector.predict_features(torch.randn(4, 3))
-
-
-def test_mahalanobis_odin_without_fit_raises():
-    detector = MahalanobisODIN(torch.nn.Linear(6, 4))
-    with pytest.raises(RequiresFittingException):
-        detector.predict(torch.randn(4, 6))

@@ -55,17 +55,15 @@ through the full model again. The available methods will depend on the base clas
 ..  autoclass:: pytorch_ood.api.LogitsDetector
     :members:
     :show-inheritance:
-    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.FeaturesDetector
     :members:
     :show-inheritance:
-    :exclude-members: fit, predict
 
 ..  autoclass:: pytorch_ood.api.FeatureMapsDetector
     :members:
     :show-inheritance:
-    :exclude-members: fit, predict
+    :exclude-members: fit
 
 ..  autoclass:: pytorch_ood.api.StructuredDetector
     :members:

@@ -9,7 +9,6 @@
 import logging
 from typing import Callable, Optional
 
-import torch
 import torch.nn.functional as F
 from torch import Tensor
 from typing_extensions import Self
@@ -17,7 +16,6 @@ from typing_extensions import Self
 from ..api import (
     DetectorInfo,
     FeaturesDetector,
-    ModelNotSetException,
     Paper,
     RequiresFittingException,
     Task,
@@ -97,14 +95,3 @@ class MCM(FeaturesDetector):
         t_norm = F.normalize(self.text_embeddings.to(z.device).float(), dim=-1)
         similarities = z_norm @ t_norm.T / self.temperature
         return -similarities.softmax(dim=-1).max(dim=-1).values
-
-    @torch.no_grad()
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input tensor, will be passed through ``encoder``
-        :return: outlier scores of shape :math:`B`
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-        features = self.encoder(x)
-        return self.predict_features(features)

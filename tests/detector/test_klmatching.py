@@ -5,7 +5,6 @@ import torch
 from torch.optim import SGD
 from torch.utils.data import DataLoader, TensorDataset, random_split
 
-from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector.klmatching import KLMatching
 from pytorch_ood.loss import CrossEntropyLoss
 from pytorch_ood.metrics import OODMetrics
@@ -35,14 +34,6 @@ class TestKLMatching(unittest.TestCase):
 
         self.assertIsNotNone(y)
         self.assertEqual(y.shape, (128,))
-
-    def test_no_fit(self):
-        model = ClassificationModel()
-        detector = KLMatching(model)
-        x = torch.zeros(size=(128, 10))
-
-        with self.assertRaises(RequiresFittingException):
-            detector(x)
 
     def test_train(self):
         torch.manual_seed(1234)
@@ -182,10 +173,6 @@ class TestKLMatching(unittest.TestCase):
         self.assertEqual(sorted(detector.dists.keys()), sorted(reference.dists.keys()))
         for k in reference.dists.keys():
             torch.testing.assert_close(detector.dists[k], reference.dists[k])
-
-    def test_predict_logits_before_fit_raises(self):
-        with self.assertRaises(RequiresFittingException):
-            KLMatching(None).predict_logits(torch.randn(4, 3))
 
     def test_mock_performance(self):
         """

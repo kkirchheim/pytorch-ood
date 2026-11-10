@@ -14,7 +14,7 @@ import torch
 from torch import Tensor
 from torch.nn import Module
 
-from ..api import DetectorInfo, FeaturesDetector, ModelNotSetException, Paper, Task
+from ..api import DetectorInfo, FeaturesDetector, Paper, Task
 from ..utils.utils import _check_fraction
 from .energy import EnergyBased
 
@@ -120,18 +120,3 @@ class LTS(FeaturesDetector):
         """
         s = self.scaling_factor(z, self.p)
         return self.detector(self.head(z) * s.unsqueeze(1))
-
-    @torch.no_grad()
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input tensor, passed through the encoder and head.
-        :return: outlier scores of shape :math:`B`
-        :raises ModelNotSetException: if no encoder was given.
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-        device = self.device
-        if device is not None:
-            x = x.to(device)
-        features = self.encoder(x)
-        return self.predict_features(features)
