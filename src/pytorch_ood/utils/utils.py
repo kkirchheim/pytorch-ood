@@ -4,6 +4,7 @@ import logging
 import random
 import warnings
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, KeysView, Optional, Tuple, Union
 
 import numpy as np
@@ -100,13 +101,25 @@ def _gram_matrix(x: Tensor, transform: Optional[Callable[[Tensor], Tensor]] = No
     return gram
 
 
-def _fit_gaussian(
-    z: Tensor, y: Tensor, n_classes: int, eps: float, use_pinv: bool
-) -> Tuple[Tensor, Tensor, Tensor]:
+@dataclass
+class _Gaussian:
+    """
+    Gaussians with class means and a shared covariance, as fitted by :func:`_fit_gaussian`.
+    """
+
+    mu: Tensor  #: class means, :math:`C \\times D`
+    cov: Tensor  #: shared covariance (regularized unless ``use_pinv``), :math:`D \\times D`
+    precision: Tensor  #: (pseudo-)inverse of ``cov``, :math:`D \\times D`
+    #: :math:`L` of shape :math:`D \\times R` with ``precision`` :math:`= L L^\\top`
+    whitening: Tensor
+    whitened_mu: Tensor  #: ``mu @ whitening``, :math:`C \\times R`
+
+
+def _fit_gaussian(z: Tensor, y: Tensor, n_classes: int, eps: float, use_pinv: bool) -> _Gaussian:
     """
     Class means and shared within-class covariance (centered outer products divided by :math:`N`,
-    as sklearn's ``EmpiricalCovariance``), plus its inverse. Computed in :func:`_linalg_dtype`,
-    returned in the dtype of ``z``.
+    as sklearn's ``EmpiricalCovariance``), plus its inverse and a factor :math:`L` of the inverse.
+    Computed in :func:`_linalg_dtype`, returned in the dtype of ``z``.
 
     With ``use_pinv``, the pseudo-inverse discards directions without variance and ``eps`` is not
     used: a ridge would turn them into directions of precision ``1 / eps``, and whether ``pinv`` keeps
@@ -115,9 +128,10 @@ def _fit_gaussian(
     :param z: features of shape :math:`N \\times D`
     :param y: class labels of shape :math:`N`, in :math:`0, \\ldots, C-1`
     :param n_classes: number of classes :math:`C`; all of them have to occur
-    :param eps: added to the diagonal of the covariance before ``inv``
-    :param use_pinv: use ``pinv`` instead of a regularized ``inv``
-    :return: means :math:`C \\times D`, covariance :math:`D \\times D`, precision :math:`D \\times D`
+    :param eps: added to the diagonal of the covariance before inversion
+    :param use_pinv: use the pseudo-inverse instead of the inverse of the regularized covariance
+    :return: the fitted Gaussians
+    :raises ValueError: if not ``use_pinv`` and the regularized covariance is not positive definite
     """
     dtype = _linalg_dtype(z.device)
     z = z.detach()
@@ -132,12 +146,56 @@ def _fit_gaussian(
         centered = z_k - mu[k]
         cov += centered.T @ centered
     cov /= z.shape[0]
-    if use_pinv:
-        precision = torch.linalg.pinv(cov, hermitian=True)
-    else:
+    if not use_pinv:
         cov = cov + eps * torch.eye(cov.shape[0], device=cov.device, dtype=dtype)
-        precision = torch.linalg.inv(cov)
-    return mu.to(z.dtype), cov.to(z.dtype), precision.to(z.dtype)
+    # Factor the covariance, not the precision: cholesky(inv(cov)) fails when cov is rank-deficient
+    # (fewer samples than dimensions, dead units), since inv(cov + eps I) then has eigenvalues ~1/eps
+    # and is not numerically positive definite.
+    if cov.device.type == "mps":
+        # eigh has no MPS kernel
+        lam, vec = (t.to(cov.device) for t in torch.linalg.eigh(cov.cpu()))
+    else:
+        lam, vec = torch.linalg.eigh(cov)
+    if use_pinv:
+        # the default cutoff of torch.linalg.pinv(hermitian=True)
+        keep = lam > torch.finfo(dtype).eps * d * lam.abs().max()
+        lam, vec = lam[keep], vec[:, keep]
+    elif lam.min() <= 0:
+        raise ValueError(
+            "The covariance matrix plus eps * I is not positive definite (smallest eigenvalue "
+            f"{lam.min():.1e}, eps={eps}); increase eps or use use_pinv=True"
+        )
+    whitening = vec * lam.rsqrt()
+    return _Gaussian(
+        mu=mu.to(z.dtype),
+        cov=cov.to(z.dtype),
+        precision=(whitening @ whitening.T).to(z.dtype),
+        whitening=whitening.to(z.dtype),
+        whitened_mu=(mu @ whitening).to(z.dtype),
+    )
+
+
+def _squared_mahalanobis(z: Tensor, whitening: Tensor, whitened_mu: Tensor) -> Tensor:
+    """
+    Squared Mahalanobis distances of every sample to every mean, as Euclidean distances in the
+    whitened space: :math:`\\|(z - \\mu_k) L\\|^2` with precision :math:`L L^\\top`.
+
+    :param z: features of shape :math:`B \\times D`
+    :param whitening: :attr:`_Gaussian.whitening` :math:`L`, shape :math:`D \\times R`
+    :param whitened_mu: :attr:`_Gaussian.whitened_mu`, shape :math:`C \\times R`
+    :return: distances of shape :math:`B \\times C`
+    """
+    # Costs B*D*R + B*C*R instead of C*B*D^2 for a loop over classes. The direct mode avoids
+    # cdist's |a|^2 - 2ab + |b|^2 expansion, which cancels catastrophically near a class mean.
+    # cdist runs in _linalg_dtype: on the CPU it sums the R squared differences sequentially, which
+    # in float32 costs ~1e-6 relative error at R=2048, amplified ~100x by RMD's difference of
+    # distances. The B*C*R work is small next to the projection.
+    w = z @ whitening
+    dtype = _linalg_dtype(w.device)
+    d = torch.cdist(
+        w.to(dtype), whitened_mu.to(dtype), compute_mode="donot_use_mm_for_euclid_dist"
+    )
+    return d.square().to(z.dtype)
 
 
 #######################################
