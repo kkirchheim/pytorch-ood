@@ -2,7 +2,8 @@ Utilities
 ************************************
 
 Helpers that the rest of the library builds on: hyperparameter optimization, the label
-conventions for in- and out-of-distribution samples, dataset transforms, and feature extraction.
+conventions for in- and out-of-distribution samples, dataset transforms, feature extraction, and
+nearest-neighbor search.
 
 .. py:module:: pytorch_ood.utils
 
@@ -45,6 +46,7 @@ Features
 
    utils/features
    utils/tensorbuffer
+   utils/neighbors
 
 
 Miscellaneous

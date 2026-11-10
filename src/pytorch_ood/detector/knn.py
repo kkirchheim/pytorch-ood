@@ -10,7 +10,7 @@
 import logging
 from typing import Callable, Optional
 
-from torch import Tensor, tensor
+from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
@@ -23,6 +23,7 @@ from ..api import (
     Task,
 )
 from ..utils import extract_features, is_known
+from ..utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +41,12 @@ class KNN(FeaturesDetector):
 
     where :math:`f` is the ``encoder`` and :math:`z_{(1)}, \\dots, z_{(n)}` are the normalized features of
     the fitted data, sorted by increasing distance to :math:`z`.
+
+    The neighbors are found by ``search``, by default an exact search with
+    :class:`TorchNearestNeighbors <pytorch_ood.utils.TorchNearestNeighbors>`. It keeps the
+    features of the fitted data in memory (:math:`n \\times D` values), on the detector's device:
+    :meth:`to` moves them. For a fitted set too large for the GPU, pin it to the CPU with
+    ``search=TorchNearestNeighbors(device="cpu")``.
 
     The original paper found that using contrastive pre-training could increase the performance.
     """
@@ -66,32 +73,33 @@ class KNN(FeaturesDetector):
         encoder: Optional[Callable[[Tensor], Tensor]],
         k: int = 50,
         normalize: bool = True,
-        **knn_kwargs,
+        search: Optional[NearestNeighborSearch] = None,
     ):
         """
         :param encoder: feature encoder :math:`f`. Can be ``None`` when using
             ``fit_features(...)`` and ``predict_features(...)`` directly.
         :param k: number of neighbors :math:`k`; the score is the distance to the :math:`k`-th
             nearest neighbor. The best value depends on the dataset, see
-            ``hyperparameter_space``.
+            ``hyperparameter_space``. It can be changed after fitting.
         :param normalize: whether to normalize the features to unit length,
             :math:`z = f(x) / \\lVert f(x) \\rVert_2`. If ``False``, :math:`z = f(x)`, and the
             distances also depend on the feature norms.
-        :param knn_kwargs: keyword arguments for :class:`sklearn.neighbors.NearestNeighbors`
-            (``n_jobs`` is fixed to -1)
+        :param search: nearest-neighbor search with ``metric == "sqeuclidean"``. Defaults to
+            :class:`TorchNearestNeighbors() <pytorch_ood.utils.TorchNearestNeighbors>`.
+        :raises ValueError: if ``search`` uses another metric
         """
         # k = 50 is the paper's choice for CIFAR-10 (200 for CIFAR-100, 1000 for ImageNet)
+        if search is None:
+            search = TorchNearestNeighbors()
+        if search.metric != "sqeuclidean":
+            raise ValueError(
+                f"KNN needs a search with metric 'sqeuclidean', got {search.metric!r}"
+            )
         self.encoder = encoder
         self.k = k
         self.normalize = normalize
-        self._is_fitted = False
-
-        try:
-            from sklearn.neighbors import NearestNeighbors
-        except ImportError:
-            raise ImportError("You have to install scikit-learn to use this detector")
-
-        self.knn: NearestNeighbors = NearestNeighbors(n_jobs=-1, **knn_kwargs)
+        self.search = search
+        self._n_fitted: Optional[int] = None
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -113,43 +121,46 @@ class KNN(FeaturesDetector):
     def predict_features(self, z: Tensor) -> Tensor:
         """
         :param z: features of shape :math:`B \\times D`
-        :return: outlier scores of shape :math:`B` (dtype ``float64``)
+        :return: outlier scores of shape :math:`B`, in the dtype of ``z``
         :raises RequiresFittingException: if the detector was not fitted
+        :raises ValueError: if ``k`` exceeds the number of fitted samples
         """
-
-        if not self._is_fitted:
+        if self._n_fitted is None:
             raise RequiresFittingException()
+        self._check_k(self._n_fitted, "fitted samples")
 
-        dist, idx = self.knn.kneighbors(
-            self._prepare(z.detach().cpu()).numpy(), n_neighbors=self.k, return_distance=True
-        )
-
-        # distance to the k-th nearest neighbor (largest of the k returned distances)
-        device = self.device or z.device
-        return tensor(dist[:, -1], device=device)
+        # squared distances, nearest first; the k-th is the last column
+        values, _ = self.search.search(self._prepare(z), self.k)
+        return values[:, -1].sqrt()
 
     def fit_features(self, z: Tensor, labels: Tensor) -> Self:
         """
-        Fits nearest neighbor model. Ignores OOD inputs.
+        Fits the nearest-neighbor search. Ignores OOD inputs.
 
-        :param z: features of shape :math:`N \\times D`, on the CPU and without gradient
+        :param z: features of shape :math:`N \\times D`
         :param labels: labels for features, shape :math:`N`
         :return: the fitted detector
         :raises ValueError: if ``labels`` contains fewer than ``k`` in-distribution samples
         """
-        known = is_known(labels)
+        known = is_known(labels).to(z.device)
 
         if not known.any():
             raise ValueError("No ID samples")
         n_known = int(known.sum())
-        if n_known < self.k:
-            raise ValueError(f"k={self.k} exceeds the number of ID samples ({n_known})")
+        self._check_k(n_known, "ID samples")
 
-        self.knn.fit(self._prepare(z[known]).numpy())
-
-        self._is_fitted = True
+        self.search.fit(self._prepare(z.detach()[known]))
+        # an unpinned backend follows the detector, like its other state
+        device = self.device
+        if device is not None:
+            self.search = self._move_value_to_device(self.search, device)
+        self._n_fitted = n_known
 
         return self
+
+    def _check_k(self, n: int, what: str) -> None:
+        if self.k > n:
+            raise ValueError(f"k={self.k} exceeds the number of {what} ({n})")
 
     def _prepare(self, z: Tensor) -> Tensor:
         if not self.normalize:
@@ -159,7 +170,7 @@ class KNN(FeaturesDetector):
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
-        Extracts features and fits the kNN-Model
+        Extracts features and fits the nearest-neighbor search.
 
         :param data_loader: data loader. OOD inputs will be ignored.
         :return: the fitted detector

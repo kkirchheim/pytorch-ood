@@ -25,6 +25,7 @@ from pytorch_ood.detector import (
     Gram,
     KLMatching,
     Mahalanobis,
+    MahalanobisODIN,
     MaxLogit,
     MaxSoftmax,
     MultiMahalanobis,
@@ -430,3 +431,33 @@ class TestDetectorDeviceHandling(unittest.TestCase):
         detector.fit(self.image_loader)
         scores = detector(torch.randn(8, 3, 8, 8))
         self._assert_scores(scores, self.device, batch_size=8)
+
+
+class _Movable:
+    """A plain object with its own ``to``, like a nearest-neighbour search backend."""
+
+    def __init__(self, device="cpu"):
+        self.device = torch.device(device)
+
+    def to(self, device):
+        # returns a copy, so the detector must store the return value
+        return _Movable(device)
+
+
+def test_to_moves_objects_with_their_own_to():
+    detector = MaxSoftmax(ClassificationModel())
+    detector.extra = _Movable()
+    detector.to("meta")
+    assert detector.extra.device.type == "meta"
+
+
+def test_to_moves_nested_detector():
+    """MahalanobisODIN keeps a Mahalanobis detector; ``to`` must move its fitted state too."""
+    model = ClassificationModel()
+    detector = MahalanobisODIN(model.features)
+    loader = DataLoader(TensorDataset(torch.randn(32, 10), torch.arange(32) % 3), batch_size=8)
+    detector.fit(loader)
+    detector.to("meta")
+    assert detector._base.mu.device.type == "meta"
+    assert detector._base.precision.device.type == "meta"
+    assert next(model.parameters()).device.type == "meta"

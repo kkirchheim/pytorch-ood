@@ -22,8 +22,7 @@ You can install the latest stable version directly via Python Packaging Index (P
 
    pip install pytorch-ood
 
-Some components need optional dependencies (scikit-learn for e.g. KNN and ViM, gdown for some
-dataset downloads). To install them as well:
+Some components need optional dependencies (gdown for some dataset downloads). To install them as well:
 
 .. code-block:: shell
 
