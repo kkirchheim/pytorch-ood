@@ -24,12 +24,7 @@ from ..api import (
     Task,
 )
 from ..utils import extract_features, is_known
-from ..utils.neighbors import (
-    NearestNeighborSearch,
-    TorchNearestNeighbors,
-    _check_k,
-    _check_search,
-)
+from ..utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors, _check_k, _check_search
 
 log = logging.getLogger(__name__)
 
@@ -150,8 +145,7 @@ class KNN(FeaturesDetector):
         :param z: features of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`, in the dtype of ``z``
         :raises RequiresFittingException: if the detector was not fitted
-        :raises ValueError: if ``k`` is below 1 or exceeds the number of fitted samples
-        :raises TypeError: if ``k`` is not an integer
+        :raises ValueError: if ``k`` exceeds the number of fitted samples
         """
         if not self._is_fitted:
             raise RequiresFittingException()
@@ -173,8 +167,7 @@ class KNN(FeaturesDetector):
         :param labels: labels for features, shape :math:`N`
         :return: the fitted detector
         :raises ValueError: if ``labels`` contains no or fewer than ``k`` in-distribution
-            samples, or ``k`` is below 1
-        :raises TypeError: if ``k`` is not an integer
+            samples
         """
         known = is_known(labels).to(z.device)
 

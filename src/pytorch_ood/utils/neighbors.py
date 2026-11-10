@@ -23,8 +23,6 @@ __all__ = ["NearestNeighborSearch", "TorchNearestNeighbors"]
 # block budget of the "auto" batch size off the GPU
 _CPU_BLOCK_BYTES = 1 << 30
 
-_METRICS = ("sqeuclidean", "inner_product")
-
 
 class NearestNeighborSearch(ABC):
     """
@@ -41,7 +39,7 @@ class NearestNeighborSearch(ABC):
 
 
         class CdistSearch(NearestNeighborSearch):
-            metric = "sqeuclidean"  # "inner_product" would return the largest values first
+            metric = "sqeuclidean"
 
             def fit(self, reference):
                 self.reference = reference
@@ -77,9 +75,7 @@ class NearestNeighborSearch(ABC):
     @abstractmethod
     def search(self, queries: Tensor, k: int) -> Tuple[Tensor, Tensor]:
         """
-        Find the :math:`k` nearest reference samples of each query, for :math:`1 \\le k \\le N`,
-        where the nearest have the smallest distances or the largest inner products (see
-        ``metric``).
+        Find the :math:`k` nearest reference samples of each query, for :math:`1 \\le k \\le N`.
 
         :param queries: queries of shape :math:`B \\times D`
         :param k: number of neighbors :math:`k`
@@ -134,10 +130,6 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         search = TorchNearestNeighbors(batch_size=256).fit(torch.randn(1000, 16))
         # squared distances to the 5 nearest reference samples, nearest first, and their indices
         distances, indices = search.search(torch.randn(8, 16), k=5)
-
-        # the 5 largest inner products instead, largest first
-        search = TorchNearestNeighbors(metric="inner_product").fit(torch.randn(1000, 16))
-        similarities, indices = search.search(torch.randn(8, 16), k=5)
     """
 
     def __init__(
@@ -171,9 +163,8 @@ class TorchNearestNeighbors(NearestNeighborSearch):
             raise ValueError(
                 f"batch_size must be 'auto', None or a positive integer, got {batch_size!r}"
             )
-        if metric not in _METRICS:
-            raise ValueError(f"metric must be one of {_METRICS}, got {metric!r}")
-        #: ``"sqeuclidean"`` or ``"inner_product"``, see :attr:`NearestNeighborSearch.metric`.
+        if metric not in ("sqeuclidean", "inner_product"):
+            raise ValueError(f"metric must be 'sqeuclidean' or 'inner_product', got {metric!r}")
         self.metric = metric
         #: Device the reference set is pinned to, or ``None`` if it follows :meth:`to`.
         self.device = torch.device(device) if device is not None else None
@@ -218,9 +209,8 @@ class TorchNearestNeighbors(NearestNeighborSearch):
 
         :param queries: queries of shape :math:`B \\times D`
         :param k: number of neighbors :math:`k`
-        :return: squared Euclidean distances of shape :math:`B \\times k`, ascending, or inner
-            products, descending (see ``metric``), and the indices of the neighbors in the
-            reference set, of shape :math:`B \\times k`. Both on the device of ``queries``, the
+        :return: values ordered as in ``metric`` and the indices of the neighbors in the
+            reference set, both of shape :math:`B \\times k` and on the device of ``queries``, the
             values in their dtype.
         :raises RequiresFittingException: if the search was not fitted
         :raises ValueError: if ``queries`` does not have shape :math:`B \\times D` with the
@@ -291,7 +281,6 @@ class TorchNearestNeighbors(NearestNeighborSearch):
 
 
 def _check_search(search: object, metric: str, owner: str) -> None:
-    # for detectors that take a search instance; the metric decides how they use the values
     if not isinstance(search, NearestNeighborSearch):
         raise TypeError(f"search must be an instance of NearestNeighborSearch, got {search!r}")
     actual = getattr(search, "metric", None)
@@ -300,8 +289,7 @@ def _check_search(search: object, metric: str, owner: str) -> None:
 
 
 def _check_k(k: object, n: Optional[int] = None, what: str = "samples") -> None:
-    # detectors check k at construction, fit and predict, since it can change in between
-    # (e.g. by GridSearch)
+    # detectors check k at construction, fit and predict: it can change in between (GridSearch)
     if not isinstance(k, numbers.Integral) or isinstance(k, bool):
         raise TypeError(f"k must be an integer, got {k!r}")
     if k < 1:

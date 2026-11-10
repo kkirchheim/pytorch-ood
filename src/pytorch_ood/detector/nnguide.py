@@ -14,7 +14,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from pytorch_ood.api import (
+from ..api import (
     DetectorInfo,
     FeaturesDetector,
     ModelNotSetException,
@@ -22,13 +22,8 @@ from pytorch_ood.api import (
     RequiresFittingException,
     Task,
 )
-from pytorch_ood.utils import apply_in_batches, extract_features, is_known
-from pytorch_ood.utils.neighbors import (
-    NearestNeighborSearch,
-    TorchNearestNeighbors,
-    _check_k,
-    _check_search,
-)
+from ..utils import apply_in_batches, extract_features, is_known
+from ..utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors, _check_k, _check_search
 
 log = logging.getLogger(__name__)
 
@@ -54,12 +49,8 @@ class NNGuide(FeaturesDetector):
     The paper builds the bank from a random subset of the training data (e.g. 1% for ImageNet),
     which you can do by fitting on a subset.
 
-    The :math:`k` largest inner products are found by ``search``, by default an exact search
-    with :class:`TorchNearestNeighbors <pytorch_ood.utils.TorchNearestNeighbors>`. That search
-    keeps the bank in memory (:math:`N \\times D` values) on the detector's device, and :meth:`to`
-    moves it. For a bank too large for the GPU, pin it to the CPU with
-    ``search=TorchNearestNeighbors(device="cpu", metric="inner_product")``; the search then runs
-    on the CPU.
+    The neighbors are found by ``search``, which keeps the bank on the detector's device. For a
+    bank too large for the GPU, pin the search to the CPU, as in the example.
 
     .. rubric:: Examples
 
@@ -101,17 +92,12 @@ class NNGuide(FeaturesDetector):
         """
         :param encoder: neural network that extracts penultimate-layer features :math:`f`
         :param head: callable that maps features to logits :math:`l` (e.g., a linear layer)
-        :param k: number :math:`k` of nearest neighbors for guidance. It can be changed after
-            fitting.
-        :param search: instance of a
-            :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>` with
-            ``metric == "inner_product"`` (see there for writing your own). Defaults to
-            :class:`TorchNearestNeighbors(metric="inner_product")
-            <pytorch_ood.utils.TorchNearestNeighbors>`. Fitting the detector fits this instance
-            and replaces its reference set, so give each detector its own instance.
+        :param k: number :math:`k` of nearest neighbors for guidance; can be changed after fitting
+        :param search: a :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>`
+            with ``metric == "inner_product"``, refitted by each fit (use one per detector).
+            Defaults to :class:`TorchNearestNeighbors <pytorch_ood.utils.TorchNearestNeighbors>`.
         :raises ValueError: if ``k`` is below 1 or ``search`` uses another metric
-        :raises TypeError: if ``k`` is not an integer or ``search`` is not an instance of
-            :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>`
+        :raises TypeError: if ``k`` is not an integer or ``search`` is not a search
         """
         super(NNGuide, self).__init__()
         _check_k(k)
@@ -153,17 +139,14 @@ class NNGuide(FeaturesDetector):
 
     def fit_features(self, z: Tensor, labels: Tensor, batch_size: int = 4096) -> Self:
         """
-        Build the energy-scaled feature bank from pre-extracted features and fit the search
-        with it. The bank is assembled on the device of ``z`` (the CPU for features from
-        :meth:`fit`), so a search pinned to the CPU never needs the whole bank on the GPU.
+        Build the energy-scaled feature bank from pre-extracted features, on the device of ``z``,
+        and fit the search with it.
 
         :param z: features of shape :math:`N \\times D`
         :param labels: class labels of shape :math:`N`; OOD samples (label below zero) are ignored
-        :param batch_size: number of samples passed through ``head`` at once; lower it to reduce
-            peak GPU memory
+        :param batch_size: number of samples processed at once; lower it to reduce peak GPU memory
         :return: self
-        :raise ValueError: if fewer than :math:`k` ID samples are given or :math:`k` is below 1
-        :raise TypeError: if :math:`k` is not an integer
+        :raise ValueError: if fewer than :math:`k` ID samples are given
         """
         known = is_known(labels).to(z.device)
         _check_k(self.k, int(known.sum()), "ID samples")
@@ -179,8 +162,7 @@ class NNGuide(FeaturesDetector):
             return F.normalize(z_batch, dim=1) * energy[:, None]
 
         self.search.fit(apply_in_batches(scaled, z, batch_size, device))
-        # an unpinned search follows the detector, like its other state; a pinned one stays
-        self.search.to(device)
+        self.search.to(device)  # no-op if pinned
         self._is_fitted = True
 
         return self
@@ -209,8 +191,7 @@ class NNGuide(FeaturesDetector):
         :param z: features of shape :math:`B \\times D`
         :return: outlier scores of shape :math:`B`
         :raise RequiresFittingException: if the detector has not been fitted
-        :raise ValueError: if ``k`` is below 1 or exceeds the number of fitted samples
-        :raise TypeError: if ``k`` is not an integer
+        :raise ValueError: if ``k`` exceeds the number of fitted samples
         """
         if not self._is_fitted:
             raise RequiresFittingException()
@@ -223,7 +204,6 @@ class NNGuide(FeaturesDetector):
             self.head.to(device)
 
         energy = torch.logsumexp(self.head(z), dim=1)
-        # the k largest inner products with the bank
         similarities, _ = self.search.search(F.normalize(z, dim=1), self.k)
         guidance = similarities.mean(dim=1)
 
@@ -232,13 +212,8 @@ class NNGuide(FeaturesDetector):
 
     def to(self, device: Union[str, torch.device]) -> Self:
         """
-        Move the detector's state to ``device``, including the bank in ``search`` unless the
-        search is pinned to a device.
-
-        :param device: target device, e.g. ``"cuda:0"`` or a :class:`torch.device`
-        :return: self
+        Move the detector to ``device``, including the bank unless the search is pinned.
         """
         super().to(device)
-        # in place; the return value is not needed
         self.search.to(device)
         return self
