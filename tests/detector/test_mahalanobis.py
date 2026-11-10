@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.api import RequiresFittingException
-from pytorch_ood.detector import Mahalanobis, MahalanobisODIN
+from pytorch_ood.detector import Mahalanobis, MahalanobisODIN, MultiMahalanobis
 from tests.helpers import ClassificationModel, points_with_covariance
 
 
@@ -249,3 +249,32 @@ def test_mahalanobis_odin_steps_against_gradient_of_closest_class_distance():
     expected = reference.predict_features(encoder(x.detach() - 0.01 * x.grad.sign()))
 
     torch.testing.assert_close(detector.predict(x.detach()), expected)
+
+
+@pytest.mark.parametrize("multi", [False, True], ids=["Mahalanobis", "MultiMahalanobis"])
+def test_near_singular_covariance_matches_float64_reference(multi):
+    """Two almost collinear units (covariance eigenvalue ~1e-9, as for the first convolution of a
+    WRN on CIFAR-100) make the precision ill-conditioned; float32 scores must still match a
+    float64 computation."""
+    g = torch.Generator().manual_seed(0)
+
+    def sample(n):
+        y = torch.arange(n) % 5
+        z = torch.randn(n, 16, generator=g) + 3 * centers[y]
+        z[:, -2] = z[:, -1] + 3e-5 * torch.randn(n, generator=g)
+        return z, y
+
+    centers = torch.randn(5, 16, generator=g)
+    z, y = sample(500)
+    x, _ = sample(64)
+    if multi:
+        scores = (
+            MultiMahalanobis([torch.nn.Identity()]).fit_structured([z], y).predict_structured([x])
+        )
+    else:
+        scores = Mahalanobis(None).fit_features(z, y).predict_features(x)
+    expected = _reference_scores(z, y, x, eps=1e-10, use_pinv=False)
+    # Scoring runs in the feature dtype: projecting float32 features of size ~3 that differ by ~3e-5
+    # onto a whitening direction of weight ~3e4 loses about 1e-3 (relative) to cancellation. A float32
+    # quadratic form with the precision matrix is off by a factor of ~200 here.
+    torch.testing.assert_close(scores.double(), expected, rtol=1e-2, atol=1e-2)
