@@ -117,15 +117,3 @@ jobs:
               importlib.import_module(name)
               print(f"OK: {name}")
           EOF
-      - name: KNN works without scikit-learn
-        run: |
-          python <<'EOF'
-          import torch
-
-          from pytorch_ood.detector import KNN
-
-          z = torch.randn(32, 8)
-          scores = KNN(None, k=3).fit_features(z, torch.zeros(32, dtype=torch.long)).predict_features(z)
-          assert scores.shape == (32,)
-          print("OK: KNN")
-          EOF

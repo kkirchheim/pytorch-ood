@@ -158,12 +158,10 @@ class KNN(FeaturesDetector):
 
         # squared distances, nearest first; the k-th is the last column
         values, _ = self.search.search(self._prepare(z), self.k)
-        # In float32, the squared distances carry cancellation errors proportional to the squared
-        # feature norms (around 1e-6 for normalized features, more with normalize=False), which
-        # the sqrt magnifies near 0: near-duplicates of fitted samples (e.g. k=1 on training data)
-        # score around 1e-3 instead of 0. Pass float64 features if that matters.
-        # The reference code scores with the squared distance (faiss IndexFlatL2); the sqrt
-        # follows the paper and does not change the ranking.
+        # the sqrt magnifies the search's float32 errors near 0: near-duplicates of fitted samples
+        # (e.g. k=1 on training data) score around 1e-3 instead of 0. The reference code scores
+        # with the squared distance (faiss IndexFlatL2); the sqrt follows the paper and does not
+        # change the ranking.
         return values[:, -1].sqrt()
 
     def fit_features(self, z: Tensor, labels: Tensor) -> Self:
