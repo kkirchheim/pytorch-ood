@@ -34,6 +34,8 @@ jobs:
           python -m pip install --upgrade pip
           # test requirements
           python -m pip install ruff pytest coverage
+          # reference implementation for the metric tests
+          python -m pip install scikit-learn
           # install depedencies + optional dependencies used by the test suite
           python -m pip install ".[all]"
       - name: Lint with ruff

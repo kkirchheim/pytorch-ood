@@ -1,6 +1,8 @@
 """The exported, concrete components of each package, for tests that check all of them."""
 
 import inspect
+import textwrap
+from typing import Iterator, Optional
 
 from torch import nn
 from torch.utils.data import Dataset
@@ -36,3 +38,18 @@ DATASETS = [
     for cls in _exported(package, Dataset, "pytorch_ood.dataset")
     if cls is not img.ImageListDataset
 ]
+
+
+def code_blocks(doc: Optional[str]) -> Iterator[str]:
+    """The content of every ``.. code-block:: python`` directive in a docstring."""
+    lines = (doc or "").splitlines()
+    for i, line in enumerate(lines):
+        if line.strip() != ".. code-block:: python":
+            continue
+        indent = len(line) - len(line.lstrip())
+        block = []
+        for body in lines[i + 1 :]:
+            if body.strip() and len(body) - len(body.lstrip()) <= indent:
+                break
+            block.append(body)
+        yield textwrap.dedent("\n".join(block)).strip()
