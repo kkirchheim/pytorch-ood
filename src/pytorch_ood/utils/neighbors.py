@@ -9,7 +9,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import ClassVar, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -21,6 +21,8 @@ __all__ = ["NearestNeighborSearch", "TorchNearestNeighbors"]
 
 # block budget of the "auto" batch size off the GPU
 _CPU_BLOCK_BYTES = 1 << 30
+
+_METRICS = ("sqeuclidean", "inner_product")
 
 
 class NearestNeighborSearch(ABC):
@@ -58,8 +60,9 @@ class NearestNeighborSearch(ABC):
     """
 
     #: What the values returned by :meth:`search` measure. ``"sqeuclidean"``: squared Euclidean
-    #: distances, ascending (nearest first).
-    metric: ClassVar[str]
+    #: distances, ascending (nearest first). ``"inner_product"``: inner products, descending
+    #: (largest first).
+    metric: str
 
     @abstractmethod
     def fit(self, reference: Tensor) -> Self:
@@ -73,15 +76,16 @@ class NearestNeighborSearch(ABC):
     @abstractmethod
     def search(self, queries: Tensor, k: int) -> Tuple[Tensor, Tensor]:
         """
-        Find the :math:`k` nearest reference samples of each query, for :math:`1 \\le k \\le N`.
+        Find the :math:`k` nearest reference samples of each query, for :math:`1 \\le k \\le N`,
+        where the nearest have the smallest distances or the largest inner products (see
+        ``metric``).
 
         :param queries: queries of shape :math:`B \\times D`
         :param k: number of neighbors :math:`k`
         :return: the values and the indices of the neighbors, both of shape
             :math:`B \\times k` and on the device of ``queries``. The values are in units of
-            ``metric`` (squared distances for ``"sqeuclidean"``), ordered from the nearest
-            neighbor to the :math:`k`-th, and in the dtype of ``queries``. The indices refer to
-            the reference set.
+            ``metric``, ordered from the nearest neighbor to the :math:`k`-th, and in the dtype
+            of ``queries``. The indices refer to the reference set.
         """
 
     @property
@@ -111,13 +115,13 @@ class TorchNearestNeighbors(NearestNeighborSearch):
 
     .. math:: \\lVert q \\rVert_2^2 + \\lVert r \\rVert_2^2 - 2 q^\\top r
 
-    in blocks of ``batch_size`` queries, so that a block needs memory for a
-    ``batch_size`` :math:`\\times N` matrix of distances. The reference set itself stays in memory
-    (:math:`N \\times D` values on its device).
+    and the inner product as :math:`q^\\top r`, in blocks of ``batch_size`` queries, so that a
+    block needs memory for a ``batch_size`` :math:`\\times N` matrix of values. The reference set
+    itself stays in memory (:math:`N \\times D` values on its device).
 
-    Distances are computed in the dtype of the reference set. In ``float32``, very close
-    neighbors lose relative precision, more so for samples with large norms; use ``float64``
-    samples if that matters.
+    Values are computed in the dtype of the reference set. In ``float32``, the distances of very
+    close neighbors lose relative precision, more so for samples with large norms; use
+    ``float64`` samples if that matters.
 
     .. rubric:: Examples
 
@@ -129,15 +133,17 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         search = TorchNearestNeighbors(batch_size=256).fit(torch.randn(1000, 16))
         # squared distances to the 5 nearest reference samples, nearest first, and their indices
         distances, indices = search.search(torch.randn(8, 16), k=5)
-    """
 
-    #: Squared Euclidean distances, ascending.
-    metric = "sqeuclidean"
+        # the 5 largest inner products instead, largest first
+        search = TorchNearestNeighbors(metric="inner_product").fit(torch.randn(1000, 16))
+        similarities, indices = search.search(torch.randn(8, 16), k=5)
+    """
 
     def __init__(
         self,
         device: Optional[Union[str, torch.device]] = None,
         batch_size: Union[int, Literal["auto"], None] = "auto",
+        metric: Literal["sqeuclidean", "inner_product"] = "sqeuclidean",
     ):
         """
         :param device: device to keep the reference set on. If given, the reference set is
@@ -147,8 +153,11 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         :param batch_size: number of queries per block. ``"auto"`` derives it on each call from
             the free GPU memory, or from a fixed budget of 1 GiB on other devices. ``None``
             processes all queries in one block, which needs memory for :math:`B \\times N`
-            distances.
-        :raises ValueError: if ``batch_size`` is not ``"auto"``, ``None`` or a positive integer
+            values.
+        :param metric: ``"sqeuclidean"`` for squared Euclidean distances, ascending, or
+            ``"inner_product"`` for inner products, descending
+        :raises ValueError: if ``batch_size`` is not ``"auto"``, ``None`` or a positive integer,
+            or ``metric`` is not one of the above
         """
         valid_int = (
             isinstance(batch_size, int) and not isinstance(batch_size, bool) and batch_size >= 1
@@ -161,6 +170,10 @@ class TorchNearestNeighbors(NearestNeighborSearch):
             raise ValueError(
                 f"batch_size must be 'auto', None or a positive integer, got {batch_size!r}"
             )
+        if metric not in _METRICS:
+            raise ValueError(f"metric must be one of {_METRICS}, got {metric!r}")
+        #: ``"sqeuclidean"`` or ``"inner_product"``, see :attr:`NearestNeighborSearch.metric`.
+        self.metric = metric
         #: Device the reference set is pinned to, or ``None`` if it follows :meth:`to`.
         self.device = torch.device(device) if device is not None else None
         #: Number of queries per block: ``"auto"``, ``None`` (one block) or an integer.
@@ -204,9 +217,10 @@ class TorchNearestNeighbors(NearestNeighborSearch):
 
         :param queries: queries of shape :math:`B \\times D`
         :param k: number of neighbors :math:`k`
-        :return: squared Euclidean distances of shape :math:`B \\times k`, ascending, and the
-            indices of the neighbors in the reference set, of shape :math:`B \\times k`. Both on
-            the device of ``queries``, the distances in their dtype.
+        :return: squared Euclidean distances of shape :math:`B \\times k`, ascending, or inner
+            products, descending (see ``metric``), and the indices of the neighbors in the
+            reference set, of shape :math:`B \\times k`. Both on the device of ``queries``, the
+            values in their dtype.
         :raises RequiresFittingException: if the search was not fitted
         :raises ValueError: if ``queries`` does not have shape :math:`B \\times D` with the
             :math:`D` of the reference set, or ``k`` is not between 1 and the size of the
@@ -226,19 +240,24 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         # queries are cast to the reference dtype (cheap), not the reference to the queries'
         # dtype, which would copy the whole reference set
         q = queries.detach().to(device=reference.device, dtype=reference.dtype)
-        # per call rather than cached at fit: costs 1/B of the distance computation
-        squared_norms = torch.einsum("nd,nd->n", reference, reference)
+        euclidean = self.metric == "sqeuclidean"
+        if euclidean:
+            # per call rather than cached at fit: costs 1/B of the distance computation
+            squared_norms = torch.einsum("nd,nd->n", reference, reference)
         rows = self._rows_per_block(q.shape[0], n, reference)
         values_list, indices_list = [], []
         # an empty batch is a single empty block
         for block in q.split(rows):
-            # ||q||^2 + ||r||^2 - 2 q.r; cancellation can make it slightly negative for
-            # (near-)duplicates, hence the clamp. The absolute error grows with the squared norms.
-            # With TF32 matmuls enabled (torch.set_float32_matmul_precision("high")), errors grow
-            # to about 1e-3.
-            d2 = torch.addmm(squared_norms, block, reference.T, alpha=-2)
-            d2.add_(torch.einsum("bd,bd->b", block, block)[:, None]).clamp_(min=0)
-            v, i = d2.topk(k, dim=1, largest=False)
+            if euclidean:
+                # ||q||^2 + ||r||^2 - 2 q.r; cancellation can make it slightly negative for
+                # (near-)duplicates, hence the clamp. The absolute error grows with the squared
+                # norms. With TF32 matmuls enabled (torch.set_float32_matmul_precision("high")),
+                # errors grow to about 1e-3.
+                d2 = torch.addmm(squared_norms, block, reference.T, alpha=-2)
+                d2.add_(torch.einsum("bd,bd->b", block, block)[:, None]).clamp_(min=0)
+                v, i = d2.topk(k, dim=1, largest=False)
+            else:
+                v, i = (block @ reference.T).topk(k, dim=1)
             values_list.append(v)
             indices_list.append(i)
         values, indices = torch.cat(values_list), torch.cat(indices_list)

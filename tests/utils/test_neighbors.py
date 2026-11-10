@@ -7,11 +7,19 @@ from tests.helpers import requires
 from tests.helpers.components import code_blocks
 
 
-def _reference_search(reference: torch.Tensor, queries: torch.Tensor, k: int):
-    """Brute-force k nearest neighbours in float64: squared Euclidean distances, ascending."""
-    d2 = torch.cdist(queries.double(), reference.double()) ** 2
-    values, indices = d2.sort(dim=1)
+def _reference_search(
+    reference: torch.Tensor, queries: torch.Tensor, k: int, metric: str = "sqeuclidean"
+):
+    """Brute-force k nearest neighbours in float64: squared Euclidean distances, ascending, or
+    inner products, descending."""
+    if metric == "sqeuclidean":
+        values, indices = (torch.cdist(queries.double(), reference.double()) ** 2).sort(dim=1)
+    else:
+        values, indices = (queries.double() @ reference.double().T).sort(dim=1, descending=True)
     return values[:, :k], indices[:, :k]
+
+
+METRICS = ["sqeuclidean", "inner_product"]
 
 
 @pytest.fixture
@@ -27,6 +35,19 @@ def test_is_a_nearest_neighbor_search():
     assert search.metric == "sqeuclidean"
     # the class itself is not a search, only its instances
     assert not isinstance(TorchNearestNeighbors, NearestNeighborSearch)
+
+
+def test_metric():
+    search = TorchNearestNeighbors(metric="inner_product")
+    assert search.metric == "inner_product"
+    # per instance, not per class
+    assert TorchNearestNeighbors().metric == "sqeuclidean"
+
+
+@pytest.mark.parametrize("metric", ["euclidean", "cosine", None])
+def test_invalid_metric_raises(metric):
+    with pytest.raises(ValueError, match="metric"):
+        TorchNearestNeighbors(metric=metric)
 
 
 def test_base_class_is_abstract():
@@ -82,11 +103,12 @@ def test_fit_rejects_non_2d_reference():
         TorchNearestNeighbors().fit(torch.randn(5))
 
 
+@pytest.mark.parametrize("metric", METRICS)
 @pytest.mark.parametrize("k", [1, 5, 50, 300])
-def test_matches_brute_force(data, k):
+def test_matches_brute_force(data, k, metric):
     reference, queries = data
-    values, indices = TorchNearestNeighbors().fit(reference).search(queries, k)
-    expected_values, expected_indices = _reference_search(reference, queries, k)
+    values, indices = TorchNearestNeighbors(metric=metric).fit(reference).search(queries, k)
+    expected_values, expected_indices = _reference_search(reference, queries, k, metric)
     assert values.shape == indices.shape == (40, k)
     torch.testing.assert_close(values, expected_values)
     # random Gaussian data: no ties, so the neighbours themselves must match
@@ -103,11 +125,27 @@ def test_values_ascending_and_non_negative(data):
     assert (values[:, 1:] >= values[:, :-1]).all()
 
 
-@pytest.mark.parametrize("batch_size", [1, 7, None, "auto", 10_000])
-def test_batch_size_does_not_change_results(data, batch_size):
+def test_inner_products_descending(data):
     reference, queries = data
-    expected = TorchNearestNeighbors(batch_size=None).fit(reference).search(queries, 5)
-    result = TorchNearestNeighbors(batch_size=batch_size).fit(reference).search(queries, 5)
+    values, _ = TorchNearestNeighbors(metric="inner_product").fit(reference).search(queries, 10)
+    assert (values[:, 1:] <= values[:, :-1]).all()
+    # inner products can be negative: no clamp
+    values, _ = TorchNearestNeighbors(metric="inner_product").fit(reference).search(queries, 300)
+    assert (values < 0).any()
+
+
+@pytest.mark.parametrize("metric", METRICS)
+@pytest.mark.parametrize("batch_size", [1, 7, None, "auto", 10_000])
+def test_batch_size_does_not_change_results(data, batch_size, metric):
+    reference, queries = data
+    expected = (
+        TorchNearestNeighbors(metric=metric, batch_size=None).fit(reference).search(queries, 5)
+    )
+    result = (
+        TorchNearestNeighbors(metric=metric, batch_size=batch_size)
+        .fit(reference)
+        .search(queries, 5)
+    )
     torch.testing.assert_close(result[0], expected[0])
     assert torch.equal(result[1], expected[1])
 
@@ -182,13 +220,14 @@ def test_pinned_cpu_with_accelerator_queries(data, accelerator):
 
 
 @requires(cuda=1)
-def test_unpinned_on_accelerator(data, accelerator):
+@pytest.mark.parametrize("metric", METRICS)
+def test_unpinned_on_accelerator(data, accelerator, metric):
     reference, queries = data
-    search = TorchNearestNeighbors(batch_size="auto").fit(reference).to(accelerator)
+    search = TorchNearestNeighbors(metric=metric, batch_size="auto").fit(reference).to(accelerator)
     assert search.reference.device == accelerator
     values, _ = search.search(queries, 5)
     assert values.device == queries.device
-    torch.testing.assert_close(values, _reference_search(reference, queries, 5)[0])
+    torch.testing.assert_close(values, _reference_search(reference, queries, 5, metric)[0])
 
 
 @pytest.mark.parametrize("k", [0, -1])
