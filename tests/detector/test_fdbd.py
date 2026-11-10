@@ -3,7 +3,6 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import fDBD
 from tests.helpers import ClassificationModel
 
@@ -45,13 +44,6 @@ class fDBDTest(unittest.TestCase):
 
         self.assertEqual(scores.shape, (20,))
         self.assertTrue(torch.isfinite(scores).all())
-
-    def test_nofit(self):
-        detector = fDBD(self.nn.features, self.head)
-        z = torch.randn(size=(5, 10))
-
-        with self.assertRaises(RequiresFittingException):
-            detector.predict_features(z)
 
     def test_ood_scores_higher(self):
         """ID points near class centers should score lower (less OOD) than far-away points."""

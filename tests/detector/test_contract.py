@@ -19,6 +19,8 @@ from pytorch_ood.api import (
     FeaturesDetector,
     GradientDetector,
     LogitsDetector,
+    ModelNotSetException,
+    RequiresFittingException,
     StructuredDetector,
 )
 from pytorch_ood.detector import (
@@ -189,6 +191,50 @@ def test_scores_on_a_differentiable_representation_are_not_differentiable(
     assert z.requires_grad  # the model's parameters require grad
 
     assert not getattr(detector, f"predict_{representation.kind}")(z).requires_grad
+
+
+# --- preconditions ------------------------------------------------------------------------------
+
+
+def _producer_name(cls: type) -> str:
+    """The constructor parameter that holds the model, encoder, backbone, layers or head."""
+    return list(inspect.signature(cls.__init__).parameters)[1]
+
+
+def _without_producer(detector: Detector) -> Detector:
+    setattr(detector, _producer_name(type(detector)), None)
+    return detector
+
+
+@pytest.mark.parametrize("case", _cases(_fits))
+def test_predict_before_fit_raises(case: DetectorCase, seed: torch.Generator):
+    with pytest.raises(RequiresFittingException):
+        case.build()(_inputs(case, seed))
+
+
+@pytest.mark.parametrize("case", _cases(lambda cls: _produced(cls) and _fits(cls)))
+def test_predict_on_representation_before_fit_raises(case: DetectorCase, seed: torch.Generator):
+    detector = case.build()
+    representation = _produced(type(detector))
+    with torch.no_grad():
+        z = getattr(detector, representation.producer)(_inputs(case, seed))
+
+    with pytest.raises(RequiresFittingException):
+        getattr(detector, f"predict_{representation.kind}")(z)
+
+
+@pytest.mark.parametrize("case", _cases())
+def test_predict_without_producer_raises(case: DetectorCase, seed: torch.Generator):
+    detector = _without_producer(_fitted(case))
+
+    with pytest.raises(ModelNotSetException):
+        detector(_inputs(case, seed))
+
+
+@pytest.mark.parametrize("case", _cases(_fits))
+def test_fit_without_producer_raises(case: DetectorCase):
+    with pytest.raises(ModelNotSetException):
+        _without_producer(case.build()).fit(case.make_fit_loader())
 
 
 # --- fitting ------------------------------------------------------------------------------------

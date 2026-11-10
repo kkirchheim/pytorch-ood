@@ -11,14 +11,12 @@ from typing import Callable, Optional
 
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from pytorch_ood.detector.mahalanobis import Mahalanobis
 
-from ..api import DetectorInfo, ModelNotSetException, Paper, RequiresFittingException, Task
+from ..api import DetectorInfo, Paper, RequiresFittingException, Task
 from ..utils import (
-    extract_features,
     is_known,
 )
 from ..utils.utils import _fit_gaussian, _squared_mahalanobis
@@ -74,24 +72,6 @@ class RMD(Mahalanobis):
         self.background_precision = None
         self._background_whitening: Tensor = None
         self._background_whitened_mu: Tensor = None
-
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Fit parameters of the multivariate Gaussians for the given loader.
-        Ignores OOD Inputs.
-
-        :param data_loader: data loader with training data
-        :return: self
-        :raises ValueError: if the regularized covariance is not positive definite
-        """
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        z, y = extract_features(data_loader, self.encoder, device=device)
-        return self.fit_features(z, y)
 
     def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
@@ -161,17 +141,3 @@ class RMD(Mahalanobis):
 
         score = torch.min(md_k - md_0.view(-1, 1), dim=1).values
         return score
-
-    @torch.no_grad()
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input batch, will be passed through the encoder
-        :return: relative Mahalanobis scores of shape :math:`B`
-        :raises ModelNotSetException: if ``encoder`` is ``None``
-        :raises RequiresFittingException: if the detector was not fitted
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-
-        features = self.encoder(x)
-        return self.predict_features(features)

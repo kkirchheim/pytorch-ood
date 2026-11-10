@@ -27,7 +27,6 @@ from ..api import (
 )
 from ..utils import (
     contains_unknown,
-    extract_features,
 )
 from ..utils.utils import _fit_gaussian, _squared_mahalanobis
 
@@ -100,24 +99,6 @@ class Mahalanobis(FeaturesDetector):
         self._whitening: Tensor = None
         self._whitened_mu: Tensor = None
 
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Fit parameters of the multivariate Gaussian.
-
-        :param data_loader: dataset to fit on. Should only contain in-distribution samples, with
-            contiguous class labels :math:`0, \\ldots, C-1`, all of which have to occur.
-        :return: the fitted detector
-        :raises ValueError: if the regularized covariance is not positive definite (e.g. ``eps=0``)
-        """
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        z, y = extract_features(data_loader, self.encoder, device)
-        return self.fit_features(z, y)
-
     def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
         Fit parameters of the multivariate Gaussian.
@@ -169,20 +150,6 @@ class Mahalanobis(FeaturesDetector):
         md_k = self._calc_gaussian_scores(z)
         score = -torch.max(md_k, dim=1).values
         return score
-
-    @torch.no_grad()
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input tensor, will be passed through ``encoder``
-        :return: outlier scores of shape :math:`B`
-        :raises ModelNotSetException: if ``encoder`` is ``None``
-        :raises RequiresFittingException: if the detector was not fitted
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-
-        features = self.encoder(x)
-        return self.predict_features(features)
 
     def _is_fitted(self) -> bool:
         # scoring needs the whitening computed by fit: mu/precision set by hand do not suffice, and
@@ -251,12 +218,22 @@ class MahalanobisODIN(GradientDetector):
         self.eps = eps
         self.norm_std = norm_std
 
+    @property
+    def encoder(self) -> Optional[Callable[[Tensor], Tensor]]:
+        """The feature encoder, shared with the underlying Mahalanobis detector."""
+        return self._base.encoder
+
+    @encoder.setter
+    def encoder(self, encoder: Optional[Callable[[Tensor], Tensor]]) -> None:
+        self._base.encoder = encoder
+
     def fit(self, data_loader: DataLoader) -> Self:
         """
         Fit the underlying Mahalanobis detector.
 
-        :param data_loader: dataset to fit on.
+        :param data_loader: loader yielding batches ``(x, y)``; OOD samples are ignored
         :return: the fitted detector
+        :raises ModelNotSetException: if ``encoder`` is ``None``
         :raises ValueError: if the regularized covariance is not positive definite
         """
         self._base.fit(data_loader)
@@ -280,8 +257,11 @@ class MahalanobisODIN(GradientDetector):
 
         :param x: input tensor
         :return: outlier scores of shape :math:`B`
+        :raises ModelNotSetException: if ``encoder`` is ``None``
         :raises RequiresFittingException: if the detector was not fitted
         """
+        if self.encoder is None:
+            raise ModelNotSetException
         if not self._base._is_fitted():
             raise RequiresFittingException
         x = self._odin_preprocess(x, x.device)

@@ -7,26 +7,21 @@
 
 """
 
-import logging
 import math
 from typing import Callable, Optional
 
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import (
     DetectorInfo,
     FeaturesDetector,
-    ModelNotSetException,
     RequiresFittingException,
     Task,
 )
-from ..utils import extract_features, is_known
+from ..utils import is_known
 from ..utils.utils import _linalg_dtype
-
-log = logging.getLogger(__name__)
 
 
 class GMM(FeaturesDetector):
@@ -70,28 +65,6 @@ class GMM(FeaturesDetector):
         self._precision = None  # (K, D, D)
         self._log_det = None  # (K,)
         self._log_weights = None  # (K,)
-
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Extract features and fit the GMM.
-
-        :param data_loader: data loader with training data. OOD samples are ignored.
-        :return: the fitted detector
-        :raises ModelNotSetException: if the detector has no ``encoder``
-        :raises ValueError: if the data contains no in-distribution sample, or a covariance matrix
-            is not positive definite even with the regularization ``reg``
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        z, y = extract_features(data_loader, self.encoder, device)
-        return self.fit_features(z, y)
 
     def fit_features(self, z: Tensor, labels: Tensor) -> Self:
         """
@@ -137,19 +110,6 @@ class GMM(FeaturesDetector):
         self._log_det = torch.stack(log_det)  # (K,)
         self._log_weights = torch.stack(log_weights).to(device)  # (K,)
         return self
-
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input tensor, will be passed through the encoder
-        :return: outlier scores of shape :math:`B`
-        :raises ModelNotSetException: if the detector has no ``encoder``
-        :raises RequiresFittingException: if the detector was not fitted
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        z = self.encoder(x)
-        return self.predict_features(z)
 
     def predict_features(self, z: Tensor) -> Tensor:
         """

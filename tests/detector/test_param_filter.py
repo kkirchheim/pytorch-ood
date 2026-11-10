@@ -96,12 +96,6 @@ class TestParamFilter(unittest.TestCase):
                     for name, param in self.model.named_parameters():
                         self.assertIsNone(param.grad, name)
 
-    def test_scores_do_not_require_grad(self):
-        for cls, _ in DETECTORS:
-            with self.subTest(cls.__name__):
-                scores = cls(self.model, param_filter=_only_classifier_weight)(self.x)
-                self.assertFalse(scores.requires_grad)
-
     def test_empty_selection_raises(self):
         for cls, module in DETECTORS:
             for batched in (True, False):

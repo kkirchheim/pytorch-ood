@@ -122,12 +122,12 @@ class MultiMahalanobis(StructuredDetector):
         :param data_loader: dataset to fit on.
         :return: self
         :raises ValueError: if the regularized covariance is not positive definite (e.g. ``eps=0``)
+        :raises ModelNotSetException: if ``model`` is empty
         """
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
+        if not self.model:
+            raise ModelNotSetException
+
+        device = self._fit_device()
 
         zs = []
 

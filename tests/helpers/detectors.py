@@ -225,7 +225,7 @@ DETECTOR_CASES = [
     DetectorCase(
         "ReAct",
         _classifier,
-        lambda m: ReAct(backbone=m.features, head=m.classifier, threshold=1.0),
+        lambda m: ReAct(backbone=m.features, head=m.classifier),
         VECTOR,
     ),
     DetectorCase(

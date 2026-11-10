@@ -4,7 +4,6 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import ReAct
 from pytorch_ood.model import WideResNet
 from tests.helpers import sample_dataset
@@ -43,16 +42,6 @@ class TestReAct(unittest.TestCase):
         )
         output = detector(torch.randn(size=(8, 3, 32, 32)))
         self.assertIsNotNone(output)
-
-    def test_predict_without_threshold_raises(self):
-        """Without a threshold or fit, prediction must fail explicitly."""
-        model = WideResNet(num_classes=10).eval()
-        detector = ReAct(
-            backbone=model.feature_maps,
-            head=model.forward_feature_maps,
-        )
-        with self.assertRaises(RequiresFittingException):
-            detector(torch.randn(size=(8, 3, 32, 32)))
 
     def test_threshold_matches_percentile(self):
         """fit_feature_maps sets the threshold to the requested activation percentile."""

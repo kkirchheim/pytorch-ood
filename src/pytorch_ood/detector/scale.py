@@ -130,17 +130,6 @@ class SCALE(FeatureMapsDetector):
         self.percentile = _check_fraction("percentile", percentile)
         self.detector = detector or EnergyBased.score
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input batch, will be passed through the backbone and head
-        :return: outlier scores of shape :math:`B`
-        """
-        device = self.device
-        if device is not None:
-            x = x.to(device)
-        x = self.backbone(x)
-        return self.predict_feature_maps(x)
-
     @torch.no_grad()
     def predict_feature_maps(self, feature_maps: Tensor) -> Tensor:
         """

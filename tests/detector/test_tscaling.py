@@ -3,7 +3,6 @@ import unittest
 import torch
 from torch.utils.data import DataLoader
 
-from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import TemperatureScaling
 from tests.helpers import ClassificationModel, sample_dataset
 
@@ -12,15 +11,6 @@ class TestTScaling(unittest.TestCase):
     """
     Tests for Temperature Scaling
     """
-
-    def test_requires_fitting(self):
-        model = ClassificationModel()
-        detector = TemperatureScaling(model)
-
-        x = torch.zeros(size=(128, 10))
-
-        with self.assertRaises(RequiresFittingException):
-            y = detector(x)
 
     def test_input(self):
         """ """

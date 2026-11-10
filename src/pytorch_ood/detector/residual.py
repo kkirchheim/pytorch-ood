@@ -13,18 +13,15 @@ from typing import Callable, Optional
 
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import (
     DetectorInfo,
     FeaturesDetector,
-    ModelNotSetException,
     Paper,
     RequiresFittingException,
     Task,
 )
-from ..utils import extract_features
 from ..utils.utils import _gram_matrix, _linalg_dtype
 
 log = logging.getLogger(__name__)
@@ -116,22 +113,6 @@ class Residual(FeaturesDetector):
         x_p_t = (x - self.u) @ self.residual_subspace  # (N, D-d)
         return x_p_t.norm(dim=-1)  # (N,)
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: model input, will be passed through neural network
-        :return: outlier scores of shape :math:`B`
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-
-        if self.residual_subspace is None:
-            raise RequiresFittingException()
-
-        with torch.no_grad():
-            features = self.encoder(x)
-
-        return self.predict_features(features)
-
     def __repr__(self):
         return f"{self.__class__.__name__}(d={self.d})"
 
@@ -146,25 +127,6 @@ class Residual(FeaturesDetector):
             stacklevel=2,
         )
         return self.residual_subspace
-
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Extracts features and fits the detector. Ignores OOD samples.
-
-        :param data_loader: dataset to fit on
-        :return: self
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        features, labels = extract_features(data_loader, self.encoder, device)
-        return self.fit_features(features, labels)
 
     @torch.no_grad()
     def predict_features(self, x: Tensor) -> Tensor:

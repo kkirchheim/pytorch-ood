@@ -7,26 +7,21 @@
 
 """
 
-import logging
 from typing import Callable, Optional, Union
 
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import (
     DetectorInfo,
     FeaturesDetector,
-    ModelNotSetException,
     Paper,
     RequiresFittingException,
     Task,
 )
-from ..utils import extract_features, is_known
+from ..utils import is_known
 from ..utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors, _check_k, _check_search
-
-log = logging.getLogger(__name__)
 
 
 class KNN(FeaturesDetector):
@@ -123,23 +118,6 @@ class KNN(FeaturesDetector):
         self.search = search
         self._is_fitted = False
 
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: inputs, will be passed through ``encoder``
-        :return: outlier scores of shape :math:`B`
-        :raises ModelNotSetException: if the detector has no ``encoder``
-        :raises RequiresFittingException: if the detector was not fitted
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        device = self.device
-        if device is not None:
-            x = x.to(device)
-
-        z = self.encoder(x)
-        return self.predict_features(z)
-
     def predict_features(self, z: Tensor) -> Tensor:
         """
         :param z: features of shape :math:`B \\times D`
@@ -203,23 +181,3 @@ class KNN(FeaturesDetector):
             return z
         # the paper's normalization; the clamp keeps zero vectors finite
         return z / z.norm(dim=1, keepdim=True).clamp(min=1e-12)
-
-    def fit(self, data_loader: DataLoader) -> Self:
-        """
-        Extracts features and fits the nearest-neighbor search.
-
-        :param data_loader: data loader. OOD inputs will be ignored.
-        :return: the fitted detector
-        :raises ModelNotSetException: if the detector has no ``encoder``
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        z, y = extract_features(model=self.encoder, data_loader=data_loader, device=device)
-        return self.fit_features(z, y)

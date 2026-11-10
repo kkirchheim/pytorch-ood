@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import Mahalanobis, MultiMahalanobis
-from tests.helpers import ClassificationModel, points_with_covariance
+from tests.helpers import points_with_covariance
 from tests.helpers.model import ConvClassifier
 
 
@@ -34,14 +34,6 @@ class MultiMahalanobisTest(unittest.TestCase):
 
         self.assertIsNotNone(scores)
         self.assertEqual(scores.shape[0], 20)
-
-    def test_nofit(self):
-        nn = ClassificationModel()
-        model = MultiMahalanobis([nn.layer1, nn.dropout])
-        x = torch.randn(size=(20, 10))
-
-        with self.assertRaises(RequiresFittingException):
-            model(x)
 
     def test_refit_does_not_accumulate(self):
         """Re-fitting replaces parameters instead of appending (e.g. during HPO)."""

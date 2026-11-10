@@ -5,10 +5,8 @@ import torch.nn.functional as F
 from torch.optim import SGD
 from torch.utils.data import DataLoader
 
-from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import NCI
 from pytorch_ood.metrics import OODMetrics
-from pytorch_ood.model import WideResNet
 from tests.helpers import ClassificationModel, sample_dataset
 
 
@@ -16,20 +14,6 @@ class TestNCI(unittest.TestCase):
     """
     Tests for NCI (Neural Collapse Inspired) detector
     """
-
-    def test_nofitting(self):
-        """ """
-        model = WideResNet(num_classes=10).eval()
-
-        with self.assertRaises(RequiresFittingException):
-            detector = NCI(
-                encoder=model.feature_maps,
-                head=model.forward_feature_maps,
-            )
-
-            x = torch.randn(size=(16, 3, 32, 32))
-
-            detector(x)
 
     def test_full(self):
         """ """

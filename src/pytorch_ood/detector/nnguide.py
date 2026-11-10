@@ -17,7 +17,6 @@ from typing_extensions import Self
 from ..api import (
     DetectorInfo,
     FeaturesDetector,
-    ModelNotSetException,
     Paper,
     RequiresFittingException,
     Task,
@@ -119,22 +118,24 @@ class NNGuide(FeaturesDetector):
         :param device: device for feature extraction. If ``None``, the detector device is used, else the
             device of the encoder parameters, else ``cpu``.
         :return: self
-        :raise ValueError: if the data contains fewer than :math:`k` ID samples
+        :raises ModelNotSetException: if no encoder was given
+        :raises ValueError: if the data contains fewer than :math:`k` ID samples
         """
+        encoder = self._require_producer()
         if device is None:
             device = self.device
             if device is None:
-                if isinstance(self.encoder, torch.nn.Module):
-                    device = next(self.encoder.parameters()).device
+                if isinstance(encoder, torch.nn.Module):
+                    device = next(encoder.parameters()).device
                 else:
                     device = "cpu"
                 log.warning(f"No device given. Will use '{device}'.")
 
-        if isinstance(self.encoder, torch.nn.Module):
+        if isinstance(encoder, torch.nn.Module):
             log.debug(f"Moving model to {device}")
-            self.encoder.to(device)
+            encoder.to(device)
 
-        z, y = extract_features(model=self.encoder, data_loader=data_loader, device=device)
+        z, y = extract_features(model=encoder, data_loader=data_loader, device=device)
         return self.fit_features(z, y)
 
     def fit_features(self, z: Tensor, labels: Tensor, batch_size: int = 4096) -> Self:
@@ -166,22 +167,6 @@ class NNGuide(FeaturesDetector):
         self._is_fitted = True
 
         return self
-
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: model inputs
-        :return: outlier scores of shape :math:`B`
-        :raise ModelNotSetException: if no encoder was given
-        :raise RequiresFittingException: if the detector has not been fitted
-        """
-        if self.encoder is None:
-            raise ModelNotSetException()
-        if not self._is_fitted:
-            raise RequiresFittingException()
-
-        with torch.no_grad():
-            z = self.encoder(x)
-        return self.predict_features(z)
 
     @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:

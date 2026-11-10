@@ -7,7 +7,6 @@
 
 """
 
-import logging
 from typing import Callable, Optional
 
 import numpy as np
@@ -27,8 +26,6 @@ from ..api import (
 from ..utils import is_known
 from ..utils.utils import _check_fraction
 from .energy import EnergyBased
-
-log = logging.getLogger(__name__)
 
 
 class ReAct(FeatureMapsDetector):
@@ -118,20 +115,18 @@ class ReAct(FeatureMapsDetector):
 
         :param data_loader: training data; OOD samples (label ``< 0``) are ignored
         :return: self
-        :raise ValueError: if the loader contains no ID samples
+        :raises ModelNotSetException: if the detector has no ``backbone``
+        :raises ValueError: if the loader contains no ID samples
         """
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
+        backbone = self._require_producer()
+        device = self._fit_device()
 
         activations = []
         for x, y in data_loader:
             known = is_known(y)
             if not known.any():
                 continue
-            z = self.backbone(x[known].to(device))
+            z = backbone(x[known].to(device))
             activations.append(z.detach().flatten().cpu())
 
         if not activations:
@@ -159,17 +154,6 @@ class ReAct(FeatureMapsDetector):
     def _set_threshold_from_activations(self, activations: Tensor) -> None:
         self.threshold = float(np.percentile(activations.numpy(), self.percentile * 100))
         self._is_fitted = True
-
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        :param x: input batch, will be passed through the backbone and head
-        :return: outlier scores of shape :math:`B`
-        """
-        device = self.device
-        if device is not None:
-            x = x.to(device)
-        x = self.backbone(x)
-        return self.predict_feature_maps(x)
 
     @torch.no_grad()
     def predict_feature_maps(self, feature_maps: Tensor) -> Tensor:

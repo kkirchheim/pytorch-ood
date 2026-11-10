@@ -3,7 +3,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import ClassVar, Dict, FrozenSet, Iterable, List, Optional, Tuple, Union
+from typing import Callable, ClassVar, Dict, FrozenSet, Iterable, List, Optional, Union
 
 import torch
 from torch import Tensor
@@ -222,15 +222,19 @@ class Detector(ABC):
     :mod:`pytorch_ood.detector` defines its own.
     """
 
-    #: Names of the methods that score an already-extracted representation, e.g.
-    #: ``predict_logits``. A subclass's own definitions of these methods are wrapped so that
-    #: they run under :func:`torch.no_grad` (scores are not differentiable) and tensor
-    #: arguments are moved to the detector's device.
-    _representation_methods: ClassVar[Tuple[str, ...]] = ()
+    #: The representation a semantic base class adds an entry point for, e.g. ``"features"``:
+    #: ``predict_<kind>`` scores it and ``fit_<kind>`` fits on it. A subclass's own
+    #: ``predict_<kind>`` is wrapped so that it runs under :func:`torch.no_grad` (scores are not
+    #: differentiable) and tensor arguments are moved to the detector's device.
+    _kind: ClassVar[Optional[str]] = None
+    #: The attribute that computes the representation from raw inputs (``model``, ``encoder``,
+    #: ``backbone``), or ``None`` if there is no single one.
+    _producer_name: ClassVar[Optional[str]] = None
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        for name in cls._representation_methods:
+        if cls._kind is not None:
+            name = f"predict_{cls._kind}"
             method = cls.__dict__.get(name)
             if method is not None:
                 setattr(cls, name, Detector._wrap_representation_method(method))
@@ -248,6 +252,56 @@ class Detector(ABC):
                 return method(self, *args, **kwargs)
 
         return wrapped
+
+    def _require_producer(self) -> Callable[[Tensor], Tensor]:
+        """
+        The producer (see ``_producer_name``).
+
+        :raises ModelNotSetException: if it is ``None``
+        """
+        producer = getattr(self, self._producer_name, None)
+        if producer is None:
+            raise ModelNotSetException
+        return producer
+
+    def _fit_device(self) -> Union[str, torch.device]:
+        """
+        The detector's device, or ``"cpu"`` (with a warning, and the detector moved there) if it
+        has none.
+        """
+        device = self.device
+        if device is None:
+            device = "cpu"
+            log.warning(f"No device set. Will use '{device}'.")
+            self.to(device)
+        return device
+
+    def _predict_produced(self, x: Tensor) -> Tensor:
+        """
+        Moves ``x`` to the detector's device, computes its representation with the producer
+        under :func:`torch.no_grad` and scores it with ``predict_<kind>``.
+        """
+        producer = self._require_producer()
+        device = self.device
+        if device is not None:
+            x = x.to(device)
+        with torch.no_grad():
+            z = producer(x)
+        return getattr(self, f"predict_{self._kind}")(z)
+
+    def _fit_produced(self, data_loader: DataLoader) -> Self:
+        """
+        Extracts the representations of the ID samples in ``data_loader`` with the producer and
+        fits ``fit_<kind>`` on them. Does nothing if the detector requires no fitting.
+        """
+        if not self.requires_fit:
+            return self
+        producer = self._require_producer()
+
+        from .utils import extract_features
+
+        z, y = extract_features(data_loader, producer, device=self._fit_device())
+        return getattr(self, f"fit_{self._kind}")(z, y)
 
     @staticmethod
     def _move_value_to_device(value, device: torch.device):
@@ -453,7 +507,8 @@ class LogitsDetector(Detector):
     forward raw inputs through ``self.model`` to obtain logits first.
     """
 
-    _representation_methods = ("predict_logits",)
+    _kind = "logits"
+    _producer_name = "model"
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -464,45 +519,22 @@ class LogitsDetector(Detector):
 
         :param x: input batch, e.g. images of shape :math:`B \\times C \\times H \\times W`
         :return: outlier scores of shape :math:`B` (:math:`B \\times H \\times W` for grid-like
-            input), larger values indicate that the input is more likely to be out-of-distribution
+            input)
         :raises ModelNotSetException: if the detector has no model
         """
-        if not hasattr(self, "model") or self.model is None:
-            raise ModelNotSetException
-
-        detector_device = self.device
-        if detector_device is not None:
-            x = x.to(detector_device)
-
-        with torch.no_grad():
-            logits = self.model(x)
-        return self.predict_logits(logits)
+        return self._predict_produced(x)
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
-        Extract logits from a loader with the detector's model and forward them to
-        ``fit_logits(...)``.
+        Extract logits of the ID samples in a loader with the detector's model and forward them
+        to ``fit_logits(...)``. Does nothing if the detector requires no fitting.
 
-        :param data_loader: loader yielding batches ``(x, y)`` to extract logits from
+        :param data_loader: loader yielding batches ``(x, y)``; OOD samples are ignored
         :return: the fitted detector
         :raises ModelNotSetException: if the detector has no model
+        :raises ValueError: if the loader contains no ID samples
         """
-        if not self.requires_fit:
-            return self
-
-        if not hasattr(self, "model") or self.model is None:
-            raise ModelNotSetException
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        from .utils import extract_features
-
-        z, y = extract_features(data_loader=data_loader, model=self.model, device=device)
-        return self.fit_logits(z, y)
+        return self._fit_produced(data_loader)
 
     def fit_logits(self, logits: Tensor, y: Tensor) -> Self:
         """
@@ -535,14 +567,42 @@ class FeaturesDetector(Detector):
     Base class for detectors whose alternate public API consumes one feature tensor.
 
     Subclasses implement ``predict_features(...)`` and, when fitting is required,
-    ``fit_features(...)``.
+    ``fit_features(...)``. The default ``predict(x)`` and ``fit(data_loader)`` implementations
+    forward raw inputs through ``self.encoder`` to obtain features first.
 
     **Parameter naming convention**: Subclasses that accept a feature extractor should use
     the parameter name ``encoder`` to receive a callable that produces pooled feature vectors
     of shape :math:`B \\times D`, where :math:`B` is batch size and :math:`D` is feature dimension.
     """
 
-    _representation_methods = ("predict_features",)
+    _kind = "features"
+    _producer_name = "encoder"
+
+    def predict(self, x: Tensor) -> Tensor:
+        """
+        Apply the encoder and forward its features to ``predict_features(...)``.
+
+        ``x`` is moved to the detector's device (if one is set). The encoder is called as
+        is; it is not switched to evaluation mode.
+
+        :param x: input batch, e.g. images of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B`
+        :raises ModelNotSetException: if the detector has no encoder
+        :raises RequiresFittingException: if the detector requires fitting and was not fitted
+        """
+        return self._predict_produced(x)
+
+    def fit(self, data_loader: DataLoader) -> Self:
+        """
+        Extract features of the ID samples in a loader with the detector's encoder and forward
+        them to ``fit_features(...)``. Does nothing if the detector requires no fitting.
+
+        :param data_loader: loader yielding batches ``(x, y)``; OOD samples are ignored
+        :return: the fitted detector
+        :raises ModelNotSetException: if the detector has no encoder
+        :raises ValueError: if the loader contains no ID samples
+        """
+        return self._fit_produced(data_loader)
 
     def fit_features(self, x: Tensor, y: Tensor) -> Self:
         """
@@ -574,7 +634,9 @@ class FeatureMapsDetector(Detector):
     Base class for detectors whose alternate public API consumes feature maps.
 
     Subclasses implement ``predict_feature_maps(...)`` and, when fitting is
-    required, ``fit_feature_maps(...)``.
+    required, ``fit_feature_maps(...)`` and ``fit(data_loader)``. The default ``predict(x)``
+    forwards raw inputs through ``self.backbone`` to obtain feature maps first; there is no
+    default ``fit(data_loader)``.
 
     **Parameter naming convention**: Subclasses that accept a feature extractor should use
     the parameter name ``backbone`` to receive a callable that produces spatial feature maps
@@ -582,7 +644,24 @@ class FeatureMapsDetector(Detector):
     channels, and :math:`H, W` are spatial dimensions.
     """
 
-    _representation_methods = ("predict_feature_maps",)
+    _kind = "feature_maps"
+    _producer_name = "backbone"
+    # no default fit: extract_features flattens each sample, which would lose the C x H x W shape
+    # that fit_feature_maps needs
+
+    def predict(self, x: Tensor) -> Tensor:
+        """
+        Apply the backbone and forward its feature maps to ``predict_feature_maps(...)``.
+
+        ``x`` is moved to the detector's device (if one is set). The backbone is called as
+        is; it is not switched to evaluation mode.
+
+        :param x: input batch, e.g. images of shape :math:`B \\times C \\times H \\times W`
+        :return: outlier scores of shape :math:`B`
+        :raises ModelNotSetException: if the detector has no backbone
+        :raises RequiresFittingException: if the detector requires fitting and was not fitted
+        """
+        return self._predict_produced(x)
 
     def fit_feature_maps(self, feature_maps: Tensor, y: Tensor) -> Self:
         """
@@ -618,7 +697,7 @@ class StructuredDetector(Detector):
     inputs such as logits plus feature maps.
     """
 
-    _representation_methods = ("predict_structured",)
+    _kind = "structured"
 
     def fit_structured(self, *args, **kwargs) -> Self:
         """

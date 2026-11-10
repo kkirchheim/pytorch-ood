@@ -3,7 +3,6 @@ import unittest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorch_ood.api import ModelNotSetException, RequiresFittingException
 from pytorch_ood.detector import GMM
 from tests.helpers import ClassificationModel
 
@@ -67,24 +66,6 @@ class GMMTest(unittest.TestCase):
         scores = detector.predict_features(z)
 
         self.assertEqual(scores.shape, (20,))
-
-    def test_nofit(self):
-        nn = ClassificationModel()
-        detector = GMM(nn)
-        x = torch.randn(size=(20, 10))
-
-        with self.assertRaises(RequiresFittingException):
-            detector(x)
-
-    def test_no_model(self):
-        detector = GMM(encoder=None)
-
-        z = torch.randn(size=(20, 10))
-        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
-        detector.fit_features(z, y)
-
-        with self.assertRaises(ModelNotSetException):
-            detector(torch.randn(size=(5, 10)))
 
     def test_matches_mixture_nll(self):
         z, y = _classes()

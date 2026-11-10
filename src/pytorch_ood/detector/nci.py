@@ -7,8 +7,6 @@
     :exclude-members:
 """
 
-import logging
-
 import torch
 from torch import Tensor
 from torch.nn import Linear, Module
@@ -17,14 +15,10 @@ from typing_extensions import Self
 from ..api import (
     DetectorInfo,
     FeaturesDetector,
-    ModelNotSetException,
     Paper,
     RequiresFittingException,
     Task,
 )
-from ..utils import extract_features
-
-log = logging.getLogger(__name__)
 
 
 class NCI(FeaturesDetector):
@@ -78,25 +72,6 @@ class NCI(FeaturesDetector):
         self.alpha = alpha
         self.global_mean = None
 
-    def fit(self, data_loader) -> Self:
-        """
-        :param data_loader: data loader used to compute :math:`\\mu_g`. Labels are ignored, so it must
-            only contain ID data.
-        :return: self
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-
-        device = self.device
-        if device is None:
-            device = "cpu"
-            log.warning(f"No device set. Will use '{device}'.")
-            self.to(device)
-
-        z, y = extract_features(data_loader, self.encoder, device=device)
-
-        return self.fit_features(z)
-
     def fit_features(self, z: torch.Tensor, *args, **kwargs) -> Self:
         """
         :param z: features :math:`h` of the fitting set, of shape :math:`N \\times D`, used to compute :math:`\\mu_g`.
@@ -107,19 +82,6 @@ class NCI(FeaturesDetector):
         z = z.detach().to(device).float()
         self.global_mean = z.mean(dim=0)
         return self
-
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        Calculate outlier score for inputs, which will be passed through the encoder.
-
-        :param x: input tensor, will be passed through model
-
-        :return: outlier scores of shape :math:`B`
-        """
-        if self.encoder is None:
-            raise ModelNotSetException
-
-        return self.predict_features(self.encoder(x))
 
     def _cos(self, centered_features: Tensor, class_weight_vectors: Tensor) -> Tensor:
         # dot product between class vectors and centered features
