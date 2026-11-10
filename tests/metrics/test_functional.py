@@ -21,9 +21,6 @@ try:
 except ImportError:  # pragma: no cover
     SKLEARN = False
 
-CUDA = torch.cuda.is_available()
-DEVICES = ["cpu"] + (["cuda"] if CUDA else [])
-
 
 def _reference(scores: torch.Tensor, labels: torch.Tensor, tpr: float = 0.95) -> dict:
     """sklearn values; OOD (label < 0) is the positive class."""
@@ -317,7 +314,7 @@ class TestEdgeCases(unittest.TestCase):
         expected = (greater + ties / 2) / (len(ood) * len(ind))
         self.assertAlmostEqual(float(F.auroc(scores, labels)), float(expected), places=12)
 
-    def test_more_samples_than_float32_counts(self):
+    def _check_float32_counts(self, device: str) -> None:
         # float32 represents integers above 2^24 only approximately (odd ones not at all); the
         # counts must stay exact. CUDA accumulates float32 sums in float32 (the CPU in float64),
         # so both are checked.
@@ -329,32 +326,33 @@ class TestEdgeCases(unittest.TestCase):
         n_id, n_ood = n_low + 2001, 2001
         # OOD at 1 are above the n_low ID at 0, OOD at -1 are below all
         expected = Fraction(1001 * n_low, n_id * n_ood)
-        for device in DEVICES:
-            with self.subTest(device=device):
-                s, y = scores.to(device), labels.to(device)
-                counts = F._Counts(s, y < 0)
-                self.assertEqual(counts.fps.tolist(), [2001, 2001, n_id, n_id])
-                self.assertEqual(counts.tps.tolist(), [0, 1001, 1001, n_ood])
-                self.assertAlmostEqual(float(F.auroc(s, y)), float(expected), places=12)
-                self.assertEqual(float(F.fpr_at_tpr(s, y, 0.5)), 2001 / n_id)
-                # thresholds 1 (1001 of 2001 OOD, 2001 ID above) and -1 (all samples) raise
-                # the recall of OOD; 0 (n_low ID) and 2 (the remaining ID) that of ID
-                ap_out = Fraction(1001, 2001) * Fraction(1001, 3002) + Fraction(
-                    1000, 2001
-                ) * Fraction(n_ood, n_id + n_ood)
-                ap_in = Fraction(n_low, n_id) * Fraction(n_low, n_low + 1000) + Fraction(
-                    2001, n_id
-                ) * Fraction(n_id, n_id + n_ood)
-                self.assertAlmostEqual(
-                    float(F.average_precision(s, y, "ood")), float(ap_out), places=12
-                )
-                self.assertAlmostEqual(
-                    float(F.average_precision(s, y, "id")), float(ap_in), places=12
-                )
-                # the same with the classes swapped, so that the OOD counts are large
-                counts = F._Counts(-s, y >= 0)
-                self.assertEqual(counts.tps.tolist(), [0, n_low, n_low, n_id])
-                self.assertEqual(counts.fps.tolist(), [1000, 1000, 2001, 2001])
+        s, y = scores.to(device), labels.to(device)
+        counts = F._Counts(s, y < 0)
+        self.assertEqual(counts.fps.tolist(), [2001, 2001, n_id, n_id])
+        self.assertEqual(counts.tps.tolist(), [0, 1001, 1001, n_ood])
+        self.assertAlmostEqual(float(F.auroc(s, y)), float(expected), places=12)
+        self.assertEqual(float(F.fpr_at_tpr(s, y, 0.5)), 2001 / n_id)
+        # thresholds 1 (1001 of 2001 OOD, 2001 ID above) and -1 (all samples) raise
+        # the recall of OOD; 0 (n_low ID) and 2 (the remaining ID) that of ID
+        ap_out = Fraction(1001, 2001) * Fraction(1001, 3002) + Fraction(1000, 2001) * Fraction(
+            n_ood, n_id + n_ood
+        )
+        ap_in = Fraction(n_low, n_id) * Fraction(n_low, n_low + 1000) + Fraction(
+            2001, n_id
+        ) * Fraction(n_id, n_id + n_ood)
+        self.assertAlmostEqual(float(F.average_precision(s, y, "ood")), float(ap_out), places=12)
+        self.assertAlmostEqual(float(F.average_precision(s, y, "id")), float(ap_in), places=12)
+        # the same with the classes swapped, so that the OOD counts are large
+        counts = F._Counts(-s, y >= 0)
+        self.assertEqual(counts.tps.tolist(), [0, n_low, n_low, n_id])
+        self.assertEqual(counts.fps.tolist(), [1000, 1000, 2001, 2001])
+
+    def test_more_samples_than_float32_counts(self):
+        self._check_float32_counts("cpu")
+
+    @requires(cuda=1)
+    def test_more_samples_than_float32_counts_on_cuda(self):
+        self._check_float32_counts("cuda")
 
 
 def _exact_pr_areas(scores, positive):
