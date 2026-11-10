@@ -86,11 +86,9 @@ class MultiMahalanobis(StructuredDetector):
         :param alpha: weighting of the individual layers. Defaults to uniform weighting.
         :param eps: regularization constant added to the diagonal of each covariance matrix before
             inversion, so that the matrix is invertible. Not used if ``use_pinv`` is ``True``.
-        :param use_pinv: if ``True``, each precision matrix is the Moore-Penrose pseudo-inverse of the
-            unregularized covariance matrix instead of the inverse of the regularized one.
-            Directions without variance in the training features (relative to the largest
-            variance, below the default cutoff of :func:`torch.linalg.pinv`) then do not
-            contribute to the distance.
+        :param use_pinv: if ``True``, use the pseudo-inverse of each unregularized covariance
+            instead of the inverse of the regularized one, ignoring directions without variance
+            (cutoff as in :func:`torch.linalg.pinv`).
         """
         super(MultiMahalanobis, self).__init__()
 
@@ -102,11 +100,11 @@ class MultiMahalanobis(StructuredDetector):
         self.use_pinv = use_pinv
 
         # parameters of Gaussians
-        #: Centers (result of fit; changing it does not change the scores)
+        #: Centers (fitted; read-only)
         self.mu: List[Tensor] = []
-        #: Covariance Matrices (result of fit; changing it does not change the scores)
+        #: Covariance Matrices (fitted; read-only)
         self.cov: List[Tensor] = []
-        #: Precision Matrices (result of fit; changing it does not change the scores)
+        #: Precision Matrices (fitted; read-only)
         self.precision: List[Tensor] = []
         # per layer: factor L of the precision (P = L L^T) and mu @ L, used for scoring
         self._whitening: List[Tensor] = []
@@ -124,7 +122,7 @@ class MultiMahalanobis(StructuredDetector):
 
         :param data_loader: dataset to fit on.
         :return: self
-        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
+        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
         """
         device = self.device
         if device is None:
@@ -155,7 +153,7 @@ class MultiMahalanobis(StructuredDetector):
             and no OOD labels (below zero); OOD samples are not ignored and an ``AssertionError``
             is raised otherwise
         :return: self
-        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
+        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
         """
         device = self.device or zs[0].device
 

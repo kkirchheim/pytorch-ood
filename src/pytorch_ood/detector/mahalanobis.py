@@ -84,21 +84,19 @@ class Mahalanobis(FeaturesDetector):
         :param eps: regularization constant :math:`\\epsilon` added to the diagonal of the covariance matrix
             before inversion, so that the matrix is invertible. Set to ``0`` to disable regularization.
             Not used if ``use_pinv`` is ``True``.
-        :param use_pinv: if ``True``, the precision matrix is the Moore-Penrose pseudo-inverse of the
-            unregularized covariance matrix instead of the inverse of the regularized one.
-            Directions without variance in the training features (relative to the largest
-            variance, below the default cutoff of :func:`torch.linalg.pinv`) then do not
-            contribute to the distance.
+        :param use_pinv: if ``True``, use the pseudo-inverse of the unregularized covariance
+            instead of the inverse of the regularized one, ignoring directions without variance
+            (cutoff as in :func:`torch.linalg.pinv`).
         """
         super(Mahalanobis, self).__init__()
         self.encoder = encoder
         self.eps = eps
         self.use_pinv = use_pinv
-        #: Centers (result of fit; changing it does not change the scores)
+        #: Centers (fitted; read-only)
         self.mu: Tensor = None
-        #: Covariance Matrix (result of fit; changing it does not change the scores)
+        #: Covariance Matrix (fitted; read-only)
         self.cov: Tensor = None
-        #: Precision Matrix (result of fit; changing it does not change the scores)
+        #: Precision Matrix (fitted; read-only)
         self.precision: Tensor = None
         # factor L of the precision (P = L L^T) and mu @ L, used for scoring
         self._whitening: Tensor = None
@@ -111,7 +109,7 @@ class Mahalanobis(FeaturesDetector):
         :param data_loader: dataset to fit on. Should only contain in-distribution samples, with
             contiguous class labels :math:`0, \\ldots, C-1`, all of which have to occur.
         :return: the fitted detector
-        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
+        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
         """
         device = self.device
         if device is None:
@@ -130,7 +128,7 @@ class Mahalanobis(FeaturesDetector):
         :param y: class labels of shape :math:`N`, contiguous :math:`0, \\ldots, C-1`; all classes have to
             occur. OOD samples (labels below zero) are not supported and raise an ``AssertionError``.
         :return: the fitted detector
-        :raises ValueError: if the regularized covariance is singular, e.g. for ``eps=0``
+        :raises ValueError: if the regularized covariance is singular (e.g. ``eps=0``)
         """
         device = self.device or z.device
         z = z.detach().to(device)
