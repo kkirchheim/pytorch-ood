@@ -54,7 +54,7 @@ from pytorch_ood.detector import (
     ViM,
     fDBD,
 )
-from pytorch_ood.model import WideResNet, get_model_info, load_model, load_transform
+from pytorch_ood.model import get_model_info, load_model, load_transform
 from pytorch_ood.utils import fix_random_seed
 
 fix_random_seed(123)

@@ -11,7 +11,6 @@ from typing import Callable, Optional
 
 import torch.nn.functional as F
 from torch import Tensor
-from typing_extensions import Self
 
 from ..api import (
     DetectorInfo,

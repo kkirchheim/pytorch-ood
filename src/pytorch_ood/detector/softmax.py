@@ -12,7 +12,6 @@ from typing import Optional
 
 from torch import Tensor
 from torch.nn import Module
-from typing_extensions import Self
 
 from ..api import DetectorInfo, LogitsDetector, Paper, Task
 

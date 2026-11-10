@@ -5,7 +5,6 @@ Metrics for anomaly segmentation, where each pixel is a sample.
 import warnings
 from typing import Dict, Optional, Tuple
 
-import torch
 from torch import Tensor
 from typing_extensions import Self
 

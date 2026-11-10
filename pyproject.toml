@@ -9,7 +9,6 @@ exclude = [".git", "__pycache__", "venv", "docs"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "TID251", "TID253"]
 ignore = [
-    "F401",  # imported but unused (intentional re-exports in __init__.py)
     "F841",  # local variable assigned but never used
     "F403",  # from module import *
     "E501",  # line too long (enforced via line-length)
@@ -29,3 +28,5 @@ banned-module-level-imports = ["sklearn", "gdown", "pandas", "segmentation_model
 [tool.ruff.lint.per-file-ignores]
 # only library code is bound by the install_requires policy
 "!src/**" = ["TID253"]
+# intentional re-exports
+"__init__.py" = ["F401"]

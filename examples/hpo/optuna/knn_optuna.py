@@ -13,7 +13,7 @@ validation set. Ranges are defined by hand in the objective with ``trial.suggest
 import logging
 
 import optuna
-import pandas as pd
+import pandas as pd  # noqa: F401  (study.trials_dataframe needs pandas)
 import torch
 from torch.utils.data import DataLoader, Subset
 from torchvision.datasets import CIFAR10

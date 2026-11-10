@@ -12,7 +12,6 @@ from typing import Callable, Optional
 
 import torch
 from torch import Tensor
-from typing_extensions import Self
 
 from ..api import DetectorInfo, FeatureMapsDetector, Paper, Task
 from .energy import EnergyBased
