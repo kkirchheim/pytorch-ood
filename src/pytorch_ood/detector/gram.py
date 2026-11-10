@@ -157,11 +157,11 @@ class Gram(StructuredDetector):
 
         :param data_loader: data loader for training data
         :return: self
+        :raises ModelNotSetException: if ``head`` is ``None``
         :raises ValueError: if a class between ``0`` and ``num_classes - 1`` has no in-distribution samples
 
-        The held-out split is drawn with :func:`torch.randperm`, so results depend on the random seed. If a
-        class has fewer than 10 samples, no data is held out for it.
-        :raises ModelNotSetException: if ``head`` is ``None``
+        The held-out split is random but drawn with a fixed seed, so fitting again on the same data
+        gives the same detector. If a class has fewer than 10 samples, no data is held out for it.
         """
         if self.head is None:
             raise ModelNotSetException
@@ -193,12 +193,14 @@ class Gram(StructuredDetector):
                     log.debug(f"Fitting: {n}/{len(data_loader)}")
 
         # hold out a fraction of each class to estimate the expected deviation per layer
+        # a fixed seed: refitting must not depend on the global random state (fit is idempotent)
+        generator = torch.Generator().manual_seed(0)
         splits = {}
         for c in range(self.num_classes):
             if not collected[c][0][0]:
                 raise ValueError(f"No ID samples for class {c}")
             n_c = sum(t.shape[0] for t in collected[c][0][0])
-            perm = torch.randperm(n_c)
+            perm = torch.randperm(n_c, generator=generator)
             n_val = int(self.validation_fraction * n_c)
             splits[c] = (perm[n_val:], perm[:n_val])
 

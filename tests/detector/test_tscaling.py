@@ -1,44 +1,28 @@
-import unittest
+"""
+Value tests for :class:`TemperatureScaling`; the detector contract covers its API.
+"""
 
+from typing import Tuple
+
+import pytest
 import torch
-from torch.utils.data import DataLoader
+from torch import Tensor
 
 from pytorch_ood.detector import TemperatureScaling
-from tests.helpers import ClassificationModel, sample_dataset
 
 
-class TestTScaling(unittest.TestCase):
-    """
-    Tests for Temperature Scaling
-    """
+def _calibrated_after_dividing_by(t: float, n: int = 4000, c: int = 5) -> Tuple[Tensor, Tensor]:
+    """Logits ``t * z`` with labels drawn from ``softmax(z)``: dividing by ``t`` calibrates them."""
+    generator = torch.Generator().manual_seed(0)
+    z = 3 * torch.randn(n, c, generator=generator)
+    y = torch.multinomial(z.softmax(dim=1), 1, generator=generator).squeeze(1)
+    return t * z, y
 
-    def test_input(self):
-        """ """
-        model = ClassificationModel()
-        detector = TemperatureScaling(model)
 
-        x = torch.randn(size=(128, 10))
-        y = torch.randint(0, 2, size=(x.shape[0],))
-        detector.fit_logits(x, y)
+@pytest.mark.parametrize("t", [0.5, 4.0])
+def test_fit_recovers_the_calibrating_temperature(t: float):
+    logits, y = _calibrated_after_dividing_by(t)
 
-        print(detector.t)
-        self.assertIsNotNone(detector.t)
+    detector = TemperatureScaling(None).fit_logits(logits, y)
 
-        scores = detector.predict_logits(x)
-        self.assertIsNotNone(scores)
-
-    def test_input2(self):
-        """ """
-        model = ClassificationModel()
-        detector = TemperatureScaling(model)
-
-        ds = sample_dataset(n_dim=10)
-        loader = DataLoader(ds)
-
-        x = torch.randn(size=(128, 10))
-
-        scores = detector.fit(loader).predict(x)
-
-        print(detector.t)
-        self.assertIsNotNone(detector.t)
-        self.assertIsNotNone(scores)
+    assert detector.t.item() == pytest.approx(t, rel=0.05)
