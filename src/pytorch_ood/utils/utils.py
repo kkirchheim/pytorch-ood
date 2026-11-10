@@ -524,6 +524,41 @@ def extract_features(
     return z, y
 
 
+@torch.no_grad()
+def apply_in_batches(
+    fn: Callable[[Tensor], Tensor],
+    x: Tensor,
+    batch_size: int,
+    device: Optional[Union[str, torch.device]] = None,
+) -> Tensor:
+    """
+    Apply ``fn`` to blocks of ``batch_size`` rows of ``x`` on ``device``, so that memory there
+    scales with ``batch_size``, and collect the outputs in one tensor on the device of ``x``,
+    allocated once.
+
+    :param fn: function that maps a block of :math:`B` rows to :math:`B` outputs
+    :param x: input of shape :math:`N \\times \\dots`
+    :param batch_size: number of rows per block
+    :param device: device to apply ``fn`` on. If ``None``, the blocks are not moved.
+    :return: outputs of shape :math:`N \\times \\dots` on the device of ``x``
+    :raises ValueError: if ``x`` has no rows, or ``fn`` does not return one output per row
+    """
+    if x.shape[0] == 0:
+        raise ValueError("x must have at least one row")
+    out = None
+    for start in range(0, x.shape[0], batch_size):
+        block = x[start : start + batch_size].to(device)
+        y = fn(block)
+        if y.shape[0] != block.shape[0]:
+            raise ValueError(
+                f"fn must return one output per row, got {y.shape[0]} for {block.shape[0]} rows"
+            )
+        if out is None:
+            out = y.new_empty((x.shape[0], *y.shape[1:]), device=x.device)
+        out[start : start + y.shape[0]] = y
+    return out
+
+
 def to_np(x: Tensor):
     return x.data.cpu().numpy()
 

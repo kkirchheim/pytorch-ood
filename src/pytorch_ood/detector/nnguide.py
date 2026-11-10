@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import torch
 import torch.nn.functional as F
@@ -14,7 +14,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
 
-from pytorch_ood.api import (
+from ..api import (
     DetectorInfo,
     FeaturesDetector,
     ModelNotSetException,
@@ -22,7 +22,8 @@ from pytorch_ood.api import (
     RequiresFittingException,
     Task,
 )
-from pytorch_ood.utils import extract_features, is_known
+from ..utils import apply_in_batches, extract_features, is_known
+from ..utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors, _check_k, _check_search
 
 log = logging.getLogger(__name__)
 
@@ -48,18 +49,23 @@ class NNGuide(FeaturesDetector):
     The paper builds the bank from a random subset of the training data (e.g. 1% for ImageNet),
     which you can do by fitting on a subset.
 
+    The neighbors are found by ``search``, which keeps the bank on the detector's device. For a
+    bank too large for the GPU, pin the search to the CPU, as in the example.
+
     .. rubric:: Examples
 
     .. code-block:: python
 
-        model = WideResNet()
-        detector = NNGuide(
-            encoder=model.features,
-            head=model.fc,
-            k=10
-        )
-        detector.fit(train_loader)
-        scores = detector(images)
+        import torch
+        from pytorch_ood.detector import NNGuide
+        from pytorch_ood.utils import TorchNearestNeighbors
+
+        encoder, head = torch.nn.Linear(10, 16), torch.nn.Linear(16, 3)
+        # the bank stays on the CPU, also if the detector is moved to a GPU
+        search = TorchNearestNeighbors(device="cpu", metric="inner_product")
+        detector = NNGuide(encoder, head, k=5, search=search)
+        detector.fit_features(torch.randn(100, 16), torch.zeros(100, dtype=torch.long))
+        scores = detector(torch.randn(8, 10))
     """
 
     info = DetectorInfo(
@@ -81,17 +87,29 @@ class NNGuide(FeaturesDetector):
         encoder: Callable[[Tensor], Tensor],
         head: Callable[[Tensor], Tensor],
         k: int = 10,
+        search: Optional[NearestNeighborSearch] = None,
     ):
         """
         :param encoder: neural network that extracts penultimate-layer features :math:`f`
         :param head: callable that maps features to logits :math:`l` (e.g., a linear layer)
-        :param k: number :math:`k` of nearest neighbors for guidance
+        :param k: number :math:`k` of nearest neighbors for guidance; can be changed after fitting
+        :param search: a :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>`
+            with ``metric == "inner_product"``, refitted by each fit (use one per detector).
+            Defaults to :class:`TorchNearestNeighbors <pytorch_ood.utils.TorchNearestNeighbors>`.
+        :raises ValueError: if ``k`` is below 1 or ``search`` uses another metric
+        :raises TypeError: if ``k`` is not an integer or ``search`` is not a search
         """
         super(NNGuide, self).__init__()
+        _check_k(k)
+        self.k = k
+        if search is None:
+            search = TorchNearestNeighbors(metric="inner_product")
+        _check_search(search, "inner_product", "NNGuide")
         self.encoder = encoder
         self.head = head
-        self.k = k
-        self._scaled_features: Optional[Tensor] = None
+        #: The nearest-neighbor search, fitted with the energy-scaled bank of the ID samples.
+        self.search = search
+        self._is_fitted = False
 
     def fit(self, data_loader: DataLoader, device=None) -> Self:
         """
@@ -121,7 +139,8 @@ class NNGuide(FeaturesDetector):
 
     def fit_features(self, z: Tensor, labels: Tensor, batch_size: int = 4096) -> Self:
         """
-        Build the energy-scaled feature bank from pre-extracted features.
+        Build the energy-scaled feature bank from pre-extracted features, on the device of ``z``,
+        and fit the search with it.
 
         :param z: features of shape :math:`N \\times D`
         :param labels: class labels of shape :math:`N`; OOD samples (label below zero) are ignored
@@ -129,24 +148,22 @@ class NNGuide(FeaturesDetector):
         :return: self
         :raise ValueError: if fewer than :math:`k` ID samples are given
         """
-        known = is_known(labels)
-        if known.sum() < self.k:
-            raise ValueError(f"Need at least k={self.k} ID samples, got {int(known.sum())}")
+        known = is_known(labels).to(z.device)
+        _check_k(self.k, int(known.sum()), "ID samples")
 
         device = self.device or z.device
-        z = z[known].detach().float()
+        z = z[known].detach()
 
         if isinstance(self.head, torch.nn.Module):
             self.head.to(device)
 
-        # chunked, so that peak GPU memory scales with batch_size, not with the size of the bank
-        chunks = []
-        with torch.no_grad():
-            for start in range(0, z.shape[0], batch_size):
-                z_batch = z[start : start + batch_size].to(device)
-                energy = torch.logsumexp(self.head(z_batch), dim=1)
-                chunks.append(F.normalize(z_batch, dim=1) * energy[:, None])
-        self._scaled_features = torch.cat(chunks)
+        def scaled(z_batch: Tensor) -> Tensor:
+            energy = torch.logsumexp(self.head(z_batch), dim=1)
+            return F.normalize(z_batch, dim=1) * energy[:, None]
+
+        self.search.fit(apply_in_batches(scaled, z, batch_size, device))
+        self.search.to(device)  # no-op if pinned
+        self._is_fitted = True
 
         return self
 
@@ -159,7 +176,7 @@ class NNGuide(FeaturesDetector):
         """
         if self.encoder is None:
             raise ModelNotSetException()
-        if self._scaled_features is None:
+        if not self._is_fitted:
             raise RequiresFittingException()
 
         with torch.no_grad():
@@ -167,17 +184,18 @@ class NNGuide(FeaturesDetector):
         return self.predict_features(z)
 
     @torch.no_grad()
-    def predict_features(self, z: Tensor, batch_size: int = 65536) -> Tensor:
+    def predict_features(self, z: Tensor) -> Tensor:
         """
         Compute the NNGuide outlier score from pre-extracted features.
 
         :param z: features of shape :math:`B \\times D`
-        :param batch_size: number of bank entries compared at once; lower it to reduce peak memory
         :return: outlier scores of shape :math:`B`
         :raise RequiresFittingException: if the detector has not been fitted
+        :raise ValueError: if ``k`` exceeds the number of fitted samples
         """
-        if self._scaled_features is None:
+        if not self._is_fitted:
             raise RequiresFittingException()
+        _check_k(self.k, self.search.n_samples, "fitted samples")
 
         device = self.device or z.device
         z = z.to(device)
@@ -186,19 +204,16 @@ class NNGuide(FeaturesDetector):
             self.head.to(device)
 
         energy = torch.logsumexp(self.head(z), dim=1)
-        z_norm = F.normalize(z, dim=1)
-
-        # exact search for the k largest inner products, merged over chunks of the bank
-        top = z_norm.new_full((z.shape[0], 0), float("-inf"))
-        bank = self._scaled_features
-        for start in range(0, bank.shape[0], batch_size):
-            similarities = z_norm @ bank[start : start + batch_size].to(device).T
-            top = (
-                torch.cat([top, similarities], dim=1)
-                .topk(min(self.k, top.shape[1] + similarities.shape[1]), dim=1)
-                .values
-            )
-        guidance = top.mean(dim=1)
+        similarities, _ = self.search.search(F.normalize(z, dim=1), self.k)
+        guidance = similarities.mean(dim=1)
 
         # higher guidance * energy = more in-distribution, so negate for outlier score
         return -(guidance * energy)
+
+    def to(self, device: Union[str, torch.device]) -> Self:
+        """
+        Move the detector to ``device``, including the bank unless the search is pinned.
+        """
+        super().to(device)
+        self.search.to(device)
+        return self

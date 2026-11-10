@@ -8,8 +8,9 @@
 
 """
 
+import numbers
 from abc import ABC, abstractmethod
-from typing import ClassVar, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -58,8 +59,9 @@ class NearestNeighborSearch(ABC):
     """
 
     #: What the values returned by :meth:`search` measure. ``"sqeuclidean"``: squared Euclidean
-    #: distances, ascending (nearest first).
-    metric: ClassVar[str]
+    #: distances, ascending (nearest first). ``"inner_product"``: inner products, descending
+    #: (largest first).
+    metric: str
 
     @abstractmethod
     def fit(self, reference: Tensor) -> Self:
@@ -79,9 +81,8 @@ class NearestNeighborSearch(ABC):
         :param k: number of neighbors :math:`k`
         :return: the values and the indices of the neighbors, both of shape
             :math:`B \\times k` and on the device of ``queries``. The values are in units of
-            ``metric`` (squared distances for ``"sqeuclidean"``), ordered from the nearest
-            neighbor to the :math:`k`-th, and in the dtype of ``queries``. The indices refer to
-            the reference set.
+            ``metric``, ordered from the nearest neighbor to the :math:`k`-th, and in the dtype
+            of ``queries``. The indices refer to the reference set.
         """
 
     @property
@@ -111,13 +112,13 @@ class TorchNearestNeighbors(NearestNeighborSearch):
 
     .. math:: \\lVert q \\rVert_2^2 + \\lVert r \\rVert_2^2 - 2 q^\\top r
 
-    in blocks of ``batch_size`` queries, so that a block needs memory for a
-    ``batch_size`` :math:`\\times N` matrix of distances. The reference set itself stays in memory
-    (:math:`N \\times D` values on its device).
+    and the inner product as :math:`q^\\top r`, in blocks of ``batch_size`` queries, so that a
+    block needs memory for a ``batch_size`` :math:`\\times N` matrix of values. The reference set
+    itself stays in memory (:math:`N \\times D` values on its device).
 
-    Distances are computed in the dtype of the reference set. In ``float32``, very close
-    neighbors lose relative precision, more so for samples with large norms; use ``float64``
-    samples if that matters.
+    Values are computed in the dtype of the reference set. In ``float32``, the distances of very
+    close neighbors lose relative precision, more so for samples with large norms; use
+    ``float64`` samples if that matters.
 
     .. rubric:: Examples
 
@@ -131,13 +132,11 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         distances, indices = search.search(torch.randn(8, 16), k=5)
     """
 
-    #: Squared Euclidean distances, ascending.
-    metric = "sqeuclidean"
-
     def __init__(
         self,
         device: Optional[Union[str, torch.device]] = None,
         batch_size: Union[int, Literal["auto"], None] = "auto",
+        metric: Literal["sqeuclidean", "inner_product"] = "sqeuclidean",
     ):
         """
         :param device: device to keep the reference set on. If given, the reference set is
@@ -147,8 +146,11 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         :param batch_size: number of queries per block. ``"auto"`` derives it on each call from
             the free GPU memory, or from a fixed budget of 1 GiB on other devices. ``None``
             processes all queries in one block, which needs memory for :math:`B \\times N`
-            distances.
-        :raises ValueError: if ``batch_size`` is not ``"auto"``, ``None`` or a positive integer
+            values.
+        :param metric: ``"sqeuclidean"`` for squared Euclidean distances, ascending, or
+            ``"inner_product"`` for inner products, descending
+        :raises ValueError: if ``batch_size`` is not ``"auto"``, ``None`` or a positive integer,
+            or ``metric`` is not one of the above
         """
         valid_int = (
             isinstance(batch_size, int) and not isinstance(batch_size, bool) and batch_size >= 1
@@ -161,6 +163,9 @@ class TorchNearestNeighbors(NearestNeighborSearch):
             raise ValueError(
                 f"batch_size must be 'auto', None or a positive integer, got {batch_size!r}"
             )
+        if metric not in ("sqeuclidean", "inner_product"):
+            raise ValueError(f"metric must be 'sqeuclidean' or 'inner_product', got {metric!r}")
+        self.metric = metric
         #: Device the reference set is pinned to, or ``None`` if it follows :meth:`to`.
         self.device = torch.device(device) if device is not None else None
         #: Number of queries per block: ``"auto"``, ``None`` (one block) or an integer.
@@ -204,9 +209,9 @@ class TorchNearestNeighbors(NearestNeighborSearch):
 
         :param queries: queries of shape :math:`B \\times D`
         :param k: number of neighbors :math:`k`
-        :return: squared Euclidean distances of shape :math:`B \\times k`, ascending, and the
-            indices of the neighbors in the reference set, of shape :math:`B \\times k`. Both on
-            the device of ``queries``, the distances in their dtype.
+        :return: values ordered as in ``metric`` and the indices of the neighbors in the
+            reference set, both of shape :math:`B \\times k` and on the device of ``queries``, the
+            values in their dtype.
         :raises RequiresFittingException: if the search was not fitted
         :raises ValueError: if ``queries`` does not have shape :math:`B \\times D` with the
             :math:`D` of the reference set, or ``k`` is not between 1 and the size of the
@@ -226,19 +231,24 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         # queries are cast to the reference dtype (cheap), not the reference to the queries'
         # dtype, which would copy the whole reference set
         q = queries.detach().to(device=reference.device, dtype=reference.dtype)
-        # per call rather than cached at fit: costs 1/B of the distance computation
-        squared_norms = torch.einsum("nd,nd->n", reference, reference)
+        euclidean = self.metric == "sqeuclidean"
+        if euclidean:
+            # per call rather than cached at fit: costs 1/B of the distance computation
+            squared_norms = torch.einsum("nd,nd->n", reference, reference)
         rows = self._rows_per_block(q.shape[0], n, reference)
         values_list, indices_list = [], []
         # an empty batch is a single empty block
         for block in q.split(rows):
-            # ||q||^2 + ||r||^2 - 2 q.r; cancellation can make it slightly negative for
-            # (near-)duplicates, hence the clamp. The absolute error grows with the squared norms.
-            # With TF32 matmuls enabled (torch.set_float32_matmul_precision("high")), errors grow
-            # to about 1e-3.
-            d2 = torch.addmm(squared_norms, block, reference.T, alpha=-2)
-            d2.add_(torch.einsum("bd,bd->b", block, block)[:, None]).clamp_(min=0)
-            v, i = d2.topk(k, dim=1, largest=False)
+            if euclidean:
+                # ||q||^2 + ||r||^2 - 2 q.r; cancellation can make it slightly negative for
+                # (near-)duplicates, hence the clamp. The absolute error grows with the squared
+                # norms. With TF32 matmuls enabled (torch.set_float32_matmul_precision("high")),
+                # errors grow to about 1e-3.
+                d2 = torch.addmm(squared_norms, block, reference.T, alpha=-2)
+                d2.add_(torch.einsum("bd,bd->b", block, block)[:, None]).clamp_(min=0)
+                v, i = d2.topk(k, dim=1, largest=False)
+            else:
+                v, i = (block @ reference.T).topk(k, dim=1)
             values_list.append(v)
             indices_list.append(i)
         values, indices = torch.cat(values_list), torch.cat(indices_list)
@@ -268,3 +278,21 @@ class TorchNearestNeighbors(NearestNeighborSearch):
             budget = _CPU_BLOCK_BYTES
         # the distance block plus about as much workspace for topk
         return max(1, budget // (2 * n * reference.element_size()))
+
+
+def _check_search(search: object, metric: str, owner: str) -> None:
+    if not isinstance(search, NearestNeighborSearch):
+        raise TypeError(f"search must be an instance of NearestNeighborSearch, got {search!r}")
+    actual = getattr(search, "metric", None)
+    if actual != metric:
+        raise ValueError(f"{owner} needs a search with metric {metric!r}, got {actual!r}")
+
+
+def _check_k(k: object, n: Optional[int] = None, what: str = "samples") -> None:
+    # detectors check k at construction, fit and predict: it can change in between (GridSearch)
+    if not isinstance(k, numbers.Integral) or isinstance(k, bool):
+        raise TypeError(f"k must be an integer, got {k!r}")
+    if k < 1:
+        raise ValueError(f"k must be at least 1, got k={k}")
+    if n is not None and k > n:
+        raise ValueError(f"k={k} exceeds the number of {what} ({n})")

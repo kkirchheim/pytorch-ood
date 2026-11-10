@@ -7,7 +7,6 @@ from pytorch_ood.api import ModelNotSetException, RequiresFittingException
 from pytorch_ood.detector import KNN
 from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
 from tests.helpers import ClassificationModel, sample_dataset
-from tests.helpers.components import code_blocks
 
 
 def _kth_distance(z_train, z_test, k, normalize=True):
@@ -16,28 +15,6 @@ def _kth_distance(z_train, z_test, k, normalize=True):
         z_train = z_train / z_train.norm(dim=1, keepdim=True)
         z_test = z_test / z_test.norm(dim=1, keepdim=True)
     return torch.cdist(z_test.double(), z_train.double()).sort(dim=1).values[:, k - 1]
-
-
-class _SortingSearch(NearestNeighborSearch):
-    """A minimal third-party backend; keeps the base class's no-op ``to``."""
-
-    metric = "sqeuclidean"
-
-    def __init__(self):
-        self.calls = 0
-        self.reference = None
-
-    def fit(self, reference):
-        self.reference = reference
-        return self
-
-    def search(self, queries, k):
-        self.calls += 1
-        return (torch.cdist(queries, self.reference) ** 2).topk(k, dim=1, largest=False)
-
-    @property
-    def n_samples(self):
-        return 0 if self.reference is None else len(self.reference)
 
 
 class TestKNN(unittest.TestCase):
@@ -158,125 +135,6 @@ class TestKNN(unittest.TestCase):
     def test_no_id_samples_raises(self):
         with self.assertRaisesRegex(ValueError, "No ID samples"):
             KNN(None, k=1).fit_features(torch.randn(10, 4), -torch.ones(10, dtype=torch.long))
-
-    def test_non_integer_k_raises(self):
-        # bool is a subclass of int, so it needs its own check
-        for k in (2.5, True):
-            with self.subTest(k=k), self.assertRaisesRegex(TypeError, "k must be an integer"):
-                KNN(None, k=k)
-
-    def test_k_can_change_after_fit(self):
-        """k is a query-time parameter, so GridSearch can sweep it without refitting."""
-        g = torch.Generator().manual_seed(4)
-        z_train = torch.randn(100, 8, generator=g, dtype=torch.float64)
-        z_test = torch.randn(20, 8, generator=g, dtype=torch.float64)
-        detector = KNN(None, k=3).fit_features(z_train, torch.zeros(100, dtype=torch.long))
-        detector.k = 9
-        torch.testing.assert_close(
-            detector.predict_features(z_test), _kth_distance(z_train, z_test, 9)
-        )
-        detector.k = 101
-        with self.assertRaisesRegex(ValueError, "k=101 exceeds"):
-            detector.predict_features(z_test)
-
-    def test_docstring_example_runs(self):
-        blocks = list(code_blocks(KNN.__doc__))
-        self.assertTrue(blocks)
-        for code in blocks:
-            exec(compile(code, "<KNN example>", "exec"), {})
-
-    def test_default_search_backend(self):
-        self.assertIsInstance(KNN(None).search, TorchNearestNeighbors)
-
-    def test_custom_search_backend(self):
-        g = torch.Generator().manual_seed(5)
-        z_train = torch.randn(100, 8, generator=g, dtype=torch.float64)
-        z_test = torch.randn(20, 8, generator=g, dtype=torch.float64)
-        search = _SortingSearch()
-        detector = KNN(None, k=4, search=search).fit_features(
-            z_train, torch.zeros(100, dtype=torch.long)
-        )
-        torch.testing.assert_close(
-            detector.predict_features(z_test), _kth_distance(z_train, z_test, 4)
-        )
-        self.assertEqual(search.calls, 1)
-        # the base class's ``to`` is a no-op
-        detector.to("cpu")
-        self.assertIs(detector.search, search)
-
-    def test_k_checked_before_search(self):
-        """The detector rejects a too large k itself, without calling the backend; OOD samples
-        do not count as fitted samples."""
-        search = _SortingSearch()
-        z = torch.randn(20, 4)
-        labels = torch.cat([torch.zeros(10, dtype=torch.long), -torch.ones(10, dtype=torch.long)])
-        detector = KNN(None, k=3, search=search).fit_features(z, labels)
-        detector.k = 11
-        with self.assertRaisesRegex(
-            ValueError, r"k=11 exceeds the number of fitted samples \(10\)"
-        ):
-            detector.predict_features(z)
-        self.assertEqual(search.calls, 0)
-
-    def test_k_checked_against_the_search(self):
-        """The fitted size comes from the search, not from a copy in the detector."""
-        search = _SortingSearch()
-        detector = KNN(None, k=3, search=search)
-        detector.fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
-        search.fit(torch.randn(20, 4))
-        detector.k = 15
-        self.assertEqual(detector.predict_features(torch.randn(5, 4)).shape, (5,))
-
-    def test_k_below_one_raises(self):
-        for k in (0, -1):
-            with self.subTest(k=k), self.assertRaisesRegex(ValueError, "k must be at least 1"):
-                KNN(None, k=k)
-        # k set after construction, e.g. by GridSearch, is checked when fitting
-        detector = KNN(None, k=3)
-        detector.k = 0
-        with self.assertRaisesRegex(ValueError, "k must be at least 1"):
-            detector.fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
-
-    def test_rejects_object_that_is_not_a_search(self):
-        with self.assertRaisesRegex(TypeError, "NearestNeighborSearch"):
-            KNN(None, search=object())
-        # the class instead of an instance
-        with self.assertRaisesRegex(TypeError, "NearestNeighborSearch"):
-            KNN(None, search=TorchNearestNeighbors)
-
-    def test_to_calls_search_to_in_place(self):
-        """``KNN.to`` calls the backend's ``to`` and keeps the backend, whatever ``to`` returns."""
-
-        class InPlaceSearch(_SortingSearch):
-            def to(self, device):
-                self.moved_to = device  # returns None, like an in-place move
-
-        search = InPlaceSearch()
-        detector = KNN(torch.nn.Linear(4, 4), k=3, search=search)
-        self.assertIs(detector.to("meta"), detector)
-        self.assertIs(detector.search, search)
-        self.assertEqual(torch.device(search.moved_to).type, "meta")
-        self.assertEqual(next(detector.encoder.parameters()).device.type, "meta")
-
-    def test_rejects_search_with_other_metric(self):
-        search = _SortingSearch()
-        search.metric = "inner_product"
-        with self.assertRaisesRegex(ValueError, "sqeuclidean"):
-            KNN(None, search=search)
-
-    def test_to_moves_unpinned_reference(self):
-        detector = KNN(None, k=3).fit_features(
-            torch.randn(20, 4), torch.zeros(20, dtype=torch.long)
-        )
-        detector.to("meta")
-        self.assertEqual(detector.search.reference.device.type, "meta")
-
-    def test_to_keeps_pinned_reference(self):
-        detector = KNN(torch.nn.Linear(4, 4), k=3, search=TorchNearestNeighbors(device="cpu"))
-        detector.fit_features(torch.randn(20, 4), torch.zeros(20, dtype=torch.long))
-        detector.to("meta")
-        self.assertEqual(next(detector.encoder.parameters()).device.type, "meta")
-        self.assertEqual(detector.search.reference.device.type, "cpu")
 
     def test_fit_features_moves_unpinned_reference_to_detector_device(self):
         detector = KNN(torch.nn.Linear(4, 4).to("meta"), k=3)

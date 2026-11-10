@@ -5,7 +5,8 @@ from torch.utils.data import DataLoader
 
 from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import NNGuide
-from tests.helpers import ClassificationModel, sample_dataset
+from pytorch_ood.utils import NearestNeighborSearch, TorchNearestNeighbors
+from tests.helpers import ClassificationModel, requires, sample_dataset
 
 
 class TestNNGuide(unittest.TestCase):
@@ -58,7 +59,7 @@ class TestNNGuide(unittest.TestCase):
         detector.fit_features(features, labels)
 
         # only 50 ID samples should be in the bank
-        self.assertEqual(detector._scaled_features.shape[0], 50)
+        self.assertEqual(detector.search.n_samples, 50)
 
 
 def _reference_scores(head, z_train, z, k):
@@ -95,11 +96,14 @@ class TestNNGuideReference(unittest.TestCase):
                     expected = _reference_scores(self.head, self.z_train, self.z, k)
                 torch.testing.assert_close(detector.predict_features(self.z), expected)
 
-    def test_bank_chunks_do_not_change_scores(self):
-        detector = NNGuide(encoder=None, head=self.head, k=10)
-        detector.fit_features(self.z_train, torch.zeros(200, dtype=torch.long), batch_size=7)
+    def test_chunks_do_not_change_scores(self):
+        labels = torch.zeros(200, dtype=torch.long)
+        expected = NNGuide(encoder=None, head=self.head, k=10).fit_features(self.z_train, labels)
+        search = TorchNearestNeighbors(metric="inner_product", batch_size=3)
+        detector = NNGuide(encoder=None, head=self.head, k=10, search=search)
+        detector.fit_features(self.z_train, labels, batch_size=7)
         torch.testing.assert_close(
-            detector.predict_features(self.z, batch_size=3), detector.predict_features(self.z)
+            detector.predict_features(self.z), expected.predict_features(self.z)
         )
 
     def test_neighbors_weighted_by_energy(self):
@@ -123,3 +127,22 @@ class TestNNGuideReference(unittest.TestCase):
         labels = torch.cat([torch.zeros(5, dtype=torch.long), torch.full((20,), -1)])
         with self.assertRaises(ValueError):
             detector.fit_features(torch.randn(25, 6), labels)
+
+
+def test_fit_and_predict_match_features_path(seed):
+    """``fit(loader)`` and ``detector(x)`` score like ``fit_features`` and ``predict_features``
+    on the encoder's features."""
+    model = ClassificationModel(num_inputs=10, n_hidden=10, num_outputs=3).eval()
+    x_train = torch.randn(60, 10, generator=seed)
+    labels = torch.cat([torch.zeros(50, dtype=torch.long), -torch.ones(10, dtype=torch.long)])
+    x = torch.randn(8, 10, generator=seed)
+    loader = DataLoader(list(zip(x_train, labels)), batch_size=16)
+
+    detector = NNGuide(model.features, model.classifier, k=5).fit(loader)
+    with torch.no_grad():
+        expected = (
+            NNGuide(None, model.classifier, k=5)
+            .fit_features(model.features(x_train), labels)
+            .predict_features(model.features(x))
+        )
+    torch.testing.assert_close(detector(x), expected)

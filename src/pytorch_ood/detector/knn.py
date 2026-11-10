@@ -8,7 +8,6 @@
 """
 
 import logging
-import numbers
 from typing import Callable, Optional, Union
 
 import torch
@@ -25,7 +24,7 @@ from ..api import (
     Task,
 )
 from ..utils import extract_features, is_known
-from ..utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors
+from ..utils.neighbors import NearestNeighborSearch, TorchNearestNeighbors, _check_k, _check_search
 
 log = logging.getLogger(__name__)
 
@@ -113,15 +112,11 @@ class KNN(FeaturesDetector):
             :class:`NearestNeighborSearch <pytorch_ood.utils.NearestNeighborSearch>`
         """
         # k = 50 is the paper's choice for CIFAR-10 (200 for CIFAR-100, 1000 for ImageNet)
+        _check_k(k)
         self.k = k
-        self._check_k()
         if search is None:
             search = TorchNearestNeighbors()
-        if not isinstance(search, NearestNeighborSearch):
-            raise TypeError(f"search must be an instance of NearestNeighborSearch, got {search!r}")
-        metric = getattr(search, "metric", None)
-        if metric != "sqeuclidean":
-            raise ValueError(f"KNN needs a search with metric 'sqeuclidean', got {metric!r}")
+        _check_search(search, "sqeuclidean", "KNN")
         self.encoder = encoder
         self.normalize = normalize
         #: The nearest-neighbor search, fitted with the features of the ID samples.
@@ -154,7 +149,7 @@ class KNN(FeaturesDetector):
         """
         if not self._is_fitted:
             raise RequiresFittingException()
-        self._check_k(self.search.n_samples, "fitted samples")
+        _check_k(self.k, self.search.n_samples, "fitted samples")
 
         # squared distances, nearest first; the k-th is the last column
         values, _ = self.search.search(self._prepare(z), self.k)
@@ -179,7 +174,7 @@ class KNN(FeaturesDetector):
         if not known.any():
             raise ValueError("No ID samples")
         n_known = int(known.sum())
-        self._check_k(n_known, "ID samples")
+        _check_k(self.k, n_known, "ID samples")
 
         self.search.fit(self._prepare(z.detach()[known]))
         # an unpinned backend follows the detector, like its other state
@@ -202,15 +197,6 @@ class KNN(FeaturesDetector):
         # in place; the return value is not needed
         self.search.to(device)
         return self
-
-    def _check_k(self, n: Optional[int] = None, what: str = "samples") -> None:
-        # k can be changed after construction (e.g. by GridSearch), so fit and predict check again
-        if not isinstance(self.k, numbers.Integral) or isinstance(self.k, bool):
-            raise TypeError(f"k must be an integer, got {self.k!r}")
-        if self.k < 1:
-            raise ValueError(f"k must be at least 1, got k={self.k}")
-        if n is not None and self.k > n:
-            raise ValueError(f"k={self.k} exceeds the number of {what} ({n})")
 
     def _prepare(self, z: Tensor) -> Tensor:
         if not self.normalize:
