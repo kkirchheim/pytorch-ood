@@ -169,7 +169,7 @@ class NNGuide(FeaturesDetector):
         _check_k(self.k, int(known.sum()), "ID samples")
 
         device = self.device or z.device
-        z = z[known].detach().float()
+        z = z[known].detach()
 
         if isinstance(self.head, torch.nn.Module):
             self.head.to(device)

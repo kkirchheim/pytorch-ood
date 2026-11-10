@@ -231,11 +231,6 @@ class TestNNGuideSearch(unittest.TestCase):
         self.assertEqual(next(detector.head.parameters()).device.type, "meta")
         self.assertEqual(detector.search.reference.device.type, "cpu")
 
-    def test_bank_is_float32(self):
-        detector = NNGuide(None, self.head, k=3)
-        detector.fit_features(self.z_train.double(), self.labels)
-        self.assertEqual(detector.search.reference.dtype, torch.float32)
-
 
 def test_fit_and_predict_match_features_path(seed):
     """``fit(loader)`` and ``detector(x)`` score like ``fit_features`` and ``predict_features``
