@@ -105,14 +105,18 @@ jobs:
 
           modules = [
               "pytorch_ood",
+              "pytorch_ood.api",
+              "pytorch_ood.augment",
               "pytorch_ood.detector",
               "pytorch_ood.loss",
               "pytorch_ood.metrics",
               "pytorch_ood.model",
               "pytorch_ood.utils",
+              "pytorch_ood.dataset",
               "pytorch_ood.dataset.img",
               "pytorch_ood.dataset.txt",
               "pytorch_ood.dataset.audio",
+              "pytorch_ood.dataset.ossim",
               "pytorch_ood.benchmark",
           ]
           for name in modules:
