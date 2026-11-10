@@ -1,15 +1,8 @@
-import logging
 import sys
 
 from .dataset import points_with_covariance, sample_dataset
 from .hardware import requires
 from .model import ClassificationModel, SegmentationModel
-
-# set for testing
-logger = logging.getLogger()
-logger.level = logging.DEBUG
-stream_handler = logging.StreamHandler(sys.stdout)
-logger.addHandler(stream_handler)
 
 
 def for_examples(*parameters):
