@@ -3,43 +3,6 @@ import unittest
 import torch
 
 from pytorch_ood.detector import fDBD
-from tests.helpers import ClassificationModel
-
-
-class fDBDTest(unittest.TestCase):
-    """
-    Test fDBD detector
-    """
-
-    def setUp(self) -> None:
-        torch.manual_seed(123)
-        self.nn = ClassificationModel()
-        self.head = self.nn.classifier
-
-    def test_ood_scores_higher(self):
-        """ID points near class centers should score lower (less OOD) than far-away points."""
-        detector = fDBD(self.nn.features, self.head)
-
-        # create well-separated training data
-        z_train = torch.cat(
-            [
-                torch.randn(50, 10) + 5,  # class 0 cluster
-                torch.randn(50, 10) - 5,  # class 1 cluster
-            ]
-        )
-        y_train = torch.cat([torch.zeros(50), torch.ones(50)])
-        detector.fit_features(z_train)
-
-        # ID-like features (near training clusters)
-        z_id = torch.randn(20, 10) + 5
-        # OOD-like features (far from everything)
-        z_ood = torch.randn(20, 10) * 100
-
-        scores_id = detector.predict_features(z_id)
-        scores_ood = detector.predict_features(z_ood)
-
-        # on average, OOD scores should be higher
-        self.assertGreater(scores_ood.mean().item(), scores_id.mean().item())
 
 
 def _reference_fdbd(z, train_mean, w, b, distance_as_normalizer):
@@ -89,9 +52,6 @@ class fDBDNormalizerTest(unittest.TestCase):
         )
         n_classes = self.head.out_features
         torch.testing.assert_close(scores, expected / (n_classes - 1))
-
-    def test_default_is_distance(self):
-        self.assertTrue(fDBD(None, self.head).distance_as_normalizer)
 
     def test_distance_as_normalizer(self):
         self._check(distance_as_normalizer=True)

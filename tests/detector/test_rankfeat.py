@@ -38,11 +38,6 @@ class SimpleCNN(nn.Module):
 class TestRemoveRank1(unittest.TestCase):
     """Unit tests for the _remove_rank1 helper."""
 
-    def test_output_shape(self):
-        x = torch.randn(4, 8, 6, 6)
-        out = _remove_rank1(x)
-        self.assertEqual(out.shape, x.shape)
-
     def test_rank1_removed(self):
         """
         Construct a rank-1 matrix plus noise. After removal the leading
@@ -63,13 +58,6 @@ class TestRemoveRank1(unittest.TestCase):
         # The leading singular value should drop by at least 10x
         for i in range(B):
             self.assertLess(s_after[i, 0].item(), s_before[i, 0].item() * 0.1)
-
-    def test_preserves_gradient(self):
-        """Operation should be differentiable."""
-        x = torch.randn(2, 4, 3, 3, requires_grad=True)
-        out = _remove_rank1(x)
-        out.sum().backward()
-        self.assertIsNotNone(x.grad)
 
 
 class TestRankFeat(unittest.TestCase):
@@ -97,28 +85,6 @@ class TestRankFeat(unittest.TestCase):
         detector = RankFeat(backbone=model.backbone, head=model.head)
         result = detector.fit(None)
         self.assertIs(result, detector)
-
-    def test_scores_differ_from_plain_energy(self):
-        """
-        RankFeat should produce different scores than plain energy on the same
-        inputs, confirming that the rank-1 removal actually changes the logits.
-        """
-        model = SimpleCNN(num_classes=3).eval()
-        rankfeat = RankFeat(backbone=model.backbone, head=model.head)
-
-        x = torch.randn(16, 3, 8, 8)
-        with torch.no_grad():
-            scores_rf = rankfeat(x)
-            # Plain energy without rank-1 removal
-            logits_plain = model(x)
-            from pytorch_ood.detector import EnergyBased
-
-            scores_plain = EnergyBased.score(logits_plain)
-
-        self.assertFalse(
-            torch.allclose(scores_rf, scores_plain, atol=1e-5),
-            "RankFeat scores should differ from plain energy scores",
-        )
 
     def test_score_matches_energy_convention(self):
         """

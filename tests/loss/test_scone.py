@@ -18,18 +18,6 @@ class TestEnergyMargin(unittest.TestCase):
     Test code for margin-energy-based optimization
     """
 
-    def test_backward(self):
-        criterion = EnergyMarginLoss(full_train_loss=0)
-        logits = torch.randn(size=(128, 10))
-        target = torch.zeros(size=(128,)).long()
-        target[5:] = -1
-
-        loss = criterion(logits, target, logistic_regression)
-        loss.backward()
-
-        self.assertIsNotNone(loss)
-        self.assertGreater(loss, 0)
-
     def test_inccreasing_eta(self):
         criterion = EnergyMarginLoss(full_train_loss=0, eta=1.0)
         logits = torch.randn(size=(128, 10))

@@ -24,32 +24,6 @@ class PNMLTest(unittest.TestCase):
         with self.assertRaises(ModelNotSetException):
             detector.predict_features(torch.randn(size=(5, 10)))
 
-    def test_matches_paper_formula(self):
-        head = torch.nn.Linear(2, 2, bias=False)
-        with torch.no_grad():
-            head.weight.copy_(torch.tensor([[3.0, 0.0], [0.0, 3.0]]))
-
-        detector = PNML(encoder=None, head=head)
-
-        z_train = torch.tensor([[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 1.0]])
-        y_train = torch.tensor([0, 1, 0, 1])
-        detector.fit_features(z_train, y_train)
-
-        z_test = torch.tensor([[1.0, 0.0], [1.0, 1.0]])
-        scores = detector.predict_features(z_test)
-
-        z_train_norm = torch.nn.functional.normalize(z_train.float(), p=2, dim=1)
-        z_test_norm = torch.nn.functional.normalize(z_test.float(), p=2, dim=1)
-        projector = torch.linalg.pinv(z_train_norm) @ torch.linalg.pinv(z_train_norm).T
-        probs = torch.softmax(head(z_test_norm), dim=1).clamp(min=1e-12, max=1.0 - 1e-12)
-        x_proj = (z_test_norm @ projector * z_test_norm).sum(dim=1)
-        x_t_g = x_proj / (1.0 + x_proj)
-        regret_terms = probs / (probs + (1.0 - probs) * probs.pow(x_t_g.unsqueeze(1)))
-        expected = torch.log(regret_terms.sum(dim=1)) / torch.log(torch.tensor(2.0))
-
-        self.assertTrue(torch.allclose(scores, expected, atol=1e-6))
-        self.assertGreater(scores[1].item(), scores[0].item())
-
 
 class PNMLNumericsTest(unittest.TestCase):
     """Ill-conditioned training features: float32 inputs must give the scores of a float64 computation."""

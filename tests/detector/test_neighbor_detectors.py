@@ -96,6 +96,17 @@ def test_invalid_k_raises(case, data, k, error, match):
         detector.fit_features(*data[:2])
 
 
+def test_k_above_the_id_samples_raises_when_fitting(case, data):
+    """OOD samples do not count towards k, and k may equal the number of ID samples."""
+    make = case[0]
+    z = data[0]
+    labels = torch.cat([torch.zeros(10, dtype=torch.long), -torch.ones(30, dtype=torch.long)])
+
+    make(k=10).fit_features(z, labels)
+    with pytest.raises(ValueError, match="k=11 exceeds"):
+        make(k=11).fit_features(z, labels)
+
+
 def test_k_can_change_after_fit(case, data):
     """k is a query-time parameter, so GridSearch can sweep it without refitting."""
     make = case[0]

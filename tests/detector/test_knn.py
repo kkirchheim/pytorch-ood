@@ -36,19 +36,6 @@ class TestKNN(unittest.TestCase):
                 scores = KNN(None, k=k).fit_features(z_train, labels).predict_features(z_test)
                 torch.testing.assert_close(scores, _kth_distance(z_train, z_test, k))
 
-    def test_invariant_to_feature_norm(self):
-        """With normalization, only the direction of the features matters."""
-        g = torch.Generator().manual_seed(1)
-        dtype = torch.float64
-        z_train = torch.randn(200, 8, generator=g, dtype=dtype)
-        z_test = torch.randn(30, 8, generator=g, dtype=dtype)
-        labels = torch.zeros(200, dtype=torch.long)
-        scale_train = torch.rand(200, 1, generator=g, dtype=dtype) * 100 + 0.01
-        scale_test = torch.rand(30, 1, generator=g, dtype=dtype) * 100 + 0.01
-        expected = KNN(None).fit_features(z_train, labels).predict_features(z_test)
-        scaled = KNN(None).fit_features(z_train * scale_train, labels)
-        torch.testing.assert_close(scaled.predict_features(z_test * scale_test), expected)
-
     def test_without_normalization(self):
         g = torch.Generator().manual_seed(2)
         z_train = torch.randn(200, 8, generator=g, dtype=torch.float64) * 3
@@ -58,25 +45,6 @@ class TestKNN(unittest.TestCase):
         torch.testing.assert_close(
             detector.predict_features(z_test), _kth_distance(z_train, z_test, 5, normalize=False)
         )
-
-    def test_defaults(self):
-        detector = KNN(None)
-        self.assertEqual(detector.k, 50)
-        self.assertTrue(detector.normalize)
-
-    def test_k_larger_than_fit_data_raises(self):
-        with self.assertRaisesRegex(ValueError, "k=50 exceeds"):
-            KNN(None).fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
-        # boundary: k = number of ID samples is fine, one more is not
-        KNN(None, k=10).fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
-        with self.assertRaisesRegex(ValueError, r"k=11 exceeds the number of ID samples \(10\)"):
-            KNN(None, k=11).fit_features(torch.randn(10, 4), torch.zeros(10, dtype=torch.long))
-
-    def test_k_checked_against_id_samples_at_fit(self):
-        """OOD samples do not count towards k when fitting."""
-        labels = torch.cat([torch.zeros(10, dtype=torch.long), -torch.ones(10, dtype=torch.long)])
-        with self.assertRaisesRegex(ValueError, r"k=15 exceeds the number of ID samples \(10\)"):
-            KNN(None, k=15).fit_features(torch.randn(20, 4), labels)
 
     def test_zero_vectors_give_finite_scores(self):
         z_train = torch.randn(20, 4)

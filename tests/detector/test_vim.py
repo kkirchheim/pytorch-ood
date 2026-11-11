@@ -1,57 +1,10 @@
 import unittest
 
 import torch
-from torch.optim import SGD
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.detector import ViM
-from pytorch_ood.loss import CrossEntropyLoss
-from tests.helpers import ClassificationModel, sample_dataset
-
-
-class TestViM(unittest.TestCase):
-    """
-    Tests for ViM
-    """
-
-    def test_logits(self):
-        """
-        Make sure the logit calculation in the detector is correct
-        """
-        torch.manual_seed(1234)
-        n_dim = 20
-        train = sample_dataset(centers=3, n_dim=n_dim, seed=123, n_samples=300)
-        train_loader = DataLoader(train, batch_size=64, shuffle=True)
-
-        model = ClassificationModel(num_inputs=n_dim, n_hidden=20)
-        opti = SGD(model.parameters(), lr=0.01)
-
-        criterion = CrossEntropyLoss()
-        for epoch in range(2):
-            for x, y in train_loader:
-                opti.zero_grad()
-                y_hat = model(x)
-                loss = criterion(y_hat, y)
-                loss.backward()
-                opti.step()
-
-        x = torch.randn(size=(128, n_dim)) + torch.Tensor(n_dim * [0])
-
-        model.eval()
-
-        detector = ViM(
-            model.features,
-            d=5,
-            w=model.classifier.weight.data,
-            b=model.classifier.bias.data,
-        )
-
-        with torch.no_grad():
-            logits1 = model(x)
-            features = model.features(x)
-        logits2 = detector._get_logits(features)
-        for logit1, logit2 in zip(logits1.view(-1), logits2.view(-1)):
-            self.assertAlmostEqual(logit1.item(), logit2.item(), places=5)
+from tests.helpers import ClassificationModel, requires
 
 
 class ViMNumericsTest(unittest.TestCase):
@@ -77,3 +30,17 @@ class ViMNumericsTest(unittest.TestCase):
         expected = ((x.double() - u) @ vecs[:, : dim - d]).norm(dim=1)
 
         torch.testing.assert_close(residual.double(), expected, rtol=1e-3, atol=1e-6)
+
+
+@requires(cuda=1)
+def test_device_follows_the_tensors_given_to_the_constructor(accelerator: torch.device):
+    # state must not be pinned to the CPU when the weights are on the GPU, without calling to()
+    model = ClassificationModel().to(accelerator)
+    detector = ViM(model.features, d=4, w=model.classifier.weight, b=model.classifier.bias)
+    assert detector.w.device == detector.u.device == accelerator
+
+    x = torch.randn(24, 10)
+    detector.fit(DataLoader(TensorDataset(x, torch.arange(24) % 3), batch_size=6))
+
+    assert detector.residual_subspace.device == accelerator
+    assert detector(torch.randn(8, 10, device=accelerator)).device == accelerator

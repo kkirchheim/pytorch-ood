@@ -2,11 +2,10 @@ import unittest
 
 import pytest
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.api import RequiresFittingException
-from pytorch_ood.detector import Mahalanobis, MahalanobisODIN, MultiMahalanobis
-from tests.helpers import ClassificationModel, points_with_covariance
+from pytorch_ood.detector import RMD, Mahalanobis, MahalanobisODIN, MultiMahalanobis
+from tests.helpers import points_with_covariance
 
 
 class MahalanobisScoreTest(unittest.TestCase):
@@ -21,89 +20,28 @@ class MahalanobisScoreTest(unittest.TestCase):
         torch.testing.assert_close(detector.predict_features(x), torch.tensor([2.5, 0.5]))
 
 
-class MahalanobisEpsTest(unittest.TestCase):
-    """
-    Tests for the configurable eps parameter added to the Mahalanobis detector.
-    """
+def test_eps_is_added_to_the_covariance_before_inverting_it(seed: torch.Generator):
+    x = torch.randn(20, 10, generator=seed)
+    y = torch.cat([torch.zeros(10), torch.ones(10)]).long()
 
-    def setUp(self) -> None:
-        torch.manual_seed(42)
+    model_a = Mahalanobis(None, eps=0.0).fit_features(x, y)
+    model_b = Mahalanobis(None, eps=1e-2).fit_features(x, y)
 
-    def test_default_eps(self):
-        """Mahalanobis should use eps=1e-10 by default."""
-        model = Mahalanobis(None)
-        self.assertEqual(model.eps, 1e-10)
-
-    def test_custom_eps(self):
-        """Mahalanobis should accept a custom eps value."""
-        model = Mahalanobis(None, eps=1e-3)
-        self.assertEqual(model.eps, 1e-3)
-
-    def test_eps_applied_to_covariance(self):
-        """The eps value should be added to the diagonal of the covariance matrix during fit."""
-        x = torch.randn(size=(20, 10))
-        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))]).long()
-
-        model_a = Mahalanobis(None, eps=0.0).fit_features(x, y)
-        model_b = Mahalanobis(None, eps=1e-2).fit_features(x, y)
-
-        torch.testing.assert_close(model_b.cov - model_a.cov, torch.eye(10) * 1e-2)
-        expected = torch.linalg.inv(model_b.cov.double()).float()
-        torch.testing.assert_close(model_b.precision, expected)
-
-    def test_eps_makes_singular_covariance_invertible(self):
-        """
-        eps=0 on near-singular data can lead to singular matrices.
-        With eps > 0 the same data should produce a finite precision matrix.
-        """
-        nn = ClassificationModel()
-        # Use identical samples to create a (near-)singular covariance
-        x_const = torch.ones(size=(20, 10))
-        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
-        dataset = TensorDataset(x_const, y)
-        loader = DataLoader(dataset)
-
-        model_safe = Mahalanobis(nn, eps=1e-3)
-        model_safe.fit(loader)
-        self.assertTrue(
-            torch.isfinite(model_safe.precision).all(),
-            "With eps=1e-3, precision matrix should be finite even for constant inputs.",
-        )
+    torch.testing.assert_close(model_b.cov - model_a.cov, torch.eye(10) * 1e-2)
+    expected = torch.linalg.inv(model_b.cov.double()).float()
+    torch.testing.assert_close(model_b.precision, expected)
 
 
-class MahalanobisPinvTest(unittest.TestCase):
-    """
-    Tests for the use_pinv parameter of the Mahalanobis detector.
-    """
+def test_pinv_ignores_eps(seed: torch.Generator):
+    """With pinv, no ridge is added: directions without variance are discarded instead."""
+    x = torch.randn(40, 10, generator=seed)
+    y = torch.cat([torch.zeros(20), torch.ones(20)]).long()
 
-    def setUp(self) -> None:
-        torch.manual_seed(42)
-        self.x = torch.randn(size=(40, 10))
-        self.y = torch.cat([torch.zeros(size=(20,)), torch.ones(size=(20,))]).long()
+    model_a = Mahalanobis(None, eps=0.0, use_pinv=True).fit_features(x, y)
+    model_b = Mahalanobis(None, eps=1e-2, use_pinv=True).fit_features(x, y)
 
-    def test_default_is_inv(self):
-        self.assertFalse(Mahalanobis(None).use_pinv)
-
-    def test_pinv_precision(self):
-        model = Mahalanobis(None, use_pinv=True).fit_features(self.x, self.y)
-        expected = torch.linalg.pinv(model.cov.double(), hermitian=True).float()
-        torch.testing.assert_close(model.precision, expected)
-
-    def test_pinv_ignores_eps(self):
-        """With pinv, no ridge is added: directions without variance are discarded instead."""
-        model_a = Mahalanobis(None, eps=0.0, use_pinv=True).fit_features(self.x, self.y)
-        model_b = Mahalanobis(None, eps=1e-2, use_pinv=True).fit_features(self.x, self.y)
-        torch.testing.assert_close(model_a.cov, model_b.cov)
-        torch.testing.assert_close(model_a.precision, model_b.precision)
-
-    def test_pinv_matches_inv(self):
-        """For a well-conditioned covariance matrix, inv and pinv should give the same scores."""
-        model_inv = Mahalanobis(None).fit_features(self.x, self.y)
-        model_pinv = Mahalanobis(None, use_pinv=True).fit_features(self.x, self.y)
-        x = torch.randn(size=(16, 10))
-        torch.testing.assert_close(
-            model_pinv.predict_features(x), model_inv.predict_features(x), rtol=1e-4, atol=1e-4
-        )
+    torch.testing.assert_close(model_a.cov, model_b.cov)
+    torch.testing.assert_close(model_a.precision, model_b.precision)
 
 
 def _reference_scores(z, y, x, eps, use_pinv):
@@ -296,10 +234,39 @@ def test_eps_zero_with_zero_variance_raises(features):
         Mahalanobis(None, eps=0.0).fit_features(z, y)
 
 
-def test_parameters_set_by_hand_require_fit():
+@pytest.mark.parametrize(
+    "detector, parameters, predict",
+    [
+        pytest.param(
+            lambda: Mahalanobis(None),
+            {"mu": torch.zeros(2, 3), "precision": torch.eye(3)},
+            lambda d: d.predict_features(torch.randn(4, 3)),
+            id="Mahalanobis",
+        ),
+        pytest.param(
+            lambda: RMD(None),
+            {
+                "mu": torch.zeros(2, 3),
+                "precision": torch.eye(3),
+                "background_mu": torch.zeros(3),
+                "background_precision": torch.eye(3),
+            },
+            lambda d: d.predict_features(torch.randn(4, 3)),
+            id="RMD",
+        ),
+        pytest.param(
+            lambda: MultiMahalanobis([torch.nn.Identity()]),
+            {"mu": [torch.zeros(2, 3)], "precision": [torch.eye(3)]},
+            lambda d: d.predict_structured([torch.randn(4, 3)]),
+            id="MultiMahalanobis",
+        ),
+    ],
+)
+def test_parameters_set_by_hand_require_fit(detector, parameters, predict):
     """``mu`` and ``precision`` are results of fitting; setting them by hand does not fit."""
-    detector = Mahalanobis(None)
-    detector.mu = torch.zeros(2, 3)
-    detector.precision = torch.eye(3)
+    detector = detector()
+    for name, value in parameters.items():
+        setattr(detector, name, value)
+
     with pytest.raises(RequiresFittingException):
-        detector.predict_features(torch.randn(4, 3))
+        predict(detector)

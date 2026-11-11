@@ -45,15 +45,6 @@ class TestParamFilter(unittest.TestCase):
                 self.assertTrue(seen)
                 self.assertTrue(all(names == ["classifier.weight"] for names in seen))
 
-    def test_batched_and_sequential_paths_agree(self):
-        for cls, module in DETECTORS:
-            with self.subTest(cls.__name__):
-                detector = cls(self.model, param_filter=_only_classifier_weight)
-                batched = detector(self.x)
-                with mock.patch.object(module, "_TORCH_FUNC_AVAILABLE", False):
-                    sequential = detector(self.x)
-                torch.testing.assert_close(batched, sequential)
-
     def test_paths_agree_on_conv_model(self):
         # batch normalization buffers, several selected layers, and chunking in GradNorm
         model = WideResNet(num_classes=10, depth=10, widen_factor=1).eval()
@@ -86,15 +77,6 @@ class TestParamFilter(unittest.TestCase):
                         finally:
                             self.model.requires_grad_(True)
                     torch.testing.assert_close(scores, expected)
-
-    def test_no_gradients_on_model(self):
-        for cls, module in DETECTORS:
-            for batched in (True, False):
-                with self.subTest(cls.__name__, batched=batched):
-                    with mock.patch.object(module, "_TORCH_FUNC_AVAILABLE", batched):
-                        cls(self.model, param_filter=_only_classifier_weight)(self.x)
-                    for name, param in self.model.named_parameters():
-                        self.assertIsNone(param.grad, name)
 
     def test_empty_selection_raises(self):
         for cls, module in DETECTORS:

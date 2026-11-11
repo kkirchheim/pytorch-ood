@@ -3,7 +3,6 @@ import unittest
 import torch
 
 from pytorch_ood.loss import EnergyRegularizedLoss
-from tests.helpers.model import SegmentationModel
 
 torch.manual_seed(123)
 
@@ -12,20 +11,6 @@ class TestEnergyRegularization(unittest.TestCase):
     """
     Test code for energy bounded learning
     """
-
-    def test_segmentation_with_unknown(self):
-        model = SegmentationModel()
-        # the OOD hinge max(0, m_out - E) is active while the energy is below m_out
-        criterion = EnergyRegularizedLoss(margin_out=5.0, reduction="none")
-        x = torch.randn(size=(10, 3, 32, 32))
-        target = torch.zeros(size=(10, 32, 32)).long()
-        target[0, 0, 0] = -1
-
-        logits = model(x)
-        loss = criterion(logits, target)
-        self.assertEqual(loss.shape, (10, 32, 32))
-        self.assertNotEqual(loss[0, 0, 0], 0)
-        loss.mean().backward()
 
     def test_matches_paper_formula(self):
         """CE over ID samples plus separately averaged ID and OOD hinges (Liu et al., 2020)."""

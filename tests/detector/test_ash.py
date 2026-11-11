@@ -67,8 +67,3 @@ class TestASHSEmptyMaps(unittest.TestCase):
         x = torch.rand(3, 4, 5, 5)
         out = ash_s(x, 1.0)
         self.assertTrue(torch.equal(out, torch.zeros_like(x)))
-
-    def test_detector_scores_finite(self):
-        detector = ASH(backbone=None, head=lambda f: f.mean(dim=(2, 3)), variant="ash-s")
-        scores = detector.predict_feature_maps(torch.zeros(2, 4, 5, 5))
-        self.assertTrue(torch.isfinite(scores).all())

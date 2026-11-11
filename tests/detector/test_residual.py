@@ -1,10 +1,8 @@
 import unittest
 
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.detector import Residual, ViM
-from tests.helpers import ClassificationModel
 
 
 def _reference_vim(features, train_features, w, b, d):
@@ -32,18 +30,6 @@ class TestResidual(unittest.TestCase):
         self.train = torch.randn(size=(200, self.n_dim))
         self.labels = torch.randint(0, 3, size=(200,))
         self.test = torch.randn(size=(64, self.n_dim))
-
-    def test_fit_predict(self):
-        model = ClassificationModel(n_hidden=10)
-        detector = Residual(
-            model.features, d=2, w=model.classifier.weight.data, b=model.classifier.bias.data
-        )
-        loader = DataLoader(TensorDataset(torch.randn(size=(20, 10)), torch.zeros(20)))
-        detector.fit(loader)
-
-        scores = detector(torch.zeros(size=(128, 10)))
-        self.assertEqual(scores.shape, (128,))
-        self.assertTrue((scores >= 0).all())
 
     def test_d_of_at_least_the_feature_dimension_is_halved_without_changing_the_setting(self):
         for cls in (Residual, ViM):

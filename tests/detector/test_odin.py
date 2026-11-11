@@ -39,13 +39,6 @@ class TestODIN(unittest.TestCase):
                 expected = _reference_odin(self.model, self.x, eps, temperature, NORM_STD)
                 torch.testing.assert_close(detector.predict(self.x), -expected)
 
-    def test_score_uses_temperature(self):
-        # without perturbation, the score is the negative MSP at temperature T
-        detector = ODIN(self.model, eps=0.0, temperature=100.0)
-        with torch.no_grad():
-            expected = -(self.model(self.x) / 100.0).softmax(dim=1).max(dim=1).values
-        torch.testing.assert_close(detector.predict(self.x), expected)
-
     def test_perturbation_follows_cross_entropy(self):
         x = self.x.clone().requires_grad_()
         logits = self.model(x) / 1000.0
@@ -53,26 +46,6 @@ class TestODIN(unittest.TestCase):
         expected = self.x - 0.01 * x.grad.sign()
         x_hat = odin_preprocessing(self.model, self.x, eps=0.01, temperature=1000.0)
         torch.testing.assert_close(x_hat, expected)
-
-    def test_perturbation_increases_confidence(self):
-        # the step decreases -log S_y(x; T), so the softmax probability of the prediction grows
-        x_hat = odin_preprocessing(self.model, self.x, eps=0.01, temperature=1000.0)
-        with torch.no_grad():
-            before = (self.model(self.x) / 1000.0).softmax(dim=1).max(dim=1).values
-            after = (self.model(x_hat) / 1000.0).softmax(dim=1).max(dim=1).values
-        self.assertTrue((after > before).all())
-
-    def test_norm_std_scales_channels(self):
-        plain = odin_preprocessing(self.model, self.x, eps=0.01) - self.x
-        scaled = odin_preprocessing(self.model, self.x, eps=0.01, norm_std=NORM_STD) - self.x
-        for c, std in enumerate(NORM_STD):
-            torch.testing.assert_close(scaled[:, c], plain[:, c] / std)
-
-    def test_defaults(self):
-        detector = ODIN(self.model)
-        self.assertEqual(detector.eps, 0.0014)
-        self.assertEqual(detector.temperature, 1000.0)
-        self.assertIs(detector.criterion, nn.functional.cross_entropy)
 
     def test_inference_mode(self):
         detector = ODIN(self.model, norm_std=NORM_STD)

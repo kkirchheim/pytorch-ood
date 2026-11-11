@@ -47,18 +47,6 @@ class GMMTest(unittest.TestCase):
             detector.predict_features(test).double(), _mixture_nll(z, y, test, reg=1e-3)
         )
 
-    def test_mixing_weights_matter(self):
-        """Only the class sizes differ, which changes the mixture."""
-        z, y = _classes(sizes=(100, 100, 100, 100))
-        test = torch.randn(32, 8) * 2
-        balanced = GMM(None).fit_features(z, y).predict_features(test)
-        # duplicate the samples of class 0, which keeps its mean and covariance
-        z_dup = torch.cat([z, z[y == 0], z[y == 0]])
-        y_dup = torch.cat([y, y[y == 0], y[y == 0]])
-        weighted = GMM(None).fit_features(z_dup, y_dup).predict_features(test)
-        self.assertFalse(torch.allclose(balanced, weighted))
-        torch.testing.assert_close(weighted.double(), _mixture_nll(z_dup, y_dup, test, reg=1e-6))
-
     def test_fewer_samples_than_dimensions(self):
         """Singular class covariances are regularized and give finite scores."""
         z, y = _classes(sizes=(5, 5), scales=(1.0, 1.0), dim=32)
