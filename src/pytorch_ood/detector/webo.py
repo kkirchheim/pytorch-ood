@@ -78,27 +78,9 @@ class WeightedEBO(LogitsDetector):
         :return: energy of shape :math:`B` (or :math:`B \\times H \\times W`)
         :raise ValueError: if ``logits`` is neither 2-dimensional nor 4-dimensional
         """
-        weights = weights.to(logits.device).relu()
-
-        # Classification
-        if len(logits.shape) == 2:
-            energy = torch.log(torch.sum((weights * torch.exp(logits)), dim=1, keepdim=False))
-
-            return -energy
-        # Segmentation
-        elif len(logits.shape) == 4:
-            # Permutation depends on shape of logits
-
-            logits = logits.permute(0, 2, 3, 1)
-
-            energy = torch.log(
-                torch.sum(
-                    (weights * torch.exp(logits)),
-                    dim=3,
-                    keepdim=False,
-                )
-            )
-
-            return -energy
-        else:
+        if logits.ndim not in (2, 4):
             raise ValueError(f"Unsupported input shape: {logits.shape}")
+
+        weights = weights.to(logits.device).relu().reshape(1, -1, *[1] * (logits.ndim - 2))
+        # in log space, since exp overflows float32 for logits above 88
+        return -torch.logsumexp(logits + weights.log(), dim=1)
