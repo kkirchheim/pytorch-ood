@@ -1,6 +1,7 @@
 import tempfile
 import warnings
 
+import pytest
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -66,9 +67,11 @@ class CountingLinear(nn.Module):
         self.linear = nn.Linear(2, 2, bias=False)
         with torch.no_grad():
             self.linear.weight.copy_(torch.tensor([[1.0, 0.5], [-0.25, 1.0]]))
+        self.eval()
 
     def forward(self, x):
         self.calls += 1
+        self.training_seen = self.training
         return self.linear(x.float())
 
 
@@ -76,9 +79,11 @@ class CountingFeatures(nn.Module):
     def __init__(self):
         super().__init__()
         self.calls = 0
+        self.eval()
 
     def forward(self, x):
         self.calls += 1
+        self.training_seen = self.training
         return x.float()
 
     def feature_maps(self, x):
@@ -130,6 +135,29 @@ def test_benchmark_evaluate_single_detector_keeps_output_shape():
     assert len(results) == 1
     assert results[0]["Dataset"] == "ToyOOD"
     assert "Detector" not in results[0]
+
+
+@pytest.mark.parametrize(
+    "make_model, make_detector",
+    [
+        (CountingLinear, MaxSoftmax),
+        (CountingFeatures, lambda model: SummedFeaturesDetector(model.forward)),
+        (CountingLinear, lambda model: [MaxSoftmax(CountingLinear()), MaxSoftmax(model)]),
+    ],
+    ids=["logits", "features-of-a-bound-method", "second-of-two-detectors"],
+)
+@pytest.mark.parametrize("training", [True, False], ids=["train", "eval"])
+def test_evaluate_warns_once_for_a_model_in_train_mode(make_model, make_detector, training):
+    benchmark, model = ToyBenchmark(), make_model().train(training)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        benchmark.evaluate(make_detector(model), loader_kwargs={"batch_size": 2})
+        benchmark.evaluate(make_detector(model), loader_kwargs={"batch_size": 2})
+
+    assert sum("training mode" in str(w.message) for w in caught) == int(training)
+    assert model.training is training
+    assert model.training_seen is training
 
 
 def test_benchmark_evaluate_list_shares_logits_within_call():
