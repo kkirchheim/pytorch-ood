@@ -1,5 +1,3 @@
-import unittest
-
 import numpy as np
 import pytest
 import torch
@@ -14,39 +12,32 @@ torch.manual_seed(123)
 logistic_regression = torch.nn.Linear(1, 1)
 
 
-class TestEnergyMargin(unittest.TestCase):
-    """
-    Test code for margin-energy-based optimization
-    """
+def test_inccreasing_eta():
+    criterion = EnergyMarginLoss(full_train_loss=0, eta=1.0)
+    logits = torch.randn(size=(128, 10))
+    target = torch.zeros(size=(128,)).long()
+    target[5:] = -1
 
-    def test_inccreasing_eta(self):
-        criterion = EnergyMarginLoss(full_train_loss=0, eta=1.0)
-        logits = torch.randn(size=(128, 10))
-        target = torch.zeros(size=(128,)).long()
-        target[5:] = -1
+    low_eta_loss = criterion(logits, target, logistic_regression)
 
-        low_eta_loss = criterion(logits, target, logistic_regression)
+    assert low_eta_loss > 0
 
-        assert low_eta_loss is not None
-        assert low_eta_loss > 0
+    criterion = EnergyMarginLoss(full_train_loss=0, eta=5.0)
 
-        criterion = EnergyMarginLoss(full_train_loss=0, eta=5.0)
+    high_eta_loss = criterion(logits, target, logistic_regression)
 
-        high_eta_loss = criterion(logits, target, logistic_regression)
+    assert high_eta_loss > 0
 
-        assert high_eta_loss is not None
-        assert high_eta_loss > 0
+    # introducing wider margin should minimize the loss further
+    assert low_eta_loss > high_eta_loss
 
-        # introducing wider margin should minimize the loss further
-        assert low_eta_loss > high_eta_loss
 
-    def test_batch_without_id_or_ood_raises(self):
-        # otherwise the loss is NaN, or the constraints silently have no effect
-        criterion = EnergyMarginLoss(full_train_loss=1.0)
-        for target in (torch.zeros(8).long(), -torch.ones(8).long()):
-            with self.subTest(target=target[0].item()):
-                with pytest.raises(ValueError):
-                    criterion(torch.randn(8, 10), target, logistic_regression)
+@pytest.mark.parametrize("target", (torch.zeros(8).long(), -torch.ones(8).long()))
+def test_batch_without_id_or_ood_raises(target):
+    # otherwise the loss is NaN, or the constraints silently have no effect
+    criterion = EnergyMarginLoss(full_train_loss=1.0)
+    with pytest.raises(ValueError):
+        criterion(torch.randn(8, 10), target, logistic_regression)
 
 
 def _old_evaluate_energy_logistic_loss(model, train_loader_in, logistic_regression):

@@ -10,10 +10,6 @@ torch.manual_seed(123)
 
 
 class TestVirtualOutlierSynthesizingRegLoss:
-    """
-    Test code for VirtualOutlierSynthesizingRegLoss
-    """
-
     def init_loss(self, num_classes, reduction="mean", alpha=0.1):
         weights_energy = torch.nn.Linear(num_classes, 1).cpu()
         torch.nn.init.uniform_(weights_energy.weight)

@@ -4,7 +4,6 @@ The functional metrics, compared against scikit-learn on many kinds of data.
 
 import itertools
 import math
-import unittest
 from fractions import Fraction
 
 import numpy as np
@@ -69,24 +68,24 @@ def _data(seed, n, ood_fraction=0.3, tie_levels=None, scale=1.0, offset=0.0, shi
     return scores * scale + offset, labels
 
 
-def _assert_matches(scores, labels, tpr=0.95, places=10):
+def _assert_matches(scores, labels, tpr=0.95):
     expected = _reference(scores, labels, tpr)
     actual = _ours(scores, labels, tpr)
     for key in expected:
-        assert actual[key] == pytest.approx(expected[key], abs=0.5 * 10.0**-places), key
+        assert actual[key] == pytest.approx(expected[key], abs=5e-11), key
 
 
 @pytest.mark.skipif(not SKLEARN, reason="scikit-learn is the reference")
-class TestAgainstSklearn(unittest.TestCase):
-    def test_random_data(self):
-        for seed, n in itertools.product(range(5), (2, 3, 10, 101, 1000, 20000)):
-            with self.subTest(seed=seed, n=n):
-                _assert_matches(*_data(seed, n))
+class TestAgainstSklearn:
+    @pytest.mark.parametrize(
+        "data_seed, n", itertools.product(range(5), (2, 3, 10, 101, 1000, 20000))
+    )
+    def test_random_data(self, data_seed, n):
+        _assert_matches(*_data(data_seed, n))
 
-    def test_ties(self):
-        for seed, levels in itertools.product(range(3), (1, 2, 3, 10, 100)):
-            with self.subTest(seed=seed, levels=levels):
-                _assert_matches(*_data(seed, 2000, tie_levels=levels))
+    @pytest.mark.parametrize("data_seed, levels", itertools.product(range(3), (1, 2, 3, 10, 100)))
+    def test_ties(self, data_seed, levels):
+        _assert_matches(*_data(data_seed, 2000, tie_levels=levels))
 
     def test_all_scores_equal(self):
         scores = torch.full((100,), 3.0)
@@ -94,37 +93,35 @@ class TestAgainstSklearn(unittest.TestCase):
         _assert_matches(scores, labels)
         assert float(F.auroc(scores, labels)) == 0.5
 
-    def test_magnitudes(self):
+    @pytest.mark.parametrize(
+        "scale, offset", itertools.product((1e-6, 1.0, 1e3, 1e6), (0.0, 1e4, -1e4, 1e8))
+    )
+    def test_magnitudes(self, scale, offset):
         # torchmetrics applied a sigmoid here, which saturates and turned the scores into ties
-        for scale, offset in itertools.product((1e-6, 1.0, 1e3, 1e6), (0.0, 1e4, -1e4, 1e8)):
-            with self.subTest(scale=scale, offset=offset):
-                scores, labels = _data(0, 2000, tie_levels=200)
-                _assert_matches(scores * scale + offset, labels)
+        scores, labels = _data(0, 2000, tie_levels=200)
+        _assert_matches(scores * scale + offset, labels)
 
-    def test_separated_large_scores(self):
-        for offset in (0.0, 1000.0, -1000.0):
-            with self.subTest(offset=offset):
-                scores = torch.tensor([20.0, 30.0, 40.0, 50.0]) + offset
-                labels = torch.tensor([0, 0, -1, -1])
-                result = _ours(scores, labels)
-                assert result == {
-                    "auroc": 1.0,
-                    "aupr_out": 1.0,
-                    "aupr_in": 1.0,
-                    "ap_out": 1.0,
-                    "ap_in": 1.0,
-                    "fpr": 0.0,
-                }
+    @pytest.mark.parametrize("offset", (0.0, 1000.0, -1000.0))
+    def test_separated_large_scores(self, offset):
+        scores = torch.tensor([20.0, 30.0, 40.0, 50.0]) + offset
+        labels = torch.tensor([0, 0, -1, -1])
+        result = _ours(scores, labels)
+        assert result == {
+            "auroc": 1.0,
+            "aupr_out": 1.0,
+            "aupr_in": 1.0,
+            "ap_out": 1.0,
+            "ap_in": 1.0,
+            "fpr": 0.0,
+        }
 
-    def test_imbalance(self):
-        for fraction in (0.001, 0.01, 0.5, 0.99, 0.999):
-            with self.subTest(ood_fraction=fraction):
-                _assert_matches(*_data(1, 5000, ood_fraction=fraction))
+    @pytest.mark.parametrize("fraction", (0.001, 0.01, 0.5, 0.99, 0.999))
+    def test_imbalance(self, fraction):
+        _assert_matches(*_data(1, 5000, ood_fraction=fraction))
 
-    def test_single_sample_per_class(self):
-        for scores in ([0.0, 1.0], [1.0, 0.0], [1.0, 1.0]):
-            with self.subTest(scores=scores):
-                _assert_matches(torch.tensor(scores), torch.tensor([0, -1]))
+    @pytest.mark.parametrize("scores", ([0.0, 1.0], [1.0, 0.0], [1.0, 1.0]))
+    def test_single_sample_per_class(self, scores):
+        _assert_matches(torch.tensor(scores), torch.tensor([0, -1]))
 
     def test_perfect_and_reversed(self):
         labels = torch.cat([torch.zeros(50), -torch.ones(50)]).long()
@@ -137,20 +134,20 @@ class TestAgainstSklearn(unittest.TestCase):
     def test_dtypes(self):
         scores, labels = _data(2, 3000)
         for dtype in (torch.float16, torch.bfloat16, torch.float32, torch.float64):
-            with self.subTest(dtype=dtype):
-                # the reference gets the same (rounded) values
-                _assert_matches(scores.to(dtype), labels)
+            # the reference gets the same (rounded) values
+            _assert_matches(scores.to(dtype), labels)
         _assert_matches(*_data(2, 3000, tie_levels=50, scale=1.0))
         int_scores = _data(3, 3000, tie_levels=50)[0].long()
         _assert_matches(int_scores, labels)
         _assert_matches((int_scores > 25), labels)
 
-    def test_label_dtypes(self):
+    @pytest.mark.parametrize(
+        "dtype", (torch.int8, torch.int16, torch.int32, torch.float32, torch.float64)
+    )
+    def test_label_dtypes(self, dtype):
         scores, labels = _data(4, 500)
         expected = _ours(scores, labels)
-        for dtype in (torch.int8, torch.int16, torch.int32, torch.float32, torch.float64):
-            with self.subTest(dtype=dtype):
-                assert _ours(scores, labels.to(dtype)) == expected
+        assert _ours(scores, labels.to(dtype)) == expected
 
     def test_shapes(self):
         # inputs of any shape are flattened
@@ -158,11 +155,10 @@ class TestAgainstSklearn(unittest.TestCase):
         expected = _ours(scores, labels)
         assert _ours(scores.view(2, 3, 100), labels.view(2, 3, 100)) == expected
 
-    def test_tpr_values(self):
+    @pytest.mark.parametrize("tpr", (0.0, 0.05, 0.5, 0.8, 0.9, 0.95, 0.99, 1.0))
+    def test_tpr_values(self, tpr):
         scores, labels = _data(6, 1000, tie_levels=30)
-        for tpr in (0.0, 0.05, 0.5, 0.8, 0.9, 0.95, 0.99, 1.0):
-            with self.subTest(tpr=tpr):
-                _assert_matches(scores, labels, tpr=tpr)
+        _assert_matches(scores, labels, tpr=tpr)
 
     @requires(cuda=1)
     def test_cuda(self):
@@ -195,11 +191,10 @@ class TestAgainstSklearn(unittest.TestCase):
         np.testing.assert_allclose(-thresholds.numpy(), sk_thresholds)
 
 
-class TestEdgeCases(unittest.TestCase):
-    def test_nan_raises(self):
-        scores = torch.tensor([0.0, float("nan"), 1.0, 2.0])
-        labels = torch.tensor([0, 0, -1, -1])
-        for fn in (
+class TestEdgeCases:
+    @pytest.mark.parametrize(
+        "fn",
+        (
             F.auroc,
             F.aupr,
             F.average_precision,
@@ -207,10 +202,13 @@ class TestEdgeCases(unittest.TestCase):
             F.roc_curve,
             F.pr_curve,
             F.autc,
-        ):
-            with self.subTest(fn=fn.__name__):
-                with pytest.raises(ValueError):
-                    fn(scores, labels)
+        ),
+    )
+    def test_nan_raises(self, fn):
+        scores = torch.tensor([0.0, float("nan"), 1.0, 2.0])
+        labels = torch.tensor([0, 0, -1, -1])
+        with pytest.raises(ValueError):
+            fn(scores, labels)
 
     def test_infinite_scores(self):
         labels = torch.tensor([0, 0, 0, -1, -1, -1])
@@ -231,20 +229,18 @@ class TestEdgeCases(unittest.TestCase):
         assert float(F.auroc(torch.tensor([0.0, -0.0]), torch.tensor([0, -1]))) == 0.5
         assert float(F.auroc(torch.tensor([-0.0, 0.0]), torch.tensor([0, -1]))) == 0.5
 
-    def test_one_class_raises(self):
-        for labels in (torch.zeros(5).long(), -torch.ones(5).long()):
-            for fn in (F.auroc, F.aupr, F.average_precision, F.fpr_at_tpr, F.autc):
-                with self.subTest(fn=fn.__name__, label=int(labels[0])):
-                    with pytest.raises(ValueError):
-                        fn(torch.arange(5.0), labels)
+    @pytest.mark.parametrize("labels", (torch.zeros(5).long(), -torch.ones(5).long()))
+    @pytest.mark.parametrize("fn", (F.auroc, F.aupr, F.average_precision, F.fpr_at_tpr, F.autc))
+    def test_one_class_raises(self, labels, fn):
+        with pytest.raises(ValueError):
+            fn(torch.arange(5.0), labels)
 
-    def test_shape_mismatch_raises(self):
-        for fn in (F.auroc, F.aupr, F.average_precision):
-            with self.subTest(fn=fn.__name__):
-                with pytest.raises(ValueError):
-                    fn(torch.zeros(4), torch.zeros(5))
-                with pytest.raises(ValueError):
-                    fn(torch.zeros(2, 3), torch.zeros(3, 2))
+    @pytest.mark.parametrize("fn", (F.auroc, F.aupr, F.average_precision))
+    def test_shape_mismatch_raises(self, fn):
+        with pytest.raises(ValueError):
+            fn(torch.zeros(4), torch.zeros(5))
+        with pytest.raises(ValueError):
+            fn(torch.zeros(2, 3), torch.zeros(3, 2))
 
     def test_invalid_arguments(self):
         scores, labels = torch.arange(4.0), torch.tensor([0, 0, -1, -1])
@@ -373,7 +369,7 @@ def _exact_pr_areas(scores, positive):
     return ap, trapezoid
 
 
-class TestAveragePrecision(unittest.TestCase):
+class TestAveragePrecision:
     def test_hand_computed(self):
         # thresholds 5, 4, 3, 2 raise the OOD recall to 1/4, 2/4, 3/4, 1 at the precisions
         # 1, 2/3, 3/4, 4/6; for ID (thresholds 1, 2, 4 on the negated scores) to 1/3, 2/3, 1 at
@@ -390,21 +386,20 @@ class TestAveragePrecision(unittest.TestCase):
         # the trapezoidal rule interpolates between the same points
         assert float(F.aupr(scores, labels)) == pytest.approx(13 / 16, abs=5e-16)
 
-    def test_matches_definition(self):
-        for seed, levels in itertools.product(range(3), (2, 5, 30, None)):
-            with self.subTest(seed=seed, levels=levels):
-                scores, labels = _data(seed, 300, tie_levels=levels)
-                for positive, mask, s in (
-                    ("ood", labels < 0, scores),
-                    ("id", labels >= 0, -scores),
-                ):
-                    ap, trapezoid = _exact_pr_areas(s, mask)
-                    assert float(F.average_precision(scores, labels, positive)) == pytest.approx(
-                        float(ap), abs=5e-13
-                    )
-                    assert float(F.aupr(scores, labels, positive)) == pytest.approx(
-                        float(trapezoid), abs=5e-13
-                    )
+    @pytest.mark.parametrize("data_seed, levels", itertools.product(range(3), (2, 5, 30, None)))
+    def test_matches_definition(self, data_seed, levels):
+        scores, labels = _data(data_seed, 300, tie_levels=levels)
+        for positive, mask, s in (
+            ("ood", labels < 0, scores),
+            ("id", labels >= 0, -scores),
+        ):
+            ap, trapezoid = _exact_pr_areas(s, mask)
+            assert float(F.average_precision(scores, labels, positive)) == pytest.approx(
+                float(ap), abs=5e-13
+            )
+            assert float(F.aupr(scores, labels, positive)) == pytest.approx(
+                float(trapezoid), abs=5e-13
+            )
 
     def _uninformative(self, n=10000, seed=0):
         g = torch.Generator().manual_seed(seed)
@@ -443,32 +438,30 @@ class TestAveragePrecision(unittest.TestCase):
         assert abs(float(F.average_precision(scores, labels)) - pi) < 0.005
         assert float(F.aupr(scores, labels)) > 0.5
 
-    def test_few_valued_scores(self):
+    @pytest.mark.parametrize("levels", (2, 3, 5))
+    def test_few_valued_scores(self, levels):
         labels, g = self._uninformative()
         pi = float((labels < 0).double().mean())
-        for levels in (2, 3, 5):
-            with self.subTest(levels=levels):
-                scores = torch.randint(0, levels, labels.shape, generator=g).float()
-                ap = float(F.average_precision(scores, labels))
-                aupr = float(F.aupr(scores, labels))
-                assert abs(ap - pi) < 0.005
-                # the trapezoidal rule rewards the ties
-                assert aupr > pi + 0.08
-                exact_ap, exact_trapezoid = _exact_pr_areas(scores[:2000], labels[:2000] < 0)
-                assert float(F.average_precision(scores[:2000], labels[:2000])) == pytest.approx(
-                    float(exact_ap), abs=5e-13
-                )
-                assert float(F.aupr(scores[:2000], labels[:2000])) == pytest.approx(
-                    float(exact_trapezoid), abs=5e-13
-                )
+        scores = torch.randint(0, levels, labels.shape, generator=g).float()
+        ap = float(F.average_precision(scores, labels))
+        aupr = float(F.aupr(scores, labels))
+        assert abs(ap - pi) < 0.005
+        # the trapezoidal rule rewards the ties
+        assert aupr > pi + 0.08
+        exact_ap, exact_trapezoid = _exact_pr_areas(scores[:2000], labels[:2000] < 0)
+        assert float(F.average_precision(scores[:2000], labels[:2000])) == pytest.approx(
+            float(exact_ap), abs=5e-13
+        )
+        assert float(F.aupr(scores[:2000], labels[:2000])) == pytest.approx(
+            float(exact_trapezoid), abs=5e-13
+        )
 
-    def test_continuous_scores_close_to_aupr(self):
+    @pytest.mark.parametrize("positive", ("ood", "id"))
+    def test_continuous_scores_close_to_aupr(self, positive):
         scores, labels = _data(0, 20000)
-        for positive in ("ood", "id"):
-            with self.subTest(positive=positive):
-                assert float(F.average_precision(scores, labels, positive)) == pytest.approx(
-                    float(F.aupr(scores, labels, positive)), abs=5e-3
-                )
+        assert float(F.average_precision(scores, labels, positive)) == pytest.approx(
+            float(F.aupr(scores, labels, positive)), abs=5e-3
+        )
 
     def test_results_are_detached_scalars(self):
         scores = torch.randn(20, requires_grad=True)
@@ -488,8 +481,7 @@ class TestAveragePrecision(unittest.TestCase):
         labels = torch.cat([torch.zeros(70), -torch.ones(30)]).long()
         for scores in (torch.arange(100.0), (labels < 0).float()):
             for positive in ("ood", "id"):
-                with self.subTest(positive=positive, binary=bool(scores.max() == 1)):
-                    assert float(F.average_precision(scores, labels, positive)) == 1.0
+                assert float(F.average_precision(scores, labels, positive)) == 1.0
 
     def test_worst_detector(self):
         # every OOD sample below every ID sample: the k-th OOD sample is found with all ID
@@ -504,14 +496,13 @@ class TestAveragePrecision(unittest.TestCase):
         for seed, levels in itertools.product(range(3), (1, 2, 10, None)):
             scores, labels = _data(seed, 1000, tie_levels=levels)
             for positive in ("ood", "id"):
-                with self.subTest(seed=seed, levels=levels, positive=positive):
-                    precision, recall, _ = F.pr_curve(scores, labels, positive)
-                    assert float(F.average_precision_from_curve(precision, recall)) == float(
-                        F.average_precision(scores, labels, positive)
-                    )
-                    assert float(F.aupr_from_curve(precision, recall)) == float(
-                        F.aupr(scores, labels, positive)
-                    )
+                precision, recall, _ = F.pr_curve(scores, labels, positive)
+                assert float(F.average_precision_from_curve(precision, recall)) == float(
+                    F.average_precision(scores, labels, positive)
+                )
+                assert float(F.aupr_from_curve(precision, recall)) == float(
+                    F.aupr(scores, labels, positive)
+                )
 
     def test_from_curve_of_histogram(self):
         # a curve from two bins: 30 OOD and 10 ID samples in the upper bin, 10 OOD and 50 ID in
@@ -568,9 +559,8 @@ class TestAveragePrecision(unittest.TestCase):
         }
         for fn in (F.average_precision_from_curve, F.aupr_from_curve):
             for name, (p, r, message) in cases.items():
-                with self.subTest(fn=fn.__name__, case=name):
-                    with pytest.raises(ValueError, match=message):
-                        fn(p, r)
+                with pytest.raises(ValueError, match=message):
+                    fn(p, r)
 
     def test_from_curve_accepts_valid_edge_cases(self):
         precision = torch.tensor([0.4, 0.5, 0.75, 1.0])
@@ -584,10 +574,9 @@ class TestAveragePrecision(unittest.TestCase):
             "start plateau": (torch.tensor([1.0, 1.0, 0.5, 0.0]), 0.5 * 0.5 + 0.5 * 0.75),
         }
         for name, (recall, expected) in cases.items():
-            with self.subTest(name):
-                ap = F.average_precision_from_curve(precision, recall)
-                assert float(ap) == pytest.approx(expected, abs=5e-8)
-                F.aupr_from_curve(precision, recall)
+            ap = F.average_precision_from_curve(precision, recall)
+            assert float(ap) == pytest.approx(expected, abs=5e-8)
+            F.aupr_from_curve(precision, recall)
 
     def test_from_curve_final_precision(self):
         recall = torch.tensor([1.0, 0.75, 0.0])
@@ -606,17 +595,17 @@ class TestAveragePrecision(unittest.TestCase):
         recall = torch.tensor([1.0, 0.5, 0.0])
         expected = 0.5 * 0.5 + 0.5 * 0.75
         for dtype in (torch.float16, torch.bfloat16, torch.float32, torch.float64):
-            with self.subTest(dtype=dtype):
-                ap = F.average_precision_from_curve(precision.to(dtype), recall.to(dtype))
-                assert ap.dtype == torch.float64
-                assert float(ap) == expected
-                aupr = F.aupr_from_curve(precision.to(dtype), recall.to(dtype))
-                assert aupr.dtype == torch.float64
+            ap = F.average_precision_from_curve(precision.to(dtype), recall.to(dtype))
+            assert ap.dtype == torch.float64
+            assert float(ap) == expected
+            aupr = F.aupr_from_curve(precision.to(dtype), recall.to(dtype))
+            assert aupr.dtype == torch.float64
         ap = F.average_precision_from_curve(torch.tensor([0.5, 1.0]), torch.tensor([1, 0]))
         assert ap.dtype == torch.float64
         assert float(ap) == 0.5
 
-    def test_from_curve_of_long_float32_curve(self):
+    @pytest.mark.parametrize("fn", (F.average_precision_from_curve, F.aupr_from_curve))
+    def test_from_curve_of_long_float32_curve(self, fn):
         g = torch.Generator().manual_seed(0)
         n = 2**20
         labels = -(torch.rand(n, generator=g) < 0.3).long()
@@ -625,112 +614,115 @@ class TestAveragePrecision(unittest.TestCase):
         assert precision.numel() > n // 2
         expected = float(F.average_precision_from_curve(precision, recall))
         assert expected == float(F.average_precision(scores, labels))
-        for fn in (F.average_precision_from_curve, F.aupr_from_curve):
-            with self.subTest(fn=fn.__name__):
-                full = float(fn(precision, recall))
-                single = float(fn(precision.float(), recall.float()))
-                assert single == pytest.approx(full, abs=1e-6)
+        full = float(fn(precision, recall))
+        single = float(fn(precision.float(), recall.float()))
+        assert single == pytest.approx(full, abs=1e-6)
 
 
-class TestMixedDevices:
-    @requires(cuda=1)
-    def test_labels_on_other_device(self):
-        g = torch.Generator().manual_seed(0)
-        labels = torch.randint(-1, 3, (200,), generator=g)
-        scores = torch.randn(200, generator=g) + (labels < 0).float()
-        for fn in (
-            F.auroc,
-            F.autc,
-            lambda s, y: F.fpr_at_tpr(s, y, 0.95),
-            lambda s, y: F.aupr(s, y, "id"),
-            lambda s, y: F.average_precision(s, y, "ood"),
-            lambda s, y: F.average_precision(s, y, "id"),
-        ):
-            assert float(fn(scores.cuda(), labels)) == pytest.approx(
-                float(fn(scores, labels)), abs=5e-8
-            )
-
-    @requires(cuda=1)
-    def test_result_stays_on_device(self):
-        scores, labels = _data(0, 500, tie_levels=20)
-        scores, labels = scores.cuda(), labels.cuda()
-        precision, recall, _ = F.pr_curve(scores, labels)
-        assert precision.device.type == "cuda"
-        for value in (
-            F.aupr(scores, labels),
-            F.average_precision(scores, labels),
-            F.average_precision(scores, labels, positive="id"),
-            F.aupr_from_curve(precision, recall),
-            F.average_precision_from_curve(precision, recall),
-            F.average_precision_from_curve(precision, recall.cpu()),
-        ):
-            assert value.device.type == "cuda"
-            assert value.dtype == torch.float64
+@requires(cuda=1)
+def test_labels_on_other_device():
+    g = torch.Generator().manual_seed(0)
+    labels = torch.randint(-1, 3, (200,), generator=g)
+    scores = torch.randn(200, generator=g) + (labels < 0).float()
+    for fn in (
+        F.auroc,
+        F.autc,
+        lambda s, y: F.fpr_at_tpr(s, y, 0.95),
+        lambda s, y: F.aupr(s, y, "id"),
+        lambda s, y: F.average_precision(s, y, "ood"),
+        lambda s, y: F.average_precision(s, y, "id"),
+    ):
+        assert float(fn(scores.cuda(), labels)) == pytest.approx(
+            float(fn(scores, labels)), abs=5e-8
+        )
 
 
-class TestAUTC:
-    def test_perfect_separation(self):
-        labels = torch.cat([torch.zeros(50), -torch.ones(50)]).long()
-        scores = torch.cat([torch.zeros(50), torch.ones(50)])
-        assert float(F.autc(scores, labels)) == 0.0
-
-    def test_near_worse_than_far(self):
-        g = torch.Generator().manual_seed(0)
-        ind = torch.rand(9000, generator=g)
-        labels = torch.cat([torch.zeros(9000), -torch.ones(1000)]).long()
-        near = F.autc(torch.cat([ind, torch.rand(1000, generator=g) + 2]), labels)
-        far = F.autc(torch.cat([ind, torch.rand(1000, generator=g) + 10]), labels)
-        assert float(near) > float(far)
-
-    @pytest.mark.skipif(not SKLEARN, reason="scikit-learn is the reference")
-    def test_matches_threshold_curve(self):
-        # the closed form equals the integral of the threshold curves over [0, 1]
-        g = torch.Generator().manual_seed(3)
-        scores = torch.randn(5000, generator=g, dtype=torch.float64)
-        labels = -(torch.rand(5000, generator=g) > 0.5).long()
-        s = ((scores - scores.min()) / (scores.max() - scores.min())).numpy()
-        ood = (labels < 0).numpy()
-        tau = np.linspace(0, 1, 20001)
-        fpr = np.array([(s[~ood] >= t).mean() for t in tau])
-        fnr = np.array([(s[ood] < t).mean() for t in tau])
-        area = lambda y: float(((y[1:] + y[:-1]) / 2 * np.diff(tau)).sum())  # noqa: E731
-        reference = (area(fpr) + area(fnr)) / 2
-        assert float(F.autc(scores, labels)) == pytest.approx(reference, abs=5e-4)
-
-    def test_constant_scores_raise(self):
-        with pytest.raises(ValueError):
-            F.autc(torch.ones(10), torch.tensor([0] * 5 + [-1] * 5))
-
-    def test_infinite_scores_raise(self):
-        with pytest.raises(ValueError):
-            F.autc(torch.tensor([0.0, 1.0, float("inf")]), torch.tensor([0, -1, -1]))
+@requires(cuda=1)
+def test_result_stays_on_device():
+    scores, labels = _data(0, 500, tie_levels=20)
+    scores, labels = scores.cuda(), labels.cuda()
+    precision, recall, _ = F.pr_curve(scores, labels)
+    assert precision.device.type == "cuda"
+    for value in (
+        F.aupr(scores, labels),
+        F.average_precision(scores, labels),
+        F.average_precision(scores, labels, positive="id"),
+        F.aupr_from_curve(precision, recall),
+        F.average_precision_from_curve(precision, recall),
+        F.average_precision_from_curve(precision, recall.cpu()),
+    ):
+        assert value.device.type == "cuda"
+        assert value.dtype == torch.float64
 
 
-class TestAccuracy:
-    def test_ignores_ood(self):
-        predictions = torch.tensor([1, 2, 3, 0, 0])
-        labels = torch.tensor([1, 2, 0, -1, -1])
-        assert float(F.accuracy(predictions, labels)) == pytest.approx(2 / 3, abs=5e-8)
-
-    def test_large_class_indices(self):
-        labels = torch.tensor([70000, 1000, 5])
-        assert float(F.accuracy(labels.clone(), labels)) == 1.0
-
-    def test_no_id_raises(self):
-        with pytest.raises(ValueError):
-            F.accuracy(torch.zeros(3).long(), -torch.ones(3).long())
-
-    @pytest.mark.skipif(not SKLEARN, reason="scikit-learn is the reference")
-    def test_matches_sklearn(self):
-        g = torch.Generator().manual_seed(0)
-        labels = torch.randint(-1, 10, (1000,), generator=g)
-        predictions = torch.randint(0, 10, (1000,), generator=g)
-        known = labels >= 0
-        expected = skm.accuracy_score(labels[known].numpy(), predictions[known].numpy())
-        assert float(F.accuracy(predictions, labels)) == pytest.approx(expected, abs=5e-13)
+def test_perfect_separation():
+    labels = torch.cat([torch.zeros(50), -torch.ones(50)]).long()
+    scores = torch.cat([torch.zeros(50), torch.ones(50)])
+    assert float(F.autc(scores, labels)) == 0.0
 
 
-class TestMovedFunctions(unittest.TestCase):
+def test_near_worse_than_far():
+    g = torch.Generator().manual_seed(0)
+    ind = torch.rand(9000, generator=g)
+    labels = torch.cat([torch.zeros(9000), -torch.ones(1000)]).long()
+    near = F.autc(torch.cat([ind, torch.rand(1000, generator=g) + 2]), labels)
+    far = F.autc(torch.cat([ind, torch.rand(1000, generator=g) + 10]), labels)
+    assert float(near) > float(far)
+
+
+@pytest.mark.skipif(not SKLEARN, reason="scikit-learn is the reference")
+def test_matches_threshold_curve():
+    # the closed form equals the integral of the threshold curves over [0, 1]
+    g = torch.Generator().manual_seed(3)
+    scores = torch.randn(5000, generator=g, dtype=torch.float64)
+    labels = -(torch.rand(5000, generator=g) > 0.5).long()
+    s = ((scores - scores.min()) / (scores.max() - scores.min())).numpy()
+    ood = (labels < 0).numpy()
+    tau = np.linspace(0, 1, 20001)
+    fpr = np.array([(s[~ood] >= t).mean() for t in tau])
+    fnr = np.array([(s[ood] < t).mean() for t in tau])
+    area = lambda y: float(((y[1:] + y[:-1]) / 2 * np.diff(tau)).sum())  # noqa: E731
+    reference = (area(fpr) + area(fnr)) / 2
+    assert float(F.autc(scores, labels)) == pytest.approx(reference, abs=5e-4)
+
+
+def test_constant_scores_raise():
+    with pytest.raises(ValueError):
+        F.autc(torch.ones(10), torch.tensor([0] * 5 + [-1] * 5))
+
+
+def test_infinite_scores_raise():
+    with pytest.raises(ValueError):
+        F.autc(torch.tensor([0.0, 1.0, float("inf")]), torch.tensor([0, -1, -1]))
+
+
+def test_ignores_ood():
+    predictions = torch.tensor([1, 2, 3, 0, 0])
+    labels = torch.tensor([1, 2, 0, -1, -1])
+    assert float(F.accuracy(predictions, labels)) == pytest.approx(2 / 3, abs=5e-8)
+
+
+def test_large_class_indices():
+    labels = torch.tensor([70000, 1000, 5])
+    assert float(F.accuracy(labels.clone(), labels)) == 1.0
+
+
+def test_no_id_raises():
+    with pytest.raises(ValueError):
+        F.accuracy(torch.zeros(3).long(), -torch.ones(3).long())
+
+
+@pytest.mark.skipif(not SKLEARN, reason="scikit-learn is the reference")
+def test_matches_sklearn():
+    g = torch.Generator().manual_seed(0)
+    labels = torch.randint(-1, 10, (1000,), generator=g)
+    predictions = torch.randint(0, 10, (1000,), generator=g)
+    known = labels >= 0
+    expected = skm.accuracy_score(labels[known].numpy(), predictions[known].numpy())
+    assert float(F.accuracy(predictions, labels)) == pytest.approx(expected, abs=5e-13)
+
+
+class TestMovedFunctions:
     @staticmethod
     def _three_bins():
         # bins of 100 samples: confidence 0.2 / 0.5 / 0.9, accuracy 0.2 / 0.0 / 0.6,
@@ -749,10 +741,9 @@ class TestMovedFunctions(unittest.TestCase):
             "infty": 0.5,
         }
         for p, value in expected.items():
-            with self.subTest(p=p):
-                assert calibration_error(conf, correct, p=p, beta=100) == pytest.approx(
-                    value, abs=5e-8
-                )
+            assert calibration_error(conf, correct, p=p, beta=100) == pytest.approx(
+                value, abs=5e-8
+            )
 
     def test_calibration_error_includes_last_bin(self):
         # only the highest-confidence bin is miscalibrated
@@ -776,15 +767,12 @@ class TestMovedFunctions(unittest.TestCase):
             0.75 - 0.25, abs=5e-8
         )
 
-    def test_calibration_error_of_calibrated_predictions_is_zero(self):
+    @pytest.mark.parametrize("p", ("1", "2", "infty"))
+    def test_calibration_error_of_calibrated_predictions_is_zero(self, p):
         # one bin per confidence level, with matching accuracy
         conf = torch.cat([torch.full((100,), 0.25), torch.full((100,), 0.75)])
         correct = torch.cat([torch.ones(25), torch.zeros(75), torch.ones(75), torch.zeros(25)])
-        for p in ("1", "2", "infty"):
-            with self.subTest(p=p):
-                assert calibration_error(conf, correct, p=p, beta=100) == pytest.approx(
-                    0.0, abs=5e-8
-                )
+        assert calibration_error(conf, correct, p=p, beta=100) == pytest.approx(0.0, abs=5e-8)
 
     def test_calibration_error_is_permutation_invariant(self):
         conf, correct = self._three_bins()
@@ -803,9 +791,8 @@ class TestMovedFunctions(unittest.TestCase):
             "NaN": lambda: calibration_error(torch.full((4,), float("nan")), correct[:4]),
         }
         for name, call in cases.items():
-            with self.subTest(name):
-                with pytest.raises(ValueError):
-                    call()
+            with pytest.raises(ValueError):
+                call()
 
     @requires(cuda=1)
     def test_calibration_error_on_cuda(self):

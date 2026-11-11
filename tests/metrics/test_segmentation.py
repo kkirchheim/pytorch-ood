@@ -3,7 +3,6 @@ Segmentation metrics: pooled over all pixels, and per image.
 """
 
 import math
-import unittest
 import warnings
 
 import pytest
@@ -35,31 +34,30 @@ def _images(n=4, size=8, seed=0):
     return scores, labels
 
 
-class TestOODSegmentationMetrics:
-    def test_pools_all_pixels(self):
-        scores, labels = _images()
-        expected = OODMetrics().update(scores.flatten(), labels.flatten()).compute()
-        result = (
-            OODSegmentationMetrics().update(scores[:2], labels[:2]).update(scores[2:], labels[2:])
-        )
-        assert result.compute() == expected
-        assert tuple(result.compute()) == ("AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR")
-
-    def test_images_without_ood_pixels_count(self):
-        scores, labels = _images()
-        labels[0] = labels[0].clamp(min=0)
-        result = OODSegmentationMetrics().update(scores, labels).compute()
-        assert result["AUROC"] == float(F.auroc(scores, labels))
-
-    def test_void_label_and_fpr_at(self):
-        scores, labels = _images()
-        labels[:, -1] = 255
-        result = OODSegmentationMetrics(void_label=255, fpr_at=0.9).update(scores, labels)
-        keep = labels != 255
-        assert result.compute()["FPR90TPR"] == float(F.fpr_at_tpr(scores[keep], labels[keep], 0.9))
+def test_pools_all_pixels():
+    scores, labels = _images()
+    expected = OODMetrics().update(scores.flatten(), labels.flatten()).compute()
+    result = OODSegmentationMetrics().update(scores[:2], labels[:2]).update(scores[2:], labels[2:])
+    assert result.compute() == expected
+    assert tuple(result.compute()) == ("AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR")
 
 
-class TestPerImage(unittest.TestCase):
+def test_images_without_ood_pixels_count():
+    scores, labels = _images()
+    labels[0] = labels[0].clamp(min=0)
+    result = OODSegmentationMetrics().update(scores, labels).compute()
+    assert result["AUROC"] == float(F.auroc(scores, labels))
+
+
+def test_void_label_and_fpr_at():
+    scores, labels = _images()
+    labels[:, -1] = 255
+    result = OODSegmentationMetrics(void_label=255, fpr_at=0.9).update(scores, labels)
+    keep = labels != 255
+    assert result.compute()["FPR90TPR"] == float(F.fpr_at_tpr(scores[keep], labels[keep], 0.9))
+
+
+class TestPerImage:
     def _expected(self, scores, labels, fn=F.auroc):
         return sum(float(fn(s, y)) for s, y in zip(scores, labels)) / len(scores)
 
@@ -69,20 +67,19 @@ class TestPerImage(unittest.TestCase):
         metric.update(scores[:3], labels[:3]).update(scores[3:], labels[3:])
         assert metric.compute()["AUROC"] == pytest.approx(self._expected(scores, labels), abs=5e-8)
 
-    def test_average_precision(self):
+    @pytest.mark.parametrize("positive, key", (("ood", "AP-OUT"), ("id", "AP-IN")))
+    def test_average_precision(self, positive, key):
         scores, labels = _images()
         # few-valued scores, where AP and AUPR differ
         scores = scores.round()
-        for positive, key in (("ood", "AP-OUT"), ("id", "AP-IN")):
-            with self.subTest(positive=positive):
-                metric = PerImage(AveragePrecision(positive))
-                metric.update(scores[:3], labels[:3]).update(scores[3:], labels[3:])
-                fn = lambda s, y: F.average_precision(s, y, positive)  # noqa: E731
-                assert metric.compute()[key] == pytest.approx(
-                    self._expected(scores, labels, fn), abs=5e-13
-                )
-                pooled = AveragePrecision(positive).update(scores, labels).compute()[key]
-                assert metric.compute()[key] != pytest.approx(pooled, abs=5e-8)
+        metric = PerImage(AveragePrecision(positive))
+        metric.update(scores[:3], labels[:3]).update(scores[3:], labels[3:])
+        fn = lambda s, y: F.average_precision(s, y, positive)  # noqa: E731
+        assert metric.compute()[key] == pytest.approx(
+            self._expected(scores, labels, fn), abs=5e-13
+        )
+        pooled = AveragePrecision(positive).update(scores, labels).compute()[key]
+        assert metric.compute()[key] != pytest.approx(pooled, abs=5e-8)
 
     def test_average_precision_skips_images_without_ood(self):
         scores, labels = _images()
@@ -95,16 +92,15 @@ class TestPerImage(unittest.TestCase):
         assert result["AP-OUT"] == pytest.approx(expected, abs=5e-13)
 
     @requires(cuda=1)
-    def test_average_precision_cuda(self):
+    @pytest.mark.parametrize("positive", ("ood", "id"))
+    def test_average_precision_cuda(self, positive):
         scores, labels = _images()
         scores = scores.round()
-        for positive in ("ood", "id"):
-            with self.subTest(positive=positive):
-                expected = PerImage(AveragePrecision(positive)).update(scores, labels).compute()
-                metric = PerImage(AveragePrecision(positive)).update(scores.cuda(), labels)
-                assert all(v.device.type == "cuda" for v in metric._sums.values())
-                for key, value in metric.compute().items():
-                    assert value == pytest.approx(expected[key], abs=5e-13), key
+        expected = PerImage(AveragePrecision(positive)).update(scores, labels).compute()
+        metric = PerImage(AveragePrecision(positive)).update(scores.cuda(), labels)
+        assert all(v.device.type == "cuda" for v in metric._sums.values())
+        for key, value in metric.compute().items():
+            assert value == pytest.approx(expected[key], abs=5e-13), key
 
     def test_differs_from_pooled(self):
         # the second image is shifted, which changes the pooled AUROC but not the per-image one
@@ -236,11 +232,21 @@ class TestPerImage(unittest.TestCase):
             self._expected(scores[keep], labels[keep]), abs=5e-8
         )
 
-    def test_needs(self):
-        for metric in (AUROC(), AUPR(), AveragePrecision(), FPRAtTPR(), AUTC(), OODMetrics()):
-            assert (metric.needs_id, metric.needs_ood) == (True, True)
-        for metric in (Accuracy(), MetricCollection([Accuracy()])):
-            assert (metric.needs_id, metric.needs_ood) == (True, False)
+    @pytest.mark.parametrize(
+        "metric, needs_ood",
+        [
+            (AUROC(), True),
+            (AUPR(), True),
+            (AveragePrecision(), True),
+            (FPRAtTPR(), True),
+            (AUTC(), True),
+            (OODMetrics(), True),
+            (Accuracy(), False),
+            (MetricCollection([Accuracy()]), False),
+        ],
+    )
+    def test_needs(self, metric, needs_ood):
+        assert (metric.needs_id, metric.needs_ood) == (True, needs_ood)
 
     def test_not_part_of_a_collection(self):
         with pytest.raises(ValueError, match="wrap the collection"):

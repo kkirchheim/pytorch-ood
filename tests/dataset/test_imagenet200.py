@@ -37,56 +37,57 @@ def _fake_imagenet_factory(train=None, val=None):
 CLASSES = _load_classes()
 
 
-class TestImageNet200Resource:
-    def test_classes_count_and_order(self):
-        assert len(CLASSES) == 200
-        assert len(set(CLASSES)) == 200
-        # OpenOOD assigns labels in sorted WNID order
-        assert CLASSES == sorted(CLASSES)
-
-    def test_test_split_size_and_balance(self):
-        entries = _read_split_resource("imagenet200_test.txt")
-        assert len(entries) == 9000
-        labels = [lbl for _, lbl in entries]
-        assert set(labels) == set(range(200))
-        assert all(labels.count(i) == 45 for i in range(200))
-
-    def test_val_split_size_and_balance(self):
-        entries = _read_split_resource("imagenet200_val.txt")
-        assert len(entries) == 1000
-        labels = [lbl for _, lbl in entries]
-        assert set(labels) == set(range(200))
-        assert all(labels.count(i) == 5 for i in range(200))
-
-    def test_test_and_val_splits_disjoint(self):
-        test_names = {b for b, _ in _read_split_resource("imagenet200_test.txt")}
-        val_names = {b for b, _ in _read_split_resource("imagenet200_val.txt")}
-        assert test_names & val_names == set()
+def test_classes_count_and_order():
+    assert len(CLASSES) == 200
+    assert len(set(CLASSES)) == 200
+    # OpenOOD assigns labels in sorted WNID order
+    assert CLASSES == sorted(CLASSES)
 
 
-class TestImageNet200Train:
-    def test_filters_and_relabels(self):
-        # two in-distribution WNIDs (labels 0 and 1) plus one foreign class
-        wnids = [CLASSES[0], "n99999999", CLASSES[1]]
-        samples = [
-            ("/in/a1.JPEG", 0),
-            ("/in/a2.JPEG", 0),
-            ("/foreign/b1.JPEG", 1),
-            ("/in/c1.JPEG", 2),
-        ]
-        fake = _FakeImageNet(samples, wnids)
+def test_test_split_size_and_balance():
+    entries = _read_split_resource("imagenet200_test.txt")
+    assert len(entries) == 9000
+    labels = [lbl for _, lbl in entries]
+    assert set(labels) == set(range(200))
+    assert all(labels.count(i) == 45 for i in range(200))
 
-        with mock.patch(
-            "pytorch_ood.dataset.img.imagenet200.ImageNet",
-            side_effect=_fake_imagenet_factory(train=fake),
-        ):
-            ds = ImageNet200("/fake", split="train")
 
-        # foreign class dropped, the three ID images kept and relabeled to 0/0/1
-        assert len(ds) == 3
-        labels = sorted(label for _, label in ds.samples)
-        assert labels == [0, 0, 1]
-        assert "/foreign/b1.JPEG" not in [p for p, _ in ds.samples]
+def test_val_split_size_and_balance():
+    entries = _read_split_resource("imagenet200_val.txt")
+    assert len(entries) == 1000
+    labels = [lbl for _, lbl in entries]
+    assert set(labels) == set(range(200))
+    assert all(labels.count(i) == 5 for i in range(200))
+
+
+def test_test_and_val_splits_disjoint():
+    test_names = {b for b, _ in _read_split_resource("imagenet200_test.txt")}
+    val_names = {b for b, _ in _read_split_resource("imagenet200_val.txt")}
+    assert test_names & val_names == set()
+
+
+def test_filters_and_relabels():
+    # two in-distribution WNIDs (labels 0 and 1) plus one foreign class
+    wnids = [CLASSES[0], "n99999999", CLASSES[1]]
+    samples = [
+        ("/in/a1.JPEG", 0),
+        ("/in/a2.JPEG", 0),
+        ("/foreign/b1.JPEG", 1),
+        ("/in/c1.JPEG", 2),
+    ]
+    fake = _FakeImageNet(samples, wnids)
+
+    with mock.patch(
+        "pytorch_ood.dataset.img.imagenet200.ImageNet",
+        side_effect=_fake_imagenet_factory(train=fake),
+    ):
+        ds = ImageNet200("/fake", split="train")
+
+    # foreign class dropped, the three ID images kept and relabeled to 0/0/1
+    assert len(ds) == 3
+    labels = sorted(label for _, label in ds.samples)
+    assert labels == [0, 0, 1]
+    assert "/foreign/b1.JPEG" not in [p for p, _ in ds.samples]
 
 
 class TestImageNet200ValTestSplit:
@@ -124,7 +125,6 @@ class TestImageNet200ValTestSplit:
         assert len(ds) == 1000
 
 
-class TestImageNet200Misc:
-    def test_invalid_split_raises(self):
-        with pytest.raises(ValueError):
-            ImageNet200("/fake", split="bogus")
+def test_invalid_split_raises():
+    with pytest.raises(ValueError):
+        ImageNet200("/fake", split="bogus")

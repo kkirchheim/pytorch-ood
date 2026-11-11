@@ -1,4 +1,3 @@
-import os
 from urllib.request import Request, urlopen
 
 import pytest
@@ -33,10 +32,7 @@ from pytorch_ood.dataset.txt import (
 )
 
 
-@pytest.mark.skipif(
-    not os.environ.get("PYTORCH_OOD_DOWNLOAD_TESTS"),
-    reason="Requires external dataset hosts; set PYTORCH_OOD_DOWNLOAD_TESTS=1 to run",
-)
+@pytest.mark.download
 class TestDatasetAvailability:
     def test_download_ImageNetA(self):
         status = urlopen(ImageNetA.url).getcode()

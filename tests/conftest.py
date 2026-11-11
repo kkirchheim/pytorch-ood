@@ -46,6 +46,8 @@ def _missing(config, what: str):
 
 
 def pytest_runtest_setup(item):
+    if item.get_closest_marker("download") and not os.environ.get(DOWNLOAD_TESTS):
+        pytest.skip(f"downloads data; set {DOWNLOAD_TESTS}=1 to run")
     for marker in item.iter_markers(name="hardware"):
         missing = missing_hardware(*marker.args, **marker.kwargs)
         if missing is not None:

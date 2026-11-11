@@ -1,6 +1,6 @@
-import unittest
 from unittest import mock
 
+import pytest
 import torch
 
 from pytorch_ood.detector import GradNorm
@@ -22,8 +22,8 @@ def _reference_scores(model, x, temperature=1.0):
     return -torch.stack(scores)
 
 
-class TestGradNormReference(unittest.TestCase):
-    def setUp(self):
+class TestGradNormReference:
+    def setup_method(self):
         torch.manual_seed(0)
         self.model = ClassificationModel(num_inputs=10, n_hidden=16, num_outputs=5).eval()
         # larger weights so that the predictions are far from uniform
@@ -36,12 +36,11 @@ class TestGradNormReference(unittest.TestCase):
             self.model, param_filter=lambda name: name == "classifier.weight", **kwargs
         )
 
-    def test_matches_reference(self):
-        for temperature in (1.0, 0.5, 10.0):
-            with self.subTest(temperature=temperature):
-                expected = _reference_scores(self.model, self.x, temperature)
-                scores = self._detector(temperature=temperature, micro_batch_size=5)(self.x)
-                torch.testing.assert_close(scores, expected)
+    @pytest.mark.parametrize("temperature", (1.0, 0.5, 10.0))
+    def test_matches_reference(self, temperature):
+        expected = _reference_scores(self.model, self.x, temperature)
+        scores = self._detector(temperature=temperature, micro_batch_size=5)(self.x)
+        torch.testing.assert_close(scores, expected)
 
     def test_sequential_path_matches_reference(self):
         with mock.patch.object(gradnorm_module, "_TORCH_FUNC_AVAILABLE", False):

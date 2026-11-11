@@ -1,5 +1,4 @@
 import math
-import unittest
 
 import pytest
 import torch
@@ -194,36 +193,39 @@ class TestGridSearch:
             GridSearch(detector, None, self.val_loader)
 
 
-class TestDetectorHyperparameterInterface:
-    def test_get_set_roundtrip(self):
-        detector = _WeightedFeatureDetector()
-        detector.set_hyperparameters(w=0.25)
-        assert detector.get_hyperparameters() == {"w": 0.25}
+def test_get_set_roundtrip():
+    detector = _WeightedFeatureDetector()
+    detector.set_hyperparameters(w=0.25)
+    assert detector.get_hyperparameters() == {"w": 0.25}
 
-    def test_unknown_hyperparameter_raises(self):
-        detector = _WeightedFeatureDetector()
-        with pytest.raises(ValueError):
-            detector.set_hyperparameters(does_not_exist=1)
 
-    def test_ash_exposes_space(self):
-        model = WideResNet(num_classes=10).eval()
-        detector = ASH(backbone=model.feature_maps, head=model.forward_feature_maps)
-        assert "percentile" in detector.hyperparameter_space
-        detector.set_hyperparameters(percentile=0.9)
-        assert detector.percentile == 0.9
-        assert detector.get_hyperparameters() == {"percentile": 0.9}
+def test_unknown_hyperparameter_raises():
+    detector = _WeightedFeatureDetector()
+    with pytest.raises(ValueError):
+        detector.set_hyperparameters(does_not_exist=1)
 
-    def test_gen_exposes_space(self):
-        detector = GEN(ClassificationModel())
-        assert set(detector.hyperparameter_space) == {"gamma", "M"}
-        detector.set_hyperparameters(gamma=2, M=100)
-        assert detector.get_hyperparameters() == {"gamma": 2, "M": 100}
 
-    def test_odin_exposes_space(self):
-        detector = ODIN(ClassificationModel())
-        assert set(detector.hyperparameter_space) == {"temperature", "eps"}
-        detector.set_hyperparameters(temperature=100, eps=0.0028)
-        assert detector.get_hyperparameters() == {"temperature": 100, "eps": 0.0028}
+def test_ash_exposes_space():
+    model = WideResNet(num_classes=10).eval()
+    detector = ASH(backbone=model.feature_maps, head=model.forward_feature_maps)
+    assert "percentile" in detector.hyperparameter_space
+    detector.set_hyperparameters(percentile=0.9)
+    assert detector.percentile == 0.9
+    assert detector.get_hyperparameters() == {"percentile": 0.9}
+
+
+def test_gen_exposes_space():
+    detector = GEN(ClassificationModel())
+    assert set(detector.hyperparameter_space) == {"gamma", "M"}
+    detector.set_hyperparameters(gamma=2, M=100)
+    assert detector.get_hyperparameters() == {"gamma": 2, "M": 100}
+
+
+def test_odin_exposes_space():
+    detector = ODIN(ClassificationModel())
+    assert set(detector.hyperparameter_space) == {"temperature", "eps"}
+    detector.set_hyperparameters(temperature=100, eps=0.0028)
+    assert detector.get_hyperparameters() == {"temperature": 100, "eps": 0.0028}
 
 
 class TestGridSearchReAct:
@@ -257,62 +259,54 @@ class TestGridSearchReAct:
         assert detector.threshold is not None
 
 
-class TestGridSearchKNN:
-    """KNN is a fitting feature detector: tuning uses the cached-features path."""
+def test_tunes_k():
+    g = torch.Generator().manual_seed(0)
+    z_id_train = torch.randn(80, 10, generator=g)
+    fit_loader = DataLoader(
+        TensorDataset(z_id_train, torch.zeros(80, dtype=torch.long)), batch_size=32
+    )
+    z_id = torch.randn(40, 10, generator=g)
+    z_ood = torch.randn(40, 10, generator=g) + 4.0
+    x = torch.cat([z_id, z_ood])
+    y = torch.cat([torch.zeros(40, dtype=torch.long), torch.full((40,), -1)])
+    val_loader = DataLoader(TensorDataset(x, y), batch_size=64)
 
-    def test_tunes_k(self):
-        g = torch.Generator().manual_seed(0)
-        z_id_train = torch.randn(80, 10, generator=g)
-        fit_loader = DataLoader(
-            TensorDataset(z_id_train, torch.zeros(80, dtype=torch.long)), batch_size=32
-        )
-        z_id = torch.randn(40, 10, generator=g)
-        z_ood = torch.randn(40, 10, generator=g) + 4.0
-        x = torch.cat([z_id, z_ood])
-        y = torch.cat([torch.zeros(40, dtype=torch.long), torch.full((40,), -1)])
-        val_loader = DataLoader(TensorDataset(x, y), batch_size=64)
+    detector = KNN(encoder=lambda z: z)
+    # small space so n_neighbors stays below the number of fitted samples
+    search = GridSearch(detector, fit_loader, val_loader, hyperparameter_space={"k": [1, 3, 5]})
+    best = search.run()
 
-        detector = KNN(encoder=lambda z: z)
-        # small space so n_neighbors stays below the number of fitted samples
-        search = GridSearch(
-            detector, fit_loader, val_loader, hyperparameter_space={"k": [1, 3, 5]}
-        )
-        best = search.run()
-
-        assert best["k"] in [1, 3, 5]
-        assert len(search.results_) == 3
-        assert detector.k == best["k"]
+    assert best["k"] in [1, 3, 5]
+    assert len(search.results_) == 3
+    assert detector.k == best["k"]
 
 
-class TestGridSearchGEN:
-    """GEN is a logits detector with no fit: tuning uses the cached-logits path."""
+def test_tunes_gamma_and_M():
+    model = ClassificationModel(num_inputs=10, num_outputs=10).eval()
+    detector = GEN(model)
 
-    def test_tunes_gamma_and_M(self):
-        model = ClassificationModel(num_inputs=10, num_outputs=10).eval()
-        detector = GEN(model)
+    g = torch.Generator().manual_seed(0)
+    z_id = torch.randn(100, 10, generator=g)
+    z_ood = torch.randn(100, 10, generator=g) + 4.0
+    x = torch.cat([z_id, z_ood])
+    y = torch.cat([torch.zeros(100, dtype=torch.long), torch.full((100,), -1)])
+    val_loader = DataLoader(TensorDataset(x, y), batch_size=64)
 
-        g = torch.Generator().manual_seed(0)
-        z_id = torch.randn(100, 10, generator=g)
-        z_ood = torch.randn(100, 10, generator=g) + 4.0
-        x = torch.cat([z_id, z_ood])
-        y = torch.cat([torch.zeros(100, dtype=torch.long), torch.full((100,), -1)])
-        val_loader = DataLoader(TensorDataset(x, y), batch_size=64)
+    # no fit_loader needed: GEN does not require fitting
+    search = GridSearch(detector, None, val_loader)
+    best = search.run()
 
-        # no fit_loader needed: GEN does not require fitting
-        search = GridSearch(detector, None, val_loader)
-        best = search.run()
-
-        space = GEN.hyperparameter_space
-        assert set(best) == {"gamma", "M"}
-        assert best["gamma"] in space["gamma"]
-        assert best["M"] in space["M"]
-        # full Cartesian product of the two sweeps
-        assert len(search.results_) == len(space["gamma"]) * len(space["M"])
-        assert (detector.gamma, detector.M) == (best["gamma"], best["M"])
+    space = GEN.hyperparameter_space
+    assert set(best) == {"gamma", "M"}
+    assert best["gamma"] in space["gamma"]
+    assert best["M"] in space["M"]
+    # full Cartesian product of the two sweeps
+    assert len(search.results_) == len(space["gamma"]) * len(space["M"])
+    assert (detector.gamma, detector.M) == (best["gamma"], best["M"])
 
 
-class TestGridSearchEdgeCases(unittest.TestCase):
-    def setUp(self):
+class TestGridSearchEdgeCases:
+    def setup_method(self):
         self.val_loader = DataLoader(_make_val_dataset(), batch_size=64)
         self.fit_loader = DataLoader(_make_fit_dataset(), batch_size=64)
 
@@ -366,9 +360,8 @@ class TestGridSearchEdgeCases(unittest.TestCase):
             (_WeightedFeatureDetector(), self.fit_loader),
             (_RawWeightedDetector(), None),
         ):
-            with self.subTest(type(detector).__name__):
-                search = GridSearch(detector, fit_loader, self.val_loader, metric=metric)
-                assert search.run() == {"w": 0.0}
+            search = GridSearch(detector, fit_loader, self.val_loader, metric=metric)
+            assert search.run() == {"w": 0.0}
 
     def test_constant_scores_do_not_abort(self):
         search = GridSearch(_ConstantDetector(), None, self.val_loader)

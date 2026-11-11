@@ -1,5 +1,3 @@
-import unittest
-
 import pytest
 import torch
 
@@ -22,8 +20,8 @@ def _reference_vim(features, train_features, w, b, d):
     return vlogit - energy
 
 
-class TestResidual(unittest.TestCase):
-    def setUp(self) -> None:
+class TestResidual:
+    def setup_method(self) -> None:
         torch.manual_seed(123)
         self.n_dim = 10
         self.w = torch.randn(size=(3, self.n_dim))
@@ -32,16 +30,20 @@ class TestResidual(unittest.TestCase):
         self.labels = torch.randint(0, 3, size=(200,))
         self.test = torch.randn(size=(64, self.n_dim))
 
-    def test_d_of_at_least_the_feature_dimension_is_halved_without_changing_the_setting(self):
-        for cls in (Residual, ViM):
-            halved = cls(None, d=self.n_dim // 2, w=self.w, b=self.b)
-            expected = halved.fit_features(self.train, self.labels).predict_features(self.test)
-            for d in (self.n_dim, self.n_dim + 1):
-                with self.subTest(cls=cls.__name__, d=d):
-                    detector = cls(None, d=d, w=self.w, b=self.b)
-                    detector.fit_features(self.train, self.labels)
-                    torch.testing.assert_close(detector.predict_features(self.test), expected)
-                    assert detector.d == d
+    @pytest.mark.parametrize("cls", (Residual, ViM))
+    @pytest.mark.parametrize("excess", (0, 1))
+    def test_d_of_at_least_the_feature_dimension_is_halved_without_changing_the_setting(
+        self, cls, excess
+    ):
+        d = self.n_dim + excess
+        halved = cls(None, d=self.n_dim // 2, w=self.w, b=self.b)
+        expected = halved.fit_features(self.train, self.labels).predict_features(self.test)
+
+        detector = cls(None, d=d, w=self.w, b=self.b)
+        detector.fit_features(self.train, self.labels)
+
+        torch.testing.assert_close(detector.predict_features(self.test), expected)
+        assert detector.d == d
 
     def test_principal_subspace_has_zero_residual(self):
         """

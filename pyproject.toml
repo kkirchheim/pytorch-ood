@@ -24,6 +24,10 @@ banned-module-level-imports = ["sklearn", "gdown", "pandas", "segmentation_model
 # across the two. pytest's `pythonpath = src .` makes `import pytorch_ood` use this checkout.
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "src".msg = "import `pytorch_ood`, not `src.pytorch_ood`"
+"unittest.TestCase".msg = "write plain pytest tests"
+"unittest.skip".msg = "use a pytest marker"
+"unittest.skipIf".msg = "use a pytest marker"
+"unittest.skipUnless".msg = "use a pytest marker"
 
 [tool.ruff.lint.per-file-ignores]
 # only library code is bound by the install_requires policy

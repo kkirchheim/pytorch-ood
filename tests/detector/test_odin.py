@@ -1,5 +1,3 @@
-import unittest
-
 import pytest
 import torch
 from torch import nn
@@ -27,18 +25,17 @@ def _reference_odin(model, inputs, eps, temperature, std):
     return torch.stack(scores)
 
 
-class TestODIN(unittest.TestCase):
-    def setUp(self):
+class TestODIN:
+    def setup_method(self):
         torch.manual_seed(0)
         self.model = ConvClassifier(in_channels=3, out_channels=16, num_outputs=5).eval()
         self.x = torch.randn(8, 3, 8, 8)
 
-    def test_matches_reference(self):
-        for temperature, eps in ((1000.0, 0.0014), (10.0, 0.0028), (1.0, 0.05)):
-            with self.subTest(temperature=temperature, eps=eps):
-                detector = ODIN(self.model, eps=eps, temperature=temperature, norm_std=NORM_STD)
-                expected = _reference_odin(self.model, self.x, eps, temperature, NORM_STD)
-                torch.testing.assert_close(detector.predict(self.x), -expected)
+    @pytest.mark.parametrize("temperature, eps", ((1000.0, 0.0014), (10.0, 0.0028), (1.0, 0.05)))
+    def test_matches_reference(self, temperature, eps):
+        detector = ODIN(self.model, eps=eps, temperature=temperature, norm_std=NORM_STD)
+        expected = _reference_odin(self.model, self.x, eps, temperature, NORM_STD)
+        torch.testing.assert_close(detector.predict(self.x), -expected)
 
     def test_perturbation_follows_cross_entropy(self):
         x = self.x.clone().requires_grad_()

@@ -6,10 +6,10 @@ Losses should also work when they are not moved, as long as the inputs share a d
 for which this is impossible are listed in ``REQUIRES_TO`` and document that ``.to()`` is required.
 """
 
-import unittest
 import warnings
 from unittest import mock
 
+import pytest
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -110,7 +110,7 @@ def _run(cls, task, all_ood, reduction, device, move_loss: bool):
 
 
 @requires(cuda=1)
-class TestLossDeviceHandling(unittest.TestCase):
+class TestLossDeviceHandling:
     def _check_on_device(self, cls, task, all_ood, reduction, move_loss: bool):
         criterion, args, value = _run(cls, task, all_ood, reduction, DEVICE, move_loss)
         assert value.device == DEVICE
@@ -126,23 +126,22 @@ class TestLossDeviceHandling(unittest.TestCase):
             _, _, expected = _run(cls, task, all_ood, reduction, "cpu", move_loss=False)
             torch.testing.assert_close(value.detach().cpu(), expected.detach())
 
-    def test_to_moves_all_state(self):
-        for cls in LOSSES:
-            with self.subTest(cls.__name__):
-                criterion, _ = LOSS_INPUTS[cls](SHAPES[next(iter(cls.info.tasks))])
-                criterion.to(DEVICE)
-                left = [n for n, t in _tensor_state(criterion) if t.device != DEVICE]
-                assert left == [], "tensors that are not moved"
+    @pytest.mark.parametrize("cls", LOSSES)
+    def test_to_moves_all_state(self, cls):
+        criterion, _ = LOSS_INPUTS[cls](SHAPES[next(iter(cls.info.tasks))])
+        criterion.to(DEVICE)
+        left = [n for n, t in _tensor_state(criterion) if t.device != DEVICE]
+        assert left == [], "tensors that are not moved"
 
-    def test_forward_and_backward_after_to(self):
-        for cls, task, all_ood, reduction in _cases(LOSSES):
-            with self.subTest(f"{cls.__name__}, {task.value}, all OOD: {all_ood}, {reduction}"):
-                self._check_on_device(cls, task, all_ood, reduction, move_loss=True)
+    @pytest.mark.parametrize("cls, task, all_ood, reduction", _cases(LOSSES))
+    def test_forward_and_backward_after_to(self, cls, task, all_ood, reduction):
+        self._check_on_device(cls, task, all_ood, reduction, move_loss=True)
 
-    def test_forward_and_backward_without_to(self):
-        for cls, task, all_ood, reduction in _cases(c for c in LOSSES if c not in REQUIRES_TO):
-            with self.subTest(f"{cls.__name__}, {task.value}, all OOD: {all_ood}, {reduction}"):
-                self._check_on_device(cls, task, all_ood, reduction, move_loss=False)
+    @pytest.mark.parametrize(
+        "cls, task, all_ood, reduction", _cases(c for c in LOSSES if c not in REQUIRES_TO)
+    )
+    def test_forward_and_backward_without_to(self, cls, task, all_ood, reduction):
+        self._check_on_device(cls, task, all_ood, reduction, move_loss=False)
 
     def test_vos_synthesizes_outliers(self):
         # the setup must reach the synthesis path, which holds most of the device-dependent state
@@ -184,18 +183,14 @@ class TestLossDeviceHandling(unittest.TestCase):
         assert criterion.lam2.device == DEVICE
 
 
-class TestRequiresTo(unittest.TestCase):
-    """``REQUIRES_TO`` lists exactly the losses that need ``.to()``, and they say so."""
+@pytest.mark.parametrize("cls", REQUIRES_TO)
+def test_losses_that_require_to_hold_tensors(cls):
+    # scalars mix with tensors on any device, so they alone do not require .to()
+    criterion, _ = LOSS_INPUTS[cls](SHAPES[next(iter(cls.info.tasks))])
+    state = [n for n, t in _tensor_state(criterion) if t.dim() > 0]
+    assert state, "has no tensor state, so it should work without .to()"
 
-    def test_losses_that_require_to_hold_tensors(self):
-        # scalars mix with tensors on any device, so they alone do not require .to()
-        for cls in REQUIRES_TO:
-            with self.subTest(cls.__name__):
-                criterion, _ = LOSS_INPUTS[cls](SHAPES[next(iter(cls.info.tasks))])
-                state = [n for n, t in _tensor_state(criterion) if t.dim() > 0]
-                assert state, "has no tensor state, so it should work without .to()"
 
-    def test_losses_that_require_to_document_it(self):
-        for cls in REQUIRES_TO:
-            with self.subTest(cls.__name__):
-                assert "``.to(device)``" in cls.__doc__
+@pytest.mark.parametrize("cls", REQUIRES_TO)
+def test_losses_that_require_to_document_it(cls):
+    assert "``.to(device)``" in cls.__doc__

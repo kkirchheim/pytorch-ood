@@ -1,5 +1,4 @@
-import unittest
-
+import pytest
 import torch
 
 from pytorch_ood.detector import NNGuide
@@ -24,21 +23,20 @@ def _reference_scores(head, z_train, z, k):
     return torch.stack(scores)
 
 
-class TestNNGuideReference(unittest.TestCase):
-    def setUp(self):
+class TestNNGuideReference:
+    def setup_method(self):
         torch.manual_seed(0)
         self.head = torch.nn.Linear(6, 4)
         self.z_train = torch.randn(200, 6)
         self.z = torch.randn(16, 6)
 
-    def test_matches_reference(self):
-        for k in (1, 5, 10):
-            with self.subTest(k=k):
-                detector = NNGuide(encoder=None, head=self.head, k=k)
-                detector.fit_features(self.z_train, torch.zeros(200, dtype=torch.long))
-                with torch.no_grad():
-                    expected = _reference_scores(self.head, self.z_train, self.z, k)
-                torch.testing.assert_close(detector.predict_features(self.z), expected)
+    @pytest.mark.parametrize("k", (1, 5, 10))
+    def test_matches_reference(self, k):
+        detector = NNGuide(encoder=None, head=self.head, k=k)
+        detector.fit_features(self.z_train, torch.zeros(200, dtype=torch.long))
+        with torch.no_grad():
+            expected = _reference_scores(self.head, self.z_train, self.z, k)
+        torch.testing.assert_close(detector.predict_features(self.z), expected)
 
     def test_chunks_do_not_change_scores(self):
         labels = torch.zeros(200, dtype=torch.long)

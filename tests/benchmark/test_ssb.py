@@ -1,6 +1,5 @@
 import os
 import tempfile
-import unittest
 
 import numpy as np
 import pytest
@@ -311,7 +310,7 @@ def _oscr_brute_force(scores, preds, labels):
     return sum((x1 - x0) * (y0 + y1) / 2 for (x0, y0), (x1, y1) in zip(points, points[1:]))
 
 
-class OSCRValuesTest(unittest.TestCase):
+class TestOSCRValues:
     def _oscr(self, id_scores, ood_scores, id_correct):
         id_scores, ood_scores = torch.tensor(id_scores), torch.tensor(ood_scores)
         labels = torch.cat([torch.zeros(len(id_scores)), -torch.ones(len(ood_scores))]).long()
@@ -345,17 +344,14 @@ class OSCRValuesTest(unittest.TestCase):
         result = self._oscr(torch.rand(n).tolist(), torch.rand(n).tolist(), correct.tolist())
         assert result == pytest.approx(correct.float().mean().item() / 2, abs=0.01)
 
-    def test_matches_brute_force(self):
+    @pytest.mark.parametrize("levels", (None, 3, 10))
+    def test_matches_brute_force(self, levels):
         torch.manual_seed(0)
-        for levels in (None, 3, 10):
-            with self.subTest(levels=levels):
-                labels = torch.cat(
-                    [torch.randint(0, 4, (200,)), -torch.ones(100, dtype=torch.long)]
-                )
-                preds = torch.randint(0, 4, (300,))
-                scores = torch.randn(300)
-                if levels is not None:
-                    scores = (scores * levels).round()
-                assert oscr_score(scores, preds, labels) == pytest.approx(
-                    _oscr_brute_force(scores, preds, labels), abs=5e-6
-                )
+        labels = torch.cat([torch.randint(0, 4, (200,)), -torch.ones(100, dtype=torch.long)])
+        preds = torch.randint(0, 4, (300,))
+        scores = torch.randn(300)
+        if levels is not None:
+            scores = (scores * levels).round()
+        assert oscr_score(scores, preds, labels) == pytest.approx(
+            _oscr_brute_force(scores, preds, labels), abs=5e-6
+        )

@@ -6,16 +6,15 @@ from pytorch_ood.detector import RMD, Mahalanobis, MahalanobisODIN, MultiMahalan
 from tests.helpers import points_with_covariance
 
 
-class TestMahalanobisScore:
-    def test_half_squared_distance_to_closest_center(self):
-        centers = torch.tensor([[0.0, 0.0], [4.0, 0.0]])
-        z, y = points_with_covariance(centers, torch.tensor([1.0, 0.25]))
-        detector = Mahalanobis(None, eps=0.0).fit_features(z, y)
-        torch.testing.assert_close(detector.mu, centers)
-        torch.testing.assert_close(detector.precision, torch.diag(torch.tensor([1.0, 4.0])))
-        x = torch.tensor([[1.0, 1.0], [3.0, 0.0]])
-        # squared distances: (5, 13) and (9, 1)
-        torch.testing.assert_close(detector.predict_features(x), torch.tensor([2.5, 0.5]))
+def test_half_squared_distance_to_closest_center():
+    centers = torch.tensor([[0.0, 0.0], [4.0, 0.0]])
+    z, y = points_with_covariance(centers, torch.tensor([1.0, 0.25]))
+    detector = Mahalanobis(None, eps=0.0).fit_features(z, y)
+    torch.testing.assert_close(detector.mu, centers)
+    torch.testing.assert_close(detector.precision, torch.diag(torch.tensor([1.0, 4.0])))
+    x = torch.tensor([[1.0, 1.0], [3.0, 0.0]])
+    # squared distances: (5, 13) and (9, 1)
+    torch.testing.assert_close(detector.predict_features(x), torch.tensor([2.5, 0.5]))
 
 
 def test_eps_is_added_to_the_covariance_before_inverting_it(seed: torch.Generator):

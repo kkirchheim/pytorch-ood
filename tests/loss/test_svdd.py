@@ -4,12 +4,11 @@ import torch
 from pytorch_ood.loss import DeepSADLoss, DeepSVDDLoss
 
 
-class TestDeepSAD:
-    def test_deprecated_name(self):
-        import pytorch_ood.loss as losses
+def test_deprecated_name():
+    import pytorch_ood.loss as losses
 
-        with pytest.warns(DeprecationWarning):
-            assert losses.SSDeepSVDDLoss is DeepSADLoss
+    with pytest.warns(DeprecationWarning):
+        assert losses.SSDeepSVDDLoss is DeepSADLoss
 
 
 class TestDeepSADValues:
@@ -33,20 +32,19 @@ class TestDeepSADValues:
         assert torch.isfinite(loss).all()
 
 
-class TestSVDDLossDefaultRadius:
-    def test_default_radius(self):
-        criterion = DeepSVDDLoss(n_dim=2)
-        loss = DeepSVDDLoss.svdd_loss(torch.randn(3, 2), criterion.center)
-        assert loss.shape == (3,)
+def test_default_radius():
+    criterion = DeepSVDDLoss(n_dim=2)
+    loss = DeepSVDDLoss.svdd_loss(torch.randn(3, 2), criterion.center)
+    assert loss.shape == (3,)
 
 
-class TestDeepSADCenterAndDistance:
-    def test_center_argument(self):
-        center = torch.tensor([1.0, 2.0])
-        criterion = DeepSADLoss(n_dim=2, center=center)
-        torch.testing.assert_close(criterion.center.params, center.reshape(1, 2))
+def test_center_argument():
+    center = torch.tensor([1.0, 2.0])
+    criterion = DeepSADLoss(n_dim=2, center=center)
+    torch.testing.assert_close(criterion.center.params, center.reshape(1, 2))
 
-    def test_distance_is_squared_distance_to_center(self):
-        criterion = DeepSADLoss(n_dim=2, center=torch.tensor([1.0, 0.0]))
-        x = torch.tensor([[1.0, 0.0], [3.0, 0.0], [1.0, -1.0]])
-        torch.testing.assert_close(criterion.distance(x), torch.tensor([0.0, 4.0, 1.0]))
+
+def test_distance_is_squared_distance_to_center():
+    criterion = DeepSADLoss(n_dim=2, center=torch.tensor([1.0, 0.0]))
+    x = torch.tensor([[1.0, 0.0], [3.0, 0.0], [1.0, -1.0]])
+    torch.testing.assert_close(criterion.distance(x), torch.tensor([0.0, 4.0, 1.0]))

@@ -45,8 +45,7 @@ class TestRegistryIntegrity:
 
     def test_arch_constructible(self):
         for entry in _ENTRIES:
-            model = self._construct(entry)
-            assert model is not None
+            self._construct(entry)
 
     @staticmethod
     def _construct(entry):
@@ -57,64 +56,72 @@ class TestRegistryIntegrity:
         return cls(**entry.arch_kwargs)
 
 
-class TestRegistryLookup:
-    def test_exact_key(self):
-        entry = get_model_info("wrn-40-2/cifar10/logitnorm/s0")
-        assert entry.key == "wrn-40-2/cifar10/logitnorm/s0"
-
-    def test_exact_key_without_seed(self):
-        entry = get_model_info("wrn-40-2/cifar10/oe")
-        assert entry.key == "wrn-40-2/cifar10/oe"
-        assert entry.seed is None
-
-    def test_prefix_resolution(self):
-        entry = get_model_info("wrn-40-2/imagenet32")
-        assert entry.key == "wrn-40-2/imagenet32/crossentropy"
-
-    def test_prefix_resolution_ambiguous_across_seeds(self):
-        # logitnorm/cifar10 now has multiple seeds registered, so the
-        # seedless prefix is ambiguous
-        with pytest.raises(ValueError):
-            get_model_info("wrn-40-2/cifar10/logitnorm")
-
-    def test_prefix_resolution_ambiguous_across_seeds_energy(self):
-        # cifar10/energy now has both the third-party s1 checkpoint and our
-        # own s0/s2 fine-tunes registered, so the seedless prefix is ambiguous
-        with pytest.raises(ValueError):
-            get_model_info("wrn-40-2/cifar10/energy")
-
-    def test_ambiguous(self):
-        with pytest.raises(ValueError):
-            get_model_info("wrn-40-2/cifar10")
-
-    def test_unknown(self):
-        with pytest.raises(ValueError):
-            get_model_info("resnet-18/mnist/crossentropy")
-
-    def test_list_models_all(self):
-        keys = list_models()
-        assert keys == sorted(keys)
-        assert len(keys) == len(_ENTRIES)
-
-    def test_list_models_filtered(self):
-        for key in list_models(dataset="cifar10"):
-            assert get_model_info(key).dataset == "cifar10"
-
-        assert list_models(dataset="no-such-dataset") == []
+def test_exact_key():
+    entry = get_model_info("wrn-40-2/cifar10/logitnorm/s0")
+    assert entry.key == "wrn-40-2/cifar10/logitnorm/s0"
 
 
-class TestPreprocessing:
-    def test_build_structure(self):
-        transform = load_transform("wrn-40-2/cifar10/crossentropy")
-        names = [type(t).__name__ for t in transform.transforms]
-        assert names == ["Resize", "ToRGB", "ToTensor", "Normalize"]
+def test_exact_key_without_seed():
+    entry = get_model_info("wrn-40-2/cifar10/oe")
+    assert entry.key == "wrn-40-2/cifar10/oe"
+    assert entry.seed is None
 
-    def test_std_introspection(self):
-        # detectors like ODIN require access to the normalization std
-        entry = get_model_info("wrn-40-2/cifar10/crossentropy")
-        assert isinstance(entry.preprocessing, ImagePreprocessing)
-        assert list(entry.preprocessing.std) == [x / 255 for x in [63.0, 62.1, 66.7]]
 
-    def test_all_entries_have_preprocessing(self):
-        for entry in _ENTRIES:
-            assert entry.preprocessing is not None, entry.key
+def test_prefix_resolution():
+    entry = get_model_info("wrn-40-2/imagenet32")
+    assert entry.key == "wrn-40-2/imagenet32/crossentropy"
+
+
+def test_prefix_resolution_ambiguous_across_seeds():
+    # logitnorm/cifar10 now has multiple seeds registered, so the
+    # seedless prefix is ambiguous
+    with pytest.raises(ValueError):
+        get_model_info("wrn-40-2/cifar10/logitnorm")
+
+
+def test_prefix_resolution_ambiguous_across_seeds_energy():
+    # cifar10/energy now has both the third-party s1 checkpoint and our
+    # own s0/s2 fine-tunes registered, so the seedless prefix is ambiguous
+    with pytest.raises(ValueError):
+        get_model_info("wrn-40-2/cifar10/energy")
+
+
+def test_ambiguous():
+    with pytest.raises(ValueError):
+        get_model_info("wrn-40-2/cifar10")
+
+
+def test_unknown():
+    with pytest.raises(ValueError):
+        get_model_info("resnet-18/mnist/crossentropy")
+
+
+def test_list_models_all():
+    keys = list_models()
+    assert keys == sorted(keys)
+    assert len(keys) == len(_ENTRIES)
+
+
+def test_list_models_filtered():
+    for key in list_models(dataset="cifar10"):
+        assert get_model_info(key).dataset == "cifar10"
+
+    assert list_models(dataset="no-such-dataset") == []
+
+
+def test_build_structure():
+    transform = load_transform("wrn-40-2/cifar10/crossentropy")
+    names = [type(t).__name__ for t in transform.transforms]
+    assert names == ["Resize", "ToRGB", "ToTensor", "Normalize"]
+
+
+def test_std_introspection():
+    # detectors like ODIN require access to the normalization std
+    entry = get_model_info("wrn-40-2/cifar10/crossentropy")
+    assert isinstance(entry.preprocessing, ImagePreprocessing)
+    assert list(entry.preprocessing.std) == [x / 255 for x in [63.0, 62.1, 66.7]]
+
+
+def test_all_entries_have_preprocessing():
+    for entry in _ENTRIES:
+        assert entry.preprocessing is not None, entry.key
