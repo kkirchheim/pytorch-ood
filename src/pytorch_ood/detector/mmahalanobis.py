@@ -48,9 +48,7 @@ class MultiMahalanobis(StructuredDetector):
 
     :math:`\\Sigma_i` is the shared within-class covariance (centered outer products divided by the
     number of samples), regularized or pseudo-inverted as in
-    :class:`~pytorch_ood.detector.Mahalanobis`. The parameters are estimated in
-    double precision (single precision on MPS, which does not support double precision) and stored
-    in the dtype of the features.
+    :class:`~pytorch_ood.detector.Mahalanobis`.
 
     .. note ::
         This does not yet support ODIN preprocessing. Also, the :math:`\\alpha` values have to be determined manually.

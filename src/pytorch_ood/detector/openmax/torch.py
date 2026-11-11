@@ -127,5 +127,6 @@ class OpenMax(LogitsDetector):
             raise RequiresFittingException()
 
         device = self.device or logits.device
-        logits = logits.detach().cpu().numpy()
-        return torch.tensor(self._openmax.predict(logits)[:, 0], device=device)
+        scores = self._openmax.predict(logits.detach().cpu().numpy())[:, 0]
+        dtype = torch.promote_types(logits.dtype, torch.float32)
+        return torch.tensor(scores, device=device, dtype=dtype)

@@ -193,6 +193,21 @@ def test_scores_on_a_differentiable_representation_are_not_differentiable(
     assert not getattr(detector, f"predict_{representation.kind}")(z).requires_grad
 
 
+def _base_of(cls: type) -> type:
+    """The semantic base class of a detector, or :class:`Detector` for one without (MCD)."""
+    return next((base for base in SEMANTIC_BASES if issubclass(cls, base)), Detector)
+
+
+@pytest.mark.parametrize("base", (*SEMANTIC_BASES, Detector), ids=_name)
+def test_float32_input_gives_float32_scores(base: type, seed: torch.Generator):
+    cases = [c for c in DETECTOR_CASES if _base_of(_CLASSES[c.name]) is base]
+    assert cases
+
+    dtypes = {c.name: _fitted(c)(_inputs(c, seed)).dtype for c in cases}
+
+    assert dtypes == {c.name: torch.float32 for c in cases}
+
+
 # --- preconditions ------------------------------------------------------------------------------
 
 

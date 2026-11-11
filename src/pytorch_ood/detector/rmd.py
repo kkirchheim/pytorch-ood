@@ -129,9 +129,10 @@ class RMD(Mahalanobis):
         if not self._is_fitted():
             raise RequiresFittingException
 
+        dtype = torch.promote_types(z.dtype, torch.float32)
         z = z.to(self.mu.dtype)
         md_k = self._calc_gaussian_scores(z)
         md_0 = self._background_score(z)
 
         score = torch.min(md_k - md_0.view(-1, 1), dim=1).values
-        return score
+        return score.to(dtype)

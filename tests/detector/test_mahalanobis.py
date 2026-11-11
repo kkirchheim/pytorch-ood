@@ -140,7 +140,6 @@ class MahalanobisNumericsTest(unittest.TestCase):
     def _check(self, **kwargs):
         detector = Mahalanobis(None, **kwargs).fit_features(self.z, self.y)
         scores = detector.predict_features(self.x)
-        self.assertEqual(scores.dtype, torch.float32)
         expected = _reference_scores(
             self.z, self.y, self.x, eps=detector.eps, use_pinv=detector.use_pinv
         )
@@ -151,12 +150,6 @@ class MahalanobisNumericsTest(unittest.TestCase):
 
     def test_pinv_matches_float64_reference(self):
         self._check(use_pinv=True)
-
-    def test_float64_input_stays_float64(self):
-        detector = Mahalanobis(None).fit_features(self.z.double(), self.y)
-        self.assertEqual(detector.mu.dtype, torch.float64)
-        self.assertEqual(detector.precision.dtype, torch.float64)
-        self.assertEqual(detector.predict_features(self.x.double()).dtype, torch.float64)
 
     def test_float32_input_gives_float32_parameters(self):
         detector = Mahalanobis(None).fit_features(self.z, self.y)

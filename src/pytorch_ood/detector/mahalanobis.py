@@ -49,9 +49,6 @@ class Mahalanobis(FeaturesDetector):
     used. Alternatively, the pseudo-inverse of :math:`\\Sigma` can be used (``use_pinv``), which
     ignores directions in which the training features do not vary. This is preferable when there are
     fewer training samples than feature dimensions.
-
-    The parameters are estimated in double precision (single precision on MPS, which does not support
-    double precision) and stored in the dtype of the features.
     """
 
     info = DetectorInfo(
@@ -145,7 +142,7 @@ class Mahalanobis(FeaturesDetector):
 
         md_k = self._calc_gaussian_scores(z)
         score = -torch.max(md_k, dim=1).values
-        return score
+        return score.to(torch.promote_types(z.dtype, torch.float32))
 
     def _is_fitted(self) -> bool:
         # scoring needs the whitening computed by fit: mu/precision set by hand do not suffice, and
@@ -277,8 +274,8 @@ class MahalanobisODIN(GradientDetector):
             with torch.enable_grad():
                 x = Variable(x, requires_grad=True)
                 features = self._base.encoder(x)
-                features = features.view(features.shape[0], -1)
                 whitening, whitened_mu = self._base._whitening, self._base._whitened_mu
+                features = features.view(features.shape[0], -1).to(whitening.dtype)
                 distances = _squared_mahalanobis(features.detach(), whitening, whitened_mu)
                 sample_pred = distances.argmin(dim=1)
                 # half the squared distance to the closest center, ||f L - mu_k L||^2 / 2
