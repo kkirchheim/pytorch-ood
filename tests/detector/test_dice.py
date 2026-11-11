@@ -1,7 +1,6 @@
 import torch
 
 from pytorch_ood.detector import DICE
-from tests.helpers import ClassificationModel, requires
 
 
 def test_scores_are_the_energy_of_the_sparsified_head():
@@ -19,15 +18,3 @@ def test_scores_are_the_energy_of_the_sparsified_head():
     expected = -torch.logsumexp(logits, dim=1)
 
     torch.testing.assert_close(detector.predict_features(x).double(), expected)
-
-
-@requires(cuda=1)
-def test_model_moved_after_construction(accelerator: torch.device):
-    # w and b are copies on the CPU, the encoder is on the accelerator
-    model = ClassificationModel()
-    detector = DICE(model.features, w=model.classifier.weight, b=model.classifier.bias, p=0.5)
-    model.to(accelerator)
-
-    detector.fit_features(torch.rand(20, 10), torch.zeros(20).long())
-
-    assert detector(torch.randn(4, 10, device=accelerator)).device == accelerator

@@ -98,7 +98,7 @@ class DICE(FeaturesDetector):
         if self.masked_w is None:
             raise RequiresFittingException()
 
-        return self.detector(x @ self.masked_w.T + self.bias)
+        return self.detector(x @ self.masked_w.to(x.device).T + self.bias.to(x.device))
 
     def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """
@@ -111,8 +111,7 @@ class DICE(FeaturesDetector):
         """
         device = self.device or z.device
         z = z.detach().to(device).float()
-        self.weight, self.bias = self.weight.to(device), self.bias.to(device)
-        weight = self.weight.float()
+        weight = self.weight.detach().to(device).float()
 
         self.mean_activation = z.mean(dim=0)
 
