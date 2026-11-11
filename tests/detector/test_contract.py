@@ -6,7 +6,7 @@ instance is needed, for each exported detector class.
 import copy
 import inspect
 from dataclasses import dataclass
-from typing import Dict, Iterable, Optional, Tuple, Type
+from typing import Callable, Dict, Iterable, Optional, Tuple, Type
 
 import pytest
 import torch
@@ -206,6 +206,50 @@ def test_float32_input_gives_float32_scores(base: type, seed: torch.Generator):
     dtypes = {c.name: _fitted(c)(_inputs(c, seed)).dtype for c in cases}
 
     assert dtypes == {c.name: torch.float32 for c in cases}
+
+
+def _memory_layouts(x: Tensor) -> Dict[str, Tensor]:
+    """The values of ``x``, stored in memory layouts other than the default one."""
+    # gaps along every dimension, so that ``view`` cannot merge any two of them; NaN in the gaps,
+    # so that code reading the storage directly cannot go unnoticed
+    spread = torch.full([2 * size for size in x.shape], float("nan"), dtype=x.dtype)
+    every_second = tuple(slice(None, None, 2) for _ in x.shape)
+    spread[every_second] = x
+    layouts = {"gaps": spread[every_second]}
+    if x.ndim == 4:
+        layouts["channels_last"] = x.contiguous(memory_format=torch.channels_last)
+    return layouts
+
+
+def _assert_same_scores_in_every_memory_layout(predict: Callable[[Tensor], Tensor], x: Tensor):
+    expected = predict(x)
+    for name, rearranged in _memory_layouts(x).items():
+        # float32 forward passes round differently per layout; a layout bug is far larger or raises
+        torch.testing.assert_close(predict(rearranged), expected, rtol=1e-3, atol=1e-3, msg=name)
+
+
+def _deterministic(cls: type) -> bool:
+    # MCD samples its dropout masks from the global RNG, so two calls give different scores
+    return cls is not MCD
+
+
+@pytest.mark.parametrize("case", _cases(_deterministic))
+def test_scores_do_not_depend_on_the_memory_layout(case: DetectorCase, seed: torch.Generator):
+    _assert_same_scores_in_every_memory_layout(_fitted(case), _inputs(case, seed))
+
+
+@pytest.mark.parametrize("case", _cases(lambda cls: _produced(cls) and _deterministic(cls)))
+def test_scores_on_a_representation_do_not_depend_on_the_memory_layout(
+    case: DetectorCase, seed: torch.Generator
+):
+    detector = _fitted(case)
+    representation = _produced(type(detector))
+    with torch.no_grad():
+        z = getattr(detector, representation.producer)(_inputs(case, seed))
+
+    _assert_same_scores_in_every_memory_layout(
+        getattr(detector, f"predict_{representation.kind}"), z
+    )
 
 
 # --- preconditions ------------------------------------------------------------------------------

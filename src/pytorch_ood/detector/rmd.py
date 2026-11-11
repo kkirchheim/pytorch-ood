@@ -111,7 +111,7 @@ class RMD(Mahalanobis):
         This is written a bit differently compared to the mahalanobis paper
         """
         # mean over feature maps
-        features = z.view(z.size(0), z.size(1), -1)
+        features = z.reshape(z.size(0), z.size(1), -1)
         features = torch.mean(features, 2)
         return _squared_mahalanobis(features, self._whitening, self._whitened_mu)
 

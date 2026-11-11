@@ -194,7 +194,7 @@ class MultiMahalanobis(StructuredDetector):
 
     def _calc_gaussian_scores(self, z: Tensor, layer_idx) -> Tensor:
         """ """
-        features = z.view(z.size(0), z.size(1), -1)
+        features = z.reshape(z.size(0), z.size(1), -1)
         features = torch.mean(features, 2).to(self.mu[layer_idx].dtype)
         # the factor -0.5 (Gaussian log-density term) is taken from the reference implementation
         return -0.5 * _squared_mahalanobis(

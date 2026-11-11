@@ -37,17 +37,6 @@ class TestASHOutOfPlace(unittest.TestCase):
                 self._detector(variant).predict_feature_maps(x)
                 self.assertTrue(torch.equal(x, before))
 
-    def test_non_contiguous(self):
-        for variant in self.variants:
-            with self.subTest(variant=variant):
-                x = torch.rand(4, 5, 5, 8).permute(0, 3, 1, 2)
-                self.assertFalse(x.is_contiguous())
-                detector = self._detector(variant)
-                torch.testing.assert_close(
-                    detector.predict_feature_maps(x),
-                    detector.predict_feature_maps(x.contiguous()),
-                )
-
     def test_same_values_as_in_place_version(self):
         for variant in self.variants:
             with self.subTest(variant=variant):
