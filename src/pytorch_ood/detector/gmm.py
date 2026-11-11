@@ -117,6 +117,8 @@ class GMM(FeaturesDetector):
         if self._mu is None:
             raise RequiresFittingException()
 
+        # negative log-likelihoods overflow float16
+        dtype = torch.promote_types(z.dtype, torch.float32)
         z = z.detach().to(self._mu.device, self._mu.dtype)
         d = z.shape[1]
         diff = z.unsqueeze(0) - self._mu.unsqueeze(1)  # (K, B, D)
@@ -125,4 +127,4 @@ class GMM(FeaturesDetector):
         log_likelihood = self._log_weights - 0.5 * (
             mahal + self._log_det + d * math.log(2 * math.pi)
         )
-        return -torch.logsumexp(log_likelihood, dim=1)
+        return -torch.logsumexp(log_likelihood, dim=1).to(dtype)

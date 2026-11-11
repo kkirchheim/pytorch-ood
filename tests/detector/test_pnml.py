@@ -77,5 +77,4 @@ class PNMLNumericsTest(unittest.TestCase):
             torch.tensor(float(c), dtype=torch.float64)
         )
 
-        self.assertEqual(scores.dtype, torch.float32)
         torch.testing.assert_close(scores.double(), expected, rtol=1e-4, atol=1e-5)

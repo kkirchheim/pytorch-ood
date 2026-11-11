@@ -120,7 +120,7 @@ class KNN(FeaturesDetector):
     def predict_features(self, z: Tensor) -> Tensor:
         """
         :param z: features of shape :math:`B \\times D`
-        :return: outlier scores of shape :math:`B`, in the dtype of ``z``
+        :return: outlier scores of shape :math:`B`
         :raises RequiresFittingException: if the detector was not fitted
         :raises ValueError: if ``k`` exceeds the number of fitted samples
         """

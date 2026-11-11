@@ -110,7 +110,7 @@ class KLMatching(LogitsDetector):
         :param p: probabilities predicted by the model, shape :math:`B \\times C`
         :return: outlier scores of shape :math:`B`
         """
-        dists = torch.stack([d.to(p.device) for d in self.dists.values()])  # K x C
+        dists = torch.stack([d.to(p.device, p.dtype) for d in self.dists.values()])  # K x C
         # KL[p || d_k] = sum p log p - sum p log d_k for every input and fitted class, B x K.
         # 0 log 0 = 0; log 0 is replaced by the lowest finite value, so that probabilities of 0
         # contribute nothing and positive ones where d_k is 0 give a (near) infinite divergence.

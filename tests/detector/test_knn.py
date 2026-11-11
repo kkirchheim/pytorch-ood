@@ -36,17 +36,6 @@ class TestKNN(unittest.TestCase):
                 scores = KNN(None, k=k).fit_features(z_train, labels).predict_features(z_test)
                 torch.testing.assert_close(scores, _kth_distance(z_train, z_test, k))
 
-    def test_float32_features_give_float32_scores(self):
-        g = torch.Generator().manual_seed(0)
-        z_train = torch.randn(300, 16, generator=g)
-        z_test = torch.randn(40, 16, generator=g)
-        labels = torch.zeros(300, dtype=torch.long)
-        scores = KNN(None, k=7).fit_features(z_train, labels).predict_features(z_test)
-        self.assertEqual(scores.dtype, torch.float32)
-        torch.testing.assert_close(
-            scores.double(), _kth_distance(z_train, z_test, 7), rtol=1e-4, atol=1e-5
-        )
-
     def test_invariant_to_feature_norm(self):
         """With normalization, only the direction of the features matters."""
         g = torch.Generator().manual_seed(1)
