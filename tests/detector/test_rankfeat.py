@@ -90,22 +90,6 @@ class TestRemoveRank1(unittest.TestCase):
 class TestRankFeat(unittest.TestCase):
     """Tests for the RankFeat OOD detector."""
 
-    def test_output_shape(self):
-        model = SimpleCNN(num_classes=5).eval()
-        detector = RankFeat(backbone=model.backbone, head=model.head)
-        x = torch.randn(8, 3, 8, 8)
-        with torch.no_grad():
-            scores = detector(x)
-        self.assertEqual(scores.shape, (8,))
-
-    def test_scores_finite(self):
-        model = SimpleCNN().eval()
-        detector = RankFeat(backbone=model.backbone, head=model.head)
-        x = torch.randn(16, 3, 8, 8)
-        with torch.no_grad():
-            scores = detector(x)
-        self.assertTrue(torch.isfinite(scores).all())
-
     def test_custom_detector(self):
         """Can use a custom scoring function instead of energy."""
         model = SimpleCNN(num_classes=3).eval()

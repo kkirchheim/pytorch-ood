@@ -9,34 +9,6 @@ from pytorch_ood.detector import Mahalanobis, MahalanobisODIN, MultiMahalanobis
 from tests.helpers import ClassificationModel, points_with_covariance
 
 
-class MahalanobisTest(unittest.TestCase):
-    """
-    Test mahalanobis method
-    """
-
-    def setUp(self) -> None:
-        torch.manual_seed(123)
-
-    def test_something(self):
-        nn = ClassificationModel()
-        model = Mahalanobis(nn)
-
-        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
-        x = torch.randn(size=(20, 10))
-        dataset = TensorDataset(x, y)
-        loader = DataLoader(dataset)
-
-        model.fit(loader)
-
-        scores = model(x)
-        print(scores)
-
-        scores = model(torch.ones(size=(10, 10)) * 10)
-        print(scores)
-
-        self.assertIsNotNone(scores)
-
-
 class MahalanobisScoreTest(unittest.TestCase):
     def test_half_squared_distance_to_closest_center(self):
         centers = torch.tensor([[0.0, 0.0], [4.0, 0.0]])

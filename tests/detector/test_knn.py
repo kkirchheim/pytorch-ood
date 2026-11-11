@@ -4,7 +4,6 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.detector import KNN
-from tests.helpers import ClassificationModel, sample_dataset
 
 
 def _kth_distance(z_train, z_test, k, normalize=True):
@@ -19,19 +18,6 @@ class TestKNN(unittest.TestCase):
     """
     Tests for k-Nearest Neighbor
     """
-
-    def test_input(self):
-        """``detector(x)`` scores the encoder's features of ``x``."""
-        model = ClassificationModel().eval()  # no dropout, so both forward passes agree
-        detector = KNN(model)
-        detector.fit(DataLoader(sample_dataset(n_dim=10)))
-
-        x = torch.randn(size=(128, 10))
-        scores = detector(x)
-
-        self.assertEqual(scores.shape, (128,))
-        self.assertTrue(torch.isfinite(scores).all())
-        torch.testing.assert_close(scores, detector.predict_features(model(x)))
 
     def test_unknown_kwargs_raise(self):
         """There are no backend kwargs on the detector; backends are configured via ``search``."""

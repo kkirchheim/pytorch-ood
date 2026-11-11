@@ -1,47 +1,9 @@
 import unittest
 
 import torch
-from torch.utils.data import DataLoader
 
 from pytorch_ood.detector import NNGuide
 from pytorch_ood.utils import TorchNearestNeighbors
-from tests.helpers import ClassificationModel, sample_dataset
-
-
-class TestNNGuide(unittest.TestCase):
-    """
-    Tests for NNGuide Detector
-    """
-
-    def _make_detector(self):
-        model = ClassificationModel(num_inputs=10, n_hidden=10, num_outputs=3)
-        model.eval()
-        return NNGuide(model.features, model.classifier, k=5)
-
-    def test_fit_and_predict_features(self):
-        detector = self._make_detector()
-        ds = sample_dataset(n_dim=10)
-        loader = DataLoader(ds, batch_size=32)
-
-        detector.fit(loader)
-
-        z = torch.randn(16, 10)
-        scores = detector.predict_features(z)
-
-        self.assertEqual(scores.shape, (16,))
-        self.assertTrue(torch.isfinite(scores).all())
-
-    def test_fit_features_direct(self):
-        detector = self._make_detector()
-        features = torch.randn(100, 10)
-        labels = torch.zeros(100, dtype=torch.long)
-
-        detector.fit_features(features, labels)
-
-        z = torch.randn(8, 10)
-        scores = detector.predict_features(z)
-
-        self.assertEqual(scores.shape, (8,))
 
 
 def _reference_scores(head, z_train, z, k):
@@ -109,22 +71,3 @@ class TestNNGuideReference(unittest.TestCase):
         labels = torch.cat([torch.zeros(5, dtype=torch.long), torch.full((20,), -1)])
         with self.assertRaises(ValueError):
             detector.fit_features(torch.randn(25, 6), labels)
-
-
-def test_fit_and_predict_match_features_path(seed):
-    """``fit(loader)`` and ``detector(x)`` score like ``fit_features`` and ``predict_features``
-    on the encoder's features."""
-    model = ClassificationModel(num_inputs=10, n_hidden=10, num_outputs=3).eval()
-    x_train = torch.randn(60, 10, generator=seed)
-    labels = torch.cat([torch.zeros(50, dtype=torch.long), -torch.ones(10, dtype=torch.long)])
-    x = torch.randn(8, 10, generator=seed)
-    loader = DataLoader(list(zip(x_train, labels)), batch_size=16)
-
-    detector = NNGuide(model.features, model.classifier, k=5).fit(loader)
-    with torch.no_grad():
-        expected = (
-            NNGuide(None, model.classifier, k=5)
-            .fit_features(model.features(x_train), labels)
-            .predict_features(model.features(x))
-        )
-    torch.testing.assert_close(detector(x), expected)

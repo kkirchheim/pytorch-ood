@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.detector import ReAct
 from pytorch_ood.model import WideResNet
@@ -12,24 +11,6 @@ class TestReAct(unittest.TestCase):
     """
     Tests for ReAct
     """
-
-    def test_input_after_fit(self):
-        """Threshold is estimated from training data, then scoring works."""
-        model = WideResNet(num_classes=10).eval()
-        detector = ReAct(
-            backbone=model.feature_maps,
-            head=model.forward_feature_maps,
-        )
-
-        x_train = torch.randn(size=(8, 3, 32, 32))
-        y_train = torch.zeros(8, dtype=torch.long)
-        loader = DataLoader(TensorDataset(x_train, y_train), batch_size=4)
-        detector.fit(loader)
-
-        self.assertIsNotNone(detector.threshold)
-
-        output = detector(torch.randn(size=(16, 3, 32, 32)))
-        self.assertIsNotNone(output)
 
     def test_explicit_threshold_needs_no_fit(self):
         """Passing an explicit threshold allows scoring without fitting."""

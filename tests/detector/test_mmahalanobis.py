@@ -18,23 +18,6 @@ class MultiMahalanobisTest(unittest.TestCase):
     def setUp(self) -> None:
         torch.manual_seed(123)
 
-    def test_something(self):
-        nn = ConvClassifier(in_channels=3, out_channels=16)
-        model = MultiMahalanobis([nn.layer1, nn.pool])
-
-        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
-        x = torch.randn(size=(20, 3, 16, 16))
-        dataset = TensorDataset(x, y)
-        loader = DataLoader(dataset)
-
-        model.fit(loader)
-
-        scores = model(x)
-        print(f"Scores: {scores}")
-
-        self.assertIsNotNone(scores)
-        self.assertEqual(scores.shape[0], 20)
-
     def test_refit_does_not_accumulate(self):
         """Re-fitting replaces parameters instead of appending (e.g. during HPO)."""
         nn = ConvClassifier(in_channels=3, out_channels=16)

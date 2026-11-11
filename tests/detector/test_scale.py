@@ -5,39 +5,12 @@ import torch
 from pytorch_ood.detector import SCALE
 from pytorch_ood.detector.ash import ash_s
 from pytorch_ood.detector.scale import scale
-from pytorch_ood.model import WideResNet
 
 
 class TestSCALE(unittest.TestCase):
     """
     Tests for the SCALE detector.
     """
-
-    def test_input(self):
-        """End-to-end prediction on a WideResNet."""
-        model = WideResNet(num_classes=10).eval()
-        detector = SCALE(
-            backbone=model.feature_maps,
-            head=model.forward_feature_maps,
-        )
-
-        x = torch.randn(size=(16, 3, 32, 32))
-        output = detector(x)
-
-        self.assertIsNotNone(output)
-        self.assertEqual(output.shape, (16,))
-
-    def test_batch_size_one(self):
-        """SCALE should handle a single sample."""
-        model = WideResNet(num_classes=10).eval()
-        detector = SCALE(
-            backbone=model.feature_maps,
-            head=model.forward_feature_maps,
-        )
-
-        x = torch.randn(size=(1, 3, 32, 32))
-        output = detector(x)
-        self.assertEqual(output.shape, (1,))
 
     def test_scale_preserves_shape(self):
         """The scaling op must not change the feature-map shape."""

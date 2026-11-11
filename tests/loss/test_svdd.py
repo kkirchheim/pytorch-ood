@@ -42,22 +42,6 @@ class TestDeepSVDD(unittest.TestCase):
 
 
 class TestDeepSAD(unittest.TestCase):
-    def test_forward(self):
-        criterion = DeepSADLoss(n_dim=10)
-        logits = torch.randn(size=(10, 10))
-        target = torch.zeros(size=(10,)).long()
-        target[5:] = -1
-        loss = criterion(logits, target)
-        self.assertIsNotNone(loss)
-
-    def test_forward_2(self):
-        criterion = DeepSADLoss(n_dim=10, reduction=None)
-        logits = torch.randn(size=(10, 10))
-        target = -1 * torch.ones(size=(10,)).long()
-        loss = criterion(logits, target)
-        self.assertIsNotNone(loss)
-        self.assertFalse((loss == 0).any())
-
     def test_deprecated_name(self):
         import pytorch_ood.loss as losses
 

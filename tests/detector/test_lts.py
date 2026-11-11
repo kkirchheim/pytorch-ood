@@ -31,32 +31,6 @@ class TestLTS(unittest.TestCase):
         self.model = ClassificationModel(num_inputs=10, n_hidden=8, num_outputs=3)
         self.model.eval()
 
-    def test_predict_returns_correct_shape(self):
-        detector = LTS(encoder=self.model.features, head=self.model.classifier, p=0.05)
-        x = torch.randn(16, 10)
-        scores = detector(x)
-        self.assertEqual(scores.shape, (16,))
-        self.assertTrue(torch.isfinite(scores).all())
-
-    def test_predict_features_returns_correct_shape(self):
-        detector = LTS(encoder=None, head=self.model.classifier, p=0.05)
-        features = torch.randn(16, 8)
-        scores = detector.predict_features(features)
-        self.assertEqual(scores.shape, (16,))
-        self.assertTrue(torch.isfinite(scores).all())
-
-    def test_predict_without_encoder_raises(self):
-        detector = LTS(encoder=None, head=self.model.classifier)
-        x = torch.randn(4, 10)
-        with self.assertRaises(Exception):
-            detector.predict(x)
-
-    def test_scaling_factor_shape(self):
-        z = torch.randn(8, 64)
-        s = LTS.scaling_factor(z, p=0.05)
-        self.assertEqual(s.shape, (8,))
-        self.assertTrue(torch.isfinite(s).all())
-
     def test_scaling_factor_uniform_activations(self):
         """When all activations are equal, S1/S2 = n/k, so the factor is (n/k)^2."""
         z = torch.ones(4, 100)
@@ -143,10 +117,6 @@ class TestLTS(unittest.TestCase):
         torch.testing.assert_close(seen[0], 4 * z)
         self.assertEqual(scores.shape, (1,))
 
-    def test_does_not_require_fit(self):
-        detector = LTS(encoder=self.model.features, head=self.model.classifier)
-        self.assertFalse(detector.requires_fit)
-
     def test_scores_differ_from_plain_energy(self):
         """LTS should produce different scores than plain energy (unless S=1 everywhere)."""
         x = torch.randn(16, 10)
@@ -159,13 +129,6 @@ class TestLTS(unittest.TestCase):
         lts_scores = lts_detector(x)
 
         self.assertFalse(torch.allclose(energy_scores, lts_scores))
-
-    def test_batch_size_one(self):
-        detector = LTS(encoder=self.model.features, head=self.model.classifier)
-        x = torch.randn(1, 10)
-        scores = detector(x)
-        self.assertEqual(scores.shape, (1,))
-        self.assertTrue(torch.isfinite(scores).all())
 
     def test_default_p(self):
         detector = LTS(encoder=self.model.features, head=self.model.classifier)

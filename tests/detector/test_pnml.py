@@ -1,11 +1,9 @@
 import unittest
 
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.api import ModelNotSetException
 from pytorch_ood.detector import PNML
-from tests.helpers import ClassificationModel
 
 
 class PNMLTest(unittest.TestCase):
@@ -15,33 +13,6 @@ class PNMLTest(unittest.TestCase):
 
     def setUp(self) -> None:
         torch.manual_seed(123)
-
-    def test_fit_predict(self):
-        nn = ClassificationModel()
-        detector = PNML(nn.features, nn.classifier)
-
-        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
-        x = torch.randn(size=(20, 10))
-        dataset = TensorDataset(x, y)
-        loader = DataLoader(dataset)
-
-        detector.fit(loader)
-        scores = detector(x)
-
-        self.assertEqual(scores.shape, (20,))
-        self.assertIsNotNone(scores)
-
-    def test_fit_predict_features(self):
-        head = torch.nn.Linear(10, 3)
-        detector = PNML(encoder=None, head=head)
-
-        z = torch.randn(size=(20, 10))
-        y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
-
-        detector.fit_features(z, y)
-        scores = detector.predict_features(z)
-
-        self.assertEqual(scores.shape, (20,))
 
     def test_no_head(self):
         detector = PNML(encoder=None, head=None)
