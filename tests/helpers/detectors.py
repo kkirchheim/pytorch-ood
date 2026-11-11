@@ -7,7 +7,7 @@ over :data:`DETECTOR_CASES`.
 """
 
 from dataclasses import dataclass
-from typing import Callable, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple, Type
 
 import torch
 import torch.nn.functional as F
@@ -305,3 +305,9 @@ DETECTOR_CASES = [
         IMAGE,
     ),
 ]
+
+
+# Detector class per case, to select the cases a property applies to at collection time. The
+# builders draw random weights, which must not shift the global RNG for the tests that follow.
+with torch.random.fork_rng():
+    DETECTOR_CLASSES: Dict[str, Type[Detector]] = {c.name: type(c.build()) for c in DETECTOR_CASES}

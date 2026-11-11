@@ -6,7 +6,7 @@ instance is needed, for each exported detector class.
 import copy
 import inspect
 from dataclasses import dataclass
-from typing import Callable, Dict, Iterable, Optional, Tuple, Type
+from typing import Callable, Dict, Iterable, Optional, Tuple
 
 import pytest
 import torch
@@ -63,7 +63,7 @@ from pytorch_ood.detector import (
 )
 from tests.helpers import requires
 from tests.helpers.components import DETECTORS
-from tests.helpers.detectors import DETECTOR_CASES, DetectorCase
+from tests.helpers.detectors import DETECTOR_CASES, DETECTOR_CLASSES, DetectorCase
 
 
 @dataclass(frozen=True)
@@ -100,18 +100,12 @@ def _name(cls: type) -> str:
     return cls.__name__
 
 
-# Detector classes per case, to select the cases a property applies to at collection time. The
-# builders draw random weights, which must not shift the global RNG for the tests that follow.
-with torch.random.fork_rng():
-    _CLASSES: Dict[str, Type[Detector]] = {c.name: type(c.build()) for c in DETECTOR_CASES}
-
-
 def _cases(applies=lambda cls: True, marks: Optional[Dict[str, pytest.MarkDecorator]] = None):
     marks = marks or {}
     return [
         pytest.param(c, id=c.name, marks=marks.get(c.name, ()))
         for c in DETECTOR_CASES
-        if applies(_CLASSES[c.name])
+        if applies(DETECTOR_CLASSES[c.name])
     ]
 
 
@@ -208,7 +202,7 @@ def _base_of(cls: type) -> type:
 
 @pytest.mark.parametrize("base", (*SEMANTIC_BASES, Detector), ids=_name)
 def test_float32_input_gives_float32_scores(base: type, seed: torch.Generator):
-    cases = [c for c in DETECTOR_CASES if _base_of(_CLASSES[c.name]) is base]
+    cases = [c for c in DETECTOR_CASES if _base_of(DETECTOR_CLASSES[c.name]) is base]
     assert cases
 
     dtypes = {c.name: _fitted(c)(_inputs(c, seed)).dtype for c in cases}
@@ -469,7 +463,7 @@ def test_fit_on_representation_without_id_samples_raises(case: DetectorCase):
     [
         pytest.param(c, name, value, id=f"{c.name}-{name}={value}")
         for c in DETECTOR_CASES
-        for name, values in _CLASSES[c.name].hyperparameter_space.items()
+        for name, values in DETECTOR_CLASSES[c.name].hyperparameter_space.items()
         for value in values
     ],
 )

@@ -137,12 +137,10 @@ class VRA(FeatureMapsDetector):
         device = self.device or z.device
         z = z.detach().cpu().numpy()
 
-        self._lower_threshold = torch.from_numpy(
-            np.quantile(z, self.lower_percentile, axis=0).astype(np.float32)
-        ).to(device)
-        self._upper_threshold = torch.from_numpy(
-            np.quantile(z, self.upper_percentile, axis=0).astype(np.float32)
-        ).to(device)
+        # one call, so the buffer is partitioned once for both quantiles
+        thresholds = np.quantile(z, [self.lower_percentile, self.upper_percentile], axis=0)
+        thresholds = torch.from_numpy(thresholds.astype(np.float32)).to(device)
+        self._lower_threshold, self._upper_threshold = thresholds[0], thresholds[1]
 
         log.info(
             f"Lower threshold range: [{self._lower_threshold.min():.2f}, {self._lower_threshold.max():.2f}]"

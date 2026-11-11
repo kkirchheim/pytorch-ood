@@ -111,7 +111,8 @@ class DICE(FeaturesDetector):
         """
         device = self.device or z.device
         z = z.detach().to(device).float()
-        weight = self.weight.detach().to(device).float()
+        self.weight, self.bias = self.weight.to(device), self.bias.to(device)
+        weight = self.weight.float()
 
         self.mean_activation = z.mean(dim=0)
 
