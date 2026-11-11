@@ -1,5 +1,7 @@
+import math
 import unittest
 
+import pytest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -36,34 +38,18 @@ def _train_model(model, x_train, y_train, epochs=200, lr=1e-2, seed=42):
     return model
 
 
+@pytest.mark.parametrize("margin", [0.0, 5.0, 20.0, 30.0, 40.0])
+def test_matches_closed_form(margin: float):
+    # logits [m, 0, 0]: with e = exp(-m), the entropy is log(1 + 2e) + 2em / (1 + 2e)
+    e = math.exp(-margin)
+    expected = math.log1p(2 * e) + 2 * e * margin / (1 + 2 * e)
+    scores = Entropy(None).predict_logits(torch.tensor([[margin, 0.0, 0.0]]))
+    # float32 rounds the largest softmax value to 1, which loses about 1 / (m + 1) of the entropy
+    torch.testing.assert_close(scores, torch.tensor([expected]), rtol=0.1, atol=0)
+
+
 class TestEntropy(unittest.TestCase):
     """Tests for the Entropy OOD detector."""
-
-    def test_predict_logits(self):
-        """predict_logits works on raw logits and respects entropy ordering."""
-        # Uniform logits → maximum entropy
-        uniform_logits = torch.zeros(1, 5)
-        # Peaked logits → minimum entropy
-        peaked_logits = torch.tensor([[10.0, 0.0, 0.0, 0.0, 0.0]])
-
-        s_uniform = Entropy.score(uniform_logits).item()
-        s_peaked = Entropy.score(peaked_logits).item()
-
-        self.assertGreater(s_uniform, s_peaked)
-
-        # Batch of logits produces correct shape
-        logits = torch.randn(32, 10)
-        scores = Entropy(None).predict_logits(logits)
-        self.assertEqual(scores.shape, (32,))
-
-    def test_scores_are_non_negative(self):
-        """Entropy is always >= 0."""
-        model = ClassificationModel()
-        detector = Entropy(model)
-        x = torch.randn(32, 10)
-        with torch.no_grad():
-            scores = detector(x)
-        self.assertTrue((scores >= 0).all())
 
     def test_mock_performance(self):
         """

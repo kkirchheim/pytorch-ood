@@ -61,9 +61,6 @@ class Entropy(LogitsDetector):
         """
         :param logits: logits of input, shape :math:`B \\times C`
             (or :math:`B \\times C \\times H \\times W` for segmentation)
-        :return: entropy of the softmax distribution, shape :math:`B` (or :math:`B \\times H \\times W`).
-            Probabilities are clipped to :math:`[10^{-7}, 1]` before taking the
-            logarithm for numerical stability.
+        :return: entropy of the softmax distribution, shape :math:`B` (or :math:`B \\times H \\times W`)
         """
-        p = logits.softmax(dim=1).clip(1e-7, 1)
-        return -(p.log() * p).sum(dim=1)
+        return -(logits.softmax(dim=1) * logits.log_softmax(dim=1)).sum(dim=1)
