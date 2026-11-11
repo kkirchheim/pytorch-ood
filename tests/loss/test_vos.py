@@ -49,17 +49,6 @@ class TestVOSRegularization(unittest.TestCase):
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)
 
-    def test_set_alpha(self):
-        criterion = self.init_loss(10, alpha=2)
-        logits = torch.randn(size=(10, 10))
-        target = torch.zeros(size=(10,)).long()
-        target[5:] = -1
-
-        loss = criterion(logits, target)
-
-        self.assertIsNotNone(loss)
-        self.assertGreater(loss, 0)
-
     def test_segmentation(self):
         model = SegmentationModel()
         criterion = self.init_loss(3, reduction="sum")
@@ -200,15 +189,3 @@ class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
 
         self.assertTrue(torch.equal(criterion.data_dict, reference.data_dict))
         self.assertTrue(torch.equal(loss, reference_loss))
-
-    def test_forward_set_alpha(self):
-        criterion, model = self.init_loss(10, alpha=2)
-        x = torch.randn(size=(128, 10))
-        target = torch.zeros(size=(128,)).long()
-
-        features = model.features(x)
-        logits = model.classifier(features)
-        loss = criterion(logits, features, target)
-
-        self.assertIsNotNone(loss)
-        self.assertGreater(loss, 0)

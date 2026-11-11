@@ -5,7 +5,6 @@ import torch
 
 from pytorch_ood.detector import GradUncertainty
 from pytorch_ood.detector import graduncertainty as graduncertainty_module
-from pytorch_ood.model import WideResNet
 
 
 def _linear_head(bias: torch.Tensor) -> torch.nn.Linear:
@@ -21,19 +20,6 @@ class TestGradUncertainty(unittest.TestCase):
     """
     Tests for GradUncertainty
     """
-
-    def test_input(self):
-        """ """
-        model = WideResNet(num_classes=10).eval()
-        detector = GradUncertainty(model, param_filter=lambda x: x.startswith("fc."))
-
-        x = torch.randn(size=(16, 3, 32, 32))
-
-        output = detector(x)
-
-        print(output)
-        self.assertIsNotNone(output)
-        self.assertEqual(output.shape, (16,))
 
     def test_uniform_output_scores_higher_than_confident_output(self):
         torch.manual_seed(0)

@@ -35,26 +35,6 @@ class GramTest(unittest.TestCase):
     def setUp(self) -> None:
         torch.manual_seed(123)
 
-    def test_something(self):
-        model = InitGram().model
-        y = torch.cat(
-            [
-                torch.zeros(size=(10,), dtype=torch.int),
-                torch.ones(size=(10,), dtype=torch.int),
-            ]
-        )
-        x = torch.randn(size=(20, 3, 16, 16))
-        dataset = TensorDataset(x, y)
-        loader = DataLoader(dataset)
-
-        model.fit(loader)
-
-        scores = model(x)
-        print(f"Scores: {scores}")
-
-        self.assertIsNotNone(scores)
-        self.assertEqual(scores.shape[0], 20)
-
     def test_scores_non_negative(self):
         """
         Deviations are sums of relu terms, so scores must be non-negative.

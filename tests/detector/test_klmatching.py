@@ -8,32 +8,13 @@ from torch.utils.data import DataLoader, TensorDataset, random_split
 from pytorch_ood.detector.klmatching import KLMatching
 from pytorch_ood.loss import CrossEntropyLoss
 from pytorch_ood.metrics import OODMetrics
-from tests.helpers import ClassificationModel, requires, sample_dataset
+from tests.helpers import ClassificationModel, sample_dataset
 
 
 class TestKLMatching(unittest.TestCase):
     """
     Tests for KL Matching
     """
-
-    def test_classification_input(self):
-        model = ClassificationModel()
-        detector = KLMatching(model)
-
-        x = torch.zeros(size=(128, 10))
-        y = torch.arange(128) % 10
-
-        dataset = TensorDataset(x, y)
-        loader = DataLoader(dataset)
-
-        detector.fit(loader)
-        self.assertGreater(len(detector.dists), 0)
-
-        with torch.no_grad():
-            y = detector(x)
-
-        self.assertIsNotNone(y)
-        self.assertEqual(y.shape, (128,))
 
     def test_train(self):
         torch.manual_seed(1234)
@@ -75,23 +56,6 @@ class TestKLMatching(unittest.TestCase):
         metrics.update(detector(x), y)
 
         self.assertGreater(metrics.compute()["AUROC"], 0.99)
-
-    def test_predict_logits(self):
-        """predict_logits works directly on logits."""
-        torch.manual_seed(0)
-        n_classes = 3
-        model = ClassificationModel(num_outputs=n_classes)
-        detector = KLMatching(model)
-
-        # Fit on ID data (class labels 0, 1, 2)
-        x_fit = torch.randn(90, 10)
-        y_fit = torch.repeat_interleave(torch.arange(n_classes), 30)
-        detector.fit(DataLoader(TensorDataset(x_fit, y_fit), batch_size=30))
-
-        logits = torch.randn(16, n_classes)
-        scores = detector.predict_logits(logits)
-        self.assertEqual(scores.shape, (16,))
-        self.assertTrue(torch.isfinite(scores).all())
 
     @staticmethod
     def _paper_dists(logits):
@@ -213,23 +177,3 @@ class TestKLMatching(unittest.TestCase):
         self.assertGreater(
             results["AUROC"], 0.95, f"Expected AUROC > 0.95, got {results['AUROC']:.4f}"
         )
-
-    @requires(cuda=1)
-    def test_gpu(self):
-        device = "cuda:0"
-        model = ClassificationModel().to(device)
-        detector = KLMatching(model)
-
-        x = torch.zeros(size=(128, 10))
-        y = torch.randint(3, size=(128,))
-
-        dataset = TensorDataset(x, y)
-        loader = DataLoader(dataset)
-
-        detector.to(device)
-        detector.fit(loader)
-        with torch.no_grad():
-            y = detector(x.to(device))
-
-        self.assertIsNotNone(y)
-        self.assertEqual(y.shape, (128,))

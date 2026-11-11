@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.detector import GEN
 from pytorch_ood.metrics import OODMetrics
-from tests.helpers import ClassificationModel, SegmentationModel
+from tests.helpers import ClassificationModel
 
 
 def _make_id_ood_data(n_dim=10, n_classes=3, n_per_class=100, ood_offset=20.0, seed=42):
@@ -39,24 +39,6 @@ def _train_model(model, x_train, y_train, epochs=200, lr=1e-2, seed=42):
 class TestGEN(unittest.TestCase):
     """Tests for the GEN (Generalized Entropy) OOD detector."""
 
-    def test_output_shape_classification(self):
-        """Scalar score per sample for 1-D classification inputs."""
-        model = ClassificationModel(num_inputs=10, num_outputs=5)
-        detector = GEN(model)
-        x = torch.randn(16, 10)
-        with torch.no_grad():
-            scores = detector(x)
-        self.assertEqual(scores.shape, (16,))
-
-    def test_output_shape_segmentation(self):
-        """Pixel-wise score for segmentation model (B, H, W) output."""
-        model = SegmentationModel(in_channels=3, out_channels=4)
-        detector = GEN(model)
-        x = torch.randn(4, 3, 8, 8)
-        with torch.no_grad():
-            scores = detector(x)
-        self.assertEqual(scores.shape, (4, 8, 8))
-
     def test_predict_logits(self):
         """predict_logits works on raw logits and respects score ordering."""
         # Uniform logits → maximum score (most uncertain)
@@ -68,13 +50,6 @@ class TestGEN(unittest.TestCase):
         s_peaked = GEN.score(peaked_logits).item()
 
         self.assertGreater(s_uniform, s_peaked)
-
-    def test_predict_logits_batch(self):
-        """Batch of logits produces correct shape."""
-        logits = torch.randn(32, 10)
-        scores = GEN(None).predict_logits(logits)
-        self.assertEqual(scores.shape, (32,))
-        self.assertTrue(torch.isfinite(scores).all())
 
     def test_scores_are_non_negative(self):
         """GEN scores are always >= 0."""

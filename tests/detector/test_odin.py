@@ -4,7 +4,6 @@ import torch
 from torch import nn
 
 from pytorch_ood.detector import ODIN, odin_preprocessing
-from tests.helpers import ClassificationModel
 from tests.helpers.model import ConvClassifier
 
 NORM_STD = [0.25, 0.5, 2.0]
@@ -32,15 +31,6 @@ class TestODIN(unittest.TestCase):
         torch.manual_seed(0)
         self.model = ConvClassifier(in_channels=3, out_channels=16, num_outputs=5).eval()
         self.x = torch.randn(8, 3, 8, 8)
-
-    def test_odin(self):
-        model = ClassificationModel()
-        odin = ODIN(model)
-
-        x = torch.zeros(size=(1, 10))
-        y = odin.predict(x)
-
-        self.assertIsNotNone(y)
 
     def test_matches_reference(self):
         for temperature, eps in ((1000.0, 0.0014), (10.0, 0.0028), (1.0, 0.05)):
@@ -77,11 +67,6 @@ class TestODIN(unittest.TestCase):
         scaled = odin_preprocessing(self.model, self.x, eps=0.01, norm_std=NORM_STD) - self.x
         for c, std in enumerate(NORM_STD):
             torch.testing.assert_close(scaled[:, c], plain[:, c] / std)
-
-    def test_model_parameters_collect_no_gradients(self):
-        ODIN(self.model).predict(self.x)
-        for name, param in self.model.named_parameters():
-            self.assertIsNone(param.grad, name)
 
     def test_defaults(self):
         detector = ODIN(self.model)

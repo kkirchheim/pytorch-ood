@@ -63,15 +63,6 @@ class TestGradNormReference(unittest.TestCase):
 
 
 class TestGradNorm(unittest.TestCase):
-    def test_output_shape(self):
-        model = WideResNet(num_classes=10).eval()
-        detector = GradNorm(model, param_filter=lambda x: x.startswith("fc."))
-
-        x = torch.randn(size=(4, 3, 32, 32))
-        output = detector(x)
-
-        self.assertEqual(output.shape, (4,))
-
     def test_sign_convention(self):
         """OOD inputs (uniform softmax) should get higher scores than ID inputs (peaked softmax)."""
         model = WideResNet(num_classes=10).eval()

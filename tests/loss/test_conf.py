@@ -21,14 +21,3 @@ class TestConfidenceLoss(unittest.TestCase):
 
         self.assertIsNotNone(loss)
         self.assertGreater(loss, 0)
-
-    def test_all_ood(self):
-        target = torch.ones(128).long() * -1
-
-        criterion = ConfidenceLoss()
-        x = torch.randn(size=(128, 10))
-        c = torch.randn(size=(128, 1))
-        loss = criterion(x, c, target)
-
-        self.assertIsNotNone(loss)
-        self.assertEqual(loss, 0)

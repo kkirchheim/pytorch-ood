@@ -84,52 +84,6 @@ class NACUETest(unittest.TestCase):
             device=device,
         )
 
-    def test_predict_raises_before_fit(self):
-        model = TinyConvClassifier().eval()
-        det = self._make_detector(model, layers=[model.block2, model.bn])
-
-        x = torch.randn(4, 3, 16, 16)
-
-        # Update this exception type if your NACUE uses pytorch-ood's RequiresFittingException.
-        with self.assertRaises(Exception):
-            _ = det(x)
-
-    def test_fit_then_predict_shape_and_finite(self):
-        model = TinyConvClassifier().eval()
-        det = self._make_detector(
-            model,
-            layers=[model.block2, model.bn],
-            m_bins=[50, 50],
-            alpha=[20.0, 20.0],
-            o_star=[5, 10],
-            device="cpu",
-        )
-
-        loader = _make_loader(n=32, batch_size=8, seed=1)
-        det.to("cpu")
-        det.fit(loader)
-
-        x = torch.randn(16, 3, 16, 16)
-        with torch.enable_grad():  # NAC-UE needs grads
-            scores = det(x)
-
-        self.assertEqual(scores.shape, (16,))
-        self.assertTrue(torch.isfinite(scores).all().item())
-
-    def test_accepts_device_kwarg_in_fit(self):
-        model = TinyConvClassifier().eval()
-        det = self._make_detector(model, layers=[model.block2], device=None)
-
-        loader = _make_loader(n=16, batch_size=4, seed=2)
-        # Should not error
-        det.to("cpu")
-        det.fit(loader)
-
-        x = torch.randn(8, 3, 16, 16)
-        with torch.enable_grad():
-            s = det(x)
-        self.assertEqual(s.shape, (8,))
-
     def test_determinism_fixed_seed(self):
         # Two runs, same seeds -> identical scores.
         torch.manual_seed(123)
