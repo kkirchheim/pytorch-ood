@@ -21,28 +21,25 @@ class TestGradUncertainty(unittest.TestCase):
     Tests for GradUncertainty
     """
 
-    def test_uniform_output_scores_higher_than_confident_output(self):
-        torch.manual_seed(0)
-        x = torch.randn(4, 16)
-        uniform = _linear_head(torch.zeros(10))
-        confident = _linear_head(torch.tensor([10.0] + [0.0] * 9))
-        for batched in (True, False):
-            with self.subTest(batched=batched):
-                with mock.patch.object(graduncertainty_module, "_TORCH_FUNC_AVAILABLE", batched):
-                    score_uniform = GradUncertainty(uniform)(x)
-                    score_confident = GradUncertainty(confident)(x)
-                self.assertTrue((score_uniform > score_confident).all())
-
     def test_matches_closed_form(self):
         # for a linear layer, the loss gradient w.r.t. the logits is C * p - 1, so the squared
         # gradient norms are ||C * p - 1||^2 * ||x||^2 (weight) and ||C * p - 1||^2 (bias)
         torch.manual_seed(0)
         x = torch.randn(4, 16)
-        head = torch.nn.Linear(16, 5)
-        p = head(x).softmax(dim=1)
-        expected = -((5 * p - 1) ** 2).sum(dim=1) * ((x**2).sum(dim=1) + 1)
-        for batched in (True, False):
-            with self.subTest(batched=batched):
-                with mock.patch.object(graduncertainty_module, "_TORCH_FUNC_AVAILABLE", batched):
-                    scores = GradUncertainty(head)(x)
-                torch.testing.assert_close(scores, expected.detach())
+        heads = {
+            "random": torch.nn.Linear(16, 5),
+            "uniform": _linear_head(torch.zeros(5)),
+            # the largest softmax value rounds to 1 at these margins
+            "margin 20": _linear_head(torch.tensor([20.0, 0.0, 0.0, 0.0, 0.0])),
+            "margin 40": _linear_head(torch.tensor([40.0, 0.0, 0.0, 0.0, 0.0])),
+        }
+        for name, head in heads.items():
+            p = head(x).softmax(dim=1)
+            expected = -((5 * p - 1) ** 2).sum(dim=1) * ((x**2).sum(dim=1) + 1)
+            for batched in (True, False):
+                with self.subTest(head=name, batched=batched):
+                    with mock.patch.object(
+                        graduncertainty_module, "_TORCH_FUNC_AVAILABLE", batched
+                    ):
+                        scores = GradUncertainty(head)(x)
+                    torch.testing.assert_close(scores, expected.detach())
