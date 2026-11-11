@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from typing import Callable, Dict, List
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
 from typing_extensions import Self
@@ -45,6 +44,12 @@ def _requires_grad(params: List[Tensor]):
     finally:
         for p, flag in zip(params, flags):
             p.requires_grad_(flag)
+
+
+def _loss_against_confounding_label(logits: Tensor) -> Tensor:
+    """Binary cross-entropy between the softmax output and a label of all ones."""
+    # not F.binary_cross_entropy(softmax, ones): the gradient vanishes for softmax values below its 1e-12 clamp
+    return -logits.log_softmax(dim=1).sum()
 
 
 class GradUncertainty(GradientDetector):
@@ -151,8 +156,7 @@ class GradUncertainty(GradientDetector):
 
         def loss_for_single(params, x_single):
             logits = _functional_call(model, {**params, **constants}, (x_single.unsqueeze(0),))
-            y_conf = torch.ones_like(logits)
-            return F.binary_cross_entropy(logits.softmax(dim=1), y_conf, reduction="sum")
+            return _loss_against_confounding_label(logits)
 
         with torch.enable_grad():
             per_sample_grads = _vmap(_func_grad(loss_for_single), in_dims=(None, 0))(selected, x)
@@ -169,9 +173,7 @@ class GradUncertainty(GradientDetector):
         with _requires_grad(selected):
             for xi in x:
                 with torch.enable_grad():
-                    logits = self.model(xi.unsqueeze(0))
-                    y_conf = torch.ones_like(logits)
-                    loss = F.binary_cross_entropy(logits.softmax(dim=1), y_conf, reduction="sum")
+                    loss = _loss_against_confounding_label(self.model(xi.unsqueeze(0)))
                     # only the selected parameters, without writing .grad into the model
                     grads = torch.autograd.grad(loss, selected)
                 scores.append(sum((g**2).sum() for g in grads))
