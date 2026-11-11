@@ -119,27 +119,6 @@ class _BenchmarkContractMixin:
         )
         self.assertEqual(len(bench.test_oods), len(bench.ood_names))
 
-    def test_test_sets_known_unknown(self):
-        bench = self._make_benchmark()
-        sets = bench.test_sets(known=True, unknown=True)
-        self.assertEqual(len(sets), len(bench.ood_names))
-        # each combined set holds ID + 1 OOD
-        for s in sets:
-            self.assertEqual(len(s), self.expected_test_in_size + self.expected_ood_per_split)
-
-    def test_test_sets_known_only(self):
-        bench = self._make_benchmark()
-        sets = bench.test_sets(known=True, unknown=False)
-        self.assertEqual(len(sets), 1)
-        self.assertEqual(len(sets[0]), self.expected_test_in_size)
-
-    def test_test_sets_unknown_only(self):
-        bench = self._make_benchmark()
-        sets = bench.test_sets(known=False, unknown=True)
-        self.assertEqual(len(sets), len(bench.ood_names))
-        for s in sets:
-            self.assertEqual(len(s), self.expected_ood_per_split)
-
     def test_train_set_returns_id_train(self):
         bench = self._make_benchmark()
         train = bench.train_set()

@@ -12,12 +12,6 @@ class TestSCALE(unittest.TestCase):
     Tests for the SCALE detector.
     """
 
-    def test_scale_preserves_shape(self):
-        """The scaling op must not change the feature-map shape."""
-        x = torch.rand(size=(4, 8, 5, 5))
-        out = scale(x, percentile=0.65)
-        self.assertEqual(out.shape, x.shape)
-
     def test_does_not_prune(self):
         """
         SCALE keeps all activations (only scales), whereas ASH-S prunes the

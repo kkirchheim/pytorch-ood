@@ -129,19 +129,55 @@ def test_sum_is_the_sum_of_none(cls: type, task: Task):
 # --- batches ------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "cls, task",
-    # documented: EnergyMarginLoss requires ID and OOD samples in every batch
-    _cases(lambda cls: cls is not loss.EnergyMarginLoss),
-)
-def test_all_ood_batch_gives_a_finite_scalar_with_gradients(cls: type, task: Task):
+#: how a batch's targets are made mixed, ID only or OOD only
+BATCHES = {
+    "mixed": lambda target: target,
+    "all-id": lambda target: target.clamp(min=0),
+    "all-ood": lambda target: torch.full_like(target, -1),
+}
+
+
+def _batch_cases(applies=lambda cls, batch: True) -> List:
+    return [
+        pytest.param(cls, task, batch, id=f"{cls.__name__}-{task.value}-{batch}")
+        for cls in LOSSES
+        for task in cls.info.tasks
+        for batch in BATCHES
+        # documented: EnergyMarginLoss requires ID and OOD samples in every batch
+        if (batch == "mixed" or cls is not loss.EnergyMarginLoss) and applies(cls, batch)
+    ]
+
+
+# unsupervised losses warn about the OOD samples they discard
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@pytest.mark.parametrize("cls, task, batch", _batch_cases())
+def test_any_batch_gives_a_finite_scalar_with_gradients(cls: type, task: Task, batch: str):
     call = _call(cls, task)
 
-    value = call(torch.full_like(call.target, -1), call.with_grad())
+    value = call(BATCHES[batch](call.target), call.with_grad())
 
     assert value.shape == ()
     assert torch.isfinite(value)
     value.backward()
+
+
+#: an inactive hinge on the outliers gives exactly zero
+HINGE_ON_OUTLIERS = {loss.EnergyRegularizedLoss, loss.MCHADLoss}
+
+
+def _uses_batch(cls: type, batch: str) -> bool:
+    # IILoss can be negative; unsupervised losses give zero on OOD-only batches (checked below)
+    if batch == "all-ood" and (_unsupervised(cls) or cls in HINGE_ON_OUTLIERS):
+        return False
+    return cls is not loss.IILoss
+
+
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@pytest.mark.parametrize("cls, task, batch", _batch_cases(_uses_batch))
+def test_batches_the_loss_uses_give_a_positive_value(cls: type, task: Task, batch: str):
+    call = _call(cls, task)
+
+    assert call(BATCHES[batch](call.target)) > 0
 
 
 @pytest.mark.parametrize("cls, task", _cases())

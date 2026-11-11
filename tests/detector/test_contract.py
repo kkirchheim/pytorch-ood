@@ -61,6 +61,7 @@ from pytorch_ood.detector import (
     WeightedEBO,
     fDBD,
 )
+from tests.helpers import requires
 from tests.helpers.components import DETECTORS
 from tests.helpers.detectors import DETECTOR_CASES, DetectorCase
 
@@ -122,8 +123,15 @@ def _inputs(case: DetectorCase, generator: torch.Generator, n: int = 8) -> Tenso
     return torch.randn(n, *case.input_shape, generator=generator)
 
 
-def _fitted(case: DetectorCase, model: Optional[nn.Module] = None, **loader_kwargs) -> Detector:
+def _fitted(
+    case: DetectorCase,
+    model: Optional[nn.Module] = None,
+    device: Optional[torch.device] = None,
+    **loader_kwargs,
+) -> Detector:
     detector = case.detector(case.model() if model is None else model)
+    if device is not None:
+        detector.to(device)
     if detector.requires_fit:
         detector.fit(case.make_fit_loader(**loader_kwargs))
     return detector
@@ -250,6 +258,55 @@ def test_scores_on_a_representation_do_not_depend_on_the_memory_layout(
     _assert_same_scores_in_every_memory_layout(
         getattr(detector, f"predict_{representation.kind}"), z
     )
+
+
+# --- devices ------------------------------------------------------------------------------------
+
+
+def _assert_scores_on(scores: Tensor, device: torch.device):
+    assert scores.device == device
+    assert torch.isfinite(scores).all()
+
+
+@requires(cuda=1)
+@pytest.mark.parametrize("case", _cases())
+def test_cpu_inputs_are_scored_on_the_device_of_the_detector(
+    case: DetectorCase, seed: torch.Generator, accelerator: torch.device
+):
+    detector = _fitted(case, device=accelerator)
+
+    assert detector.device == accelerator
+    _assert_scores_on(detector(_inputs(case, seed)), accelerator)
+
+
+@requires(cuda=1)
+@pytest.mark.parametrize("case", _cases(_produced))
+def test_cpu_representations_are_scored_on_the_device_of_the_detector(
+    case: DetectorCase, seed: torch.Generator, accelerator: torch.device
+):
+    detector = _fitted(case, device=accelerator)
+    representation = _produced(type(detector))
+    with torch.no_grad():
+        z = getattr(detector, representation.producer)(_inputs(case, seed).to(accelerator))
+
+    _assert_scores_on(getattr(detector, f"predict_{representation.kind}")(z.cpu()), accelerator)
+
+
+#: the arguments of ``predict_structured`` differ per detector
+STRUCTURED_INPUTS = {
+    "MultiMahalanobis": lambda: ([torch.randn(8, 8), torch.randn(8, 8)],),
+    "Gram": lambda: (torch.randn(8, 3), [torch.randn(8, 8, 8, 8), torch.randn(8, 8, 8, 8)]),
+}
+
+
+@requires(cuda=1)
+@pytest.mark.parametrize("case", _cases(lambda cls: issubclass(cls, StructuredDetector)))
+def test_cpu_structured_inputs_are_scored_on_the_device_of_the_detector(
+    case: DetectorCase, accelerator: torch.device
+):
+    detector = _fitted(case, device=accelerator)
+
+    _assert_scores_on(detector.predict_structured(*STRUCTURED_INPUTS[case.name]()), accelerator)
 
 
 # --- preconditions ------------------------------------------------------------------------------
@@ -646,6 +703,27 @@ def test_fit_uses_ood_passes_ood_rows_through():
     y = torch.tensor([0, -1, 1, -1])
 
     assert torch.equal(UsesOOD().fit_features(torch.zeros(4, 2), y).fitted_on, y)
+
+
+# --- default hyperparameters ---------------------------------------------------------------------
+
+#: defaults that decide the published results of a method
+DEFAULTS = [
+    (fDBD, "distance_as_normalizer", True),
+    (GradNorm, "temperature", 1.0),
+    (KNN, "k", 50),
+    (KNN, "normalize", True),
+    (LTS, "p", 0.05),
+    (Mahalanobis, "eps", 1e-10),
+    (Mahalanobis, "use_pinv", False),
+    (ODIN, "eps", 0.0014),
+    (ODIN, "temperature", 1000.0),
+]
+
+
+@pytest.mark.parametrize("cls, name, default", DEFAULTS)
+def test_default_hyperparameter(cls: type, name: str, default):
+    assert inspect.signature(cls.__init__).parameters[name].default == default
 
 
 # --- fraction hyperparameters -------------------------------------------------------------------

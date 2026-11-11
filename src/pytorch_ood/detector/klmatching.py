@@ -18,7 +18,6 @@ from typing_extensions import Self
 from ..api import (
     DetectorInfo,
     LogitsDetector,
-    ModelNotSetException,
     Paper,
     RequiresFittingException,
     Task,
@@ -118,24 +117,3 @@ class KLMatching(LogitsDetector):
         p_log_p = torch.where(p > 0, p * p.log(), torch.zeros_like(p))
         kl = p_log_p.sum(dim=1, keepdim=True) - p @ log_d.T
         return kl.min(dim=1).values
-
-    def predict(self, x: Tensor) -> Tensor:
-        """
-        Calculates KL-Divergence between predicted posteriors and typical posteriors.
-
-        :param x: input tensor, will be passed through model
-        :return: outlier scores of shape :math:`B`
-        """
-        if len(self.dists) == 0:
-            raise RequiresFittingException("KL-Matching has to be fitted on validation data.")
-
-        if self.model is None:
-            raise ModelNotSetException
-
-        # we move the dict with the typical posteriors to the same device as the input
-        # this might be not desirable in some cases, but avoids errors
-        device = x.device
-        self.dists.to(device)
-
-        logits = self.model(x)
-        return self.predict_logits(logits)

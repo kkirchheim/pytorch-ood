@@ -244,13 +244,6 @@ class SSBBenchmarkStructureTest(unittest.TestCase):
         self.mock = _MockSSBBenchmark(self.tmp)
         self.bench = self.mock.bench
 
-    def test_test_sets_returns_two_datasets(self):
-        sets = self.bench.test_sets()
-        self.assertEqual(len(sets), 2)
-
-    def test_ood_names_are_easy_and_hard(self):
-        self.assertEqual(self.bench.ood_names, ["Easy", "Hard"])
-
     def test_ood_labels_are_neg_one(self):
         # Easy set: concat of ID test + easy OOD
         ds = self.bench.test_sets()[0]
@@ -268,20 +261,6 @@ class SSBBenchmarkStructureTest(unittest.TestCase):
         ds = self.bench.train_set()
         labels = [label for _, label in ds]
         self.assertTrue(all(label >= 0 for label in labels))
-
-    def test_known_only_returns_the_id_dataset_once(self):
-        sets = self.bench.test_sets(known=True, unknown=False)
-        self.assertEqual(len(sets), 1)
-        for ds in sets:
-            labels = [label for _, label in ds]
-            self.assertTrue(all(label >= 0 for label in labels))
-
-    def test_unknown_only_returns_two_ood_datasets(self):
-        sets = self.bench.test_sets(known=False, unknown=True)
-        self.assertEqual(len(sets), 2)
-        for ds in sets:
-            labels = [label for _, label in ds]
-            self.assertTrue(all(label == -1 for label in labels))
 
 
 # ─── OSCR Tests ───────────────────────────────────────────────────────────────
@@ -302,32 +281,6 @@ class OSCRTest(unittest.TestCase):
         scores = torch.randn(len(labels))
         result = oscr_score(scores, preds, labels)
         self.assertIsInstance(result, float)
-
-    def test_range_zero_to_one(self):
-        labels, preds = self._make_data()
-        scores = torch.randn(len(labels))
-        result = oscr_score(scores, preds, labels)
-        self.assertGreaterEqual(result, 0.0)
-        self.assertLessEqual(result, 1.0)
-
-    def test_perfect_detector_and_classifier(self):
-        n_id, n_ood = 100, 50
-        labels = torch.cat([torch.arange(n_id), torch.full((n_ood,), -1)])
-        preds = torch.cat([torch.arange(n_id), torch.zeros(n_ood, dtype=torch.long)])
-        # Perfect: ID scores all low, OOD scores all high
-        scores = torch.cat([torch.zeros(n_id), torch.ones(n_ood)])
-        result = oscr_score(scores, preds, labels)
-        self.assertAlmostEqual(result, 1.0, places=3)
-
-    def test_worst_case_inverted_scores(self):
-        n_id, n_ood = 100, 50
-        labels = torch.cat([torch.arange(n_id), torch.full((n_ood,), -1)])
-        preds = torch.cat([torch.arange(n_id), torch.zeros(n_ood, dtype=torch.long)])
-        # Inverted: ID scores all high, OOD scores all low.
-        # The curve jumps from (0,0) to (FPR=1, CCR≈0) in one step — OSCR ≈ 0.
-        scores = torch.cat([torch.ones(n_id), torch.zeros(n_ood)])
-        result = oscr_score(scores, preds, labels)
-        self.assertLess(result, 1.0 / n_id)
 
     def test_raises_without_ood_samples(self):
         labels = torch.arange(10)

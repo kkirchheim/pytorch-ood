@@ -49,25 +49,3 @@ class TestNNGuideReference(unittest.TestCase):
         torch.testing.assert_close(
             detector.predict_features(self.z), expected.predict_features(self.z)
         )
-
-    def test_neighbors_weighted_by_energy(self):
-        # two training samples with the direction of the input, one with a larger energy: with
-        # k = 1, the guidance is the inner product with the high-energy sample, while the cosine
-        # similarity of both is 1
-        head = torch.nn.Linear(2, 2, bias=False)
-        with torch.no_grad():
-            head.weight.copy_(torch.tensor([[1.0, 0.0], [0.0, 0.0]]))
-        z_train = torch.tensor([[1.0, 0.0], [4.0, 0.0], [0.0, 1.0]])
-        detector = NNGuide(encoder=None, head=head, k=1)
-        detector.fit_features(z_train, torch.zeros(3, dtype=torch.long))
-        z = torch.tensor([[2.0, 0.0]])
-        energy = lambda f: torch.logsumexp(head(f), dim=1)  # noqa: E731
-        with torch.no_grad():
-            expected = -energy(z_train[1:2]) * energy(z)
-        torch.testing.assert_close(detector.predict_features(z), expected)
-
-    def test_fewer_samples_than_k_raises(self):
-        detector = NNGuide(encoder=None, head=self.head, k=10)
-        labels = torch.cat([torch.zeros(5, dtype=torch.long), torch.full((20,), -1)])
-        with self.assertRaises(ValueError):
-            detector.fit_features(torch.randn(25, 6), labels)

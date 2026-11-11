@@ -8,7 +8,7 @@
 
 import logging
 import warnings
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Union
 
 import torch
 from torch import Tensor
@@ -220,6 +220,21 @@ class MahalanobisODIN(GradientDetector):
     def encoder(self, encoder: Optional[Callable[[Tensor], Tensor]]) -> None:
         self._base.encoder = encoder
 
+    @property
+    def device(self) -> Optional[torch.device]:
+        """The device of the underlying Mahalanobis detector, if one can be inferred."""
+        return self._base.device
+
+    def to(self, device: Union[str, torch.device]) -> Self:
+        """
+        Move the underlying Mahalanobis detector to ``device``.
+
+        :param device: target device
+        :return: the detector
+        """
+        self._base.to(device)
+        return self
+
     def fit(self, data_loader: DataLoader) -> Self:
         """
         Fit the underlying Mahalanobis detector.
@@ -257,6 +272,9 @@ class MahalanobisODIN(GradientDetector):
             raise ModelNotSetException
         if not self._base._is_fitted():
             raise RequiresFittingException
+        device = self.device
+        if device is not None:
+            x = x.to(device)
         x = self._odin_preprocess(x, x.device)
         return self._base.predict(x)
 
