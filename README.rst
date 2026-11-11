@@ -117,7 +117,7 @@ Benchmarks
 ---------------------------
 
 Evaluate detectors against common benchmarks, for example the OpenOOD v1.5 CIFAR benchmark.
-Datasets will be downloaded automatically.
+``download=True`` fetches the datasets.
 When evaluating several detectors on the same benchmark, cached logits
 and pooled features are reused across calls:
 
@@ -131,7 +131,7 @@ and pooled features are reused across calls:
    model = load_model("wrn-40-2/cifar10/crossentropy").to("cuda:0")
    trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
-   benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
+   benchmark = CIFAR10_OpenOOD(root="data", transform=trans, download=True)
    detectors = {
        "MSP": MaxSoftmax(model),
        "Energy": EnergyBased(model),

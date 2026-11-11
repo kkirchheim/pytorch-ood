@@ -38,30 +38,36 @@ _SSB_SPLIT_FILES = {
 }
 
 
-def load_ssb_splits(dataset: str, root: str) -> dict:
+def load_ssb_splits(dataset: str, root: str, download: bool = False) -> dict:
     """
-    Download (once) and return the SSB class splits for a given dataset.
+    Return the SSB class splits for a given dataset.
 
     Files are cached under ``<root>/ssb_splits/``. The split file is a pickle that is
-    downloaded and loaded with :func:`pickle.load`.
+    loaded with :func:`pickle.load`.
 
     :param dataset: one of ``"cub"``, ``"aircraft"``, ``"scars"``
     :param root: directory used for caching the split file
+    :param download: if ``True``, download the split file if not already present
     :return: dict with keys:
 
         - ``known_classes`` — list of 0-indexed class IDs for the ID split
         - ``unknown_classes`` — dict with keys ``"Easy"``, ``"Medium"``, ``"Hard"``
           each mapping to a list of 0-indexed class IDs
+    :raises RuntimeError: if the split file is missing and ``download`` is ``False``
     """
     if dataset not in _SSB_SPLIT_FILES:
         raise ValueError(f"Unknown dataset '{dataset}'. Choose from {list(_SSB_SPLIT_FILES)}")
 
     fname = _SSB_SPLIT_FILES[dataset]
     cache_dir = join(root, "ssb_splits")
-    os.makedirs(cache_dir, exist_ok=True)
     local_path = join(cache_dir, fname)
 
     if not os.path.isfile(local_path):
+        if not download:
+            raise RuntimeError(
+                f"SSB splits not found at {local_path}. Pass download=True to download them."
+            )
+        os.makedirs(cache_dir, exist_ok=True)
         url = f"{_SSB_SPLIT_BASE}/{fname}"
         log.info("Downloading SSB splits for %s from %s", dataset, url)
         download_url(url, cache_dir, filename=fname)
@@ -381,9 +387,9 @@ class CUB_SSB(_SSBBase):
         """
         :param root: directory containing CUB-200-2011 data and used for caching splits
         :param transform: image transform applied to all samples
-        :param download: if ``True``, download CUB-200-2011 if not already present
+        :param download: if ``True``, download CUB-200-2011 and the class splits if not already present
         """
-        splits = load_ssb_splits("cub", root)
+        splits = load_ssb_splits("cub", root, download=download)
         known = splits["known_classes"]
         unk = splits["unknown_classes"]
         hard_and_medium = unk["Hard"] + unk["Medium"]
@@ -442,12 +448,14 @@ class StanfordCars_SSB(_SSBBase):
         ai_coded=True,
     )
 
-    def __init__(self, root: str, transform: Callable) -> None:
+    def __init__(self, root: str, transform: Callable, download: bool = False) -> None:
         """
         :param root: directory containing Stanford Cars data and used for caching splits
         :param transform: image transform applied to all samples
+        :param download: if ``True``, download the class splits if not already present. The images
+            have to be obtained manually, see above.
         """
-        splits = load_ssb_splits("scars", root)
+        splits = load_ssb_splits("scars", root, download=download)
         known = splits["known_classes"]
         unk = splits["unknown_classes"]
         hard_and_medium = unk["Hard"] + unk["Medium"]
@@ -500,9 +508,9 @@ class Aircraft_SSB(_SSBBase):
         """
         :param root: directory containing FGVC-Aircraft data and used for caching splits
         :param transform: image transform applied to all samples
-        :param download: if ``True``, download FGVC-Aircraft if not already present
+        :param download: if ``True``, download FGVC-Aircraft and the class splits if not already present
         """
-        splits = load_ssb_splits("aircraft", root)
+        splits = load_ssb_splits("aircraft", root, download=download)
         known = splits["known_classes"]
         unk = splits["unknown_classes"]
         hard_and_medium = unk["Hard"] + unk["Medium"]

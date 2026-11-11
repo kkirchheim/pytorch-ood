@@ -16,7 +16,7 @@ Each benchmark implements a common interface.
     from pytorch_ood.benchmark import CIFAR10_OpenOOD
     from pytorch_ood.detector import EnergyBased, Mahalanobis
 
-    benchmark = CIFAR10_OpenOOD(root, transform)
+    benchmark = CIFAR10_OpenOOD(root, transform, download=True)
     detector1 = EnergyBased(model)
     detector2 = Mahalanobis(model.features)  # requires fitting
 

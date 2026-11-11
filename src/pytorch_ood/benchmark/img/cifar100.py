@@ -45,24 +45,25 @@ class CIFAR100_ODIN(Benchmark):
         tasks={Task.CLASSIFICATION},
     )
 
-    def __init__(self, root, transform):
+    def __init__(self, root, transform, download: bool = False):
         """
         :param root: where to store datasets
         :param transform: transform to apply to images
+        :param download: if ``True``, download the datasets if not already present
         """
         self.transform = transform
-        self.train_in = CIFAR100(root, download=True, transform=transform, train=True)
-        self.test_in = CIFAR100(root, download=True, transform=transform, train=False)
+        self.train_in = CIFAR100(root, download=download, transform=transform, train=True)
+        self.test_in = CIFAR100(root, download=download, transform=transform, train=False)
 
         self.test_oods = [
             TinyImageNetCrop(
-                root, download=True, transform=transform, target_transform=ToUnknown()
+                root, download=download, transform=transform, target_transform=ToUnknown()
             ),
             TinyImageNetResize(
-                root, download=True, transform=transform, target_transform=ToUnknown()
+                root, download=download, transform=transform, target_transform=ToUnknown()
             ),
-            LSUNResize(root, download=True, transform=transform, target_transform=ToUnknown()),
-            LSUNCrop(root, download=True, transform=transform, target_transform=ToUnknown()),
+            LSUNResize(root, download=download, transform=transform, target_transform=ToUnknown()),
+            LSUNCrop(root, download=download, transform=transform, target_transform=ToUnknown()),
             UniformNoise(
                 1000,
                 size=(32, 32, 3),
