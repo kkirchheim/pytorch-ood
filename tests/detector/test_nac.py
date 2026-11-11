@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
+from pytorch_ood.api import RequiresFittingException
 from pytorch_ood.detector import NACUE
 from pytorch_ood.metrics import OODMetrics
 
@@ -76,6 +77,18 @@ class TestNACUE:
                 o_star=[5, 10],
                 device="cpu",
             )
+
+    def test_failed_refit_leaves_the_detector_unfitted(self):
+        model = TinyConvClassifier().eval()
+        detector = self._make_detector(model, [model.block2, model.bn])
+        x = torch.randn(4, 3, 16, 16)
+        detector.fit(DataLoader(TensorDataset(x, torch.zeros(4, dtype=torch.long)), batch_size=2))
+
+        with pytest.raises(ValueError):
+            detector.fit(DataLoader(TensorDataset(x, -torch.ones(4, dtype=torch.long))))
+
+        with pytest.raises(RequiresFittingException):
+            detector(x)
 
     def test_mock_performance(self):
         """

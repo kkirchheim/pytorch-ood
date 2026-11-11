@@ -299,9 +299,9 @@ class MahalanobisODIN(GradientDetector):
                 # half the squared distance to the closest center, ||f L - mu_k L||^2 / 2
                 whitened = features @ whitening - whitened_mu.index_select(0, sample_pred)
                 loss = torch.mean(0.5 * whitened.square().sum(dim=1))
-                loss.backward()
-
-                gradient = torch.sign(x.grad.data)
+                # only the input gradient, so that the parameters of the encoder collect no gradients
+                (gradient,) = torch.autograd.grad(loss, x)
+                gradient = torch.sign(gradient)
 
         if self.norm_std:
             for i, std in enumerate(self.norm_std):

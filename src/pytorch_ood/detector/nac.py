@@ -7,8 +7,9 @@
     :exclude-members:
 """
 
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Iterator, List, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -106,6 +107,7 @@ class NACUE(GradientDetector):
     summed over layers. The negative coverage is returned, so larger scores indicate outliers.
 
     Both fitting and prediction need gradients and run forward and backward passes of the model.
+    The model is used in the mode it is given, so you should usually call ``model.eval()`` first.
 
     .. rubric:: Examples
 
@@ -176,14 +178,12 @@ class NACUE(GradientDetector):
 
         self._fitted: bool = False
         self._stats: List[_LayerStats] = []
-        self._hooks: List[torch.utils.hooks.RemovableHandle] = []
-        self._captured: List[Tensor] = []
 
     # ----------------------------- pytorch-ood API -----------------------------
 
     def fit(self, data_loader: DataLoader) -> "NACUE":
         """
-        Collect the activation histograms of all neurons. Calls ``model.eval()``.
+        Collect the activation histograms of all neurons.
 
         :param data_loader: loader with ID samples; batches may be tensors or ``(x, y)`` tuples.
             In tuples, OOD samples (labels :math:`< 0`) are ignored. Gradients are required, so the
@@ -193,12 +193,13 @@ class NACUE(GradientDetector):
         """
         if self.model is None:
             raise ModelNotSetException("NACUE requires a model.")
-        self.model.eval()
+        with self._observing_layers() as captured:
+            return self._fit(data_loader, captured)
 
+    def _fit(self, data_loader: DataLoader, captured: List[Tensor]) -> "NACUE":
+        self._fitted = False
         if self.device is not None:
             self.to(self.device)
-
-        self._init_hooks()
 
         def id_inputs():
             # batches may be plain tensors, without labels
@@ -206,18 +207,20 @@ class NACUE(GradientDetector):
                 (b[0], b[1]) if isinstance(b, (tuple, list)) else (b, None) for b in data_loader
             )
             for x, _ in _id_batches(batches):
-                yield x.to(self.device) if self.device is not None else x
+                x = x.to(self.device) if self.device is not None else x
+                # the activations need a graph even if the model's parameters are frozen
+                yield x.detach().requires_grad_(True)
 
         # First pass: initialize histograms (need N per layer)
         self._stats = []
         with torch.enable_grad():
             for x in id_inputs():
-                self._captured.clear()
+                captured.clear()
                 logits = self.model(x)
                 _ = logits.sum()
 
                 if not self._stats:
-                    for li, z in enumerate(self._captured):
+                    for li, z in enumerate(captured):
                         z2 = self.feature_reduce(z)
                         n = z2.shape[1]
                         counts = torch.zeros((n, self.m_bins[li]), dtype=torch.long, device="cpu")
@@ -229,7 +232,7 @@ class NACUE(GradientDetector):
         # Second pass: accumulate histograms
         for x in id_inputs():
             with torch.enable_grad():
-                self._captured.clear()
+                captured.clear()
                 logits = self.model(x)
                 p = torch.softmax(logits, dim=1)
                 dkl = -(torch.log(p + 1e-12)).mean(dim=1)
@@ -237,13 +240,13 @@ class NACUE(GradientDetector):
 
                 grads = torch.autograd.grad(
                     loss,
-                    self._captured,  # list of tensors
+                    captured,  # list of tensors
                     retain_graph=False,
                     create_graph=False,
                     allow_unused=False,
                 )
 
-                for li, (z, grad) in enumerate(zip(self._captured, grads)):
+                for li, (z, grad) in enumerate(zip(captured, grads)):
                     # grad = torch.autograd.grad(loss, z, retain_graph=True, create_graph=False)[0]
                     prod = z * grad
                     p2 = self.feature_reduce(prod)  # (B, N)
@@ -263,11 +266,12 @@ class NACUE(GradientDetector):
                     counts_flat.scatter_add_(0, index_flat.to("cpu"), ones.to("cpu"))
 
         self._fitted = True
-        self._remove_hooks()
         return self
 
     def predict(self, x: Tensor) -> Tensor:
         """
+        Compute outlier scores.
+
         :param x: input batch of shape :math:`B \\times C \\times H \\times W`. Gradients are
             required, so the call must not be wrapped in ``torch.no_grad``.
         :return: outlier scores of shape :math:`B`
@@ -276,22 +280,24 @@ class NACUE(GradientDetector):
             raise ModelNotSetException("NACUE requires a model.")
         if not self._fitted:
             raise RequiresFittingException("Call `fit` before `predict`.")
-        self.model.eval()
+        with self._observing_layers() as captured:
+            return self._predict(x, captured)
+
+    def _predict(self, x: Tensor, captured: List[Tensor]) -> Tensor:
         if self.device is not None:
             self.model.to(self.device)
             x = x.to(self.device)
-
-        self._init_hooks()
+        # the activations need a graph even if the model's parameters are frozen
+        x = x.detach().requires_grad_(True)
 
         with torch.enable_grad():
-            self._captured.clear()
             logits = self.model(x)
             p = torch.softmax(logits, dim=1)
             dkl = -(torch.log(p + 1e-12)).mean(dim=1)  # (B,)
             loss = dkl.sum()
 
             layer_scores: List[Tensor] = []
-            for li, z in enumerate(self._captured):
+            for li, z in enumerate(captured):
                 grad = torch.autograd.grad(loss, z, retain_graph=True, create_graph=False)[0]
                 prod = z * grad
                 p2 = self.feature_reduce(prod)  # (B, N)
@@ -312,28 +318,25 @@ class NACUE(GradientDetector):
 
             id_likeness = torch.stack(layer_scores, dim=0).sum(dim=0)  # (B,)
             outlier_score = -id_likeness  # pytorch-ood convention: larger => more outlier
-        self._remove_hooks()
         return outlier_score.detach()
 
     # ----------------------------- internals -----------------------------
 
-    def _init_hooks(self) -> None:
-        if self._hooks:
-            return
+    @contextmanager
+    def _observing_layers(self) -> Iterator[List[Tensor]]:
+        """
+        Yields a list that collects the outputs of the layers while the block runs, and removes the
+        hooks afterwards.
+        """
+        captured: List[Tensor] = []
 
-        self._captured = []
-
-        def _hook(_module: Module, _inp: Tuple[Tensor, ...], out: Tensor):
+        def hook(_module: Module, _inp: Tuple[Tensor, ...], out: Tensor) -> None:
             # keep tensor in computation graph (no detach)
-            self._captured.append(out)
+            captured.append(out)
 
-        for layer in self.layers:
-            self._hooks.append(layer.register_forward_hook(_hook))
-
-    def _remove_hooks(self) -> None:
-        for h in self._hooks:
-            try:
-                h.remove()
-            except Exception:
-                pass
-        self._hooks.clear()
+        handles = [layer.register_forward_hook(hook) for layer in self.layers]
+        try:
+            yield captured
+        finally:
+            for handle in handles:
+                handle.remove()

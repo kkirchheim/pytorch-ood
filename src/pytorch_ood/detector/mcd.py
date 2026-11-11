@@ -9,7 +9,8 @@
 """
 
 import logging
-from typing import Tuple
+from contextlib import contextmanager
+from typing import Iterator, Tuple
 
 import torch
 from torch import Tensor, nn
@@ -41,11 +42,10 @@ class MCD(Detector):
 
     :see Bayesian SegNet: `ArXiv <https://arxiv.org/abs/1511.02680>`__
 
-    .. warning:: If the model is in evaluation mode, it is temporarily put into training mode so that dropout is
-        active (BatchNorm layers stay in evaluation mode if ``batch_norm=True``), and it is set back to
-        evaluation mode afterwards. This could also affect other modules. If the model is already in training mode,
-        it is left unchanged, so BatchNorm layers also stay in training mode and update their running statistics,
-        regardless of ``batch_norm``.
+    .. warning:: The model is switched to training mode so that dropout is active (BatchNorm layers stay in
+        evaluation mode if ``batch_norm=True``). Afterwards, every submodule gets its previous mode back.
+        A model that is already in training mode is left unchanged, so its BatchNorm layers also stay in
+        training mode and update their running statistics, regardless of ``batch_norm``.
     """
 
     info = DetectorInfo(
@@ -87,29 +87,32 @@ class MCD(Detector):
         return self
 
     @staticmethod
-    def _switch_mode(model: Module, batch_norm: bool = True) -> bool:
+    @contextmanager
+    def _switch_mode(model: Module, batch_norm: bool = True) -> Iterator[None]:
         """
-        Puts the model into training mode, except for variants of the batch-norm layer.
+        Puts the model into training mode, except for variants of the batch-norm layer, and gives
+        every submodule its mode back when the block ends.
 
         :param batch_norm: set to False if batch-norm should also be in training mode
-        :return: true if model was switched, false otherwise
         """
-        mode_switch = False
+        modes = [(module, module.training) for module in model.modules()]
+        try:
+            if not model.training:
+                log.debug("Putting model into training mode ... ")
 
-        if not model.training:
-            log.debug("Putting model into training mode ... ")
-            mode_switch = True
+                model.train()
 
-            model.train()
+                if batch_norm:
+                    for mod in model.modules():
+                        # reset batch norm layers.
+                        # TODO: are there other layers?
+                        if isinstance(mod, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+                            mod.train(False)
 
-            if batch_norm:
-                for mod in model.modules():
-                    # reset batch norm layers.
-                    # TODO: are there other layers?
-                    if isinstance(mod, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
-                        mod.train(False)
-
-        return mode_switch
+            yield
+        finally:
+            for module, training in modes:
+                module.training = training
 
     @staticmethod
     @torch.no_grad()
@@ -126,19 +129,12 @@ class MCD(Detector):
         if model is None:
             raise ModelNotSetException
 
-        mode_switch = MCD._switch_mode(model, batch_norm)
-
         results = []
 
-        try:
+        with MCD._switch_mode(model, batch_norm):
             for i in range(samples):
                 output = model(x).softmax(dim=1).cpu()
                 results.append(output)
-        finally:
-            # restore the mode even if the forward pass raises
-            if mode_switch:
-                log.debug("Putting model into eval mode ... ")
-                model.eval()
 
         # samples x batch x classes
         y = torch.stack(results)
@@ -174,12 +170,10 @@ class MCD(Detector):
         if model is None:
             raise ModelNotSetException
 
-        mode_switch = MCD._switch_mode(model, batch_norm=batch_norm)
-
         dev = x.device
 
         results = None
-        try:
+        with MCD._switch_mode(model, batch_norm=batch_norm):
             for i in range(samples):
                 output = model(x).softmax(dim=1)
                 if results is None:
@@ -187,11 +181,6 @@ class MCD(Detector):
                     results = torch.zeros_like(output, device=dev)
                 results += output
             results /= samples
-        finally:
-            # restore the mode even if the forward pass raises
-            if mode_switch:
-                log.debug("Putting model into eval mode ... ")
-                model.eval()
 
         return results
 
