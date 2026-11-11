@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, Task
-from .graduncertainty import _requires_grad
+from ..utils.utils import _require_eval_mode, _requires_grad
 
 try:
     from torch.func import (
@@ -66,6 +66,8 @@ class GradNorm(GradientDetector):
     .. note:: The paper uses only the gradients of the weights of the final classification layer.
         You can achieve this by setting ``param_filter``, e.g. ``lambda name: name == "fc.weight"``.
         Gradients are only computed for the selected parameters.
+
+    The model and all its submodules have to be in evaluation mode, so call ``model.eval()`` first.
 
     .. note:: On PyTorch ≥ 2.0, per-sample gradients are computed with ``torch.func.vmap`` +
         ``torch.func.grad`` in a single batched forward+backward pass. On PyTorch 1.x the
@@ -127,9 +129,11 @@ class GradNorm(GradientDetector):
         :param x: input tensor of shape :math:`B \\times \\ldots`, will be passed through the network
         :return: outlier scores of shape :math:`B`
         :raises ValueError: if ``param_filter`` selects no parameter
+        :raises ModelModeException: if the model or one of its submodules is in training mode
         """
         if self.model is None:
             raise ModelNotSetException()
+        _require_eval_mode(self.model, self)
 
         x = x.to(self.device)
 

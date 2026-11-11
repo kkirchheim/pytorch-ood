@@ -19,6 +19,7 @@ from pytorch_ood.api import (
     FeaturesDetector,
     GradientDetector,
     LogitsDetector,
+    ModelModeException,
     ModelNotSetException,
     RequiresFittingException,
     StructuredDetector,
@@ -516,30 +517,36 @@ def _in_mode(model: nn.Module, mode: str) -> nn.Module:
     return model
 
 
+#: cannot score a model with modules in training mode and raise ModelModeException instead
+#: (docs/info.rst, design choice 4)
+_REFUSE_TRAINING_MODE = (GradNorm, GradUncertainty)
+
+
 def _modes(model: nn.Module) -> Dict[str, bool]:
     return {n: m.training for n, m in model.named_modules()}
 
 
 @pytest.mark.parametrize("mode", ["eval", "train", "mixed_under_train", "mixed_under_eval"])
 @pytest.mark.parametrize("case", _cases())
-def test_model_mode_is_unchanged(
-    case: DetectorCase, mode: str, seed: torch.Generator, request: pytest.FixtureRequest
-):
-    if mode != "eval" and _CLASSES[case.name] in (GradNorm, GradUncertainty):
-        request.applymarker(
-            pytest.mark.xfail(strict=True, reason="vmap refuses dropout in training mode")
-        )
+def test_model_mode_is_unchanged(case: DetectorCase, mode: str, seed: torch.Generator):
     model = _in_mode(case.model(), mode)
     before = _modes(model)
+    detector = _fitted(case, model)
 
-    _fitted(case, model)(_inputs(case, seed))
+    if mode != "eval" and _CLASSES[case.name] in _REFUSE_TRAINING_MODE:
+        with pytest.raises(ModelModeException, match=r"model\.eval\(\)"):
+            detector(_inputs(case, seed))
+    else:
+        detector(_inputs(case, seed))
 
     assert _modes(model) == before
 
 
 @pytest.mark.parametrize("case", _cases())
 def test_model_is_restored_when_the_forward_pass_fails(case: DetectorCase, seed: torch.Generator):
-    model = _in_mode(case.model(), "mixed_under_eval")
+    # mixed, so that a detector that switches modes has to restore each submodule
+    mode = "eval" if _CLASSES[case.name] in _REFUSE_TRAINING_MODE else "mixed_under_eval"
+    model = _in_mode(case.model(), mode)
     before = _state(model)
     detector = _fitted(case, model)
 
