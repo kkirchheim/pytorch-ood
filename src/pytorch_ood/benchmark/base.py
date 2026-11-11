@@ -423,7 +423,9 @@ class Benchmark(ABC):
         Only logits detectors (using ``model``) and pooled-feature detectors (using
         ``encoder``) can reuse cached representations; all other detectors run the full
         pipeline. Detectors are not fitted by this method, call ``fit()`` beforehand. They are
-        moved to ``device``. The metrics are those computed by
+        moved to ``device``. This method does not change the train or eval mode of their
+        ``model``, ``encoder`` or ``backbone``, and warns once per benchmark if one of them is in
+        training mode. The metrics are those computed by
         :class:`~pytorch_ood.metrics.OODMetrics`. Each OOD dataset in ``ood_names`` is evaluated
         together with the ID test data.
 
@@ -441,6 +443,17 @@ class Benchmark(ABC):
             result also includes a ``Detector`` field with the detector class name.
         """
         detectors, many = self._normalize_detectors(detector)
+        for current_detector in detectors:
+            for name in ("model", "encoder", "backbone"):
+                producer = getattr(current_detector, name, None)
+                module = getattr(producer, "__self__", producer)
+                if isinstance(module, torch.nn.Module) and module.training:
+                    self._warn_once(
+                        "train_mode",
+                        f"The {name} of {type(current_detector).__name__} is in training mode, "
+                        "which affects layers such as dropout and batch normalization. Call "
+                        "eval() on it before evaluate() unless this is intended.",
+                    )
 
         if loader_kwargs is None:
             loader_kwargs = {}
