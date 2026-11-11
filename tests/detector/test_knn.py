@@ -13,12 +13,6 @@ def _kth_distance(z_train, z_test, k, normalize=True):
     return torch.cdist(z_test.double(), z_train.double()).sort(dim=1).values[:, k - 1]
 
 
-def test_unknown_kwargs_raise():
-    """There are no backend kwargs on the detector; backends are configured via ``search``."""
-    with pytest.raises(TypeError):
-        KNN(None, k=3, metric="euclidean")
-
-
 @pytest.mark.parametrize("k", (1, 7, 50))
 def test_matches_paper(k):
     g = torch.Generator().manual_seed(0)

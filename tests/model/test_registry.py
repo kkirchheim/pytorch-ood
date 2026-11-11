@@ -72,23 +72,12 @@ def test_prefix_resolution():
     assert entry.key == "wrn-40-2/imagenet32/crossentropy"
 
 
-def test_prefix_resolution_ambiguous_across_seeds():
-    # logitnorm/cifar10 now has multiple seeds registered, so the
-    # seedless prefix is ambiguous
+@pytest.mark.parametrize(
+    "prefix", ["wrn-40-2/cifar10", "wrn-40-2/cifar10/logitnorm", "wrn-40-2/cifar10/energy"]
+)
+def test_ambiguous_prefix_raises(prefix: str):
     with pytest.raises(ValueError):
-        get_model_info("wrn-40-2/cifar10/logitnorm")
-
-
-def test_prefix_resolution_ambiguous_across_seeds_energy():
-    # cifar10/energy now has both the third-party s1 checkpoint and our
-    # own s0/s2 fine-tunes registered, so the seedless prefix is ambiguous
-    with pytest.raises(ValueError):
-        get_model_info("wrn-40-2/cifar10/energy")
-
-
-def test_ambiguous():
-    with pytest.raises(ValueError):
-        get_model_info("wrn-40-2/cifar10")
+        get_model_info(prefix)
 
 
 def test_unknown():

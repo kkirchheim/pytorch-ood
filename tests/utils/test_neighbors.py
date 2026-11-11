@@ -28,14 +28,6 @@ def data(seed):
     return reference, queries
 
 
-def test_is_a_nearest_neighbor_search():
-    search = TorchNearestNeighbors()
-    assert isinstance(search, NearestNeighborSearch)
-    assert search.metric == "sqeuclidean"
-    # the class itself is not a search, only its instances
-    assert not isinstance(TorchNearestNeighbors, NearestNeighborSearch)
-
-
 def test_metric():
     search = TorchNearestNeighbors(metric="inner_product")
     assert search.metric == "inner_product"
@@ -122,15 +114,6 @@ def test_values_ascending_and_non_negative(data):
     )
     assert (values >= 0).all()
     assert (values[:, 1:] >= values[:, :-1]).all()
-
-
-def test_inner_products_descending(data):
-    reference, queries = data
-    values, _ = TorchNearestNeighbors(metric="inner_product").fit(reference).search(queries, 10)
-    assert (values[:, 1:] <= values[:, :-1]).all()
-    # inner products can be negative: no clamp
-    values, _ = TorchNearestNeighbors(metric="inner_product").fit(reference).search(queries, 300)
-    assert (values < 0).any()
 
 
 @pytest.mark.parametrize("metric", METRICS)

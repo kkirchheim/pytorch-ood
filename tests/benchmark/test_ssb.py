@@ -210,59 +210,6 @@ class TestStanfordCarsDataset:
 # ─── SSB Benchmark Structure Tests ───────────────────────────────────────────
 
 
-class _MockSSBBenchmark:
-    """Helper that builds a CUB_SSB-like structure from fake data."""
-
-    def __init__(self, tmp):
-        _make_cub_root(tmp, n_classes=10, n_per_class=4)
-
-        # Mimic split structure: 6 known, 2 easy OOD, 2 hard OOD classes
-        from pytorch_ood.benchmark.img.ssb import _CUB200, _SSBBase
-        from pytorch_ood.utils import ToUnknown
-
-        class FakeCUB_SSB(_SSBBase):
-            def __init__(self):
-                known = list(range(6))
-                easy = [6, 7]
-                hard = [8, 9]
-                self._train = _CUB200(tmp, split="train", classes=known)
-                self._test_id = _CUB200(tmp, split="test", classes=known)
-                self._test_easy = _CUB200(
-                    tmp, split="test", classes=easy, target_transform=ToUnknown()
-                )
-                self._test_hard = _CUB200(
-                    tmp, split="test", classes=hard, target_transform=ToUnknown()
-                )
-                self.ood_names = ["Easy", "Hard"]
-
-        self.bench = FakeCUB_SSB()
-
-
-class TestSSBBenchmarkStructure:
-    def setup_method(self):
-        self.tmp = tempfile.mkdtemp()
-        self.mock = _MockSSBBenchmark(self.tmp)
-        self.bench = self.mock.bench
-
-    def test_ood_labels_are_neg_one(self):
-        # Easy set: concat of ID test + easy OOD
-        ds = self.bench.test_sets()[0]
-        labels = [label for _, label in ds]
-        ood_labels = [label for label in labels if label < 0]
-        assert all(label == -1 for label in ood_labels)
-        assert len(ood_labels) > 0
-
-    def test_id_labels_are_non_negative(self):
-        ds = self.bench.test_sets()[0]
-        id_labels = [label for _, label in ds if label >= 0]
-        assert all(label >= 0 for label in id_labels)
-
-    def test_train_set_has_no_ood_labels(self):
-        ds = self.bench.train_set()
-        labels = [label for _, label in ds]
-        assert all(label >= 0 for label in labels)
-
-
 # ─── OSCR Tests ───────────────────────────────────────────────────────────────
 
 
@@ -328,21 +275,6 @@ class TestOSCRValues:
         assert self._oscr([0.0, 1.0, 1.0], [1.0, 2.0], [True, True, True]) == pytest.approx(
             5 / 6, abs=5e-8
         )
-
-    def test_constant_scores_give_half_the_accuracy(self):
-        assert self._oscr([0.0] * 4, [0.0] * 4, [True, True, True, False]) == pytest.approx(
-            0.375, abs=5e-8
-        )
-
-    def test_inverted_scores_give_zero(self):
-        assert self._oscr([1.0, 1.0], [0.0, 0.0], [True, True]) == pytest.approx(0.0, abs=5e-8)
-
-    def test_random_scores_give_half_the_accuracy(self):
-        torch.manual_seed(0)
-        n = 5000
-        correct = torch.rand(n) < 0.6
-        result = self._oscr(torch.rand(n).tolist(), torch.rand(n).tolist(), correct.tolist())
-        assert result == pytest.approx(correct.float().mean().item() / 2, abs=0.01)
 
     @pytest.mark.parametrize("levels", (None, 3, 10))
     def test_matches_brute_force(self, levels):

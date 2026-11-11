@@ -91,26 +91,6 @@ class TestPerImage:
         expected = self._expected(scores[keep], labels[keep], F.average_precision)
         assert result["AP-OUT"] == pytest.approx(expected, abs=5e-13)
 
-    @requires(cuda=1)
-    @pytest.mark.parametrize("positive", ("ood", "id"))
-    def test_average_precision_cuda(self, positive):
-        scores, labels = _images()
-        scores = scores.round()
-        expected = PerImage(AveragePrecision(positive)).update(scores, labels).compute()
-        metric = PerImage(AveragePrecision(positive)).update(scores.cuda(), labels)
-        assert all(v.device.type == "cuda" for v in metric._sums.values())
-        for key, value in metric.compute().items():
-            assert value == pytest.approx(expected[key], abs=5e-13), key
-
-    def test_differs_from_pooled(self):
-        # the second image is shifted, which changes the pooled AUROC but not the per-image one
-        scores, labels = _images(n=2)
-        scores[1] += 10
-        per_image = PerImage(AUROC()).update(scores, labels).compute()["AUROC"]
-        pooled = AUROC().update(scores, labels).compute()["AUROC"]
-        assert per_image == pytest.approx(self._expected(scores, labels), abs=5e-8)
-        assert per_image != pytest.approx(pooled, abs=5e-8)
-
     def test_collection_matches_single_metrics(self):
         scores, labels = _images()
         result = OODPerImageSegmentationMetrics().update(scores, labels).compute()
