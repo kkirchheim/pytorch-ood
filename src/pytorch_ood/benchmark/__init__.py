@@ -42,17 +42,16 @@ intermediate logits or pooled features when evaluating multiple compatible detec
     )
 
 When possible, benchmarks reuse cached logits or pooled features for
-``LogitsDetector`` and ``FeaturesDetector`` instances. With ``cache=True`` or
-``cache_dir=...``, those cached representations are kept on the benchmark object and
-can be reused across later ``evaluate(...)`` calls. With ``cache_dir=...`` and a
-``cache_key``, they are also written to disk. Detectors of other kinds
+``LogitsDetector`` and ``FeaturesDetector`` instances within one ``evaluate(...)`` call.
+With ``cache=True``, those representations are kept on the benchmark object for later calls.
+With ``cache_dir=...`` and a ``cache_key``, they are written to disk. The two options are
+independent. Detectors of other kinds
 (feature-map, structured, and gradient detectors) always run the full pipeline.
 
 .. warning::
 
-    File-backed cache reuse is keyed only by the user-supplied ``cache_key``
-    and lightweight metadata. Users are responsible for changing the key when
-    the model, weights, transforms, or benchmark configuration change.
+    Caches identify the weights and train/eval mode of a model, but not its other attributes,
+    the transforms or the data. Change ``cache_key`` when those change.
 
 
 ..  autoclass:: pytorch_ood.benchmark.Benchmark
