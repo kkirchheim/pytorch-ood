@@ -11,7 +11,7 @@ import logging
 from typing import Optional
 
 import torch.nn
-from torch import Tensor, tensor
+from torch import Tensor
 from torch.nn import Module
 from torch.nn.functional import log_softmax, nll_loss
 from torch.optim import LBFGS
@@ -60,8 +60,9 @@ class TemperatureScaling(MaxSoftmax):
         :param model: neural network to use. Can be ``None`` when using
             ``fit_logits(...)`` and ``predict_logits(...)`` directly.
         """
+        # t stays the float 1.0 of MaxSoftmax until fit makes it a parameter on the fit device: a
+        # CPU tensor created here would come first in vars(self) and decide the detector's device
         super(TemperatureScaling, self).__init__(model=model)
-        self.t = torch.nn.Parameter(tensor(1.0))
         self._is_fitted = False
 
     def predict(self, x: Tensor) -> Tensor:
@@ -93,7 +94,7 @@ class TemperatureScaling(MaxSoftmax):
         :return: self
         :raise ValueError: if there are no ID samples
         """
-        device = self.t.device
+        device = self.device or logits.device
         logits = logits.detach().to(device)
         labels = labels.to(device)
 
@@ -109,8 +110,7 @@ class TemperatureScaling(MaxSoftmax):
             return loss
 
         optimizer.step(closure)
-        with torch.no_grad():
-            self.t.copy_(log_t.exp())
+        self.t = torch.nn.Parameter(log_t.detach().exp())
         log.info(f"Optimal temperature: {self.t.item():.3f}")
         self._is_fitted = True
         return self

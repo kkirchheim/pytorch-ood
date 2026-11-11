@@ -78,8 +78,8 @@ class DICE(FeaturesDetector):
             :meth:`EnergyBased.score <pytorch_ood.detector.EnergyBased.score>`.
         """
         self.encoder = encoder
-        self.weight = w.detach().cpu()
-        self.bias = b.detach().cpu()
+        self.weight = w.detach()
+        self.bias = b.detach()
         self.p = _check_fraction("p", p)
         self.detector = detector or EnergyBased.score
 
@@ -98,10 +98,7 @@ class DICE(FeaturesDetector):
         if self.masked_w is None:
             raise RequiresFittingException()
 
-        vote = x[:, None, :] * self.masked_w.to(x.device)
-        output = vote.sum(2) + self.bias.to(x.device)
-        score = self.detector(output)
-        return score
+        return self.detector(x @ self.masked_w.T + self.bias)
 
     def fit_features(self, z: Tensor, y: Tensor) -> Self:
         """

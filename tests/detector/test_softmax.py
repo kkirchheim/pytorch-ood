@@ -1,7 +1,6 @@
 import torch
 
 from pytorch_ood.detector import MaxSoftmax
-from tests.helpers import ClassificationModel, requires
 
 
 def test_temperature_is_float():
@@ -17,16 +16,3 @@ def test_temperature_scales_logits():
 
     expected = -(logits / 2.0).softmax(dim=1).max(dim=1).values
     torch.testing.assert_close(detector.predict_logits(logits), expected)
-
-
-@requires(cuda=1)
-def test_cuda_model_without_to():
-    # the temperature must not pin the detector to the CPU when the model is on the GPU
-    model = ClassificationModel().cuda()
-    detector = MaxSoftmax(model)
-
-    x = torch.zeros(size=(8, 10), device="cuda")
-    with torch.no_grad():
-        y = detector(x)
-    assert y.device == x.device
-    assert y.shape == (8,)

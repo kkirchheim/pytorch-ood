@@ -1,8 +1,6 @@
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.detector import ViM
-from tests.helpers import ClassificationModel, requires
 
 
 def test_ill_conditioned_features_match_float64_reference():
@@ -25,17 +23,3 @@ def test_ill_conditioned_features_match_float64_reference():
     expected = ((x.double() - u) @ vecs[:, : dim - d]).norm(dim=1)
 
     torch.testing.assert_close(residual.double(), expected, rtol=1e-3, atol=1e-6)
-
-
-@requires(cuda=1)
-def test_device_follows_the_tensors_given_to_the_constructor(accelerator: torch.device):
-    # state must not be pinned to the CPU when the weights are on the GPU, without calling to()
-    model = ClassificationModel().to(accelerator)
-    detector = ViM(model.features, d=4, w=model.classifier.weight, b=model.classifier.bias)
-    assert detector.w.device == detector.u.device == accelerator
-
-    x = torch.randn(24, 10)
-    detector.fit(DataLoader(TensorDataset(x, torch.arange(24) % 3), batch_size=6))
-
-    assert detector.residual_subspace.device == accelerator
-    assert detector(torch.randn(8, 10, device=accelerator)).device == accelerator

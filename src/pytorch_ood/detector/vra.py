@@ -134,14 +134,15 @@ class VRA(FeatureMapsDetector):
         :return: self
         :raise ValueError: if there are no ID samples
         """
+        device = self.device or z.device
         z = z.detach().cpu().numpy()
 
         self._lower_threshold = torch.from_numpy(
             np.quantile(z, self.lower_percentile, axis=0).astype(np.float32)
-        )
+        ).to(device)
         self._upper_threshold = torch.from_numpy(
             np.quantile(z, self.upper_percentile, axis=0).astype(np.float32)
-        )
+        ).to(device)
 
         log.info(
             f"Lower threshold range: [{self._lower_threshold.min():.2f}, {self._lower_threshold.max():.2f}]"

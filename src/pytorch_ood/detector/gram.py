@@ -241,9 +241,10 @@ class Gram(StructuredDetector):
                     expected = mean_dev
             norms.append(expected)
 
-        self.feature_min = feature_min
-        self.feature_max = feature_max
-        self.layer_norm = torch.stack(norms)
+        # the Gram vectors are buffered on the CPU; the statistics go to the device of the fit
+        self.feature_min = [[t.to(device) for t in poles] for poles in feature_min]
+        self.feature_max = [[t.to(device) for t in poles] for poles in feature_max]
+        self.layer_norm = torch.stack(norms).to(device)
         return self
 
     def predict(self, x: Tensor) -> Tensor:

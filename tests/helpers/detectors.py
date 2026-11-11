@@ -127,6 +127,11 @@ def _classifier() -> ClassificationModel:
     return ClassificationModel().eval()
 
 
+def _device(model: nn.Module) -> torch.device:
+    """Device of ``model``, for tensors a case passes to a detector next to the model."""
+    return next(model.parameters()).device
+
+
 def _gradient_classifier() -> ClassificationModel:
     # only the last layer takes gradients, as the gradient-based detectors are usually configured
     model = _classifier()
@@ -170,7 +175,12 @@ DETECTOR_CASES = [
     DetectorCase("KLMatching", _classifier, KLMatching, VECTOR),
     DetectorCase("ODIN", _classifier, lambda m: ODIN(m, eps=0.001), VECTOR),
     DetectorCase("OpenMax", _classifier, lambda m: OpenMax(m, tailsize=3, alpha=2), VECTOR),
-    DetectorCase("WeightedEBO", _classifier, lambda m: WeightedEBO(m, torch.ones(1, 3)), VECTOR),
+    DetectorCase(
+        "WeightedEBO",
+        _classifier,
+        lambda m: WeightedEBO(m, torch.ones(1, 3, device=_device(m))),
+        VECTOR,
+    ),
     DetectorCase("MCD", _classifier, lambda m: MCD(m, samples=4, mode="var"), VECTOR),
     # features
     DetectorCase("KNN", _classifier, lambda m: KNN(m.features, k=3), VECTOR),
@@ -180,7 +190,7 @@ DETECTOR_CASES = [
         _classifier,
         lambda m: MCM(
             encoder=m.features,
-            text_embeddings=F.normalize(torch.randn(3, 10), dim=-1),
+            text_embeddings=F.normalize(torch.randn(3, 10, device=_device(m)), dim=-1),
             temperature=1.0,
         ),
         VECTOR,
