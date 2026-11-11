@@ -1,4 +1,3 @@
-import unittest
 import warnings
 
 import torch
@@ -6,7 +5,7 @@ import torch
 from pytorch_ood.detector.klmatching import KLMatching
 
 
-class TestKLMatching(unittest.TestCase):
+class TestKLMatching:
     """
     Tests for KL Matching
     """
@@ -40,7 +39,7 @@ class TestKLMatching(unittest.TestCase):
         logits, labels = self._misclassified_logits()
         detector = KLMatching(None).fit_logits(logits, labels)
         expected = self._paper_dists(logits)
-        self.assertEqual(sorted(detector.dists.keys()), ["0", "1", "2"])
+        assert sorted(detector.dists.keys()) == ["0", "1", "2"]
         for k, d_k in expected.items():
             torch.testing.assert_close(detector.dists[str(k)].data, d_k)
 
@@ -63,7 +62,7 @@ class TestKLMatching(unittest.TestCase):
         p = test.softmax(dim=1)
         dists = self._paper_dists(logits)
         kl = torch.stack([(p * (p / d).log()).sum(dim=1) for d in dists.values()], dim=1)
-        self.assertTrue((kl.argmin(dim=1) != p.argmax(dim=1)).any())
+        assert (kl.argmin(dim=1) != p.argmax(dim=1)).any()
         torch.testing.assert_close(detector.predict_logits(test), self._paper_scores(test, dists))
 
     def test_classes_never_predicted_are_not_needed(self):
@@ -73,7 +72,7 @@ class TestKLMatching(unittest.TestCase):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             detector = KLMatching(None).fit_logits(logits, labels)
-        self.assertEqual(sorted(detector.dists.keys()), ["0", "1"])
+        assert sorted(detector.dists.keys()) == ["0", "1"]
         test = torch.randn(20, 3)
         test[:, 2] += 5  # predicted as class 2
         scores = detector.predict_logits(test)

@@ -1,5 +1,4 @@
-import unittest
-
+import pytest
 import torch
 
 from pytorch_ood.detector import ASH
@@ -22,48 +21,40 @@ def _old_in_place(x, percentile, variant):
     return x
 
 
-class TestASHOutOfPlace(unittest.TestCase):
+class TestASHOutOfPlace:
     variants = ["ash-p", "ash-b", "ash-s"]
 
     @staticmethod
     def _detector(variant):
         return ASH(backbone=None, head=lambda f: f.mean(dim=(2, 3)), variant=variant)
 
-    def test_input_unchanged(self):
-        for variant in self.variants:
-            with self.subTest(variant=variant):
-                x = torch.rand(4, 8, 5, 5)
-                before = x.clone()
-                self._detector(variant).predict_feature_maps(x)
-                self.assertTrue(torch.equal(x, before))
+    @pytest.mark.parametrize("variant", variants)
+    def test_input_unchanged(self, variant):
+        x = torch.rand(4, 8, 5, 5)
+        before = x.clone()
+        self._detector(variant).predict_feature_maps(x)
+        assert torch.equal(x, before)
 
-    def test_same_values_as_in_place_version(self):
-        for variant in self.variants:
-            with self.subTest(variant=variant):
-                torch.manual_seed(0)
-                x = torch.rand(4, 8, 5, 5)
-                detector = self._detector(variant)
-                torch.testing.assert_close(
-                    detector.ash(x, 0.65), _old_in_place(x.clone(), 0.65, variant)
-                )
+    @pytest.mark.parametrize("variant", variants)
+    def test_same_values_as_in_place_version(self, variant):
+        torch.manual_seed(0)
+        x = torch.rand(4, 8, 5, 5)
+        detector = self._detector(variant)
+        torch.testing.assert_close(detector.ash(x, 0.65), _old_in_place(x.clone(), 0.65, variant))
 
 
-class TestASHSEmptyMaps(unittest.TestCase):
-    """
-    ASH-S divides by the sum of the pruned map, which is zero if nothing remains after pruning.
-    """
+def test_all_zero_input():
+    x = torch.rand(3, 4, 5, 5)
+    x[1] = 0
+    out = ash_s(x, 0.65)
+    assert torch.isfinite(out).all()
+    assert torch.equal(out[1], torch.zeros_like(out[1]))
+    # the other samples are unaffected
+    expected = _old_in_place(x[[0, 2]].clone(), 0.65, "ash-s")
+    torch.testing.assert_close(out[[0, 2]], expected)
 
-    def test_all_zero_input(self):
-        x = torch.rand(3, 4, 5, 5)
-        x[1] = 0
-        out = ash_s(x, 0.65)
-        self.assertTrue(torch.isfinite(out).all())
-        self.assertTrue(torch.equal(out[1], torch.zeros_like(out[1])))
-        # the other samples are unaffected
-        expected = _old_in_place(x[[0, 2]].clone(), 0.65, "ash-s")
-        torch.testing.assert_close(out[[0, 2]], expected)
 
-    def test_full_pruning(self):
-        x = torch.rand(3, 4, 5, 5)
-        out = ash_s(x, 1.0)
-        self.assertTrue(torch.equal(out, torch.zeros_like(x)))
+def test_full_pruning():
+    x = torch.rand(3, 4, 5, 5)
+    out = ash_s(x, 1.0)
+    assert torch.equal(out, torch.zeros_like(x))

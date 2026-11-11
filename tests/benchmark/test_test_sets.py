@@ -4,8 +4,7 @@ ood_names, and both one combined set per entry of ood_names. The datasets are sm
 so nothing is downloaded.
 """
 
-import unittest
-
+import pytest
 import torch
 from torch.utils.data import TensorDataset
 
@@ -49,32 +48,26 @@ BENCHMARKS = (
 )
 
 
-class TestTestSets(unittest.TestCase):
-    def test_id_only_returns_the_id_test_set_once(self):
-        for cls in BENCHMARKS:
-            with self.subTest(cls.__name__):
-                sets = _benchmark(cls).test_sets(known=True, unknown=False)
-                self.assertEqual(len(sets), 1)
-                self.assertIs(sets[0], TEST)
-
-    def test_ood_only_returns_one_set_per_ood_name(self):
-        for cls in BENCHMARKS:
-            with self.subTest(cls.__name__):
-                sets = _benchmark(cls).test_sets(known=False, unknown=True)
-                self.assertEqual([len(s) for s in sets], [3, 4])
-
-    def test_both_combine_the_id_test_set_with_each_ood_set(self):
-        for cls in BENCHMARKS:
-            with self.subTest(cls.__name__):
-                sets = _benchmark(cls).test_sets(known=True, unknown=True)
-                self.assertEqual([len(s) for s in sets], [13, 14])
-
-    def test_neither_raises(self):
-        for cls in BENCHMARKS:
-            with self.subTest(cls.__name__):
-                with self.assertRaises(ValueError):
-                    _benchmark(cls).test_sets(known=False, unknown=False)
+@pytest.mark.parametrize("cls", BENCHMARKS)
+def test_id_only_returns_the_id_test_set_once(cls):
+    sets = _benchmark(cls).test_sets(known=True, unknown=False)
+    assert len(sets) == 1
+    assert sets[0] is TEST
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.mark.parametrize("cls", BENCHMARKS)
+def test_ood_only_returns_one_set_per_ood_name(cls):
+    sets = _benchmark(cls).test_sets(known=False, unknown=True)
+    assert [len(s) for s in sets] == [3, 4]
+
+
+@pytest.mark.parametrize("cls", BENCHMARKS)
+def test_both_combine_the_id_test_set_with_each_ood_set(cls):
+    sets = _benchmark(cls).test_sets(known=True, unknown=True)
+    assert [len(s) for s in sets] == [13, 14]
+
+
+@pytest.mark.parametrize("cls", BENCHMARKS)
+def test_neither_raises(cls):
+    with pytest.raises(ValueError):
+        _benchmark(cls).test_sets(known=False, unknown=False)

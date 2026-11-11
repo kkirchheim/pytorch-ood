@@ -9,10 +9,10 @@ loader for non-PIL formats). They do not download any real medical imaging data.
 import contextlib
 import os
 import tempfile
-import unittest
 from os.path import join
 from unittest import mock
 
+import pytest
 from PIL import Image
 from torchvision import transforms
 
@@ -51,7 +51,7 @@ class _FixtureBase:
     expected_ood_per_split = 1
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls._tmp = tempfile.TemporaryDirectory()
         cls.tmp_root = cls._tmp.name
         cls.data_root = join(cls.tmp_root, "data")
@@ -61,7 +61,7 @@ class _FixtureBase:
         cls._build_fixtures()
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         cls._tmp.cleanup()
 
     @classmethod
@@ -113,40 +113,39 @@ class _BenchmarkContractMixin:
 
     def test_categorical_attributes(self):
         bench = self._make_benchmark()
-        self.assertEqual(
-            bench.ood_names,
-            list(bench.cs_id_names) + list(bench.near_ood_names) + list(bench.far_ood_names),
+        assert bench.ood_names == list(bench.cs_id_names) + list(bench.near_ood_names) + list(
+            bench.far_ood_names
         )
-        self.assertEqual(len(bench.test_oods), len(bench.ood_names))
+        assert len(bench.test_oods) == len(bench.ood_names)
 
     def test_train_set_returns_id_train(self):
         bench = self._make_benchmark()
         train = bench.train_set()
-        self.assertEqual(len(train), self.expected_train_size)
+        assert len(train) == self.expected_train_size
 
     def test_ood_samples_get_unknown_label(self):
         bench = self._make_benchmark()
         ood = bench.test_oods[0]
         _, label = ood[0]
-        self.assertEqual(label, -1)
+        assert label == -1
 
     def test_id_samples_keep_real_label(self):
         bench = self._make_benchmark()
         _, label = bench.test_in[0]
-        self.assertGreaterEqual(label, 0)
+        assert label >= 0
 
     def test_default_does_not_download(self):
         with tempfile.TemporaryDirectory() as tmp:
             with mock.patch("pytorch_ood.benchmark.img.openmibood.download_url") as download_url:
-                with self.assertRaises(RuntimeError):
+                with pytest.raises(RuntimeError):
                     self.benchmark_cls(root=tmp, transform=transforms.ToTensor())
                 download_url.assert_not_called()
 
     def test_val_set(self):
         bench = self._make_benchmark()
-        self.assertEqual(len(bench.val_set()), 3)
+        assert len(bench.val_set()) == 3
         _, label = bench.val_set()[0]
-        self.assertGreaterEqual(label, 0)
+        assert label >= 0
 
     @contextlib.contextmanager
     def _without(self, relpath):
@@ -162,25 +161,25 @@ class _BenchmarkContractMixin:
 
     def test_missing_ood_data_raises(self):
         with self._without("ood_0.png"):
-            with self.assertRaises(FileNotFoundError) as ctx:
+            with pytest.raises(FileNotFoundError) as ctx:
                 self._make_benchmark()
         all_names = self.benchmark_cls.cs_id_names + self.benchmark_cls.near_ood_names
-        self.assertIn(all_names[0], str(ctx.exception))
-        self.assertIn("skip_missing", str(ctx.exception))
+        assert all_names[0] in str(ctx.value)
+        assert "skip_missing" in str(ctx.value)
 
-    def test_skip_missing_ood_data(self):
+    def test_skip_missing_ood_data(self, caplog):
         with self._without("ood_0.png"):
-            with self.assertLogs("pytorch_ood.benchmark.img.openmibood", "WARNING") as logs:
+            with caplog.at_level("WARNING", logger="pytorch_ood.benchmark.img.openmibood"):
                 bench = self._make_benchmark(skip_missing=True)
         first = self.benchmark_cls.cs_id_names[0]
-        self.assertIn(first, logs.output[0])
-        self.assertNotIn(first, bench.ood_names)
-        self.assertEqual(len(bench.ood_names), len(bench.test_oods))
-        self.assertEqual(len(bench.test_sets()), len(bench._ood_imglists) - 1)
+        assert first in caplog.records[0].getMessage()
+        assert first not in bench.ood_names
+        assert len(bench.ood_names) == len(bench.test_oods)
+        assert len(bench.test_sets()) == len(bench._ood_imglists) - 1
 
     def test_missing_id_data_raises(self):
         with self._without("train_0.png"):
-            with self.assertRaises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError):
                 self._make_benchmark(skip_missing=True)
 
     def test_download_only_fetches_missing_downloadable_sources(self):
@@ -204,47 +203,47 @@ class _BenchmarkContractMixin:
         source.download.side_effect = RuntimeError("MD5 mismatch")
         source.is_present.return_value = False
         with mock.patch.object(self.benchmark_cls, "_sources", [source]):
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
                 self._make_benchmark(download=True)
 
 
-class MIDOGOpenMIBOODTest(_FixtureBase, _BenchmarkContractMixin, unittest.TestCase):
+class TestMIDOGOpenMIBOOD(_FixtureBase, _BenchmarkContractMixin):
     benchmark_cls = MIDOG_OpenMIBOOD
     subdir = "midog"
     num_classes = 3
 
     def test_split_counts(self):
         bench = self._make_benchmark()
-        self.assertEqual(len(bench.cs_id_names), 2)
-        self.assertEqual(len(bench.near_ood_names), 7)
-        self.assertEqual(len(bench.far_ood_names), 2)
-        self.assertEqual(len(bench.ood_names), 11)
+        assert len(bench.cs_id_names) == 2
+        assert len(bench.near_ood_names) == 7
+        assert len(bench.far_ood_names) == 2
+        assert len(bench.ood_names) == 11
 
 
-class PhaKIROpenMIBOODTest(_FixtureBase, _BenchmarkContractMixin, unittest.TestCase):
+class TestPhaKIROpenMIBOOD(_FixtureBase, _BenchmarkContractMixin):
     benchmark_cls = PhaKIR_OpenMIBOOD
     subdir = "phakir"
     num_classes = 7
 
     def test_split_counts(self):
         bench = self._make_benchmark()
-        self.assertEqual(len(bench.cs_id_names), 2)
-        self.assertEqual(len(bench.near_ood_names), 3)
-        self.assertEqual(len(bench.far_ood_names), 2)
-        self.assertEqual(len(bench.ood_names), 7)
+        assert len(bench.cs_id_names) == 2
+        assert len(bench.near_ood_names) == 3
+        assert len(bench.far_ood_names) == 2
+        assert len(bench.ood_names) == 7
 
 
-class OASIS3OpenMIBOODTest(_FixtureBase, _BenchmarkContractMixin, unittest.TestCase):
+class TestOASIS3OpenMIBOOD(_FixtureBase, _BenchmarkContractMixin):
     benchmark_cls = OASIS3_OpenMIBOOD
     subdir = "oasis3"
     num_classes = 2
 
     def test_split_counts(self):
         bench = self._make_benchmark()
-        self.assertEqual(len(bench.cs_id_names), 2)
-        self.assertEqual(len(bench.near_ood_names), 3)
-        self.assertEqual(len(bench.far_ood_names), 2)
-        self.assertEqual(len(bench.ood_names), 7)
+        assert len(bench.cs_id_names) == 2
+        assert len(bench.near_ood_names) == 3
+        assert len(bench.far_ood_names) == 2
+        assert len(bench.ood_names) == 7
 
     def test_custom_loader_is_used(self):
         # Verify that the loader callable is wired through to the underlying datasets
@@ -256,10 +255,10 @@ class OASIS3OpenMIBOODTest(_FixtureBase, _BenchmarkContractMixin, unittest.TestC
 
         bench = self._make_benchmark(loader=fake_loader)
         _ = bench.test_in[0]
-        self.assertGreater(sentinel["called"], 0)
+        assert sentinel["called"] > 0
 
 
-class ImageListDatasetTest(unittest.TestCase):
+class TestImageListDataset:
     def test_loads_and_skips_blank_and_comment_lines(self):
         with tempfile.TemporaryDirectory() as tmp:
             _write_png(join(tmp, "a.png"))
@@ -272,22 +271,18 @@ class ImageListDatasetTest(unittest.TestCase):
                 f.write("b.png 1\n")
 
             ds = ImageListDataset(tmp, imglist)
-            self.assertEqual(len(ds), 2)
-            self.assertEqual(ds.labels, [0, 1])
+            assert len(ds) == 2
+            assert ds.labels == [0, 1]
 
     def test_missing_root_raises(self):
         with tempfile.TemporaryDirectory() as tmp:
             imglist = join(tmp, "list.txt")
             with open(imglist, "w") as f:
                 f.write("a.png 0\n")
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
                 ImageListDataset(join(tmp, "does-not-exist"), imglist)
 
     def test_missing_imglist_raises(self):
         with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
                 ImageListDataset(tmp, join(tmp, "missing.txt"))
-
-
-if __name__ == "__main__":
-    unittest.main()

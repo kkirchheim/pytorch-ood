@@ -5,7 +5,6 @@ subsets, splits and seeded sampling) would not be reproducible.
 """
 
 import ast
-import unittest
 from pathlib import Path
 
 import pytorch_ood.dataset
@@ -36,15 +35,14 @@ def unsorted_listings(source: str):
                 yield node.lineno
 
 
-class TestFileOrder(unittest.TestCase):
-    def test_file_listings_are_sorted(self):
-        files = sorted(DATASET_DIR.rglob("*.py"))
-        self.assertTrue(files)
-        for path in files:
-            with self.subTest(str(path.relative_to(DATASET_DIR))):
-                lines = sorted(unsorted_listings(path.read_text()))
-                self.assertEqual(lines, [], "wrap the listing in sorted()")
+def test_file_listings_are_sorted():
+    files = sorted(DATASET_DIR.rglob("*.py"))
+    assert files
+    for path in files:
+        lines = sorted(unsorted_listings(path.read_text()))
+        assert lines == [], "wrap the listing in sorted()"
 
-    def test_detects_unsorted_listings(self):
-        source = "import os\na = os.listdir('x')\nb = sorted(os.listdir('x'))\nc = glob('*')\n"
-        self.assertEqual(sorted(unsorted_listings(source)), [2, 4])
+
+def test_detects_unsorted_listings():
+    source = "import os\na = os.listdir('x')\nb = sorted(os.listdir('x'))\nc = glob('*')\n"
+    assert sorted(unsorted_listings(source)) == [2, 4]

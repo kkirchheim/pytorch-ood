@@ -1,5 +1,4 @@
 import tempfile
-import unittest
 import warnings
 
 import torch
@@ -98,162 +97,161 @@ class SummedFeaturesDetector(FeaturesDetector):
         return -x.sum(dim=1)
 
 
-class BenchmarkCachingTest(unittest.TestCase):
-    def test_producer_token_distinguishes_bound_methods(self):
-        model = CountingFeatures()
+def test_producer_token_distinguishes_bound_methods():
+    model = CountingFeatures()
 
-        forward_token = Benchmark._producer_token(model.forward)
-        pre_pool_token = Benchmark._producer_token(model.feature_maps)
+    forward_token = Benchmark._producer_token(model.forward)
+    pre_pool_token = Benchmark._producer_token(model.feature_maps)
 
-        self.assertNotEqual(forward_token, pre_pool_token)
-        self.assertIn("forward", forward_token)
-        self.assertIn("feature_maps", pre_pool_token)
+    assert forward_token != pre_pool_token
+    assert "forward" in forward_token
+    assert "feature_maps" in pre_pool_token
 
-    def test_cache_file_path_distinguishes_bound_method_producers(self):
-        benchmark = ToyBenchmark()
-        model = CountingFeatures()
 
-        forward_path = benchmark._cache_file_path(
-            cache_dir="/tmp",
-            split="eval",
-            dataset_name="ToyOOD",
-            representation="features",
-            producer=model.forward,
-            cache_key="toy-model-v1",
-        )
-        pre_pool_path = benchmark._cache_file_path(
-            cache_dir="/tmp",
-            split="eval",
-            dataset_name="ToyOOD",
-            representation="features",
-            producer=model.feature_maps,
-            cache_key="toy-model-v1",
-        )
+def test_cache_file_path_distinguishes_bound_method_producers():
+    benchmark = ToyBenchmark()
+    model = CountingFeatures()
 
-        self.assertNotEqual(forward_path, pre_pool_path)
+    forward_path = benchmark._cache_file_path(
+        cache_dir="/tmp",
+        split="eval",
+        dataset_name="ToyOOD",
+        representation="features",
+        producer=model.forward,
+        cache_key="toy-model-v1",
+    )
+    pre_pool_path = benchmark._cache_file_path(
+        cache_dir="/tmp",
+        split="eval",
+        dataset_name="ToyOOD",
+        representation="features",
+        producer=model.feature_maps,
+        cache_key="toy-model-v1",
+    )
 
-    def test_benchmark_evaluate_single_detector_keeps_output_shape(self):
-        benchmark = ToyBenchmark()
-        detector = MaxSoftmax(CountingLinear())
+    assert forward_path != pre_pool_path
 
-        results = benchmark.evaluate(detector, loader_kwargs={"batch_size": 2})
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["Dataset"], "ToyOOD")
-        self.assertNotIn("Detector", results[0])
+def test_benchmark_evaluate_single_detector_keeps_output_shape():
+    benchmark = ToyBenchmark()
+    detector = MaxSoftmax(CountingLinear())
 
-    def test_benchmark_evaluate_list_shares_logits_within_call(self):
-        benchmark = ToyBenchmark()
-        model = CountingLinear()
+    results = benchmark.evaluate(detector, loader_kwargs={"batch_size": 2})
 
-        results = benchmark.evaluate(
-            [MaxSoftmax(model), EnergyBased(model)],
-            loader_kwargs={"batch_size": 2},
-        )
+    assert len(results) == 1
+    assert results[0]["Dataset"] == "ToyOOD"
+    assert "Detector" not in results[0]
 
-        self.assertEqual(len(results), 2)
-        self.assertEqual(
-            {result["Detector"] for result in results},
-            {"MaxSoftmax", "EnergyBased"},
-        )
-        self.assertEqual(model.calls, 2)
 
-    def test_benchmark_reuses_in_memory_cache_across_calls(self):
-        benchmark = ToyBenchmark()
-        model = CountingLinear()
+def test_benchmark_evaluate_list_shares_logits_within_call():
+    benchmark = ToyBenchmark()
+    model = CountingLinear()
 
-        benchmark.evaluate(
-            MaxSoftmax(model),
-            loader_kwargs={"batch_size": 2},
-            cache=True,
-        )
-        calls_after_first = model.calls
+    results = benchmark.evaluate(
+        [MaxSoftmax(model), EnergyBased(model)],
+        loader_kwargs={"batch_size": 2},
+    )
 
-        benchmark.evaluate(
-            EnergyBased(model),
-            loader_kwargs={"batch_size": 2},
-            cache=True,
-        )
+    assert len(results) == 2
+    assert {result["Detector"] for result in results} == {"MaxSoftmax", "EnergyBased"}
+    assert model.calls == 2
 
-        self.assertEqual(calls_after_first, 2)
-        self.assertEqual(model.calls, calls_after_first)
 
-    def test_benchmark_reuses_disk_cache_across_benchmark_instances(self):
-        benchmark = ToyBenchmark()
-        model = CountingLinear()
+def test_benchmark_reuses_in_memory_cache_across_calls():
+    benchmark = ToyBenchmark()
+    model = CountingLinear()
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                benchmark.evaluate(
-                    MaxSoftmax(model),
-                    loader_kwargs={"batch_size": 2},
-                    cache=True,
-                    cache_dir=tmpdir,
-                    cache_key="toy-model-v1",
-                )
+    benchmark.evaluate(
+        MaxSoftmax(model),
+        loader_kwargs={"batch_size": 2},
+        cache=True,
+    )
+    calls_after_first = model.calls
 
-            self.assertEqual(model.calls, 2)
-            self.assertEqual(len(caught), 1)
-            self.assertIn("cache_key", str(caught[0].message))
+    benchmark.evaluate(
+        EnergyBased(model),
+        loader_kwargs={"batch_size": 2},
+        cache=True,
+    )
 
-            second_benchmark = ToyBenchmark()
-            second_model = CountingLinear()
+    assert calls_after_first == 2
+    assert model.calls == calls_after_first
 
-            second_benchmark.evaluate(
-                EnergyBased(second_model),
+
+def test_benchmark_reuses_disk_cache_across_benchmark_instances():
+    benchmark = ToyBenchmark()
+    model = CountingLinear()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            benchmark.evaluate(
+                MaxSoftmax(model),
                 loader_kwargs={"batch_size": 2},
                 cache=True,
                 cache_dir=tmpdir,
                 cache_key="toy-model-v1",
             )
 
-            self.assertEqual(second_model.calls, 0)
+        assert model.calls == 2
+        assert len(caught) == 1
+        assert "cache_key" in str(caught[0].message)
 
-    def test_benchmark_reuses_feature_cache_across_calls(self):
-        benchmark = ToyBenchmark()
-        model = CountingFeatures()
+        second_benchmark = ToyBenchmark()
+        second_model = CountingLinear()
 
-        benchmark.evaluate(
-            SummedFeaturesDetector(model),
+        second_benchmark.evaluate(
+            EnergyBased(second_model),
             loader_kwargs={"batch_size": 2},
             cache=True,
-        )
-        calls_after_first = model.calls
-
-        benchmark.evaluate(
-            SummedFeaturesDetector(model),
-            loader_kwargs={"batch_size": 2},
-            cache=True,
+            cache_dir=tmpdir,
+            cache_key="toy-model-v1",
         )
 
-        self.assertEqual(calls_after_first, 2)
-        self.assertEqual(model.calls, calls_after_first)
-
-    def test_benchmark_falls_back_for_mahalanobis_with_input_preprocessing(self):
-        benchmark = ToyBenchmark()
-        model = CountingFeatures()
-        detector = MahalanobisODIN(encoder=model, eps=0.1)
-        detector.fit(DataLoader(benchmark.train_set(), batch_size=2))
-
-        calls_after_fit = model.calls
-
-        benchmark.evaluate(
-            detector,
-            loader_kwargs={"batch_size": 2},
-            cache=True,
-        )
-        calls_after_first_eval = model.calls
-
-        benchmark.evaluate(
-            detector,
-            loader_kwargs={"batch_size": 2},
-            cache=True,
-        )
-
-        self.assertGreater(calls_after_first_eval, calls_after_fit)
-        self.assertGreater(model.calls, calls_after_first_eval)
+        assert second_model.calls == 0
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_benchmark_reuses_feature_cache_across_calls():
+    benchmark = ToyBenchmark()
+    model = CountingFeatures()
+
+    benchmark.evaluate(
+        SummedFeaturesDetector(model),
+        loader_kwargs={"batch_size": 2},
+        cache=True,
+    )
+    calls_after_first = model.calls
+
+    benchmark.evaluate(
+        SummedFeaturesDetector(model),
+        loader_kwargs={"batch_size": 2},
+        cache=True,
+    )
+
+    assert calls_after_first == 2
+    assert model.calls == calls_after_first
+
+
+def test_benchmark_falls_back_for_mahalanobis_with_input_preprocessing():
+    benchmark = ToyBenchmark()
+    model = CountingFeatures()
+    detector = MahalanobisODIN(encoder=model, eps=0.1)
+    detector.fit(DataLoader(benchmark.train_set(), batch_size=2))
+
+    calls_after_fit = model.calls
+
+    benchmark.evaluate(
+        detector,
+        loader_kwargs={"batch_size": 2},
+        cache=True,
+    )
+    calls_after_first_eval = model.calls
+
+    benchmark.evaluate(
+        detector,
+        loader_kwargs={"batch_size": 2},
+        cache=True,
+    )
+
+    assert calls_after_first_eval > calls_after_fit
+    assert model.calls > calls_after_first_eval

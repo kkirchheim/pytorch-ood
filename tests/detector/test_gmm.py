@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 
 from pytorch_ood.detector import GMM
@@ -31,24 +29,19 @@ def _mixture_nll(z_fit, y_fit, z, reg):
     return -torch.logsumexp(torch.stack(log_probs, dim=1), dim=1)
 
 
-class GMMTest(unittest.TestCase):
-    """
-    Test GMM detector
-    """
+def test_matches_mixture_nll():
+    torch.manual_seed(123)
+    z, y = _classes()
+    test = torch.randn(64, 8) * 2 + 1
+    detector = GMM(None, reg=1e-3).fit_features(z, y)
+    torch.testing.assert_close(
+        detector.predict_features(test).double(), _mixture_nll(z, y, test, reg=1e-3)
+    )
 
-    def setUp(self) -> None:
-        torch.manual_seed(123)
 
-    def test_matches_mixture_nll(self):
-        z, y = _classes()
-        test = torch.randn(64, 8) * 2 + 1
-        detector = GMM(None, reg=1e-3).fit_features(z, y)
-        torch.testing.assert_close(
-            detector.predict_features(test).double(), _mixture_nll(z, y, test, reg=1e-3)
-        )
-
-    def test_fewer_samples_than_dimensions(self):
-        """Singular class covariances are regularized and give finite scores."""
-        z, y = _classes(sizes=(5, 5), scales=(1.0, 1.0), dim=32)
-        scores = GMM(None).fit_features(z, y).predict_features(torch.randn(10, 32))
-        self.assertTrue(torch.isfinite(scores).all())
+def test_fewer_samples_than_dimensions():
+    """Singular class covariances are regularized and give finite scores."""
+    torch.manual_seed(123)
+    z, y = _classes(sizes=(5, 5), scales=(1.0, 1.0), dim=32)
+    scores = GMM(None).fit_features(z, y).predict_features(torch.randn(10, 32))
+    assert torch.isfinite(scores).all()

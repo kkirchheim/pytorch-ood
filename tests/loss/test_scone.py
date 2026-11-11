@@ -1,6 +1,5 @@
-import unittest
-
 import numpy as np
+import pytest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -13,39 +12,32 @@ torch.manual_seed(123)
 logistic_regression = torch.nn.Linear(1, 1)
 
 
-class TestEnergyMargin(unittest.TestCase):
-    """
-    Test code for margin-energy-based optimization
-    """
+def test_inccreasing_eta():
+    criterion = EnergyMarginLoss(full_train_loss=0, eta=1.0)
+    logits = torch.randn(size=(128, 10))
+    target = torch.zeros(size=(128,)).long()
+    target[5:] = -1
 
-    def test_inccreasing_eta(self):
-        criterion = EnergyMarginLoss(full_train_loss=0, eta=1.0)
-        logits = torch.randn(size=(128, 10))
-        target = torch.zeros(size=(128,)).long()
-        target[5:] = -1
+    low_eta_loss = criterion(logits, target, logistic_regression)
 
-        low_eta_loss = criterion(logits, target, logistic_regression)
+    assert low_eta_loss > 0
 
-        self.assertIsNotNone(low_eta_loss)
-        self.assertGreater(low_eta_loss, 0)
+    criterion = EnergyMarginLoss(full_train_loss=0, eta=5.0)
 
-        criterion = EnergyMarginLoss(full_train_loss=0, eta=5.0)
+    high_eta_loss = criterion(logits, target, logistic_regression)
 
-        high_eta_loss = criterion(logits, target, logistic_regression)
+    assert high_eta_loss > 0
 
-        self.assertIsNotNone(high_eta_loss)
-        self.assertGreater(high_eta_loss, 0)
+    # introducing wider margin should minimize the loss further
+    assert low_eta_loss > high_eta_loss
 
-        # introducing wider margin should minimize the loss further
-        self.assertGreater(low_eta_loss, high_eta_loss)
 
-    def test_batch_without_id_or_ood_raises(self):
-        # otherwise the loss is NaN, or the constraints silently have no effect
-        criterion = EnergyMarginLoss(full_train_loss=1.0)
-        for target in (torch.zeros(8).long(), -torch.ones(8).long()):
-            with self.subTest(target=target[0].item()):
-                with self.assertRaises(ValueError):
-                    criterion(torch.randn(8, 10), target, logistic_regression)
+@pytest.mark.parametrize("target", (torch.zeros(8).long(), -torch.ones(8).long()))
+def test_batch_without_id_or_ood_raises(target):
+    # otherwise the loss is NaN, or the constraints silently have no effect
+    criterion = EnergyMarginLoss(full_train_loss=1.0)
+    with pytest.raises(ValueError):
+        criterion(torch.randn(8, 10), target, logistic_regression)
 
 
 def _old_evaluate_energy_logistic_loss(model, train_loader_in, logistic_regression):
@@ -80,8 +72,8 @@ def _loader(n: int, batch_size: int = 4) -> DataLoader:
     )
 
 
-class TestEvaluateEnergyLogisticLoss(unittest.TestCase):
-    def setUp(self):
+class TestEvaluateEnergyLogisticLoss:
+    def setup_method(self):
         torch.manual_seed(0)
         self.model = torch.nn.Linear(4, 3)
         self.phi = torch.nn.Linear(1, 1)
@@ -89,11 +81,11 @@ class TestEvaluateEnergyLogisticLoss(unittest.TestCase):
     def test_cpu(self):
         # the model and the data stay on the CPU, also when CUDA is available
         results = evaluate_energy_logistic_loss(self.model, _loader(8), self.phi, device="cpu")
-        self.assertTrue(all(np.isfinite(r) for r in results))
+        assert all(np.isfinite(r) for r in results)
 
     def test_last_batch_of_size_one(self):
         results = evaluate_energy_logistic_loss(self.model, _loader(5), self.phi)
-        self.assertTrue(all(np.isfinite(r) for r in results))
+        assert all(np.isfinite(r) for r in results)
 
     def test_matches_batchwise_computation(self):
         loader = _loader(9)
@@ -103,8 +95,8 @@ class TestEvaluateEnergyLogisticLoss(unittest.TestCase):
         expected_sigmoid = torch.sigmoid(self.phi(energy)).mean().item()
         expected_ce = torch.nn.functional.cross_entropy(logits, y).item()
         sigmoid, _, ce = evaluate_energy_logistic_loss(self.model, loader, self.phi)
-        self.assertAlmostEqual(sigmoid, expected_sigmoid, places=6)
-        self.assertAlmostEqual(ce, expected_ce, places=6)
+        assert sigmoid == pytest.approx(expected_sigmoid, abs=5e-7)
+        assert ce == pytest.approx(expected_ce, abs=5e-7)
 
     # the old implementation required CUDA
     @requires(cuda=1)
@@ -114,20 +106,20 @@ class TestEvaluateEnergyLogisticLoss(unittest.TestCase):
         loader = _loader(8)
         old = _old_evaluate_energy_logistic_loss(model, loader, phi)
         new = evaluate_energy_logistic_loss(model, loader, phi, device="cuda")
-        self.assertEqual(tuple(old), tuple(new))
+        assert tuple(old) == tuple(new)
 
     def test_update_hyperparameters_on_cpu(self):
         criterion = EnergyMarginLoss(full_train_loss=1.0)
         criterion.update_hyperparameters(self.model, _loader(5), self.phi)
-        self.assertTrue(torch.isfinite(criterion.lam))
+        assert torch.isfinite(criterion.lam)
 
     def test_without_gradients_in_eval_mode(self):
         grad_enabled = []
         self.model.register_forward_hook(lambda *_: grad_enabled.append(torch.is_grad_enabled()))
         self.model.train()
         evaluate_energy_logistic_loss(self.model, _loader(8), self.phi)
-        self.assertEqual(grad_enabled, [False, False])
-        self.assertFalse(self.model.training)
+        assert grad_enabled == [False, False]
+        assert not self.model.training
 
     def test_state_in_state_dict(self):
         criterion = EnergyMarginLoss(full_train_loss=1.0)
@@ -136,6 +128,6 @@ class TestEvaluateEnergyLogisticLoss(unittest.TestCase):
         criterion.in_constraint_weight.fill_(3.0)
         restored = EnergyMarginLoss(full_train_loss=1.0)
         restored.load_state_dict(criterion.state_dict())
-        self.assertEqual(restored.lam.item(), 0.5)
-        self.assertEqual(restored.lam2.item(), 0.25)
-        self.assertEqual(restored.in_constraint_weight.item(), 3.0)
+        assert restored.lam.item() == 0.5
+        assert restored.lam2.item() == 0.25
+        assert restored.in_constraint_weight.item() == 3.0
