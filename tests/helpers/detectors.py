@@ -198,7 +198,8 @@ DETECTOR_CASES = [
     ),
     DetectorCase(
         "ViM",
-        _classifier,
+        # D = 16 is a candidate of hyperparameter_space, which covers d == D
+        lambda: ClassificationModel(n_hidden=16).eval(),
         lambda m: ViM(m.features, d=4, w=m.classifier.weight, b=m.classifier.bias),
         VECTOR,
     ),

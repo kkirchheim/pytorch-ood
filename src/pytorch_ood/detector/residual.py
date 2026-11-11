@@ -72,8 +72,8 @@ class Residual(FeaturesDetector):
     requires_fit = True
 
     #: Default search space for :class:`pytorch_ood.utils.GridSearch`: the principal-subspace
-    #: dimension ``d``. If ``d`` exceeds the feature dimension :math:`D` during fitting, it is replaced by
-    #: :math:`D // 2`.
+    #: dimension ``d``. If ``d`` is not smaller than the feature dimension :math:`D`, fitting uses
+    #: :math:`D // 2` instead.
     # This lets a single search space work across architectures of different width.
     hyperparameter_space = {"d": [16, 32, 64, 128, 256, 512]}
 
@@ -151,10 +151,10 @@ class Residual(FeaturesDetector):
         device = self.device or self.w.device
         features = features.detach().to(device).float()
 
-        if features.shape[1] < self.d:
-            n = features.shape[1] // 2
-            log.warning(f"{features.shape[1]=} is smaller than {self.d=}. Will be adjusted to {n}")
-            self.d = n
+        d = self.d
+        if d >= features.shape[1]:  # d == D would leave an empty residual subspace
+            d = features.shape[1] // 2
+            log.warning(f"{features.shape[1]=} is not larger than {self.d=}. Using d={d}")
 
         log.info("Computing principal space ...")
         # Empirical covariance (assume_centered=True → MLE: divide by n), in float64: centered at u, not
@@ -170,6 +170,6 @@ class Residual(FeaturesDetector):
         # Select the null subspace: the (D - d) eigenvectors that correspond
         # to the *smallest* eigenvalues (i.e. directions least explained by the
         # training data).  With ascending eigh output these are the first columns.
-        k = eig_vecs.shape[1] - self.d
+        k = eig_vecs.shape[1] - d
         self.residual_subspace = eig_vecs[:, :k].float().contiguous()  # (D, D-d)
         return self

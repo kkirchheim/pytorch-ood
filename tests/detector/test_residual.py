@@ -45,6 +45,17 @@ class TestResidual(unittest.TestCase):
         self.assertEqual(scores.shape, (128,))
         self.assertTrue((scores >= 0).all())
 
+    def test_d_of_at_least_the_feature_dimension_is_halved_without_changing_the_setting(self):
+        for cls in (Residual, ViM):
+            halved = cls(None, d=self.n_dim // 2, w=self.w, b=self.b)
+            expected = halved.fit_features(self.train, self.labels).predict_features(self.test)
+            for d in (self.n_dim, self.n_dim + 1):
+                with self.subTest(cls=cls.__name__, d=d):
+                    detector = cls(None, d=d, w=self.w, b=self.b)
+                    detector.fit_features(self.train, self.labels)
+                    torch.testing.assert_close(detector.predict_features(self.test), expected)
+                    self.assertEqual(detector.d, d)
+
     def test_principal_subspace_has_zero_residual(self):
         """
         Features that lie entirely in the principal subspace (after centering) have a residual norm of zero.
