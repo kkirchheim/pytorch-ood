@@ -48,7 +48,8 @@ def scale(x: Tensor, percentile: float = 0.65) -> Tensor:
 
     n = x.shape[1:].numel()
     k = n - int(np.round(n * percentile))
-    t = x.view((b, c * h * w))
+    # reshape instead of view, since the feature maps may be non-contiguous (e.g. channels_last)
+    t = x.reshape(b, c * h * w)
     v, i = torch.topk(t, k, dim=1)
 
     # sum over the surviving (top-k) activations per sample
