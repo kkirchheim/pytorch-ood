@@ -43,6 +43,10 @@ through the full model again. The available methods will depend on the base clas
 - structured detectors: ``predict_structured(...)`` and optionally
   ``fit_structured(...)``
 
+``predict_*(...)`` runs under :class:`torch.no_grad`, so scores are not differentiable, and moves
+tensor arguments to the detector's device, if it has one. ``fit_*(...)`` ignores OOD samples
+(labels below zero) with a warning and raises :class:`ValueError` if no ID sample is left.
+
 .. code-block:: python
 
     from pytorch_ood.detector import OpenMax

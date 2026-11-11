@@ -517,7 +517,7 @@ def test_predict_methods_keep_their_signature(cls: type, method: str):
 
 def test_detector_base_defaults():
     assert Detector.requires_fit is False
-    assert Detector.fit_uses_ood is False
+    assert Detector._fit_uses_ood is False
     assert not any(hasattr(Detector, f"{p}_{kind}") for kind in KINDS for p in ("predict", "fit"))
 
 
@@ -530,10 +530,52 @@ def test_fit_method_without_labels_is_rejected_at_class_creation():
                 return self
 
 
+def test_predict_structured_is_not_differentiable():
+    # the expected arguments differ per detector, so the contract cases cannot call it generically
+    class Summing(StructuredDetector):
+        def predict_structured(self, z: Tensor) -> Tensor:
+            return z.sum(dim=1)
+
+        def predict(self, x: Tensor) -> Tensor:
+            return self.predict_structured(x)
+
+        def fit(self, data_loader: DataLoader) -> "Summing":
+            return self
+
+    assert not Summing().predict_structured(torch.ones(2, 3, requires_grad=True)).requires_grad
+
+
+def test_fit_structured_signature_is_up_to_the_detector():
+    # its arguments depend on the detector, so the second one need not be the labels
+    class Mixed(StructuredDetector):
+        def fit_structured(self, logits: Tensor, features: Tensor, y: Tensor) -> "Mixed":
+            self.fitted_on = logits, features, y
+            return self
+
+        def predict_structured(self, logits: Tensor, features: Tensor) -> Tensor:
+            return logits.sum(dim=1)
+
+        def predict(self, x: Tensor) -> Tensor:
+            return x.sum(dim=1)
+
+        def fit(self, data_loader: DataLoader) -> "Mixed":
+            return self
+
+    logits, features, y = (
+        torch.zeros(3, 2),
+        torch.tensor([-1.0, -2.0, 1.0]),
+        torch.tensor([0, 1, 2]),
+    )
+
+    fitted_on = Mixed().fit_structured(logits, features, y).fitted_on
+
+    assert [len(t) for t in fitted_on] == [3, 3, 3]
+
+
 @pytest.mark.filterwarnings("error")
 def test_fit_uses_ood_passes_ood_rows_through():
     class UsesOOD(FeaturesDetector):
-        fit_uses_ood = True
+        _fit_uses_ood = True
 
         def fit_features(self, z: Tensor, y: Tensor) -> "UsesOOD":
             self.fitted_on = y

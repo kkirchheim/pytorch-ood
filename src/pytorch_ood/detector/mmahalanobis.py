@@ -24,7 +24,7 @@ from ..api import (
     Task,
 )
 from ..utils import extract_feature_avg
-from ..utils.utils import _fit_gaussian, _squared_mahalanobis
+from ..utils.utils import _fit_gaussian, _id_rows_for_fit, _squared_mahalanobis
 
 log = logging.getLogger(__name__)
 
@@ -148,12 +148,13 @@ class MultiMahalanobis(StructuredDetector):
 
         :param zs: list with one tensor per layer, each of shape :math:`N \\times D_i` or
             :math:`N \\times C_i \\times H \\times W` (the spatial mean is taken)
-        :param y: class labels of shape :math:`N`, must contain all classes :math:`0, ..., K-1`
-            and no OOD labels (below zero); OOD samples are not ignored and an ``AssertionError``
-            is raised otherwise
+        :param y: class labels of shape :math:`N`, must contain all classes :math:`0, ..., K-1`;
+            OOD samples (labels below zero) are ignored with a warning
         :return: self
         :raises ValueError: if the regularized covariance is not positive definite (e.g. ``eps=0``)
+            or if there is no ID sample
         """
+        zs, y = _id_rows_for_fit(zs, y)
         device = self.device or zs[0].device
 
         y = y.to(device)
