@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 
 from pytorch_ood.detector import SCALE
@@ -7,7 +5,7 @@ from pytorch_ood.detector.ash import ash_s
 from pytorch_ood.detector.scale import scale
 
 
-class TestSCALE(unittest.TestCase):
+class TestSCALE:
     """
     Tests for the SCALE detector.
     """
@@ -23,15 +21,15 @@ class TestSCALE(unittest.TestCase):
         ash_out = ash_s(x.clone(), percentile=0.65)
 
         # SCALE leaves every position non-zero, ASH-S zeros most of them
-        self.assertEqual((scale_out == 0).sum().item(), 0)
-        self.assertGreater((ash_out == 0).sum().item(), 0)
+        assert (scale_out == 0).sum().item() == 0
+        assert (ash_out == 0).sum().item() > 0
 
     def test_scale_factor_positive(self):
         """Scaling factor exp(s1/s2) >= 1, so output magnitude grows."""
         x = torch.rand(size=(4, 8, 5, 5)) + 0.1
         out = scale(x.clone(), percentile=0.65)
         # since s1 >= s2 > 0 for non-negative activations, scale factor >= 1
-        self.assertTrue(torch.all(out.abs() >= x.abs() - 1e-6))
+        assert torch.all(out.abs() >= x.abs() - 1e-06)
 
     def test_separates_gaussians(self):
         """
@@ -55,8 +53,4 @@ class TestSCALE(unittest.TestCase):
         metrics.update(s_in, torch.zeros(128))  # ID labels >= 0
         metrics.update(s_out, -torch.ones(128).long())  # OOD labels < 0
         auroc = metrics.compute()["AUROC"]
-        self.assertGreater(auroc, 0.6)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert auroc > 0.6

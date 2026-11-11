@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 
 from pytorch_ood.detector import GMM
@@ -31,12 +29,12 @@ def _mixture_nll(z_fit, y_fit, z, reg):
     return -torch.logsumexp(torch.stack(log_probs, dim=1), dim=1)
 
 
-class GMMTest(unittest.TestCase):
+class TestGMM:
     """
     Test GMM detector
     """
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         torch.manual_seed(123)
 
     def test_matches_mixture_nll(self):
@@ -51,4 +49,4 @@ class GMMTest(unittest.TestCase):
         """Singular class covariances are regularized and give finite scores."""
         z, y = _classes(sizes=(5, 5), scales=(1.0, 1.0), dim=32)
         scores = GMM(None).fit_features(z, y).predict_features(torch.randn(10, 32))
-        self.assertTrue(torch.isfinite(scores).all())
+        assert torch.isfinite(scores).all()

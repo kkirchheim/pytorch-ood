@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 
 from pytorch_ood.detector import fDBD
@@ -27,12 +25,12 @@ def _reference_fdbd(z, train_mean, w, b, distance_as_normalizer):
     return -torch.sum(logits_sub / denominator_matrix[nn_idx], axis=1) / normalizer
 
 
-class fDBDNormalizerTest(unittest.TestCase):
+class TestfDBDNormalizer:
     """
     Test the distance_as_normalizer parameter of fDBD
     """
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         torch.manual_seed(123)
         self.head = torch.nn.Linear(10, 4)
         self.z_train = torch.randn(size=(100, 10)) + 1

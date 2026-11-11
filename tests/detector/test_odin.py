@@ -1,5 +1,6 @@
 import unittest
 
+import pytest
 import torch
 from torch import nn
 
@@ -51,10 +52,6 @@ class TestODIN(unittest.TestCase):
         detector = ODIN(self.model, norm_std=NORM_STD)
         expected = detector.predict(self.x)
         with torch.inference_mode():
-            with self.assertWarns(UserWarning):
+            with pytest.warns(UserWarning):
                 scores = detector.predict(self.x)
         torch.testing.assert_close(scores.clone(), expected)
-
-
-if __name__ == "__main__":
-    unittest.main()

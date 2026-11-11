@@ -1,11 +1,10 @@
-import unittest
-
+import pytest
 import torch
 
 from pytorch_ood.loss import BackgroundClassLoss
 
 
-class TestBackgroundClass(unittest.TestCase):
+class TestBackgroundClass:
     """
     Test Background Class Loss
     """
@@ -16,5 +15,5 @@ class TestBackgroundClass(unittest.TestCase):
         target = torch.arange(10) % 3
         target[5:] = 10
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             criterion(logits, target)

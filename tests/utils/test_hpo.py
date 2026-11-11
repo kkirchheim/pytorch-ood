@@ -1,6 +1,7 @@
 import math
 import unittest
 
+import pytest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -135,8 +136,8 @@ class _ConstantDetector(Detector):
         return (1.0 - self.w) * x[:, 0]
 
 
-class TestGridSearch(unittest.TestCase):
-    def setUp(self):
+class TestGridSearch:
+    def setup_method(self):
         self.val_loader = DataLoader(_make_val_dataset(), batch_size=64)
         self.fit_loader = DataLoader(_make_fit_dataset(), batch_size=64)
 
@@ -145,10 +146,10 @@ class TestGridSearch(unittest.TestCase):
         search = GridSearch(detector, self.fit_loader, self.val_loader)
         best = search.run()
 
-        self.assertEqual(best, {"w": 0.0})
-        self.assertGreater(search.best_score_, 0.95)
+        assert best == {"w": 0.0}
+        assert search.best_score_ > 0.95
         # detector left configured with the best params
-        self.assertEqual(detector.w, 0.0)
+        assert detector.w == 0.0
 
     def test_refits_per_candidate(self):
         detector = _WeightedFeatureDetector()
@@ -156,27 +157,27 @@ class TestGridSearch(unittest.TestCase):
         search.run()
         # one fit per candidate, plus one final re-fit to leave the detector
         # consistently fitted for the best params
-        self.assertEqual(detector.fit_calls, len(detector.hyperparameter_space["w"]) + 1)
+        assert detector.fit_calls == len(detector.hyperparameter_space["w"]) + 1
 
     def test_direction_flag(self):
         # minimizing AUROC should pick the worst (noise-only) weight
         detector = _WeightedFeatureDetector()
         search = GridSearch(detector, self.fit_loader, self.val_loader, higher_is_better=False)
         best = search.run()
-        self.assertEqual(best, {"w": 1.0})
+        assert best == {"w": 1.0}
 
     def test_raw_fallback(self):
         detector = _RawWeightedDetector()
         search = GridSearch(detector, None, self.val_loader)
         best = search.run()
-        self.assertEqual(best, {"w": 0.0})
-        self.assertGreater(search.best_score_, 0.95)
+        assert best == {"w": 0.0}
+        assert search.best_score_ > 0.95
 
     def test_records_all_results(self):
         detector = _WeightedFeatureDetector()
         search = GridSearch(detector, self.fit_loader, self.val_loader)
         search.run()
-        self.assertEqual(len(search.results_), len(detector.hyperparameter_space["w"]))
+        assert len(search.results_) == len(detector.hyperparameter_space["w"])
 
     def test_explicit_space_override(self):
         detector = _WeightedFeatureDetector()
@@ -184,48 +185,48 @@ class TestGridSearch(unittest.TestCase):
             detector, self.fit_loader, self.val_loader, hyperparameter_space={"w": [0.0, 1.0]}
         )
         search.run()
-        self.assertEqual(len(search.results_), 2)
+        assert len(search.results_) == 2
 
     def test_empty_space_raises(self):
         detector = _RawWeightedDetector()
         detector.hyperparameter_space = {}
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             GridSearch(detector, None, self.val_loader)
 
 
-class TestDetectorHyperparameterInterface(unittest.TestCase):
+class TestDetectorHyperparameterInterface:
     def test_get_set_roundtrip(self):
         detector = _WeightedFeatureDetector()
         detector.set_hyperparameters(w=0.25)
-        self.assertEqual(detector.get_hyperparameters(), {"w": 0.25})
+        assert detector.get_hyperparameters() == {"w": 0.25}
 
     def test_unknown_hyperparameter_raises(self):
         detector = _WeightedFeatureDetector()
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             detector.set_hyperparameters(does_not_exist=1)
 
     def test_ash_exposes_space(self):
         model = WideResNet(num_classes=10).eval()
         detector = ASH(backbone=model.feature_maps, head=model.forward_feature_maps)
-        self.assertIn("percentile", detector.hyperparameter_space)
+        assert "percentile" in detector.hyperparameter_space
         detector.set_hyperparameters(percentile=0.9)
-        self.assertEqual(detector.percentile, 0.9)
-        self.assertEqual(detector.get_hyperparameters(), {"percentile": 0.9})
+        assert detector.percentile == 0.9
+        assert detector.get_hyperparameters() == {"percentile": 0.9}
 
     def test_gen_exposes_space(self):
         detector = GEN(ClassificationModel())
-        self.assertEqual(set(detector.hyperparameter_space), {"gamma", "M"})
+        assert set(detector.hyperparameter_space) == {"gamma", "M"}
         detector.set_hyperparameters(gamma=2, M=100)
-        self.assertEqual(detector.get_hyperparameters(), {"gamma": 2, "M": 100})
+        assert detector.get_hyperparameters() == {"gamma": 2, "M": 100}
 
     def test_odin_exposes_space(self):
         detector = ODIN(ClassificationModel())
-        self.assertEqual(set(detector.hyperparameter_space), {"temperature", "eps"})
+        assert set(detector.hyperparameter_space) == {"temperature", "eps"}
         detector.set_hyperparameters(temperature=100, eps=0.0028)
-        self.assertEqual(detector.get_hyperparameters(), {"temperature": 100, "eps": 0.0028})
+        assert detector.get_hyperparameters() == {"temperature": 100, "eps": 0.0028}
 
 
-class TestGridSearchReAct(unittest.TestCase):
+class TestGridSearchReAct:
     """ReAct is a fitting feature-map detector: tuning re-fits via the raw path."""
 
     def _val_dataset(self, seed=0):
@@ -249,14 +250,14 @@ class TestGridSearchReAct(unittest.TestCase):
         search = GridSearch(detector, fit_loader, val_loader)
         best = search.run()
 
-        self.assertIn("percentile", best)
-        self.assertIn(best["percentile"], ReAct.hyperparameter_space["percentile"])
-        self.assertEqual(len(search.results_), len(ReAct.hyperparameter_space["percentile"]))
+        assert "percentile" in best
+        assert best["percentile"] in ReAct.hyperparameter_space["percentile"]
+        assert len(search.results_) == len(ReAct.hyperparameter_space["percentile"])
         # detector left fitted with a threshold derived from the winning percentile
-        self.assertIsNotNone(detector.threshold)
+        assert detector.threshold is not None
 
 
-class TestGridSearchKNN(unittest.TestCase):
+class TestGridSearchKNN:
     """KNN is a fitting feature detector: tuning uses the cached-features path."""
 
     def test_tunes_k(self):
@@ -278,12 +279,12 @@ class TestGridSearchKNN(unittest.TestCase):
         )
         best = search.run()
 
-        self.assertIn(best["k"], [1, 3, 5])
-        self.assertEqual(len(search.results_), 3)
-        self.assertEqual(detector.k, best["k"])
+        assert best["k"] in [1, 3, 5]
+        assert len(search.results_) == 3
+        assert detector.k == best["k"]
 
 
-class TestGridSearchGEN(unittest.TestCase):
+class TestGridSearchGEN:
     """GEN is a logits detector with no fit: tuning uses the cached-logits path."""
 
     def test_tunes_gamma_and_M(self):
@@ -302,12 +303,12 @@ class TestGridSearchGEN(unittest.TestCase):
         best = search.run()
 
         space = GEN.hyperparameter_space
-        self.assertEqual(set(best), {"gamma", "M"})
-        self.assertIn(best["gamma"], space["gamma"])
-        self.assertIn(best["M"], space["M"])
+        assert set(best) == {"gamma", "M"}
+        assert best["gamma"] in space["gamma"]
+        assert best["M"] in space["M"]
         # full Cartesian product of the two sweeps
-        self.assertEqual(len(search.results_), len(space["gamma"]) * len(space["M"]))
-        self.assertEqual((detector.gamma, detector.M), (best["gamma"], best["M"]))
+        assert len(search.results_) == len(space["gamma"]) * len(space["M"])
+        assert (detector.gamma, detector.M) == (best["gamma"], best["M"])
 
 
 class TestGridSearchEdgeCases(unittest.TestCase):
@@ -316,7 +317,7 @@ class TestGridSearchEdgeCases(unittest.TestCase):
         self.fit_loader = DataLoader(_make_fit_dataset(), batch_size=64)
 
     def test_empty_candidate_list_raises(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             GridSearch(
                 _RawWeightedDetector(), None, self.val_loader, hyperparameter_space={"w": []}
             )
@@ -329,12 +330,12 @@ class TestGridSearchEdgeCases(unittest.TestCase):
             detector, None, self.val_loader, hyperparameter_space={"w": [0.0, 1.0]}
         )
         best = search.run()
-        self.assertEqual(best, {"w": 0.0})
+        assert best == {"w": 0.0}
 
     def test_requires_fit_without_fit_loader_raises(self):
         # _WeightedFeatureDetector.requires_fit is True
         search = GridSearch(_WeightedFeatureDetector(), None, self.val_loader)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             search.run()
 
     def test_non_finite_score_is_not_selected(self):
@@ -342,13 +343,13 @@ class TestGridSearchEdgeCases(unittest.TestCase):
         detector = _NaNDetector()
         search = GridSearch(detector, None, self.val_loader)
         best = search.run()
-        self.assertEqual(best, {"w": 1.0})
-        self.assertTrue(math.isfinite(search.best_score_))
+        assert best == {"w": 1.0}
+        assert math.isfinite(search.best_score_)
 
     def test_all_non_finite_raises(self):
         detector = _NaNDetector(always_nan=True)
         search = GridSearch(detector, None, self.val_loader)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             search.run()
 
     def test_detector_left_consistently_fitted(self):
@@ -356,8 +357,8 @@ class TestGridSearchEdgeCases(unittest.TestCase):
         detector = _FitAffectingDetector()
         search = GridSearch(detector, self.fit_loader, self.val_loader)
         best = search.run()
-        self.assertEqual(detector.bias, best["bias"])
-        self.assertEqual(detector._fitted_bias, detector.bias)
+        assert detector.bias == best["bias"]
+        assert detector._fitted_bias == detector.bias
 
     def test_metric_collection(self):
         metric = MetricCollection([AUROC(), FPRAtTPR()])
@@ -367,22 +368,18 @@ class TestGridSearchEdgeCases(unittest.TestCase):
         ):
             with self.subTest(type(detector).__name__):
                 search = GridSearch(detector, fit_loader, self.val_loader, metric=metric)
-                self.assertEqual(search.run(), {"w": 0.0})
+                assert search.run() == {"w": 0.0}
 
     def test_constant_scores_do_not_abort(self):
         search = GridSearch(_ConstantDetector(), None, self.val_loader)
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             best = search.run()
-        self.assertEqual(best, {"w": 0.0})
-        self.assertEqual(search.results_[1]["score"], 0.5)
+        assert best == {"w": 0.0}
+        assert search.results_[1]["score"] == 0.5
 
     def test_unknown_metric_name_raises_readable(self):
         detector = _RawWeightedDetector()
         search = GridSearch(detector, None, self.val_loader, metric_name="NOPE")
-        with self.assertRaises(ValueError) as ctx:
+        with pytest.raises(ValueError) as ctx:
             search.run()
-        self.assertIn("NOPE", str(ctx.exception))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert "NOPE" in str(ctx.value)

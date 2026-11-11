@@ -1,15 +1,16 @@
 import os
 import unittest
 
+import pytest
 import torch
 
 from pytorch_ood.model import list_models, load_model
 from pytorch_ood.model.registry import get_model_info
 
 
-@unittest.skipUnless(
-    os.environ.get("PYTORCH_OOD_DOWNLOAD_TESTS"),
-    "Downloads all pre-trained models; set PYTORCH_OOD_DOWNLOAD_TESTS=1 to run",
+@pytest.mark.skipif(
+    not os.environ.get("PYTORCH_OOD_DOWNLOAD_TESTS"),
+    reason="Downloads all pre-trained models; set PYTORCH_OOD_DOWNLOAD_TESTS=1 to run",
 )
 class TestPreTrainedModels(unittest.TestCase):
     """
@@ -23,12 +24,8 @@ class TestPreTrainedModels(unittest.TestCase):
             with self.subTest(model=key):
                 entry = get_model_info(key)
                 model = load_model(key)
-                self.assertFalse(model.training)
+                assert not model.training
 
                 x = torch.ones(size=(1, 3, 32, 32))
                 y = model(x)
-                self.assertEqual(y.shape, (1, entry.arch_kwargs["num_classes"]))
-
-
-if __name__ == "__main__":
-    unittest.main()
+                assert y.shape == (1, entry.arch_kwargs["num_classes"])

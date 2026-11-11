@@ -1,5 +1,6 @@
 import unittest
 
+import pytest
 import torch
 
 from pytorch_ood.detector import Residual, ViM
@@ -40,7 +41,7 @@ class TestResidual(unittest.TestCase):
                     detector = cls(None, d=d, w=self.w, b=self.b)
                     detector.fit_features(self.train, self.labels)
                     torch.testing.assert_close(detector.predict_features(self.test), expected)
-                    self.assertEqual(detector.d, d)
+                    assert detector.d == d
 
     def test_principal_subspace_has_zero_residual(self):
         """
@@ -64,16 +65,16 @@ class TestResidual(unittest.TestCase):
         residual = Residual(None, d=4, w=self.w, b=self.b).fit_features(self.train, self.labels)
         vim = ViM(None, d=4, w=self.w, b=self.b).fit_features(self.train, self.labels)
 
-        self.assertIsInstance(vim, Residual)
+        assert isinstance(vim, Residual)
         energy = torch.logsumexp(self.test @ self.w.T + self.b, dim=-1)
         expected = vim.alpha * residual.predict_features(self.test) - energy
         torch.testing.assert_close(vim.predict_features(self.test), expected)
 
     def test_principal_subspace_alias_is_deprecated(self):
         detector = Residual(None, d=4, w=self.w, b=self.b).fit_features(self.train, self.labels)
-        with self.assertWarns(DeprecationWarning):
-            self.assertIs(detector.principal_subspace, detector.residual_subspace)
+        with pytest.warns(DeprecationWarning):
+            assert detector.principal_subspace is detector.residual_subspace
 
     def test_repr(self):
-        self.assertEqual(repr(Residual(None, d=4, w=self.w, b=self.b)), "Residual(d=4)")
-        self.assertEqual(repr(ViM(None, d=4, w=self.w, b=self.b)), "ViM(d=4)")
+        assert repr(Residual(None, d=4, w=self.w, b=self.b)) == "Residual(d=4)"
+        assert repr(ViM(None, d=4, w=self.w, b=self.b)) == "ViM(d=4)"

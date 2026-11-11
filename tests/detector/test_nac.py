@@ -1,6 +1,6 @@
-import unittest
 from typing import List
 
+import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -42,8 +42,8 @@ class TinyConvClassifier(nn.Module):
         return self.head(x)
 
 
-class NACUETest(unittest.TestCase):
-    def setUp(self) -> None:
+class TestNACUE:
+    def setup_method(self) -> None:
         torch.manual_seed(123)
 
     def _make_detector(
@@ -67,7 +67,7 @@ class NACUETest(unittest.TestCase):
     def test_layer_config_validation_lengths(self):
         model = TinyConvClassifier().eval()
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self._make_detector(
                 model,
                 layers=[model.block2, model.bn],
@@ -141,10 +141,4 @@ class NACUETest(unittest.TestCase):
             metrics.update(detector(x_ood), y_ood)
 
         results = metrics.compute()
-        self.assertGreater(
-            results["AUROC"], 0.70, f"Expected AUROC > 0.70, got {results['AUROC']:.4f}"
-        )
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert results["AUROC"] > 0.7, f"Expected AUROC > 0.70, got {results['AUROC']:.4f}"

@@ -1,13 +1,12 @@
-import unittest
-
 import numpy as np
+import pytest
 import torch
 
 from pytorch_ood.detector import ReAct
 from pytorch_ood.model import WideResNet
 
 
-class TestReAct(unittest.TestCase):
+class TestReAct:
     """
     Tests for ReAct
     """
@@ -21,7 +20,7 @@ class TestReAct(unittest.TestCase):
             threshold=1.0,
         )
         output = detector(torch.randn(size=(8, 3, 32, 32)))
-        self.assertIsNotNone(output)
+        assert output is not None
 
     def test_threshold_matches_percentile(self):
         """fit_feature_maps sets the threshold to the requested activation percentile."""
@@ -32,8 +31,4 @@ class TestReAct(unittest.TestCase):
         detector.fit_feature_maps(feature_maps, y)
 
         expected = float(np.percentile(feature_maps.numpy(), 90))
-        self.assertAlmostEqual(detector.threshold, expected, places=4)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert detector.threshold == pytest.approx(expected, abs=5e-5)

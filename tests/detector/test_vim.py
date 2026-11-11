@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -7,7 +5,7 @@ from pytorch_ood.detector import ViM
 from tests.helpers import ClassificationModel, requires
 
 
-class ViMNumericsTest(unittest.TestCase):
+class TestViMNumerics:
     """Ill-conditioned features: the residual subspace must match a float64 eigendecomposition."""
 
     def test_ill_conditioned_features_match_float64_reference(self):

@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -27,12 +25,12 @@ class InitGram:
         self.model = Gram(MyHead(nn.classifier, nn.pool), [nn.layer1], 2, [1])
 
 
-class GramTest(unittest.TestCase):
+class TestGram:
     """
     Test gram matrix based method
     """
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         torch.manual_seed(123)
 
     def test_scores_non_negative(self):
@@ -45,7 +43,7 @@ class GramTest(unittest.TestCase):
         model.fit(DataLoader(TensorDataset(x, y), batch_size=16))
 
         scores = model(x)
-        self.assertTrue((scores >= 0).all())
+        assert (scores >= 0).all()
 
     def test_score_direction(self):
         """
@@ -65,11 +63,11 @@ class GramTest(unittest.TestCase):
         scores_in = model(x_in)
         scores_out = model(x_out)
 
-        self.assertGreater(scores_out.mean().item(), scores_in.mean().item())
+        assert scores_out.mean().item() > scores_in.mean().item()
 
         metrics = OODMetrics()
         metrics.update(
             torch.cat([scores_in, scores_out]),
             torch.cat([torch.zeros(100), -torch.ones(100)]),
         )
-        self.assertGreater(metrics.compute()["AUROC"], 0.95)
+        assert metrics.compute()["AUROC"] > 0.95

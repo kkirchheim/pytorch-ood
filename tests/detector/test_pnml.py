@@ -1,17 +1,16 @@
-import unittest
-
+import pytest
 import torch
 
 from pytorch_ood.api import ModelNotSetException
 from pytorch_ood.detector import PNML
 
 
-class PNMLTest(unittest.TestCase):
+class TestPNML:
     """
     Test PNML detector
     """
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         torch.manual_seed(123)
 
     def test_no_head(self):
@@ -21,11 +20,11 @@ class PNMLTest(unittest.TestCase):
         y = torch.cat([torch.zeros(size=(10,)), torch.ones(size=(10,))])
         detector.fit_features(z, y)
 
-        with self.assertRaises(ModelNotSetException):
+        with pytest.raises(ModelNotSetException):
             detector.predict_features(torch.randn(size=(5, 10)))
 
 
-class PNMLNumericsTest(unittest.TestCase):
+class TestPNMLNumerics:
     """Ill-conditioned training features: float32 inputs must give the scores of a float64 computation."""
 
     def test_ill_conditioned_features_match_float64_reference(self):

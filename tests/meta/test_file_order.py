@@ -39,12 +39,12 @@ def unsorted_listings(source: str):
 class TestFileOrder(unittest.TestCase):
     def test_file_listings_are_sorted(self):
         files = sorted(DATASET_DIR.rglob("*.py"))
-        self.assertTrue(files)
+        assert files
         for path in files:
             with self.subTest(str(path.relative_to(DATASET_DIR))):
                 lines = sorted(unsorted_listings(path.read_text()))
-                self.assertEqual(lines, [], "wrap the listing in sorted()")
+                assert lines == [], "wrap the listing in sorted()"
 
     def test_detects_unsorted_listings(self):
         source = "import os\na = os.listdir('x')\nb = sorted(os.listdir('x'))\nc = glob('*')\n"
-        self.assertEqual(sorted(unsorted_listings(source)), [2, 4])
+        assert sorted(unsorted_listings(source)) == [2, 4]

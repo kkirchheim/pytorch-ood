@@ -1,5 +1,4 @@
 import copy
-import unittest
 from unittest.mock import patch
 
 import torch
@@ -10,7 +9,7 @@ from tests.helpers.model import ClassificationModel
 torch.manual_seed(123)
 
 
-class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
+class TestVirtualOutlierSynthesizingRegLoss:
     """
     Test code for VirtualOutlierSynthesizingRegLoss
     """
@@ -33,14 +32,14 @@ class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
 
     def test_dimensions_from_fc(self):
         criterion, model = self.init_loss(num_classes=4)
-        self.assertEqual(criterion.num_classes, 4)
-        self.assertEqual(criterion.data_dict.shape, (4, 5, model.classifier.in_features))
+        assert criterion.num_classes == 4
+        assert criterion.data_dict.shape == (4, 5, model.classifier.in_features)
 
     def test_queues_not_in_state_dict(self):
         # the fill levels are not saved either, so restoring only the queues would be inconsistent
         criterion, _ = self.init_loss(num_classes=3)
-        self.assertNotIn("data_dict", criterion.state_dict())
-        self.assertNotIn("eye_matrix", criterion.state_dict())
+        assert "data_dict" not in criterion.state_dict()
+        assert "eye_matrix" not in criterion.state_dict()
 
     def test_real_outliers_are_ignored(self):
         criterion, model = self.init_loss(3)
@@ -52,9 +51,9 @@ class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
         reg = criterion._regularization_classification(logits, features, target)
 
         # queues are not full yet and real outliers are ignored: no regularization
-        self.assertEqual(reg.item(), 0)
+        assert reg.item() == 0
         # only the 9 ID samples were stored
-        self.assertEqual(sum(criterion.number_dict.values()), 9)
+        assert sum(criterion.number_dict.values()) == 9
 
         # changing the outliers does not change the loss
         unknown = target < 0
@@ -107,5 +106,5 @@ class TestVirtualOutlierSynthesizingRegLoss(unittest.TestCase):
             reference._sample_virtual_outliers(),
         )
 
-        self.assertTrue(torch.equal(criterion.data_dict, reference.data_dict))
-        self.assertTrue(torch.equal(loss, reference_loss))
+        assert torch.equal(criterion.data_dict, reference.data_dict)
+        assert torch.equal(loss, reference_loss)

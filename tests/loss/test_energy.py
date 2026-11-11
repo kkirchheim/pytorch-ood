@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 
 from pytorch_ood.loss import EnergyRegularizedLoss
@@ -7,7 +5,7 @@ from pytorch_ood.loss import EnergyRegularizedLoss
 torch.manual_seed(123)
 
 
-class TestEnergyRegularization(unittest.TestCase):
+class TestEnergyRegularization:
     """
     Test code for energy bounded learning
     """

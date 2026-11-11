@@ -1,12 +1,10 @@
-import unittest
-
 import torch
 from torch.utils.data import TensorDataset
 
 from pytorch_ood.dataset.ossim import DynamicOSS
 
 
-class TestOSSIM(unittest.TestCase):
+class TestOSSIM:
     """
     Test code of examples
     """
@@ -19,9 +17,9 @@ class TestOSSIM(unittest.TestCase):
 
         ossim = DynamicOSS(dataset, kuc=0, uuc_test=4, uuc_val=0, seed=0)
 
-        self.assertEqual(6, len(ossim.kkc))
-        self.assertEqual(4, len(ossim.uuc))
+        assert 6 == len(ossim.kkc)
+        assert 4 == len(ossim.uuc)
 
-        self.assertIsNotNone(ossim.test_dataset())
-        self.assertIsNotNone(ossim.train_dataset())
-        self.assertIsNotNone(ossim.val_dataset())
+        assert ossim.test_dataset() is not None
+        assert ossim.train_dataset() is not None
+        assert ossim.val_dataset() is not None

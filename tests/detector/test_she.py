@@ -1,11 +1,9 @@
-import unittest
-
 import torch
 
 from pytorch_ood.detector import SHE
 
 
-class SHEScoreTest(unittest.TestCase):
+class TestSHEScore:
     def test_negated_inner_product_with_pattern_of_predicted_class(self):
         # the head is the identity, so the predicted class is the argmax of the features
         detector = SHE(encoder=None, head=torch.nn.Identity())

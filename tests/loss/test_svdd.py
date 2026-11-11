@@ -1,19 +1,18 @@
-import unittest
-
+import pytest
 import torch
 
 from pytorch_ood.loss import DeepSADLoss, DeepSVDDLoss
 
 
-class TestDeepSAD(unittest.TestCase):
+class TestDeepSAD:
     def test_deprecated_name(self):
         import pytorch_ood.loss as losses
 
-        with self.assertWarns(DeprecationWarning):
-            self.assertIs(losses.SSDeepSVDDLoss, DeepSADLoss)
+        with pytest.warns(DeprecationWarning):
+            assert losses.SSDeepSVDDLoss is DeepSADLoss
 
 
-class TestDeepSADValues(unittest.TestCase):
+class TestDeepSADValues:
     def _loss(self, **kwargs):
         criterion = DeepSADLoss(n_dim=2, reduction="none", **kwargs)
         criterion.center.params.data.zero_()
@@ -31,17 +30,17 @@ class TestDeepSADValues(unittest.TestCase):
 
     def test_outlier_at_center_is_finite(self):
         loss = self._loss()(torch.zeros(1, 2), torch.tensor([-1]))
-        self.assertTrue(torch.isfinite(loss).all())
+        assert torch.isfinite(loss).all()
 
 
-class TestSVDDLossDefaultRadius(unittest.TestCase):
+class TestSVDDLossDefaultRadius:
     def test_default_radius(self):
         criterion = DeepSVDDLoss(n_dim=2)
         loss = DeepSVDDLoss.svdd_loss(torch.randn(3, 2), criterion.center)
-        self.assertEqual(loss.shape, (3,))
+        assert loss.shape == (3,)
 
 
-class TestDeepSADCenterAndDistance(unittest.TestCase):
+class TestDeepSADCenterAndDistance:
     def test_center_argument(self):
         center = torch.tensor([1.0, 2.0])
         criterion = DeepSADLoss(n_dim=2, center=center)

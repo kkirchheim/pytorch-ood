@@ -1,5 +1,4 @@
 import tempfile
-import unittest
 import warnings
 
 import torch
@@ -98,16 +97,16 @@ class SummedFeaturesDetector(FeaturesDetector):
         return -x.sum(dim=1)
 
 
-class BenchmarkCachingTest(unittest.TestCase):
+class TestBenchmarkCaching:
     def test_producer_token_distinguishes_bound_methods(self):
         model = CountingFeatures()
 
         forward_token = Benchmark._producer_token(model.forward)
         pre_pool_token = Benchmark._producer_token(model.feature_maps)
 
-        self.assertNotEqual(forward_token, pre_pool_token)
-        self.assertIn("forward", forward_token)
-        self.assertIn("feature_maps", pre_pool_token)
+        assert forward_token != pre_pool_token
+        assert "forward" in forward_token
+        assert "feature_maps" in pre_pool_token
 
     def test_cache_file_path_distinguishes_bound_method_producers(self):
         benchmark = ToyBenchmark()
@@ -130,7 +129,7 @@ class BenchmarkCachingTest(unittest.TestCase):
             cache_key="toy-model-v1",
         )
 
-        self.assertNotEqual(forward_path, pre_pool_path)
+        assert forward_path != pre_pool_path
 
     def test_benchmark_evaluate_single_detector_keeps_output_shape(self):
         benchmark = ToyBenchmark()
@@ -138,9 +137,9 @@ class BenchmarkCachingTest(unittest.TestCase):
 
         results = benchmark.evaluate(detector, loader_kwargs={"batch_size": 2})
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["Dataset"], "ToyOOD")
-        self.assertNotIn("Detector", results[0])
+        assert len(results) == 1
+        assert results[0]["Dataset"] == "ToyOOD"
+        assert "Detector" not in results[0]
 
     def test_benchmark_evaluate_list_shares_logits_within_call(self):
         benchmark = ToyBenchmark()
@@ -151,12 +150,9 @@ class BenchmarkCachingTest(unittest.TestCase):
             loader_kwargs={"batch_size": 2},
         )
 
-        self.assertEqual(len(results), 2)
-        self.assertEqual(
-            {result["Detector"] for result in results},
-            {"MaxSoftmax", "EnergyBased"},
-        )
-        self.assertEqual(model.calls, 2)
+        assert len(results) == 2
+        assert {result["Detector"] for result in results} == {"MaxSoftmax", "EnergyBased"}
+        assert model.calls == 2
 
     def test_benchmark_reuses_in_memory_cache_across_calls(self):
         benchmark = ToyBenchmark()
@@ -175,8 +171,8 @@ class BenchmarkCachingTest(unittest.TestCase):
             cache=True,
         )
 
-        self.assertEqual(calls_after_first, 2)
-        self.assertEqual(model.calls, calls_after_first)
+        assert calls_after_first == 2
+        assert model.calls == calls_after_first
 
     def test_benchmark_reuses_disk_cache_across_benchmark_instances(self):
         benchmark = ToyBenchmark()
@@ -193,9 +189,9 @@ class BenchmarkCachingTest(unittest.TestCase):
                     cache_key="toy-model-v1",
                 )
 
-            self.assertEqual(model.calls, 2)
-            self.assertEqual(len(caught), 1)
-            self.assertIn("cache_key", str(caught[0].message))
+            assert model.calls == 2
+            assert len(caught) == 1
+            assert "cache_key" in str(caught[0].message)
 
             second_benchmark = ToyBenchmark()
             second_model = CountingLinear()
@@ -208,7 +204,7 @@ class BenchmarkCachingTest(unittest.TestCase):
                 cache_key="toy-model-v1",
             )
 
-            self.assertEqual(second_model.calls, 0)
+            assert second_model.calls == 0
 
     def test_benchmark_reuses_feature_cache_across_calls(self):
         benchmark = ToyBenchmark()
@@ -227,8 +223,8 @@ class BenchmarkCachingTest(unittest.TestCase):
             cache=True,
         )
 
-        self.assertEqual(calls_after_first, 2)
-        self.assertEqual(model.calls, calls_after_first)
+        assert calls_after_first == 2
+        assert model.calls == calls_after_first
 
     def test_benchmark_falls_back_for_mahalanobis_with_input_preprocessing(self):
         benchmark = ToyBenchmark()
@@ -251,9 +247,5 @@ class BenchmarkCachingTest(unittest.TestCase):
             cache=True,
         )
 
-        self.assertGreater(calls_after_first_eval, calls_after_fit)
-        self.assertGreater(model.calls, calls_after_first_eval)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert calls_after_first_eval > calls_after_fit
+        assert model.calls > calls_after_first_eval

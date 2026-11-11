@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 
 from pytorch_ood.loss import LogitNorm
@@ -7,7 +5,7 @@ from pytorch_ood.loss import LogitNorm
 torch.manual_seed(123)
 
 
-class TestLogitNorm(unittest.TestCase):
+class TestLogitNorm:
     """
     Test code for energy bounded learning
     """
@@ -24,7 +22,7 @@ class TestLogitNorm(unittest.TestCase):
 
         loss = criterion(logits, target)
 
-        self.assertGreaterEqual(loss.item(), 0.0)
+        assert loss.item() >= 0.0
 
     def test_matches_reference_formula(self):
         """
@@ -41,7 +39,7 @@ class TestLogitNorm(unittest.TestCase):
         norm = torch.norm(logits, p=2, dim=1, keepdim=True) + 1e-7
         expected = torch.nn.functional.cross_entropy(logits / (t * norm), target)
 
-        self.assertTrue(torch.allclose(loss, expected))
+        assert torch.allclose(loss, expected)
 
     def test_scale_invariance(self):
         """
@@ -55,4 +53,4 @@ class TestLogitNorm(unittest.TestCase):
         loss_1 = criterion(logits, target)
         loss_2 = criterion(100.0 * logits, target)
 
-        self.assertTrue(torch.allclose(loss_1, loss_2, atol=1e-5))
+        assert torch.allclose(loss_1, loss_2, atol=1e-05)

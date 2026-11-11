@@ -6,6 +6,7 @@ selects, independent of ``requires_grad``, and leave no gradients on the model.
 import unittest
 from unittest import mock
 
+import pytest
 import torch
 
 from pytorch_ood.detector import GradNorm, GradUncertainty
@@ -42,8 +43,8 @@ class TestParamFilter(unittest.TestCase):
 
                 with mock.patch.object(module, "_func_grad", spy):
                     cls(self.model, param_filter=_only_classifier_weight)(self.x)
-                self.assertTrue(seen)
-                self.assertTrue(all(names == ["classifier.weight"] for names in seen))
+                assert seen
+                assert all(names == ["classifier.weight"] for names in seen)
 
     def test_paths_agree_on_conv_model(self):
         # batch normalization buffers, several selected layers, and chunking in GradNorm
@@ -84,9 +85,5 @@ class TestParamFilter(unittest.TestCase):
                 with self.subTest(cls.__name__, batched=batched):
                     detector = cls(self.model, param_filter=lambda name: False)
                     with mock.patch.object(module, "_TORCH_FUNC_AVAILABLE", batched):
-                        with self.assertRaises(ValueError):
+                        with pytest.raises(ValueError):
                             detector(self.x)
-
-
-if __name__ == "__main__":
-    unittest.main()

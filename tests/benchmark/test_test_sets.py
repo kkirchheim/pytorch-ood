@@ -6,6 +6,7 @@ so nothing is downloaded.
 
 import unittest
 
+import pytest
 import torch
 from torch.utils.data import TensorDataset
 
@@ -54,27 +55,23 @@ class TestTestSets(unittest.TestCase):
         for cls in BENCHMARKS:
             with self.subTest(cls.__name__):
                 sets = _benchmark(cls).test_sets(known=True, unknown=False)
-                self.assertEqual(len(sets), 1)
-                self.assertIs(sets[0], TEST)
+                assert len(sets) == 1
+                assert sets[0] is TEST
 
     def test_ood_only_returns_one_set_per_ood_name(self):
         for cls in BENCHMARKS:
             with self.subTest(cls.__name__):
                 sets = _benchmark(cls).test_sets(known=False, unknown=True)
-                self.assertEqual([len(s) for s in sets], [3, 4])
+                assert [len(s) for s in sets] == [3, 4]
 
     def test_both_combine_the_id_test_set_with_each_ood_set(self):
         for cls in BENCHMARKS:
             with self.subTest(cls.__name__):
                 sets = _benchmark(cls).test_sets(known=True, unknown=True)
-                self.assertEqual([len(s) for s in sets], [13, 14])
+                assert [len(s) for s in sets] == [13, 14]
 
     def test_neither_raises(self):
         for cls in BENCHMARKS:
             with self.subTest(cls.__name__):
-                with self.assertRaises(ValueError):
+                with pytest.raises(ValueError):
                     _benchmark(cls).test_sets(known=False, unknown=False)
-
-
-if __name__ == "__main__":
-    unittest.main()

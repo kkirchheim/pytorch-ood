@@ -1,6 +1,7 @@
 import os
-import unittest
 from urllib.request import Request, urlopen
+
+import pytest
 
 from pytorch_ood.dataset.img import (
     CIFAR10C,
@@ -32,135 +33,131 @@ from pytorch_ood.dataset.txt import (
 )
 
 
-@unittest.skipUnless(
-    os.environ.get("PYTORCH_OOD_DOWNLOAD_TESTS"),
-    "Requires external dataset hosts; set PYTORCH_OOD_DOWNLOAD_TESTS=1 to run",
+@pytest.mark.skipif(
+    not os.environ.get("PYTORCH_OOD_DOWNLOAD_TESTS"),
+    reason="Requires external dataset hosts; set PYTORCH_OOD_DOWNLOAD_TESTS=1 to run",
 )
-class TestDatasetAvailability(unittest.TestCase):
+class TestDatasetAvailability:
     def test_download_ImageNetA(self):
         status = urlopen(ImageNetA.url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_ImageNetO(self):
         status = urlopen(ImageNetO.url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_ImageNetR(self):
         status = urlopen(ImageNetR.url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
-    @unittest.skip("Unreliable - network timeout")
+    @pytest.mark.skip(reason="Unreliable - network timeout")
     def test_download_ImageNetC(self):
         status = urlopen(ImageNetC.url_list[0]).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
-    @unittest.skip("Unreliable - network timeout")
+    @pytest.mark.skip(reason="Unreliable - network timeout")
     def test_download_CIFAR10C(self):
         status = urlopen(CIFAR10C.url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
-    @unittest.skip("Unreliable - network timeout")
+    @pytest.mark.skip(reason="Unreliable - network timeout")
     def test_download_CIFAR100C(self):
         status = urlopen(CIFAR100C.url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
-    @unittest.skip("Unreliable - network timeout")
+    @pytest.mark.skip(reason="Unreliable - network timeout")
     def test_download_MNISTC(self):
         status = urlopen(MNISTC.urls[0]).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_RoadAnomaly(self):
         status = urlopen(RoadAnomaly.url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_SegmentMeIfYouCan(self):
         status = urlopen(SegmentMeIfYouCan.url_list["RoadAnomaly21"]).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
         status = urlopen(SegmentMeIfYouCan.url_list["RoadObstacle21"]).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_StreetHazards(self):
         status = urlopen(StreetHazards.url_list["train"]).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
         status = urlopen(StreetHazards.url_list["test"]).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
         status = urlopen(StreetHazards.url_list["validation"]).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_Wiki2(self):
         # the mirror rejects Python's default User-Agent; torchvision's download_url sends this one
         status = urlopen(
             Request(WikiText2.url, headers={"User-Agent": "pytorch/vision"})
         ).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_Wiki103(self):
         # the mirror rejects Python's default User-Agent; torchvision's download_url sends this one
         status = urlopen(
             Request(WikiText103.url, headers={"User-Agent": "pytorch/vision"})
         ).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_Reuters52(self):
         status = urlopen(Reuters52.train_url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
         status = urlopen(Reuters52.test_url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_Reuters8(self):
         status = urlopen(Reuters8.train_url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
         status = urlopen(Reuters8.test_url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_Multi30k(self):
         status = urlopen(Multi30k.test_url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
         status = urlopen(Multi30k.train_url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_NewsGroup20(self):
         status = urlopen(NewsGroup20.test_url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
         status = urlopen(NewsGroup20.train_url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
-    @unittest.skip("Unavailable")
+    @pytest.mark.skip(reason="Unavailable")
     def test_download_mvtech(self):
         status = urlopen(MVTechAD.url).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_iNaturalist(self):
         status = urlopen("https://drive.google.com/uc?id=" + iNaturalist.gdrive_id).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_OpenImagesO(self):
         status = urlopen("https://drive.google.com/uc?id=" + OpenImagesO.gdrive_id).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_Places365(self):
         status = urlopen("https://drive.google.com/uc?id=" + Places365.gdrive_id).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_ImageNetV2(self):
         status = urlopen("https://drive.google.com/uc?id=" + ImageNetV2.gdrive_id).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_ImageNetES(self):
         status = urlopen("https://drive.google.com/uc?id=" + ImageNetES.gdrive_id).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
     def test_download_SSBHard(self):
         status = urlopen("https://drive.google.com/uc?id=" + SSBHard.gdrive_id).getcode()
-        self.assertEqual(status, 200)
+        assert status == 200
 
-    @unittest.skip("Too large")
+    @pytest.mark.skip(reason="Too large")
     def test_google_drive(self):
         data = FractalDataset(root=".", download=True)
-        self.assertIsNotNone(data)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert data is not None

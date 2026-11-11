@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 import torch.nn.functional as F
 from torch.optim import SGD
@@ -10,7 +8,7 @@ from pytorch_ood.metrics import OODMetrics
 from tests.helpers import ClassificationModel, sample_dataset
 
 
-class TestNCI(unittest.TestCase):
+class TestNCI:
     """
     Tests for NCI (Neural Collapse Inspired) detector
     """
@@ -43,7 +41,7 @@ class TestNCI(unittest.TestCase):
         results = m.compute()
 
         print(results["AUROC"])
-        self.assertGreater(results["AUROC"], 0.9)
+        assert results["AUROC"] > 0.9
 
     def _train_model(self, loader):
         model = ClassificationModel(num_outputs=3, n_hidden=128).eval()

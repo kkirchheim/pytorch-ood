@@ -1,11 +1,9 @@
-import unittest
-
 import torch
 
 from pytorch_ood.detector import RMD
 
 
-class RMDBackgroundTest(unittest.TestCase):
+class TestRMDBackground:
     def test_background_covariance_is_normalized(self):
         """The background Gaussian uses the covariance of all known features (divided by N)."""
         torch.manual_seed(0)

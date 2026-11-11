@@ -1,12 +1,10 @@
-import unittest
-
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.detector import VRA
 
 
-class TestVRA(unittest.TestCase):
+class TestVRA:
     """
     Tests for VRA detector
     """
@@ -29,4 +27,4 @@ class TestVRA(unittest.TestCase):
         detector.fit(loader)
 
         scores = detector(torch.randn(5, 3, 8, 8))
-        self.assertEqual(scores.shape, (5,))
+        assert scores.shape == (5,)

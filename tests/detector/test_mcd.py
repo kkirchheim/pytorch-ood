@@ -1,5 +1,6 @@
 import unittest
 
+import pytest
 import torch
 from torch import nn
 
@@ -7,7 +8,7 @@ from pytorch_ood.detector import MCD
 from tests.helpers import ClassificationModel
 
 
-class TestMCD(unittest.TestCase):
+class TestMCD:
     """
     Tests for Monte Carlo Dropout
     """
@@ -20,7 +21,7 @@ class TestMCD(unittest.TestCase):
         y = mcd.predict(x)
 
         mean = -mcd.run(model, x, samples=1000)[0]
-        self.assertTrue(torch.isclose(y, mean, rtol=0.05).all())
+        assert torch.isclose(y, mean, rtol=0.05).all()
 
 
 class _FailingModel(nn.Module):
@@ -42,7 +43,7 @@ class TestMCDEdgeCases(unittest.TestCase):
         with torch.no_grad():
             expected = torch.stack([model(x).softmax(dim=1) for _ in range(5)]).mean(dim=0)
 
-        self.assertEqual(mean.dtype, torch.float64)
+        assert mean.dtype == torch.float64
         torch.testing.assert_close(mean, expected, rtol=0, atol=1e-12)
 
     def test_eval_mode_restored_on_error(self):
@@ -50,6 +51,6 @@ class TestMCDEdgeCases(unittest.TestCase):
             for training in [False, True]:
                 with self.subTest(run=run.__name__, training=training):
                     model = _FailingModel().train(training)
-                    with self.assertRaisesRegex(RuntimeError, "forward failed"):
+                    with pytest.raises(RuntimeError, match="forward failed"):
                         run(model, torch.randn(2, 10), samples=3)
-                    self.assertEqual(model.training, training)
+                    assert model.training == training

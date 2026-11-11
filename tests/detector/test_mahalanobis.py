@@ -1,5 +1,3 @@
-import unittest
-
 import pytest
 import torch
 
@@ -8,7 +6,7 @@ from pytorch_ood.detector import RMD, Mahalanobis, MahalanobisODIN, MultiMahalan
 from tests.helpers import points_with_covariance
 
 
-class MahalanobisScoreTest(unittest.TestCase):
+class TestMahalanobisScore:
     def test_half_squared_distance_to_closest_center(self):
         centers = torch.tensor([[0.0, 0.0], [4.0, 0.0]])
         z, y = points_with_covariance(centers, torch.tensor([1.0, 0.25]))
@@ -60,13 +58,13 @@ def _reference_scores(z, y, x, eps, use_pinv):
     return 0.5 * d.min(dim=1).values
 
 
-class MahalanobisNumericsTest(unittest.TestCase):
+class TestMahalanobisNumerics:
     """
     Rank-deficient covariance (fewer samples than feature dimensions): float32 inputs must give
     the scores of a float64 computation.
     """
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         torch.manual_seed(0)
         n, d = 60, 80
         # decaying feature scales make the covariance ill-conditioned, like penultimate CNN features
@@ -91,8 +89,8 @@ class MahalanobisNumericsTest(unittest.TestCase):
 
     def test_float32_input_gives_float32_parameters(self):
         detector = Mahalanobis(None).fit_features(self.z, self.y)
-        self.assertEqual(detector.mu.dtype, torch.float32)
-        self.assertEqual(detector.precision.dtype, torch.float32)
+        assert detector.mu.dtype == torch.float32
+        assert detector.precision.dtype == torch.float32
 
 
 def _features_with_dead_units(n: int, d: int = 50, n_classes: int = 10, n_dead: int = 5):

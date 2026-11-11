@@ -1,5 +1,6 @@
 import unittest
 
+import pytest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -21,7 +22,7 @@ class TestKNN(unittest.TestCase):
 
     def test_unknown_kwargs_raise(self):
         """There are no backend kwargs on the detector; backends are configured via ``search``."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             KNN(None, k=3, metric="euclidean")
 
     def test_matches_paper(self):
@@ -51,12 +52,12 @@ class TestKNN(unittest.TestCase):
         z_train[3] = 0
         detector = KNN(None, k=3).fit_features(z_train, torch.zeros(20, dtype=torch.long))
         z_test = torch.cat([torch.zeros(1, 4), torch.randn(4, 4)])
-        self.assertTrue(torch.isfinite(detector.predict_features(z_test)).all())
+        assert torch.isfinite(detector.predict_features(z_test)).all()
 
     def test_fit_features_moves_unpinned_reference_to_detector_device(self):
         detector = KNN(torch.nn.Linear(4, 4).to("meta"), k=3)
         detector.fit_features(torch.randn(20, 4), torch.zeros(20, dtype=torch.long))
-        self.assertEqual(detector.search.reference.device.type, "meta")
+        assert detector.search.reference.device.type == "meta"
 
     def test_sequential_encoder(self):
         """An encoder that evaluates to False, like an empty Sequential, is still an encoder."""
@@ -64,4 +65,4 @@ class TestKNN(unittest.TestCase):
         detector.fit(
             DataLoader(TensorDataset(torch.randn(20, 4), torch.zeros(20, dtype=torch.long)))
         )
-        self.assertEqual(detector.predict(torch.randn(5, 4)).shape, (5,))
+        assert detector.predict(torch.randn(5, 4)).shape == (5,)

@@ -3,6 +3,7 @@ import tempfile
 import unittest
 
 import numpy as np
+import pytest
 import torch
 from PIL import Image
 
@@ -127,84 +128,84 @@ def _make_cars_root(root, n_classes=10, n_per_class=4):
 # ─── _CUB200 Tests ────────────────────────────────────────────────────────────
 
 
-class CUB200DatasetTest(unittest.TestCase):
-    def setUp(self):
+class TestCUB200Dataset:
+    def setup_method(self):
         self.tmp = tempfile.mkdtemp()
         _make_cub_root(self.tmp, n_classes=10, n_per_class=4)
 
     def test_loads_all_classes(self):
         ds = _CUB200(self.tmp, split="train")
         # 10 classes × 2 train images each = 20
-        self.assertEqual(len(ds), 20)
+        assert len(ds) == 20
 
     def test_class_filter_reduces_size(self):
         ds = _CUB200(self.tmp, split="train", classes=[0, 1, 2])
-        self.assertEqual(len(ds), 6)
+        assert len(ds) == 6
 
     def test_class_filter_remaps_labels(self):
         ds = _CUB200(self.tmp, split="train", classes=[2, 5, 8])
         labels = {label for _, label in ds.data}
-        self.assertEqual(labels, {0, 1, 2})
+        assert labels == {0, 1, 2}
 
     def test_test_split_loaded(self):
         ds = _CUB200(self.tmp, split="test")
-        self.assertEqual(len(ds), 20)
+        assert len(ds) == 20
 
     def test_getitem_returns_image_and_label(self):
         ds = _CUB200(self.tmp, split="train", classes=[0])
         img, label = ds[0]
-        self.assertIsInstance(label, int)
+        assert isinstance(label, int)
 
     def test_unknown_transform_gives_neg_one(self):
         from pytorch_ood.utils import ToUnknown
 
         ds = _CUB200(self.tmp, split="train", classes=[0], target_transform=ToUnknown())
         _, label = ds[0]
-        self.assertEqual(label, -1)
+        assert label == -1
 
 
 # ─── _FGVCAircraft Tests ──────────────────────────────────────────────────────
 
 
-class FGVCAircraftDatasetTest(unittest.TestCase):
-    def setUp(self):
+class TestFGVCAircraftDataset:
+    def setup_method(self):
         self.tmp = tempfile.mkdtemp()
         _make_aircraft_root(self.tmp, n_classes=10, n_per_class=4)
 
     def test_loads_all_classes(self):
         ds = _FGVCAircraft(self.tmp, split="test")
-        self.assertEqual(len(ds), 40)
+        assert len(ds) == 40
 
     def test_class_filter_reduces_size(self):
         ds = _FGVCAircraft(self.tmp, split="test", classes=[0, 1])
-        self.assertEqual(len(ds), 8)
+        assert len(ds) == 8
 
     def test_class_filter_remaps_labels(self):
         ds = _FGVCAircraft(self.tmp, split="test", classes=[3, 7])
         labels = {label for _, label in ds.data}
-        self.assertEqual(labels, {0, 1})
+        assert labels == {0, 1}
 
 
 # ─── _StanfordCars Tests ──────────────────────────────────────────────────────
 
 
-class StanfordCarsDatasetTest(unittest.TestCase):
-    def setUp(self):
+class TestStanfordCarsDataset:
+    def setup_method(self):
         self.tmp = tempfile.mkdtemp()
         _make_cars_root(self.tmp, n_classes=10, n_per_class=4)
 
     def test_loads_all_classes(self):
         ds = _StanfordCars(self.tmp, split="train")
-        self.assertEqual(len(ds), 40)
+        assert len(ds) == 40
 
     def test_class_filter_reduces_size(self):
         ds = _StanfordCars(self.tmp, split="train", classes=[0, 1, 2])
-        self.assertEqual(len(ds), 12)
+        assert len(ds) == 12
 
     def test_class_filter_remaps_labels(self):
         ds = _StanfordCars(self.tmp, split="train", classes=[0, 4, 9])
         labels = {label for _, label in ds.data}
-        self.assertEqual(labels, {0, 1, 2})
+        assert labels == {0, 1, 2}
 
 
 # ─── SSB Benchmark Structure Tests ───────────────────────────────────────────
@@ -238,8 +239,8 @@ class _MockSSBBenchmark:
         self.bench = FakeCUB_SSB()
 
 
-class SSBBenchmarkStructureTest(unittest.TestCase):
-    def setUp(self):
+class TestSSBBenchmarkStructure:
+    def setup_method(self):
         self.tmp = tempfile.mkdtemp()
         self.mock = _MockSSBBenchmark(self.tmp)
         self.bench = self.mock.bench
@@ -249,24 +250,24 @@ class SSBBenchmarkStructureTest(unittest.TestCase):
         ds = self.bench.test_sets()[0]
         labels = [label for _, label in ds]
         ood_labels = [label for label in labels if label < 0]
-        self.assertTrue(all(label == -1 for label in ood_labels))
-        self.assertGreater(len(ood_labels), 0)
+        assert all(label == -1 for label in ood_labels)
+        assert len(ood_labels) > 0
 
     def test_id_labels_are_non_negative(self):
         ds = self.bench.test_sets()[0]
         id_labels = [label for _, label in ds if label >= 0]
-        self.assertTrue(all(label >= 0 for label in id_labels))
+        assert all(label >= 0 for label in id_labels)
 
     def test_train_set_has_no_ood_labels(self):
         ds = self.bench.train_set()
         labels = [label for _, label in ds]
-        self.assertTrue(all(label >= 0 for label in labels))
+        assert all(label >= 0 for label in labels)
 
 
 # ─── OSCR Tests ───────────────────────────────────────────────────────────────
 
 
-class OSCRTest(unittest.TestCase):
+class TestOSCR:
     def _make_data(self, n_id=100, n_ood=50, accuracy=1.0, seed=42):
         torch.manual_seed(seed)
         labels = torch.cat([torch.arange(n_id), torch.full((n_ood,), -1)])
@@ -280,20 +281,20 @@ class OSCRTest(unittest.TestCase):
         labels, preds = self._make_data()
         scores = torch.randn(len(labels))
         result = oscr_score(scores, preds, labels)
-        self.assertIsInstance(result, float)
+        assert isinstance(result, float)
 
     def test_raises_without_ood_samples(self):
         labels = torch.arange(10)
         scores = torch.randn(10)
         preds = torch.arange(10)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             oscr_score(scores, preds, labels)
 
     def test_raises_without_id_samples(self):
         labels = torch.full((10,), -1)
         scores = torch.randn(10)
         preds = torch.zeros(10, dtype=torch.long)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             oscr_score(scores, preds, labels)
 
 
@@ -321,24 +322,28 @@ class OSCRValuesTest(unittest.TestCase):
 
     def test_step_function_without_ties(self):
         # curve (0, 0) -> (0, 1/2) -> (1/2, 1/2) -> (1/2, 1) -> (1, 1)
-        self.assertAlmostEqual(self._oscr([0.0, 2.0], [1.0, 3.0], [True, True]), 0.75)
+        assert self._oscr([0.0, 2.0], [1.0, 3.0], [True, True]) == pytest.approx(0.75, abs=5e-8)
 
     def test_ties_between_known_and_unknown_are_diagonal(self):
         # curve (0, 0) -> (0, 1/3) -> (1/2, 1) -> (1, 1)
-        self.assertAlmostEqual(self._oscr([0.0, 1.0, 1.0], [1.0, 2.0], [True, True, True]), 5 / 6)
+        assert self._oscr([0.0, 1.0, 1.0], [1.0, 2.0], [True, True, True]) == pytest.approx(
+            5 / 6, abs=5e-8
+        )
 
     def test_constant_scores_give_half_the_accuracy(self):
-        self.assertAlmostEqual(self._oscr([0.0] * 4, [0.0] * 4, [True, True, True, False]), 0.375)
+        assert self._oscr([0.0] * 4, [0.0] * 4, [True, True, True, False]) == pytest.approx(
+            0.375, abs=5e-8
+        )
 
     def test_inverted_scores_give_zero(self):
-        self.assertAlmostEqual(self._oscr([1.0, 1.0], [0.0, 0.0], [True, True]), 0.0)
+        assert self._oscr([1.0, 1.0], [0.0, 0.0], [True, True]) == pytest.approx(0.0, abs=5e-8)
 
     def test_random_scores_give_half_the_accuracy(self):
         torch.manual_seed(0)
         n = 5000
         correct = torch.rand(n) < 0.6
         result = self._oscr(torch.rand(n).tolist(), torch.rand(n).tolist(), correct.tolist())
-        self.assertAlmostEqual(result, correct.float().mean().item() / 2, delta=0.01)
+        assert result == pytest.approx(correct.float().mean().item() / 2, abs=0.01)
 
     def test_matches_brute_force(self):
         torch.manual_seed(0)
@@ -351,12 +356,6 @@ class OSCRValuesTest(unittest.TestCase):
                 scores = torch.randn(300)
                 if levels is not None:
                     scores = (scores * levels).round()
-                self.assertAlmostEqual(
-                    oscr_score(scores, preds, labels),
-                    _oscr_brute_force(scores, preds, labels),
-                    places=5,
+                assert oscr_score(scores, preds, labels) == pytest.approx(
+                    _oscr_brute_force(scores, preds, labels), abs=5e-6
                 )
-
-
-if __name__ == "__main__":
-    unittest.main()

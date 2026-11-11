@@ -7,7 +7,7 @@ line-length = 99
 exclude = [".git", "__pycache__", "venv", "docs"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "TID251", "TID253"]
+select = ["E", "F", "W", "I", "TID251", "TID253", "PT009", "PT027"]
 ignore = [
     "F841",  # local variable assigned but never used
     "F403",  # from module import *

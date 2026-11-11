@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import pytest
 import torch
 import torch.nn.functional as F
 
@@ -46,7 +47,7 @@ class TestLTS(unittest.TestCase):
         torch.testing.assert_close(s, (z.sum(dim=1) / z.max(dim=1).values) ** 2)
 
     def test_scaling_factor_rejects_feature_maps(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             LTS.scaling_factor(torch.rand(4, 16, 8, 8), p=0.05)
 
     def test_matches_official_pipeline(self):
@@ -75,8 +76,4 @@ class TestLTS(unittest.TestCase):
         scores = detector.predict_features(z)
         # k = 2, so S = (8 / 4)^2 = 4, and the detector receives the scaled logits
         torch.testing.assert_close(seen[0], 4 * z)
-        self.assertEqual(scores.shape, (1,))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert scores.shape == (1,)

@@ -113,15 +113,15 @@ def _run(cls, task, all_ood, reduction, device, move_loss: bool):
 class TestLossDeviceHandling(unittest.TestCase):
     def _check_on_device(self, cls, task, all_ood, reduction, move_loss: bool):
         criterion, args, value = _run(cls, task, all_ood, reduction, DEVICE, move_loss)
-        self.assertEqual(value.device, DEVICE)
-        self.assertTrue(torch.isfinite(value).all())
+        assert value.device == DEVICE
+        assert torch.isfinite(value).all()
         for arg in args:
             if isinstance(arg, torch.Tensor) and arg.grad is not None:
-                self.assertEqual(arg.grad.device, DEVICE)
+                assert arg.grad.device == DEVICE
         if move_loss:
             for name, param in criterion.named_parameters():
                 if param.grad is not None:
-                    self.assertEqual(param.grad.device, DEVICE, name)
+                    assert param.grad.device == DEVICE, name
         if cls not in RANDOM:
             _, _, expected = _run(cls, task, all_ood, reduction, "cpu", move_loss=False)
             torch.testing.assert_close(value.detach().cpu(), expected.detach())
@@ -132,7 +132,7 @@ class TestLossDeviceHandling(unittest.TestCase):
                 criterion, _ = LOSS_INPUTS[cls](SHAPES[next(iter(cls.info.tasks))])
                 criterion.to(DEVICE)
                 left = [n for n, t in _tensor_state(criterion) if t.device != DEVICE]
-                self.assertEqual(left, [], "tensors that are not moved")
+                assert left == [], "tensors that are not moved"
 
     def test_forward_and_backward_after_to(self):
         for cls, task, all_ood, reduction in _cases(LOSSES):
@@ -160,7 +160,7 @@ class TestLossDeviceHandling(unittest.TestCase):
                 reduction="mean",
                 move_loss=True,
             )
-        self.assertGreater(sample.call_count, 0)
+        assert sample.call_count > 0
 
     def test_ii_loss_eval_mode(self):
         # in evaluation mode, the loss uses the stored running centers
@@ -169,8 +169,8 @@ class TestLossDeviceHandling(unittest.TestCase):
         criterion(x.to(DEVICE), y.to(DEVICE))
         criterion.eval()
         value = criterion(x.to(DEVICE), y.to(DEVICE))
-        self.assertEqual(value.device, DEVICE)
-        self.assertTrue(torch.isfinite(value))
+        assert value.device == DEVICE
+        assert torch.isfinite(value)
 
     def test_energy_margin_update_hyperparameters(self):
         torch.manual_seed(0)
@@ -180,8 +180,8 @@ class TestLossDeviceHandling(unittest.TestCase):
         loader = DataLoader(TensorDataset(torch.randn(5, 4), torch.zeros(5).long()), batch_size=4)
         criterion = loss.EnergyMarginLoss(full_train_loss=1.0).to(DEVICE)
         criterion.update_hyperparameters(model, loader, logistic_regression)
-        self.assertEqual(criterion.lam.device, DEVICE)
-        self.assertEqual(criterion.lam2.device, DEVICE)
+        assert criterion.lam.device == DEVICE
+        assert criterion.lam2.device == DEVICE
 
 
 class TestRequiresTo(unittest.TestCase):
@@ -193,9 +193,9 @@ class TestRequiresTo(unittest.TestCase):
             with self.subTest(cls.__name__):
                 criterion, _ = LOSS_INPUTS[cls](SHAPES[next(iter(cls.info.tasks))])
                 state = [n for n, t in _tensor_state(criterion) if t.dim() > 0]
-                self.assertTrue(state, "has no tensor state, so it should work without .to()")
+                assert state, "has no tensor state, so it should work without .to()"
 
     def test_losses_that_require_to_document_it(self):
         for cls in REQUIRES_TO:
             with self.subTest(cls.__name__):
-                self.assertIn("``.to(device)``", cls.__doc__)
+                assert "``.to(device)``" in cls.__doc__

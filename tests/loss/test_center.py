@@ -1,11 +1,9 @@
-import unittest
-
 import torch
 
 from pytorch_ood.loss import CenterLoss
 
 
-class TestCenterLossDistance(unittest.TestCase):
+class TestCenterLossDistance:
     def test_squared_distances_to_the_centers(self):
         criterion = CenterLoss(n_classes=3, n_dim=2)
         criterion.centers.params.data = torch.tensor([[0.0, 0.0], [1.0, 0.0], [0.0, 2.0]])

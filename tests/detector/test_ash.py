@@ -35,7 +35,7 @@ class TestASHOutOfPlace(unittest.TestCase):
                 x = torch.rand(4, 8, 5, 5)
                 before = x.clone()
                 self._detector(variant).predict_feature_maps(x)
-                self.assertTrue(torch.equal(x, before))
+                assert torch.equal(x, before)
 
     def test_same_values_as_in_place_version(self):
         for variant in self.variants:
@@ -48,7 +48,7 @@ class TestASHOutOfPlace(unittest.TestCase):
                 )
 
 
-class TestASHSEmptyMaps(unittest.TestCase):
+class TestASHSEmptyMaps:
     """
     ASH-S divides by the sum of the pruned map, which is zero if nothing remains after pruning.
     """
@@ -57,8 +57,8 @@ class TestASHSEmptyMaps(unittest.TestCase):
         x = torch.rand(3, 4, 5, 5)
         x[1] = 0
         out = ash_s(x, 0.65)
-        self.assertTrue(torch.isfinite(out).all())
-        self.assertTrue(torch.equal(out[1], torch.zeros_like(out[1])))
+        assert torch.isfinite(out).all()
+        assert torch.equal(out[1], torch.zeros_like(out[1]))
         # the other samples are unaffected
         expected = _old_in_place(x[[0, 2]].clone(), 0.65, "ash-s")
         torch.testing.assert_close(out[[0, 2]], expected)
@@ -66,4 +66,4 @@ class TestASHSEmptyMaps(unittest.TestCase):
     def test_full_pruning(self):
         x = torch.rand(3, 4, 5, 5)
         out = ash_s(x, 1.0)
-        self.assertTrue(torch.equal(out, torch.zeros_like(x)))
+        assert torch.equal(out, torch.zeros_like(x))

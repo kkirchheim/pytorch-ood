@@ -1,12 +1,10 @@
-import unittest
-
 import torch
 
 from pytorch_ood.detector import MaxSoftmax
 from tests.helpers import ClassificationModel, requires
 
 
-class TestSoftmax(unittest.TestCase):
+class TestSoftmax:
     """
     Tests for Energy based Out-of-Distribution Detection
     """
@@ -14,8 +12,8 @@ class TestSoftmax(unittest.TestCase):
     def test_temperature_is_float(self):
         detector = MaxSoftmax(None, t=2)
 
-        self.assertIsInstance(detector.t, float)
-        self.assertEqual(detector.t, 2.0)
+        assert isinstance(detector.t, float)
+        assert detector.t == 2.0
 
     def test_temperature_scales_logits(self):
         logits = torch.randn(16, 5)
@@ -33,5 +31,5 @@ class TestSoftmax(unittest.TestCase):
         x = torch.zeros(size=(8, 10), device="cuda")
         with torch.no_grad():
             y = detector(x)
-        self.assertEqual(y.device, x.device)
-        self.assertEqual(y.shape, (8,))
+        assert y.device == x.device
+        assert y.shape == (8,)

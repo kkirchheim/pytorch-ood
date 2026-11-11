@@ -1,5 +1,3 @@
-import unittest
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -35,7 +33,7 @@ class SimpleCNN(nn.Module):
         return self.head(self.backbone(x))
 
 
-class TestRemoveRank1(unittest.TestCase):
+class TestRemoveRank1:
     """Unit tests for the _remove_rank1 helper."""
 
     def test_rank1_removed(self):
@@ -57,10 +55,10 @@ class TestRemoveRank1(unittest.TestCase):
 
         # The leading singular value should drop by at least 10x
         for i in range(B):
-            self.assertLess(s_after[i, 0].item(), s_before[i, 0].item() * 0.1)
+            assert s_after[i, 0].item() < s_before[i, 0].item() * 0.1
 
 
-class TestRankFeat(unittest.TestCase):
+class TestRankFeat:
     """Tests for the RankFeat OOD detector."""
 
     def test_custom_detector(self):
@@ -78,13 +76,13 @@ class TestRankFeat(unittest.TestCase):
         x = torch.randn(4, 3, 8, 8)
         with torch.no_grad():
             scores = detector(x)
-        self.assertEqual(scores.shape, (4,))
+        assert scores.shape == (4,)
 
     def test_fit_is_noop(self):
         model = SimpleCNN().eval()
         detector = RankFeat(backbone=model.backbone, head=model.head)
         result = detector.fit(None)
-        self.assertIs(result, detector)
+        assert result is detector
 
     def test_score_matches_energy_convention(self):
         """
@@ -106,8 +104,4 @@ class TestRankFeat(unittest.TestCase):
 
             expected = EnergyBased.score(logits)
 
-        self.assertTrue(torch.allclose(scores, expected, atol=1e-5))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert torch.allclose(scores, expected, atol=1e-05)

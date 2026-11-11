@@ -5,6 +5,7 @@ The metric interface: buffering, devices, void labels, and collections.
 import unittest
 from unittest import mock
 
+import pytest
 import torch
 
 from pytorch_ood.metrics import (
@@ -53,65 +54,56 @@ class TestMetricUpdates(unittest.TestCase):
             for s, y, _ in batches:
                 batched.update(s, y)
             single = metric_cls().update(scores, labels)
-            self.assertEqual(batched.compute(), single.compute())
+            assert batched.compute() == single.compute()
         batched = Accuracy()
         for _, y, p in batches:
             batched.update(p, y)
-        self.assertEqual(batched.compute(), Accuracy().update(predictions, labels).compute())
+        assert batched.compute() == Accuracy().update(predictions, labels).compute()
 
     def test_matches_functional(self):
         scores, labels, predictions = _cat(_batches())
-        self.assertEqual(
-            AUROC().update(scores, labels).compute()["AUROC"], float(F.auroc(scores, labels))
+        assert AUROC().update(scores, labels).compute()["AUROC"] == float(F.auroc(scores, labels))
+        assert AUPR("id").update(scores, labels).compute()["AUPR-IN"] == float(
+            F.aupr(scores, labels, positive="id")
         )
-        self.assertEqual(
-            AUPR("id").update(scores, labels).compute()["AUPR-IN"],
-            float(F.aupr(scores, labels, positive="id")),
+        assert AveragePrecision("id").update(scores, labels).compute()["AP-IN"] == float(
+            F.average_precision(scores, labels, positive="id")
         )
-        self.assertEqual(
-            AveragePrecision("id").update(scores, labels).compute()["AP-IN"],
-            float(F.average_precision(scores, labels, positive="id")),
+        assert AveragePrecision("ood").update(scores, labels).compute()["AP-OUT"] == float(
+            F.average_precision(scores, labels, positive="ood")
         )
-        self.assertEqual(
-            AveragePrecision("ood").update(scores, labels).compute()["AP-OUT"],
-            float(F.average_precision(scores, labels, positive="ood")),
+        assert FPRAtTPR(0.8).update(scores, labels).compute()["FPR80TPR"] == float(
+            F.fpr_at_tpr(scores, labels, 0.8)
         )
-        self.assertEqual(
-            FPRAtTPR(0.8).update(scores, labels).compute()["FPR80TPR"],
-            float(F.fpr_at_tpr(scores, labels, 0.8)),
-        )
-        self.assertEqual(
-            AUTC().update(scores, labels).compute()["AUTC"], float(F.autc(scores, labels))
-        )
-        self.assertEqual(
-            Accuracy().update(predictions, labels).compute()["ACC"],
-            float(F.accuracy(predictions, labels)),
+        assert AUTC().update(scores, labels).compute()["AUTC"] == float(F.autc(scores, labels))
+        assert Accuracy().update(predictions, labels).compute()["ACC"] == float(
+            F.accuracy(predictions, labels)
         )
 
     def test_keyword_inputs(self):
         scores, labels, predictions = _cat(_batches())
-        self.assertEqual(
-            AUROC().update(scores=scores, labels=labels).compute(),
-            AUROC().update(scores, labels).compute(),
+        assert (
+            AUROC().update(scores=scores, labels=labels).compute()
+            == AUROC().update(scores, labels).compute()
         )
-        self.assertEqual(
-            Accuracy().update(labels=labels, predictions=predictions).compute(),
-            Accuracy().update(predictions, labels).compute(),
+        assert (
+            Accuracy().update(labels=labels, predictions=predictions).compute()
+            == Accuracy().update(predictions, labels).compute()
         )
 
     def test_invalid_inputs(self):
         scores, labels, _ = _cat(_batches())
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             AUROC().update(scores)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             AUROC().update(scores, None)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             AUROC().update(scores, labels, labels)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             AUROC().update(scores, scores=scores)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             AUROC().update(scores, labels[:-1])
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             AUROC().update(scores.tolist(), labels)
 
     def test_compute_without_data_raises(self):
@@ -125,23 +117,23 @@ class TestMetricUpdates(unittest.TestCase):
             OODMetrics(),
         ):
             with self.subTest(type(metric).__name__):
-                with self.assertRaises(ValueError):
+                with pytest.raises(ValueError):
                     metric.compute()
 
     def test_empty_update_is_ignored(self):
         scores, labels, _ = _cat(_batches())
         metric = AUROC().update(torch.zeros(0), torch.zeros(0).long()).update(scores, labels)
-        self.assertEqual(metric.compute(), AUROC().update(scores, labels).compute())
+        assert metric.compute() == AUROC().update(scores, labels).compute()
 
     def test_compute_is_repeatable_and_update_continues(self):
         batches = _batches()
         metric = OODMetrics()
         metric.update(*batches[0])
         first = metric.compute()
-        self.assertEqual(metric.compute(), first)
+        assert metric.compute() == first
         for batch in batches[1:]:
             metric.update(*batch)
-        self.assertEqual(metric.compute(), OODMetrics().update(*_cat(batches)).compute())
+        assert metric.compute() == OODMetrics().update(*_cat(batches)).compute()
 
     def test_reset(self):
         batches = _batches()
@@ -152,29 +144,29 @@ class TestMetricUpdates(unittest.TestCase):
                 )
                 metric.update(*args(batches[0]))
                 metric.reset()
-                with self.assertRaises(ValueError):
+                with pytest.raises(ValueError):
                     metric.compute()
                 metric.update(*args(batches[1]))
                 fresh = type(metric)().update(*args(batches[1]))
-                self.assertEqual(metric.compute(), fresh.compute())
+                assert metric.compute() == fresh.compute()
 
     def test_inputs_are_not_modified_and_detached(self):
         scores = torch.randn(10, requires_grad=True)
         labels = torch.tensor([0] * 5 + [-1] * 5)
         metric = AUROC().update(scores, labels)
-        self.assertFalse(metric._buffers["scores"][0].requires_grad)
-        self.assertIsInstance(metric.compute()["AUROC"], float)
+        assert not metric._buffers["scores"][0].requires_grad
+        assert isinstance(metric.compute()["AUROC"], float)
 
     def test_labels_and_predictions_stored_as_int32(self):
         scores, labels, predictions = _cat(_batches())
         collection = OODMetrics().update(scores, labels.double(), predictions)
-        self.assertEqual(collection._buffers["labels"][0].dtype, torch.int32)
-        self.assertEqual(collection._buffers["scores"][0].dtype, scores.dtype)
+        assert collection._buffers["labels"][0].dtype == torch.int32
+        assert collection._buffers["scores"][0].dtype == scores.dtype
         # class indices beyond the range of int16: the wrong prediction equals the label modulo
         # 2^16, so a 16-bit cast would count it as correct
         labels = torch.tensor([70000, 40000])
         predictions = torch.tensor([70000 - 2**16, 40000])
-        self.assertEqual(Accuracy().update(predictions, labels).compute()["ACC"], 0.5)
+        assert Accuracy().update(predictions, labels).compute()["ACC"] == 0.5
 
     def test_accuracy_counts_beyond_float32_precision(self):
         # float32 counts are exact only up to 2^24
@@ -185,9 +177,9 @@ class TestMetricUpdates(unittest.TestCase):
         metric = Accuracy()
         for _ in range(2):
             metric.update(predictions, labels)
-        self.assertEqual(int(metric._correct), 2 * (n - 1))
-        self.assertEqual(int(metric._total), 2 * n)
-        self.assertEqual(metric.compute()["ACC"], (n - 1) / n)
+        assert int(metric._correct) == 2 * (n - 1)
+        assert int(metric._total) == 2 * n
+        assert metric.compute()["ACC"] == (n - 1) / n
 
     def test_buffered_inputs_do_not_share_memory_with_inputs(self):
         scores, labels, predictions = _cat(_batches())
@@ -201,43 +193,43 @@ class TestMetricUpdates(unittest.TestCase):
                 metric.update(*given)
                 for tensor in given:
                     tensor.fill_(0)
-                self.assertEqual(metric.compute(), expected)
+                assert metric.compute() == expected
 
     def test_device_and_void_label_are_keyword_only(self):
         for metric_cls in (AUROC, AUTC, Accuracy, OODMetrics):
             with self.subTest(metric_cls.__name__):
-                with self.assertRaises(TypeError):
+                with pytest.raises(TypeError):
                     metric_cls("cpu")
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             AUPR("id", "cpu")
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             AveragePrecision("id", "cpu")
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             FPRAtTPR(0.95, "cpu")
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             MetricCollection([AUROC()], "cpu")
 
     def test_unknown_input_raises(self):
         scores, labels, _ = _cat(_batches())
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             AUROC().update(scores=scores, labels=labels, logits=scores)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             AUROC().update(scores, labels, scores)
 
     def test_float_labels(self):
         scores, labels, _ = _cat(_batches())
-        self.assertEqual(
-            AUROC().update(scores, labels.float()).compute(),
-            AUROC().update(scores, labels).compute(),
+        assert (
+            AUROC().update(scores, labels.float()).compute()
+            == AUROC().update(scores, labels).compute()
         )
 
     def test_nan_scores_raise(self):
         metric = OODMetrics().update(torch.tensor([0.0, float("nan")]), torch.tensor([0, -1]))
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             metric.compute()
 
 
-class TestVoidLabel(unittest.TestCase):
+class TestVoidLabel:
     def _batch(self):
         # ID label 1 with low scores, OOD with high scores, void label 0 with the highest scores
         scores = torch.tensor([0.0, 0.1, 0.2, 1.0, 1.1, 1.2, 2.0, 2.1])
@@ -248,58 +240,58 @@ class TestVoidLabel(unittest.TestCase):
     def test_excludes_void_entries(self):
         scores, labels, predictions = self._batch()
         result = OODMetrics(void_label=0).update(scores, labels, predictions).compute()
-        self.assertEqual(result["AUROC"], 1.0)
-        self.assertEqual(result["FPR95TPR"], 0.0)
-        self.assertEqual(result["ACC"], 1.0)
+        assert result["AUROC"] == 1.0
+        assert result["FPR95TPR"] == 0.0
+        assert result["ACC"] == 1.0
         # without the void label, the void samples count as ID with the highest scores
-        self.assertLess(OODMetrics().update(scores, labels).compute()["AUROC"], 1.0)
+        assert OODMetrics().update(scores, labels).compute()["AUROC"] < 1.0
 
     def test_single_metrics(self):
         scores, labels, predictions = self._batch()
-        self.assertEqual(AUROC(void_label=0).update(scores, labels).compute()["AUROC"], 1.0)
+        assert AUROC(void_label=0).update(scores, labels).compute()["AUROC"] == 1.0
         for positive, key in (("ood", "AP-OUT"), ("id", "AP-IN")):
             metric = AveragePrecision(positive, void_label=0).update(scores, labels)
-            self.assertEqual(metric.compute()[key], 1.0)
+            assert metric.compute()[key] == 1.0
             # the void samples count as ID with the highest scores otherwise
-            self.assertLess(AveragePrecision(positive).update(scores, labels).compute()[key], 1)
-        self.assertEqual(Accuracy(void_label=0).update(predictions, labels).compute()["ACC"], 1.0)
+            assert AveragePrecision(positive).update(scores, labels).compute()[key] < 1
+        assert Accuracy(void_label=0).update(predictions, labels).compute()["ACC"] == 1.0
 
     def test_only_void_raises(self):
         metric = OODMetrics(void_label=3).update(torch.zeros(4), torch.full((4,), 3))
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             metric.compute()
 
     def test_only_one_class_after_removing_void_raises(self):
         metric = OODMetrics(void_label=3).update(torch.arange(4.0), torch.tensor([3, 3, 0, 0]))
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             metric.compute()
 
     def test_negative_void_label_raises(self):
         for cls in (AUROC, AveragePrecision, Accuracy, OODMetrics):
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 cls(void_label=-1)
 
 
-class TestDevices(unittest.TestCase):
+class TestDevices:
     def test_default_keeps_device_of_first_input(self):
         scores, labels, _ = _cat(_batches())
         metric = AUROC().update(scores, labels)
-        self.assertEqual(metric._buffers["scores"][0].device.type, "cpu")
+        assert metric._buffers["scores"][0].device.type == "cpu"
 
     def test_explicit_cpu(self):
         scores, labels, _ = _cat(_batches())
         metric = AUROC(device="cpu").update(scores, labels)
-        self.assertEqual(metric._buffers["labels"][0].device.type, "cpu")
+        assert metric._buffers["labels"][0].device.type == "cpu"
 
     @requires(cuda=1)
     def test_mixed_devices_in_one_update(self):
         scores, labels, predictions = _cat(_batches())
         expected = OODMetrics().update(scores, labels, predictions).compute()
         metric = OODMetrics().update(scores.cuda(), labels, predictions)
-        self.assertEqual(metric._buffers["labels"][0].device.type, "cuda")
+        assert metric._buffers["labels"][0].device.type == "cuda"
         result = metric.compute()
         for key in expected:
-            self.assertAlmostEqual(result[key], expected[key], places=12, msg=key)
+            assert result[key] == pytest.approx(expected[key], abs=5e-13), key
 
     @requires(cuda=1)
     def test_devices_across_updates(self):
@@ -308,27 +300,25 @@ class TestDevices(unittest.TestCase):
         metric.update(*(t.cuda() for t in batches[0]))
         for batch in batches[1:]:
             metric.update(*batch)
-        self.assertTrue(all(t.device.type == "cuda" for t in metric._buffers["scores"]))
+        assert all(t.device.type == "cuda" for t in metric._buffers["scores"])
         expected = OODMetrics().update(*_cat(batches)).compute()
         for key, value in metric.compute().items():
-            self.assertAlmostEqual(value, expected[key], places=12, msg=key)
+            assert value == pytest.approx(expected[key], abs=5e-13), key
 
     @requires(cuda=1)
     def test_explicit_device_wins(self):
         scores, labels, _ = _cat(_batches())
         metric = AUROC(device="cpu").update(scores.cuda(), labels.cuda())
-        self.assertEqual(metric._buffers["scores"][0].device.type, "cpu")
+        assert metric._buffers["scores"][0].device.type == "cpu"
         metric = AUROC(device="cuda").update(scores, labels)
-        self.assertEqual(metric._buffers["scores"][0].device.type, "cuda")
+        assert metric._buffers["scores"][0].device.type == "cuda"
         metric = AveragePrecision(device="cpu").update(scores.cuda(), labels.cuda())
-        self.assertEqual(metric._buffers["scores"][0].device.type, "cpu")
+        assert metric._buffers["scores"][0].device.type == "cpu"
         metric = AveragePrecision(device="cuda").update(scores, labels)
-        self.assertEqual(metric._buffers["scores"][0].device.type, "cuda")
-        self.assertEqual(metric._compute()["AP-OUT"].device.type, "cuda")
-        self.assertAlmostEqual(
-            metric.compute()["AP-OUT"],
-            AveragePrecision().update(scores, labels).compute()["AP-OUT"],
-            places=12,
+        assert metric._buffers["scores"][0].device.type == "cuda"
+        assert metric._compute()["AP-OUT"].device.type == "cuda"
+        assert metric.compute()["AP-OUT"] == pytest.approx(
+            AveragePrecision().update(scores, labels).compute()["AP-OUT"], abs=5e-13
         )
 
     @requires(cuda=1)
@@ -337,14 +327,14 @@ class TestDevices(unittest.TestCase):
         metric = AUROC().update(scores.cuda(), labels)
         metric.reset()
         metric.update(scores, labels)
-        self.assertEqual(metric._buffers["scores"][0].device.type, "cpu")
+        assert metric._buffers["scores"][0].device.type == "cpu"
 
     @requires(cuda=1)
     def test_accuracy_on_cuda(self):
         _, labels, predictions = _cat(_batches())
         metric = Accuracy().update(predictions.cuda(), labels)
-        self.assertEqual(metric._correct.device.type, "cuda")
-        self.assertEqual(metric.compute(), Accuracy().update(predictions, labels).compute())
+        assert metric._correct.device.type == "cuda"
+        assert metric.compute() == Accuracy().update(predictions, labels).compute()
 
 
 class TestCollection(unittest.TestCase):
@@ -363,11 +353,15 @@ class TestCollection(unittest.TestCase):
         ):
             expected.update(metric_cls().update(scores, labels).compute())
         expected.update(Accuracy().update(predictions, labels).compute())
-        self.assertEqual(collection.compute(), expected)
-        self.assertEqual(
-            list(collection.compute()),
-            ["AUROC", "AUPR-OUT", "AP-IN", "FPR90TPR", "AUTC", "ACC"],
-        )
+        assert collection.compute() == expected
+        assert list(collection.compute()) == [
+            "AUROC",
+            "AUPR-OUT",
+            "AP-IN",
+            "FPR90TPR",
+            "AUTC",
+            "ACC",
+        ]
 
     def test_each_input_stored_once_per_update(self):
         batches = _batches(n_batches=3, size=64)
@@ -375,14 +369,14 @@ class TestCollection(unittest.TestCase):
         for scores, labels, predictions in batches:
             collection.update(scores, labels, predictions)
         for name in ("scores", "labels"):
-            self.assertEqual(len(collection._buffers[name]), 3)
-            self.assertEqual(sum(t.numel() for t in collection._buffers[name]), 3 * 64)
+            assert len(collection._buffers[name]) == 3
+            assert sum(t.numel() for t in collection._buffers[name]) == 3 * 64
         first = collection.compute()
         # the concatenation is kept for later calls of compute
         for name in ("scores", "labels"):
-            self.assertEqual(len(collection._buffers[name]), 1)
-            self.assertEqual(collection._buffers[name][0].numel(), 3 * 64)
-        self.assertEqual(collection.compute(), first)
+            assert len(collection._buffers[name]) == 1
+            assert collection._buffers[name][0].numel() == 3 * 64
+        assert collection.compute() == first
 
     def test_reset_resets_members(self):
         scores, labels, predictions = _cat(_batches())
@@ -400,17 +394,17 @@ class TestCollection(unittest.TestCase):
                     collection.update(*args(wrong))
                     collection.reset()
                     collection.update(*args(labels.clamp(min=0)))
-                self.assertEqual(collection.compute()["ACC"], 1.0)
+                assert collection.compute()["ACC"] == 1.0
 
     def test_failed_update_changes_nothing(self):
         scores, labels, predictions = _cat(_batches())
         collection = OODMetrics()
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             collection.update(scores, labels, predictions[:-1])
         # the failed call must not have committed to passing predictions
         result = collection.update(scores, labels).compute()
-        self.assertNotIn("ACC", result)
-        self.assertEqual(result, OODMetrics().update(scores, labels).compute())
+        assert "ACC" not in result
+        assert result == OODMetrics().update(scores, labels).compute()
 
     def test_inputs_buffered_once(self):
         scores, labels, predictions = _cat(_batches())
@@ -419,10 +413,10 @@ class TestCollection(unittest.TestCase):
         )
         collection.update(scores=scores, labels=labels, predictions=predictions)
         # only the inputs of the buffered metrics, each once; predictions only feed the accuracy
-        self.assertEqual(set(collection._buffers), {"scores", "labels"})
+        assert set(collection._buffers) == {"scores", "labels"}
         for metric in collection.metrics:
             if hasattr(metric, "_buffers"):
-                self.assertTrue(all(not values for values in metric._buffers.values()))
+                assert all(not values for values in metric._buffers.values())
 
     def test_curve_computed_once(self):
         # every curve sorts the scores, so one sort means one curve, whichever code path
@@ -431,80 +425,78 @@ class TestCollection(unittest.TestCase):
         collection = OODMetrics().update(scores, labels, predictions)
         with mock.patch("torch.argsort", wraps=torch.argsort) as argsort:
             collection.compute()
-        self.assertEqual(argsort.call_count, 1)
+        assert argsort.call_count == 1
         collection = MetricCollection(
             [AUROC(), AveragePrecision("id"), AveragePrecision("ood"), AUPR("ood"), FPRAtTPR()]
         ).update(scores=scores, labels=labels)
         with mock.patch("torch.argsort", wraps=torch.argsort) as argsort:
             collection.compute()
-        self.assertEqual(argsort.call_count, 1)
+        assert argsort.call_count == 1
         # AUROC and FPR95TPR share the ROC curve, which is computed on first use
         counts = F._counts(scores, labels)
-        self.assertIs(F._roc(counts), F._roc(counts))
+        assert F._roc(counts) is F._roc(counts)
 
     def test_streaming_members_store_counts_only(self):
         _, labels, predictions = _cat(_batches())
         collection = MetricCollection([Accuracy()])
         for _ in range(3):
             collection.update(predictions=predictions, labels=labels)
-        self.assertEqual(collection._buffers, {})
-        self.assertEqual(collection.metrics[0]._correct.numel(), 1)
+        assert collection._buffers == {}
+        assert collection.metrics[0]._correct.numel() == 1
 
     def test_missing_input_raises(self):
         scores, labels, _ = _cat(_batches())
         collection = MetricCollection([AUROC(), Accuracy()])
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             collection.update(scores=scores, labels=labels)
 
     def test_invalid_construction(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             MetricCollection([])
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             MetricCollection([AUROC(), AUROC()])
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             MetricCollection([FPRAtTPR(0.95), FPRAtTPR(0.95)])
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             MetricCollection([MetricCollection([AUROC()])])
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             MetricCollection([AUROC(device="cpu")])
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             MetricCollection([AUROC(void_label=1)])
 
     def test_invalid_update(self):
         scores, labels, _ = _cat(_batches())
         collection = MetricCollection([AUROC()])
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             collection.update(scores, labels)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             collection.update(scores=scores, labels=labels, logits=scores)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             collection.update(scores=scores, labels=labels[:-1])
 
     def test_defaults(self):
-        self.assertEqual(AUPR().keys, ("AUPR-OUT",))
-        self.assertEqual(AveragePrecision().keys, ("AP-OUT",))
-        self.assertEqual(FPRAtTPR().keys, ("FPR95TPR",))
+        assert AUPR().keys == ("AUPR-OUT",)
+        assert AveragePrecision().keys == ("AP-OUT",)
+        assert FPRAtTPR().keys == ("FPR95TPR",)
 
     def test_keys(self):
-        self.assertEqual(FPRAtTPR(0.95).keys, ("FPR95TPR",))
-        self.assertEqual(FPRAtTPR(0.9).keys, ("FPR90TPR",))
-        self.assertEqual(FPRAtTPR(0.925).keys, ("FPR92.5TPR",))
-        self.assertEqual(AUPR("id").keys, ("AUPR-IN",))
-        self.assertEqual(AUPR("ood").keys, ("AUPR-OUT",))
-        self.assertEqual(AveragePrecision("id").keys, ("AP-IN",))
-        self.assertEqual(AveragePrecision("ood").keys, ("AP-OUT",))
-        self.assertEqual(
-            OODMetrics().keys, ("AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR", "ACC")
-        )
-        self.assertEqual(OODMetrics(fpr_at=0.9).keys[4], "FPR90TPR")
+        assert FPRAtTPR(0.95).keys == ("FPR95TPR",)
+        assert FPRAtTPR(0.9).keys == ("FPR90TPR",)
+        assert FPRAtTPR(0.925).keys == ("FPR92.5TPR",)
+        assert AUPR("id").keys == ("AUPR-IN",)
+        assert AUPR("ood").keys == ("AUPR-OUT",)
+        assert AveragePrecision("id").keys == ("AP-IN",)
+        assert AveragePrecision("ood").keys == ("AP-OUT",)
+        assert OODMetrics().keys == ("AUROC", "AUTC", "AUPR-IN", "AUPR-OUT", "FPR95TPR", "ACC")
+        assert OODMetrics(fpr_at=0.9).keys[4] == "FPR90TPR"
 
     def test_invalid_parameters(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             AUPR("out")
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             AveragePrecision("out")
         for tpr in (-0.1, 1.1, 95):
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 FPRAtTPR(tpr)
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 OODMetrics(fpr_at=tpr)
