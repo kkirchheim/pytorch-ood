@@ -48,7 +48,7 @@ def _requires_grad(params: List[Tensor]):
 
 def _loss_against_confounding_label(logits: Tensor) -> Tensor:
     """Binary cross-entropy between the softmax output and a label of all ones."""
-    # not F.binary_cross_entropy(softmax, ones), whose gradient is exactly 0 once the softmax rounds to 1
+    # not F.binary_cross_entropy(softmax, ones): the gradient vanishes for softmax values below its 1e-12 clamp
     return -logits.log_softmax(dim=1).sum()
 
 

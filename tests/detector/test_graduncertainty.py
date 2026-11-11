@@ -29,8 +29,8 @@ class TestGradUncertainty(unittest.TestCase):
         heads = {
             "random": torch.nn.Linear(16, 5),
             "uniform": _linear_head(torch.zeros(5)),
-            # the largest softmax value rounds to 1 at these margins
             "margin 20": _linear_head(torch.tensor([20.0, 0.0, 0.0, 0.0, 0.0])),
+            # the other softmax values are below the 1e-12 clamp of binary cross-entropy
             "margin 40": _linear_head(torch.tensor([40.0, 0.0, 0.0, 0.0, 0.0])),
         }
         for name, head in heads.items():
