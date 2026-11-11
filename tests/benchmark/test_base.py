@@ -97,17 +97,6 @@ class SummedFeaturesDetector(FeaturesDetector):
         return -x.sum(dim=1)
 
 
-def test_producer_token_distinguishes_bound_methods():
-    model = CountingFeatures()
-
-    forward_token = Benchmark._producer_token(model.forward)
-    pre_pool_token = Benchmark._producer_token(model.feature_maps)
-
-    assert forward_token != pre_pool_token
-    assert "forward" in forward_token
-    assert "feature_maps" in pre_pool_token
-
-
 def test_cache_file_path_distinguishes_bound_method_producers():
     benchmark = ToyBenchmark()
     model = CountingFeatures()

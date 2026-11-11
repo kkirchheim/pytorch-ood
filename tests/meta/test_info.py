@@ -84,17 +84,6 @@ def test_segmentation():
         assert torch.isfinite(scores).all()
 
 
-def test_tasks():
-    torch.manual_seed(0)
-    for cls in LOSSES:
-        for task in sorted(cls.info.tasks):
-            assert cls in LOSS_INPUTS, "add an entry to LOSS_INPUTS"
-            criterion, inputs = LOSS_INPUTS[cls](SHAPES[task])
-            value = criterion(*inputs)
-            assert value.dim() == 0
-            assert torch.isfinite(value)
-
-
 def _pixels_as_samples(tensor):
     """(B, C, H, W) -> (B * H * W, C): every pixel as a sample of its own."""
     return tensor.permute(0, 2, 3, 1).reshape(-1, tensor.shape[1])

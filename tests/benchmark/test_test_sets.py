@@ -30,7 +30,7 @@ def _benchmark(cls):
     """A benchmark object whose datasets are the stand-ins above."""
     bench = object.__new__(cls)
     if issubclass(cls, CUB_SSB):
-        bench._train_id, bench._test_id = TRAIN, TEST
+        bench._train, bench._test_id = TRAIN, TEST
         bench._test_easy, bench._test_hard = OODS
     else:
         bench.train_in, bench.test_in, bench.test_oods = TRAIN, TEST, OODS
@@ -46,6 +46,11 @@ BENCHMARKS = (
     MIDOG_OpenMIBOOD,
     CUB_SSB,
 )
+
+
+@pytest.mark.parametrize("cls", BENCHMARKS)
+def test_train_set_is_the_id_training_set(cls):
+    assert _benchmark(cls).train_set() is TRAIN
 
 
 @pytest.mark.parametrize("cls", BENCHMARKS)

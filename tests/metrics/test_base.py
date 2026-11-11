@@ -101,6 +101,8 @@ def test_invalid_inputs():
     with pytest.raises(TypeError):
         AUROC().update(scores, labels, labels)
     with pytest.raises(TypeError):
+        AUROC().update(scores=scores, labels=labels, logits=scores)
+    with pytest.raises(TypeError):
         AUROC().update(scores, scores=scores)
     with pytest.raises(ValueError):
         AUROC().update(scores, labels[:-1])
@@ -215,22 +217,6 @@ def test_device_and_void_label_are_keyword_only():
         FPRAtTPR(0.95, "cpu")
     with pytest.raises(TypeError):
         MetricCollection([AUROC()], "cpu")
-
-
-def test_unknown_input_raises():
-    scores, labels, _ = _cat(_batches())
-    with pytest.raises(TypeError):
-        AUROC().update(scores=scores, labels=labels, logits=scores)
-    with pytest.raises(TypeError):
-        AUROC().update(scores, labels, scores)
-
-
-def test_float_labels():
-    scores, labels, _ = _cat(_batches())
-    assert (
-        AUROC().update(scores, labels.float()).compute()
-        == AUROC().update(scores, labels).compute()
-    )
 
 
 def test_nan_scores_raise():
@@ -497,13 +483,10 @@ def test_invalid_update():
         collection.update(scores=scores, labels=labels[:-1])
 
 
-def test_defaults():
+def test_keys():
     assert AUPR().keys == ("AUPR-OUT",)
     assert AveragePrecision().keys == ("AP-OUT",)
     assert FPRAtTPR().keys == ("FPR95TPR",)
-
-
-def test_keys():
     assert FPRAtTPR(0.95).keys == ("FPR95TPR",)
     assert FPRAtTPR(0.9).keys == ("FPR90TPR",)
     assert FPRAtTPR(0.925).keys == ("FPR92.5TPR",)

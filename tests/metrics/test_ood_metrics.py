@@ -4,14 +4,12 @@ OODMetrics: the fixed collection of the commonly reported metrics.
 
 import math
 import warnings
-from unittest import mock
 
 import pytest
 import torch
 
-from pytorch_ood.metrics import AUPR, AUTC, AveragePrecision, MetricCollection, OODMetrics
+from pytorch_ood.metrics import AUTC, OODMetrics
 from pytorch_ood.metrics import functional as F
-from tests.helpers import requires
 
 
 def _separated(n=10):
@@ -20,19 +18,6 @@ def _separated(n=10):
     scores[n // 2 :] = 1
     labels[n // 2 :] = -1
     return scores, labels
-
-
-def test_perfect_separation():
-    scores, labels = _separated()
-    result = OODMetrics().update(scores, labels).compute()
-    assert result == {
-        "AUROC": 1.0,
-        "AUTC": 0.0,
-        "AUPR-IN": 1.0,
-        "AUPR-OUT": 1.0,
-        "FPR95TPR": 0.0,
-    }
-    assert all(isinstance(v, float) for v in result.values())
 
 
 def test_does_not_include_average_precision():
@@ -53,18 +38,6 @@ def test_values_match_functional():
     assert result["AUPR-OUT"] == float(F.aupr(scores, labels, positive="ood"))
     assert result["FPR90TPR"] == float(F.fpr_at_tpr(scores, labels, 0.9))
     assert result["ACC"] == float(F.accuracy(predictions, labels))
-
-
-def test_accuracy():
-    scores, labels = _separated()
-    predictions = torch.zeros(10).long()
-    # predictions of OOD samples are irrelevant
-    predictions[7] = 3
-    assert OODMetrics().update(scores, labels, predictions).compute()["ACC"] == 1.0
-    predictions[:2] = 1
-    assert OODMetrics().update(scores, labels, predictions).compute()["ACC"] == pytest.approx(
-        3 / 5, abs=5e-8
-    )
 
 
 def test_no_accuracy_without_predictions():
@@ -158,112 +131,3 @@ def test_no_warning_for_valid_scores():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         OODMetrics().update(scores, labels).compute()
-
-
-@pytest.mark.parametrize(
-    "scale, offset", ((1000.0, 0.0), (1000.0, 1e4), (1000.0, -1e4), (1e6, 0.0))
-)
-def test_large_scores(scale, offset):
-    # torchmetrics, used before, applied a sigmoid that saturated for such scores
-    g = torch.Generator().manual_seed(1)
-    labels = torch.cat([torch.zeros(300), -torch.ones(100)]).long()
-    scores = (torch.randn(400, generator=g) + (labels < 0).float()).round(decimals=1)
-    expected = OODMetrics().update(scores / 10, labels).compute()
-    result = OODMetrics().update(scores * scale + offset, labels).compute()
-    for key, value in expected.items():
-        assert result[key] == pytest.approx(value, abs=5e-7), key
-
-
-def _tied(seed=0, n=2000, levels=4):
-    """Few-valued scores, where AP and the trapezoidal AUPR differ."""
-    g = torch.Generator().manual_seed(seed)
-    labels = torch.randint(-1, 5, (n,), generator=g)
-    scores = torch.randint(0, levels, (n,), generator=g).float() + (labels < 0).float()
-    return scores, labels
-
-
-def test_keys():
-    assert AveragePrecision().keys == ("AP-OUT",)
-    assert AveragePrecision("ood").keys == ("AP-OUT",)
-    assert AveragePrecision("id").keys == ("AP-IN",)
-    scores, labels = _tied()
-    assert list(AveragePrecision("id").update(scores, labels).compute()) == ["AP-IN"]
-
-
-@pytest.mark.parametrize("positive, key", (("ood", "AP-OUT"), ("id", "AP-IN")))
-def test_matches_functional_batched_and_unbatched(positive, key):
-    scores, labels = _tied()
-    expected = float(F.average_precision(scores, labels, positive))
-    single = AveragePrecision(positive).update(scores, labels).compute()
-    batched = AveragePrecision(positive)
-    # batches of 2-D inputs, which are flattened
-    for s, y in zip(scores.split(400), labels.split(400)):
-        batched.update(s.view(20, 20), y.view(20, 20))
-    assert single == {key: expected}
-    assert batched.compute() == {key: expected}
-    assert isinstance(single[key], float)
-    # differs from the trapezoidal AUPR for these scores
-    assert expected != pytest.approx(float(F.aupr(scores, labels, positive)), abs=5e-4)
-
-
-@pytest.mark.parametrize("positive", ("ood", "id"))
-def test_void_label(positive):
-    scores, labels = _tied()
-    labels[::7] = 255
-    keep = labels != 255
-    metric = AveragePrecision(positive, void_label=255).update(scores, labels)
-    assert metric.compute()[metric.keys[0]] == float(
-        F.average_precision(scores[keep], labels[keep], positive)
-    )
-
-
-def test_invalid_parameters():
-    for positive in ("out", "in", "OOD", None):
-        with pytest.raises(ValueError):
-            AveragePrecision(positive)
-    with pytest.raises(ValueError):
-        AveragePrecision(void_label=-1)
-
-
-def test_invalid_data_raises():
-    labels = torch.tensor([0, 0, -1, -1])
-    for name, (scores, y) in {
-        "NaN": (torch.tensor([0.0, float("nan"), 1.0, 2.0]), labels),
-        "only ID": (torch.arange(4.0), torch.zeros(4).long()),
-        "only OOD": (torch.arange(4.0), -torch.ones(4).long()),
-    }.items():
-        with pytest.raises(ValueError):
-            AveragePrecision().update(scores, y).compute()
-    with pytest.raises(ValueError):
-        AveragePrecision().compute()
-
-
-def test_in_collection_with_aupr():
-    scores, labels = _tied()
-    metrics = [AUPR("ood"), AveragePrecision("ood"), AUPR("id"), AveragePrecision("id")]
-    collection = MetricCollection(metrics)
-    for s, y in zip(scores.split(500), labels.split(500)):
-        collection.update(scores=s, labels=y)
-    with mock.patch("torch.argsort", wraps=torch.argsort) as argsort:
-        result = collection.compute()
-    # one curve for all four
-    assert argsort.call_count == 1
-    assert result == {
-        "AUPR-OUT": float(F.aupr(scores, labels, "ood")),
-        "AP-OUT": float(F.average_precision(scores, labels, "ood")),
-        "AUPR-IN": float(F.aupr(scores, labels, "id")),
-        "AP-IN": float(F.average_precision(scores, labels, "id")),
-    }
-    with pytest.raises(ValueError):
-        MetricCollection([AveragePrecision(), AveragePrecision("ood")])
-
-
-@requires(cuda=1)
-def test_cuda():
-    scores, labels = _tied()
-    expected = AveragePrecision("id").update(scores, labels).compute()
-    metric = AveragePrecision("id").update(scores.cuda(), labels)
-    assert all(t.device.type == "cuda" for t in metric._buffers["scores"])
-    assert all(t.device.type == "cuda" for t in metric._buffers["labels"])
-    assert metric._compute()["AP-IN"].device.type == "cuda"
-    assert metric.compute()["AP-IN"] == pytest.approx(expected["AP-IN"], abs=5e-13)

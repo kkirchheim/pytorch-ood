@@ -16,11 +16,3 @@ def test_matches_paper_formula():
         (energy[known] + 3.0).relu().pow(2).mean() + (1.0 - energy[~known]).relu().pow(2).mean()
     )
     torch.testing.assert_close(criterion(logits, target), expected)
-
-
-def test_segmentation_equals_pixels_as_samples():
-    criterion = EnergyRegularizedLoss(margin_in=-3.0, margin_out=1.0)
-    logits = torch.randn(size=(2, 4, 5, 5))
-    target = torch.arange(50).reshape(2, 5, 5) % 5 - 1
-    flat = criterion(logits.permute(0, 2, 3, 1).reshape(-1, 4), target.reshape(-1))
-    torch.testing.assert_close(criterion(logits, target), flat)

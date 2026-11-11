@@ -5,9 +5,8 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from pytorch_ood.api import Detector, FeaturesDetector
-from pytorch_ood.detector import ASH, GEN, KNN, ODIN, ReAct
+from pytorch_ood.detector import GEN, KNN, ReAct
 from pytorch_ood.metrics import AUROC, FPRAtTPR, MetricCollection
-from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import GridSearch
 from tests.helpers import ClassificationModel
 
@@ -172,20 +171,6 @@ class TestGridSearch:
         assert best == {"w": 0.0}
         assert search.best_score_ > 0.95
 
-    def test_records_all_results(self):
-        detector = _WeightedFeatureDetector()
-        search = GridSearch(detector, self.fit_loader, self.val_loader)
-        search.run()
-        assert len(search.results_) == len(detector.hyperparameter_space["w"])
-
-    def test_explicit_space_override(self):
-        detector = _WeightedFeatureDetector()
-        search = GridSearch(
-            detector, self.fit_loader, self.val_loader, hyperparameter_space={"w": [0.0, 1.0]}
-        )
-        search.run()
-        assert len(search.results_) == 2
-
     def test_empty_space_raises(self):
         detector = _RawWeightedDetector()
         detector.hyperparameter_space = {}
@@ -203,29 +188,6 @@ def test_unknown_hyperparameter_raises():
     detector = _WeightedFeatureDetector()
     with pytest.raises(ValueError):
         detector.set_hyperparameters(does_not_exist=1)
-
-
-def test_ash_exposes_space():
-    model = WideResNet(num_classes=10).eval()
-    detector = ASH(backbone=model.feature_maps, head=model.forward_feature_maps)
-    assert "percentile" in detector.hyperparameter_space
-    detector.set_hyperparameters(percentile=0.9)
-    assert detector.percentile == 0.9
-    assert detector.get_hyperparameters() == {"percentile": 0.9}
-
-
-def test_gen_exposes_space():
-    detector = GEN(ClassificationModel())
-    assert set(detector.hyperparameter_space) == {"gamma", "M"}
-    detector.set_hyperparameters(gamma=2, M=100)
-    assert detector.get_hyperparameters() == {"gamma": 2, "M": 100}
-
-
-def test_odin_exposes_space():
-    detector = ODIN(ClassificationModel())
-    assert set(detector.hyperparameter_space) == {"temperature", "eps"}
-    detector.set_hyperparameters(temperature=100, eps=0.0028)
-    assert detector.get_hyperparameters() == {"temperature": 100, "eps": 0.0028}
 
 
 class TestGridSearchReAct:

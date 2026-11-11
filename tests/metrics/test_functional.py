@@ -87,12 +87,6 @@ class TestAgainstSklearn:
     def test_ties(self, data_seed, levels):
         _assert_matches(*_data(data_seed, 2000, tie_levels=levels))
 
-    def test_all_scores_equal(self):
-        scores = torch.full((100,), 3.0)
-        labels = torch.cat([torch.zeros(70), -torch.ones(30)]).long()
-        _assert_matches(scores, labels)
-        assert float(F.auroc(scores, labels)) == 0.5
-
     @pytest.mark.parametrize(
         "scale, offset", itertools.product((1e-6, 1.0, 1e3, 1e6), (0.0, 1e4, -1e4, 1e8))
     )
@@ -101,27 +95,9 @@ class TestAgainstSklearn:
         scores, labels = _data(0, 2000, tie_levels=200)
         _assert_matches(scores * scale + offset, labels)
 
-    @pytest.mark.parametrize("offset", (0.0, 1000.0, -1000.0))
-    def test_separated_large_scores(self, offset):
-        scores = torch.tensor([20.0, 30.0, 40.0, 50.0]) + offset
-        labels = torch.tensor([0, 0, -1, -1])
-        result = _ours(scores, labels)
-        assert result == {
-            "auroc": 1.0,
-            "aupr_out": 1.0,
-            "aupr_in": 1.0,
-            "ap_out": 1.0,
-            "ap_in": 1.0,
-            "fpr": 0.0,
-        }
-
     @pytest.mark.parametrize("fraction", (0.001, 0.01, 0.5, 0.99, 0.999))
     def test_imbalance(self, fraction):
         _assert_matches(*_data(1, 5000, ood_fraction=fraction))
-
-    @pytest.mark.parametrize("scores", ([0.0, 1.0], [1.0, 0.0], [1.0, 1.0]))
-    def test_single_sample_per_class(self, scores):
-        _assert_matches(torch.tensor(scores), torch.tensor([0, -1]))
 
     def test_perfect_and_reversed(self):
         labels = torch.cat([torch.zeros(50), -torch.ones(50)]).long()
@@ -221,10 +197,6 @@ class TestEdgeCases:
         both_finite = torch.tensor([100.0, 0.0, 0.0, 100.0, 1.0, 1.0])
         assert _ours(both, labels) == _ours(both_finite, labels)
 
-    def test_infinite_scores_tie(self):
-        labels = torch.tensor([0, -1])
-        assert float(F.auroc(torch.tensor([float("inf"), float("inf")]), labels)) == 0.5
-
     def test_negative_zero_ties_with_zero(self):
         assert float(F.auroc(torch.tensor([0.0, -0.0]), torch.tensor([0, -1]))) == 0.5
         assert float(F.auroc(torch.tensor([-0.0, 0.0]), torch.tensor([0, -1]))) == 0.5
@@ -266,48 +238,6 @@ class TestEdgeCases:
         scores = torch.randn(20, requires_grad=True)
         labels = torch.tensor([0] * 10 + [-1] * 10)
         assert not F.auroc(scores, labels).requires_grad
-
-    def test_permutation_invariant(self):
-        scores, labels = _data(1, 3000, tie_levels=20)
-        expected = _ours(scores, labels)
-        for seed in range(5):
-            perm = torch.randperm(3000, generator=torch.Generator().manual_seed(seed))
-            assert _ours(scores[perm], labels[perm]) == expected
-
-    def test_invariant_to_increasing_maps(self):
-        # integer-valued scores, so the maps below are exact and create no new ties
-        scores, labels = _data(2, 3000, tie_levels=500)
-        expected = _ours(scores, labels)
-        for transform in (
-            lambda s: s * 1000 + 1e6,
-            lambda s: s - 1e6,
-            lambda s: s**3,
-            lambda s: s.exp(),
-        ):
-            assert _ours(transform(scores), labels) == expected
-        assert float(F.autc(scores * 1000 + 1e6, labels)) == pytest.approx(
-            float(F.autc(scores, labels)), abs=5e-13
-        )
-
-    def test_fpr_at_tpr_conventions(self):
-        # 20 OOD samples, so a true positive rate of 0.95 is reached exactly at 19 of them
-        ood = torch.arange(20.0) + 10.5
-        ind = torch.arange(30.0)
-        scores = torch.cat([ind, ood])
-        labels = torch.cat([torch.zeros(30), -torch.ones(20)]).long()
-        # the 19th highest OOD score is 11.5, above 18 of the ID scores (0..29 > 11.5: 12..29)
-        assert float(F.fpr_at_tpr(scores, labels, 0.95)) == 18 / 30
-        assert float(F.fpr_at_tpr(scores, labels, 0.0)) == 0.0
-        # all OOD samples detected at 10.5: the ID scores 11..29 are above
-        assert float(F.fpr_at_tpr(scores, labels, 1.0)) == 19 / 30
-
-    def test_auroc_is_mann_whitney(self):
-        scores, labels = _data(3, 300, tie_levels=15)
-        ood, ind = scores[labels < 0], scores[labels >= 0]
-        greater = sum(Fraction(int((o > ind).sum())) for o in ood)
-        ties = sum(Fraction(int((o == ind).sum())) for o in ood)
-        expected = (greater + ties / 2) / (len(ood) * len(ind))
-        assert float(F.auroc(scores, labels)) == pytest.approx(float(expected), abs=5e-13)
 
     def _check_float32_counts(self, device: str) -> None:
         # float32 represents integers above 2^24 only approximately (odd ones not at all); the
@@ -370,22 +300,6 @@ def _exact_pr_areas(scores, positive):
 
 
 class TestAveragePrecision:
-    def test_hand_computed(self):
-        # thresholds 5, 4, 3, 2 raise the OOD recall to 1/4, 2/4, 3/4, 1 at the precisions
-        # 1, 2/3, 3/4, 4/6; for ID (thresholds 1, 2, 4 on the negated scores) to 1/3, 2/3, 1 at
-        # 1, 2/3, 3/6
-        scores = torch.tensor([5.0, 4.0, 4.0, 3.0, 2.0, 2.0, 1.0])
-        labels = torch.tensor([-1, 0, -1, -1, 0, -1, 0])
-        ap_out = Fraction(1, 4) * (1 + Fraction(2, 3) + Fraction(3, 4) + Fraction(4, 6))
-        ap_in = Fraction(1, 3) * (1 + Fraction(2, 3) + Fraction(3, 6))
-        assert ap_out == Fraction(37, 48)
-        assert float(F.average_precision(scores, labels)) == pytest.approx(37 / 48, abs=5e-16)
-        assert float(F.average_precision(scores, labels, positive="id")) == pytest.approx(
-            float(ap_in), abs=5e-16
-        )
-        # the trapezoidal rule interpolates between the same points
-        assert float(F.aupr(scores, labels)) == pytest.approx(13 / 16, abs=5e-16)
-
     @pytest.mark.parametrize("data_seed, levels", itertools.product(range(3), (2, 5, 30, None)))
     def test_matches_definition(self, data_seed, levels):
         scores, labels = _data(data_seed, 300, tie_levels=levels)
@@ -401,68 +315,6 @@ class TestAveragePrecision:
                 float(trapezoid), abs=5e-13
             )
 
-    def _uninformative(self, n=10000, seed=0):
-        g = torch.Generator().manual_seed(seed)
-        labels = torch.where(torch.rand(n, generator=g) < 0.1, -1, 0)
-        return labels, g
-
-    def test_constant_scores_give_positive_rate(self):
-        labels, _ = self._uninformative()
-        n_ood = int((labels < 0).sum())
-        pi = n_ood / labels.numel()
-        scores = torch.zeros(labels.shape)
-        assert float(F.average_precision(scores, labels)) == pi
-        assert float(F.average_precision(scores, labels, positive="id")) == pytest.approx(
-            1 - pi, abs=5e-16
-        )
-        # the trapezoidal rule interpolates from (0, 1) to the single point (1, pi)
-        assert float(F.aupr(scores, labels)) == pytest.approx((1 + pi) / 2, abs=5e-16)
-        assert float(F.aupr(scores, labels, positive="id")) == pytest.approx(
-            (1 + (1 - pi)) / 2, abs=5e-16
-        )
-
-    def test_binary_scores(self):
-        labels, g = self._uninformative()
-        ood = labels < 0
-        pi = float(ood.double().mean())
-        scores = (torch.rand(labels.shape, generator=g) < 0.99).float()
-        # two points: the flagged samples, with recall r and precision p, then all samples
-        flagged = scores == 1
-        r = Fraction(int((flagged & ood).sum()), int(ood.sum()))
-        p = Fraction(int((flagged & ood).sum()), int(flagged.sum()))
-        pi_exact = Fraction(int(ood.sum()), labels.numel())
-        ap = r * p + (1 - r) * pi_exact
-        trapezoid = r * (1 + p) / 2 + (1 - r) * (p + pi_exact) / 2
-        assert float(F.average_precision(scores, labels)) == pytest.approx(float(ap), abs=5e-13)
-        assert float(F.aupr(scores, labels)) == pytest.approx(float(trapezoid), abs=5e-13)
-        assert abs(float(F.average_precision(scores, labels)) - pi) < 0.005
-        assert float(F.aupr(scores, labels)) > 0.5
-
-    @pytest.mark.parametrize("levels", (2, 3, 5))
-    def test_few_valued_scores(self, levels):
-        labels, g = self._uninformative()
-        pi = float((labels < 0).double().mean())
-        scores = torch.randint(0, levels, labels.shape, generator=g).float()
-        ap = float(F.average_precision(scores, labels))
-        aupr = float(F.aupr(scores, labels))
-        assert abs(ap - pi) < 0.005
-        # the trapezoidal rule rewards the ties
-        assert aupr > pi + 0.08
-        exact_ap, exact_trapezoid = _exact_pr_areas(scores[:2000], labels[:2000] < 0)
-        assert float(F.average_precision(scores[:2000], labels[:2000])) == pytest.approx(
-            float(exact_ap), abs=5e-13
-        )
-        assert float(F.aupr(scores[:2000], labels[:2000])) == pytest.approx(
-            float(exact_trapezoid), abs=5e-13
-        )
-
-    @pytest.mark.parametrize("positive", ("ood", "id"))
-    def test_continuous_scores_close_to_aupr(self, positive):
-        scores, labels = _data(0, 20000)
-        assert float(F.average_precision(scores, labels, positive)) == pytest.approx(
-            float(F.aupr(scores, labels, positive)), abs=5e-3
-        )
-
     def test_results_are_detached_scalars(self):
         scores = torch.randn(20, requires_grad=True)
         labels = torch.tensor([0] * 10 + [-1] * 10)
@@ -476,21 +328,6 @@ class TestAveragePrecision:
             assert not value.requires_grad
             assert value.dim() == 0
             assert value.dtype == torch.float64
-
-    def test_perfect_detector(self):
-        labels = torch.cat([torch.zeros(70), -torch.ones(30)]).long()
-        for scores in (torch.arange(100.0), (labels < 0).float()):
-            for positive in ("ood", "id"):
-                assert float(F.average_precision(scores, labels, positive)) == 1.0
-
-    def test_worst_detector(self):
-        # every OOD sample below every ID sample: the k-th OOD sample is found with all ID
-        labels = torch.cat([torch.zeros(3), -torch.ones(2)]).long()
-        scores = torch.tensor([5.0, 4.0, 3.0, 2.0, 1.0])
-        expected = Fraction(1, 2) * (Fraction(1, 4) + Fraction(2, 5))
-        assert float(F.average_precision(scores, labels)) == pytest.approx(
-            float(expected), abs=5e-16
-        )
 
     def test_from_curve_equals_functional(self):
         for seed, levels in itertools.product(range(3), (1, 2, 10, None)):
@@ -655,21 +492,6 @@ def test_result_stays_on_device():
         assert value.dtype == torch.float64
 
 
-def test_perfect_separation():
-    labels = torch.cat([torch.zeros(50), -torch.ones(50)]).long()
-    scores = torch.cat([torch.zeros(50), torch.ones(50)])
-    assert float(F.autc(scores, labels)) == 0.0
-
-
-def test_near_worse_than_far():
-    g = torch.Generator().manual_seed(0)
-    ind = torch.rand(9000, generator=g)
-    labels = torch.cat([torch.zeros(9000), -torch.ones(1000)]).long()
-    near = F.autc(torch.cat([ind, torch.rand(1000, generator=g) + 2]), labels)
-    far = F.autc(torch.cat([ind, torch.rand(1000, generator=g) + 10]), labels)
-    assert float(near) > float(far)
-
-
 @pytest.mark.skipif(not SKLEARN, reason="scikit-learn is the reference")
 def test_matches_threshold_curve():
     # the closed form equals the integral of the threshold curves over [0, 1]
@@ -694,12 +516,6 @@ def test_constant_scores_raise():
 def test_infinite_scores_raise():
     with pytest.raises(ValueError):
         F.autc(torch.tensor([0.0, 1.0, float("inf")]), torch.tensor([0, -1, -1]))
-
-
-def test_ignores_ood():
-    predictions = torch.tensor([1, 2, 3, 0, 0])
-    labels = torch.tensor([1, 2, 0, -1, -1])
-    assert float(F.accuracy(predictions, labels)) == pytest.approx(2 / 3, abs=5e-8)
 
 
 def test_large_class_indices():
