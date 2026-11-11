@@ -36,7 +36,7 @@ detectors = {
 
 # %%
 results = []
-benchmark = CIFAR100_ODIN(root="data", transform=trans)
+benchmark = CIFAR100_ODIN(root="data", transform=trans, download=True)
 
 with torch.no_grad():
     for detector_name, detector in detectors.items():

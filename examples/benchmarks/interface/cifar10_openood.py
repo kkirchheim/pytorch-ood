@@ -32,7 +32,7 @@ detectors = {
 
 # %%
 results = []
-benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
+benchmark = CIFAR10_OpenOOD(root="data", transform=trans, download=True)
 
 with torch.no_grad():
     for detector_name, detector in detectors.items():

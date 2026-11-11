@@ -126,9 +126,8 @@ evaluating a detector takes a few lines.
 
    .. tab-item:: Run a benchmark
 
-      Compare detectors on the OpenOOD v1.5 CIFAR-10 benchmark. All datasets are
-      downloaded automatically, and model outputs are computed once and shared
-      by all detectors:
+      Compare detectors on the OpenOOD v1.5 CIFAR-10 benchmark. ``download=True`` fetches
+      the datasets, and model outputs are computed once and shared by all detectors:
 
       .. code-block:: python
 
@@ -139,7 +138,7 @@ evaluating a detector takes a few lines.
          model = load_model("wrn-40-2/cifar10/crossentropy").to("cuda:0")
          trans = load_transform("wrn-40-2/cifar10/crossentropy")
 
-         benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
+         benchmark = CIFAR10_OpenOOD(root="data", transform=trans, download=True)
          results = benchmark.evaluate(
              [MaxSoftmax(model), EnergyBased(model)], device="cuda:0", cache=True
          )
@@ -173,7 +172,7 @@ Explore the Library
       :link: data
       :link-type: doc
 
-      Image, text, and audio OOD datasets that download on first use,
+      Image, text, and audio OOD datasets with optional download,
       torchvision-style.
 
    .. grid-item-card:: :octicon:`cpu;1.2em;sd-mr-2` Models

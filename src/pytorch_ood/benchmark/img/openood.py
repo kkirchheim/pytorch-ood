@@ -2,7 +2,7 @@
 Imglist-driven OpenOOD v1.5 benchmarks.
 
 These classes reproduce the OpenOOD v1.5 splits *exactly* by reading the upstream
-``benchmark_imglist`` files (downloaded once on demand from OpenOOD's own distribution and
+``benchmark_imglist`` files (fetched with ``download=True`` from OpenOOD's own distribution and
 cached under ``torch.hub``'s cache dir -- never shipped with the package) and loading the
 referenced images with
 :class:`ImageListDataset <pytorch_ood.dataset.img.ImageListDataset>`.
@@ -12,7 +12,7 @@ for hyperparameter tuning (APS), and each near-/far-OOD test set -- matches Open
 curated subsets rather than the full source datasets, so results are directly comparable
 to the OpenOOD leaderboard.
 
-With ``download=True`` (the default) each referenced dataset is fetched from OpenOOD's
+With ``download=True`` each referenced dataset is fetched from OpenOOD's
 own Google-Drive distribution and extracted into ``root`` in the expected layout
 (``<root>/<dataset>/...``), mirroring OpenOOD's ``scripts/download/download.py``. Requires
 the optional ``gdown`` dependency. ImageNet-1K itself is not redistributable and is never
@@ -157,14 +157,16 @@ class _OpenOOD_Imglist(Benchmark):
     #: top-level dataset dirs (under ``root``) to auto-download when ``download=True``
     _download_names: ClassVar[List[str]]
 
-    def __init__(self, root, transform, download: bool = True) -> None:
+    def __init__(self, root, transform, download: bool = False) -> None:
         """
         :param root: directory the imglist paths resolve against (OpenOOD's
             ``images_classic`` / ``images_largescale`` layout)
         :param transform: transform applied to every image (``ToRGB`` is prepended, so
             grayscale OOD sets like MNIST work with 3-channel models)
         :param download: if ``True``, fetch any missing referenced dataset from OpenOOD's
-            distribution into ``root`` (requires ``gdown``)
+            distribution into ``root`` and the imglists into the ``torch.hub`` cache (requires
+            ``gdown``). Otherwise, both must already be present.
+        :raises RuntimeError: if ``download`` is ``False`` and a dataset or the imglists are missing
         """
         self.root = root
         # Prepend ToRGB so callers can pass a model's own transform directly, matching
@@ -175,6 +177,13 @@ class _OpenOOD_Imglist(Benchmark):
             self._download(root)
 
         imglist_dir = _ensure_imglists(download)
+
+        # ImageListDataset opens its files lazily, so missing data would only fail in a worker
+        missing = [n for n in self._download_names if not os.path.isdir(os.path.join(root, n))]
+        if missing:
+            raise RuntimeError(
+                f"Datasets {missing} not found under {root!r}. Pass download=True to fetch them."
+            )
 
         def _load(fname: str) -> ImageListDataset:
             return ImageListDataset(
@@ -249,7 +258,7 @@ class _OpenOOD_ImageNet(_OpenOOD_Imglist):
     """
 
     def __init__(
-        self, root, transform, image_net_root: Optional[str] = None, download: bool = True
+        self, root, transform, image_net_root: Optional[str] = None, download: bool = False
     ) -> None:
         """
         :param root: directory the OOD imglist paths resolve against; ``imagenet_1k`` is
@@ -261,7 +270,8 @@ class _OpenOOD_ImageNet(_OpenOOD_Imglist):
             ``<root>/imagenet_1k/val/ILSVRC2012_val_*.JPEG`` must already exist. If ``None``,
             nothing is linked and ``root`` must already contain ``imagenet_1k``; otherwise,
             loading the images fails.
-        :param download: fetch missing OOD sets into ``root``
+        :param download: if ``True``, fetch missing OOD sets into ``root`` and the imglists into
+            the ``torch.hub`` cache (requires ``gdown``). Otherwise, both must already be present.
         """
         if image_net_root is not None:
             self._link_imagenet(root, image_net_root)
@@ -284,7 +294,7 @@ class _OpenOOD_ImageNet(_OpenOOD_Imglist):
 
 class CIFAR10_OpenOOD(_OpenOOD_Imglist):
     """
-    Exact OpenOOD v1.5 CIFAR-10 benchmark (imglist-driven, auto-downloading).
+    Exact OpenOOD v1.5 CIFAR-10 benchmark (imglist-driven).
 
     Near-OOD: CIFAR-100, TinyImageNet. Far-OOD: MNIST, SVHN, Textures, Places365.
     The entries of ``ood_names`` are ``"CIFAR100"``, ``"TinyImageNet"``, ``"MNIST"``,
@@ -323,7 +333,7 @@ class CIFAR10_OpenOOD(_OpenOOD_Imglist):
 
 class CIFAR100_OpenOOD(_OpenOOD_Imglist):
     """
-    Exact OpenOOD v1.5 CIFAR-100 benchmark (imglist-driven, auto-downloading).
+    Exact OpenOOD v1.5 CIFAR-100 benchmark (imglist-driven).
 
     Near-OOD: CIFAR-10, TinyImageNet. Far-OOD: MNIST, SVHN, Textures, Places365.
     The entries of ``ood_names`` are ``"CIFAR10"``, ``"TinyImageNet"``, ``"MNIST"``,
@@ -366,8 +376,8 @@ class ImageNet200_OpenOOD(_OpenOOD_ImageNet):
     In-distribution data are the 200 ImageNet-1K classes that OpenOOD also uses for
     ImageNet-R. Near-OOD: SSB-Hard, NINCO. Far-OOD: iNaturalist, Textures, OpenImage-O. The
     entries of ``ood_names`` are ``"SSBHard"``, ``"NINCO"``, ``"iNaturalist"``,
-    ``"Textures"``, ``"OpenImagesO"``. The OOD sets
-    auto-download; ImageNet-1K comes from ``image_net_root``.
+    ``"Textures"``, ``"OpenImagesO"``. With ``download=True``, the OOD sets are
+    downloaded; ImageNet-1K comes from ``image_net_root``.
     """
 
     info = BenchmarkInfo(

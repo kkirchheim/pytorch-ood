@@ -162,7 +162,7 @@ print("STAGE 1: Creating model and benchmark")
 model = load_model("wrn-40-2/cifar10/crossentropy").to(device)
 trans = load_transform("wrn-40-2/cifar10/crossentropy")
 norm_std = get_model_info("wrn-40-2/cifar10/crossentropy").preprocessing.std
-benchmark = CIFAR10_OpenOOD(root="data", transform=trans)
+benchmark = CIFAR10_OpenOOD(root="data", transform=trans, download=True)
 
 train_dataset = benchmark.train_set()
 train_loader = DataLoader(train_dataset, shuffle=True, **loader_kwargs)
