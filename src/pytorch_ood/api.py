@@ -1,4 +1,5 @@
 import functools
+import inspect
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -12,6 +13,8 @@ from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
+
+_NAMED = (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
 
 
 class RequiresFittingException(Exception):
@@ -196,6 +199,67 @@ class BenchmarkInfo:
 # -- Detectors ------------------------------------------------------------------
 
 
+def _wrap_predict_method(cls: type, name: str) -> None:
+    """
+    Wraps the method ``name`` if ``cls`` itself defines it, so that it runs under
+    :class:`torch.no_grad`, which makes scores non-differentiable, and receives its tensor
+    arguments on the detector's device, if the detector has one. Tensors nested in lists are not
+    moved.
+    """
+    method = cls.__dict__.get(name)
+    if method is None:
+        return
+
+    # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
+    # the parameters of the wrapped method instead of *args, **kwargs
+    @functools.wraps(method)
+    def wrapped(self, *args, **kwargs):
+        device = self.device
+        if device is not None:
+            args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
+        with torch.no_grad():
+            return method(self, *args, **kwargs)
+
+    setattr(cls, name, wrapped)
+
+
+def _wrap_fit_method(cls: type, name: str) -> None:
+    """
+    Wraps the method ``name(representation, labels, ...)`` if ``cls`` itself defines it, so that
+    it receives only the ID rows of both, unless the detector sets ``_fit_uses_ood``. Warns if
+    rows were dropped and raises :class:`ValueError` if no ID row is left. Gradients stay enabled
+    and arguments stay on their device.
+
+    :raises TypeError: if the method does not name these two parameters
+    """
+    method = cls.__dict__.get(name)
+    if method is None:
+        return
+
+    signature = inspect.signature(method)
+    parameters = list(signature.parameters.values())[1:3]
+    if len(parameters) < 2 or any(p.kind not in _NAMED for p in parameters):
+        raise TypeError(
+            f"{method.__qualname__} must take the representation and the labels as its first "
+            f"two parameters, e.g. fit_features(self, z, y), got {signature}"
+        )
+    representation, labels = (p.name for p in parameters)
+
+    @functools.wraps(method)
+    def wrapped(self, *args, **kwargs):
+        bound = signature.bind(self, *args, **kwargs)
+        y = bound.arguments.get(labels)
+        if not self._fit_uses_ood and isinstance(y, Tensor):
+            from .utils.utils import _id_rows_for_fit
+
+            bound.arguments[representation], bound.arguments[labels] = _id_rows_for_fit(
+                bound.arguments[representation], y
+            )
+        return method(*bound.args, **bound.kwargs)
+
+    setattr(cls, name, wrapped)
+
+
 class Detector(ABC):
     """
     Root public API for out-of-distribution detectors.
@@ -222,36 +286,14 @@ class Detector(ABC):
     :mod:`pytorch_ood.detector` defines its own.
     """
 
-    #: The representation a semantic base class adds an entry point for, e.g. ``"features"``:
-    #: ``predict_<kind>`` scores it and ``fit_<kind>`` fits on it. A subclass's own
-    #: ``predict_<kind>`` is wrapped so that it runs under :func:`torch.no_grad` (scores are not
-    #: differentiable) and tensor arguments are moved to the detector's device.
-    _kind: ClassVar[Optional[str]] = None
     #: The attribute that computes the representation from raw inputs (``model``, ``encoder``,
     #: ``backbone``), or ``None`` if there is no single one.
     _producer_name: ClassVar[Optional[str]] = None
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        if cls._kind is not None:
-            name = f"predict_{cls._kind}"
-            method = cls.__dict__.get(name)
-            if method is not None:
-                setattr(cls, name, Detector._wrap_representation_method(method))
-
-    @staticmethod
-    def _wrap_representation_method(method):
-        # functools.wraps also sets __wrapped__, so that inspect.signature (and the docs) show
-        # the parameters of the wrapped method instead of *args, **kwargs
-        @functools.wraps(method)
-        def wrapped(self, *args, **kwargs):
-            device = self.device
-            if device is not None:
-                args, kwargs = self._move_tensor_arguments_to_device(args, kwargs, device)
-            with torch.no_grad():
-                return method(self, *args, **kwargs)
-
-        return wrapped
+    #: Whether fitting uses OOD samples (labels below zero). If ``False``, ``fit(...)`` and
+    #: ``fit_<kind>(...)`` ignore them with a warning, and raise :class:`ValueError` if no ID
+    #: sample is left.
+    _fit_uses_ood: ClassVar[bool] = False
 
     def _require_producer(self) -> Callable[[Tensor], Tensor]:
         """
@@ -276,10 +318,10 @@ class Detector(ABC):
             self.to(device)
         return device
 
-    def _predict_produced(self, x: Tensor) -> Tensor:
+    def _predict_produced(self, x: Tensor, predict: Callable[[Tensor], Tensor]) -> Tensor:
         """
         Moves ``x`` to the detector's device, computes its representation with the producer
-        under :func:`torch.no_grad` and scores it with ``predict_<kind>``.
+        under :func:`torch.no_grad` and scores it with ``predict``.
         """
         producer = self._require_producer()
         device = self.device
@@ -287,12 +329,14 @@ class Detector(ABC):
             x = x.to(device)
         with torch.no_grad():
             z = producer(x)
-        return getattr(self, f"predict_{self._kind}")(z)
+        return predict(z)
 
-    def _fit_produced(self, data_loader: DataLoader) -> Self:
+    def _fit_produced(
+        self, data_loader: DataLoader, fit: Callable[[Tensor, Tensor], Self]
+    ) -> Self:
         """
         Extracts the representations of the ID samples in ``data_loader`` with the producer and
-        fits ``fit_<kind>`` on them. Does nothing if the detector requires no fitting.
+        calls ``fit`` on them. Does nothing if the detector requires no fitting.
         """
         if not self.requires_fit:
             return self
@@ -301,7 +345,7 @@ class Detector(ABC):
         from .utils import extract_features
 
         z, y = extract_features(data_loader, producer, device=self._fit_device())
-        return getattr(self, f"fit_{self._kind}")(z, y)
+        return fit(z, y)
 
     @staticmethod
     def _move_value_to_device(value, device: torch.device):
@@ -507,8 +551,12 @@ class LogitsDetector(Detector):
     forward raw inputs through ``self.model`` to obtain logits first.
     """
 
-    _kind = "logits"
     _producer_name = "model"
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        _wrap_predict_method(cls, "predict_logits")
+        _wrap_fit_method(cls, "fit_logits")
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -522,7 +570,7 @@ class LogitsDetector(Detector):
             input)
         :raises ModelNotSetException: if the detector has no model
         """
-        return self._predict_produced(x)
+        return self._predict_produced(x, self.predict_logits)
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
@@ -534,7 +582,7 @@ class LogitsDetector(Detector):
         :raises ModelNotSetException: if the detector has no model
         :raises ValueError: if the loader contains no ID samples
         """
-        return self._fit_produced(data_loader)
+        return self._fit_produced(data_loader, self.fit_logits)
 
     def fit_logits(self, logits: Tensor, y: Tensor) -> Self:
         """
@@ -575,8 +623,12 @@ class FeaturesDetector(Detector):
     of shape :math:`B \\times D`, where :math:`B` is batch size and :math:`D` is feature dimension.
     """
 
-    _kind = "features"
     _producer_name = "encoder"
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        _wrap_predict_method(cls, "predict_features")
+        _wrap_fit_method(cls, "fit_features")
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -590,7 +642,7 @@ class FeaturesDetector(Detector):
         :raises ModelNotSetException: if the detector has no encoder
         :raises RequiresFittingException: if the detector requires fitting and was not fitted
         """
-        return self._predict_produced(x)
+        return self._predict_produced(x, self.predict_features)
 
     def fit(self, data_loader: DataLoader) -> Self:
         """
@@ -602,7 +654,7 @@ class FeaturesDetector(Detector):
         :raises ModelNotSetException: if the detector has no encoder
         :raises ValueError: if the loader contains no ID samples
         """
-        return self._fit_produced(data_loader)
+        return self._fit_produced(data_loader, self.fit_features)
 
     def fit_features(self, x: Tensor, y: Tensor) -> Self:
         """
@@ -644,10 +696,14 @@ class FeatureMapsDetector(Detector):
     channels, and :math:`H, W` are spatial dimensions.
     """
 
-    _kind = "feature_maps"
     _producer_name = "backbone"
     # no default fit: extract_features flattens each sample, which would lose the C x H x W shape
     # that fit_feature_maps needs
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        _wrap_predict_method(cls, "predict_feature_maps")
+        _wrap_fit_method(cls, "fit_feature_maps")
 
     def predict(self, x: Tensor) -> Tensor:
         """
@@ -661,7 +717,7 @@ class FeatureMapsDetector(Detector):
         :raises ModelNotSetException: if the detector has no backbone
         :raises RequiresFittingException: if the detector requires fitting and was not fitted
         """
-        return self._predict_produced(x)
+        return self._predict_produced(x, self.predict_feature_maps)
 
     def fit_feature_maps(self, feature_maps: Tensor, y: Tensor) -> Self:
         """
@@ -697,7 +753,11 @@ class StructuredDetector(Detector):
     inputs such as logits plus feature maps.
     """
 
-    _kind = "structured"
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        _wrap_predict_method(cls, "predict_structured")
+        # fit_structured has no fixed signature: only the detector knows which argument holds
+        # the labels, so it drops the OOD rows itself (see _id_rows_for_fit)
 
     def fit_structured(self, *args, **kwargs) -> Self:
         """

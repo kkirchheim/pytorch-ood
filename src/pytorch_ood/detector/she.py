@@ -13,7 +13,7 @@ from torch import Tensor
 from typing_extensions import Self
 
 from pytorch_ood.api import RequiresFittingException
-from pytorch_ood.utils import TensorBuffer, is_known
+from pytorch_ood.utils import TensorBuffer
 
 from ..api import DetectorInfo, FeaturesDetector, ModelNotSetException, Paper, Task
 
@@ -116,13 +116,8 @@ class SHE(FeaturesDetector):
         """
         device = self.device or z.device
 
-        known = is_known(y)
-
-        if not known.any():
-            raise ValueError("No ID samples")
-
-        y = y[known].to(device)
-        z = z[known].to(device)
+        y = y.to(device)
+        z = z.to(device)
         classes = y.unique()
 
         # make sure all classes are present

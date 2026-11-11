@@ -84,17 +84,6 @@ class TestKNN(unittest.TestCase):
             detector.predict_features(z_test), _kth_distance(z_train, z_test, 5, normalize=False)
         )
 
-    def test_ignores_ood_samples(self):
-        g = torch.Generator().manual_seed(3)
-        z_train = torch.randn(100, 8, generator=g, dtype=torch.float64)
-        z_ood = torch.randn(50, 8, generator=g, dtype=torch.float64) * 0.01
-        z_test = torch.randn(20, 8, generator=g, dtype=torch.float64)
-        labels = torch.cat([torch.zeros(100, dtype=torch.long), -torch.ones(50, dtype=torch.long)])
-        detector = KNN(None, k=3).fit_features(torch.cat([z_train, z_ood]), labels)
-        torch.testing.assert_close(
-            detector.predict_features(z_test), _kth_distance(z_train, z_test, 3)
-        )
-
     def test_defaults(self):
         detector = KNN(None)
         self.assertEqual(detector.k, 50)
@@ -120,10 +109,6 @@ class TestKNN(unittest.TestCase):
         detector = KNN(None, k=3).fit_features(z_train, torch.zeros(20, dtype=torch.long))
         z_test = torch.cat([torch.zeros(1, 4), torch.randn(4, 4)])
         self.assertTrue(torch.isfinite(detector.predict_features(z_test)).all())
-
-    def test_no_id_samples_raises(self):
-        with self.assertRaisesRegex(ValueError, "No ID samples"):
-            KNN(None, k=1).fit_features(torch.randn(10, 4), -torch.ones(10, dtype=torch.long))
 
     def test_fit_features_moves_unpinned_reference_to_detector_device(self):
         detector = KNN(torch.nn.Linear(4, 4).to("meta"), k=3)

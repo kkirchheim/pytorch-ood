@@ -25,6 +25,7 @@ from ..api import (
     StructuredDetector,
     Task,
 )
+from ..utils.utils import _id_batches
 
 log = logging.getLogger(__name__)
 
@@ -177,7 +178,7 @@ class Gram(StructuredDetector):
         ]
 
         with torch.no_grad():
-            for n, (x, y) in enumerate(data_loader):
+            for n, (x, y) in enumerate(_id_batches(data_loader)):
                 _, feature_list = self._create_feature_list(x.to(device))
 
                 for layer_idx in range(self.num_layer):
@@ -185,8 +186,6 @@ class Gram(StructuredDetector):
                         g = self._gram_vector(feature_list[layer_idx], p).cpu()
                         for clazz in y.unique():
                             c = int(clazz.item())
-                            if c < 0:
-                                continue
                             collected[c][layer_idx][pole_idx].append(g[y == clazz])
 
                 if n % 100 == 0:

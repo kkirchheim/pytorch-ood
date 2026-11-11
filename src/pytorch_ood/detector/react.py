@@ -23,8 +23,7 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
-from ..utils import is_known
-from ..utils.utils import _check_fraction
+from ..utils.utils import _check_fraction, _id_batches
 from .energy import EnergyBased
 
 
@@ -122,15 +121,9 @@ class ReAct(FeatureMapsDetector):
         device = self._fit_device()
 
         activations = []
-        for x, y in data_loader:
-            known = is_known(y)
-            if not known.any():
-                continue
-            z = backbone(x[known].to(device))
+        for x, _ in _id_batches(data_loader):
+            z = backbone(x.to(device))
             activations.append(z.detach().flatten().cpu())
-
-        if not activations:
-            raise ValueError("No ID samples")
 
         self._set_threshold_from_activations(torch.cat(activations))
         return self
@@ -144,11 +137,7 @@ class ReAct(FeatureMapsDetector):
         :return: self
         :raise ValueError: if there are no ID samples
         """
-        known = is_known(y)
-        if not known.any():
-            raise ValueError("No ID samples")
-
-        self._set_threshold_from_activations(feature_maps[known].detach().flatten().cpu())
+        self._set_threshold_from_activations(feature_maps.detach().flatten().cpu())
         return self
 
     def _set_threshold_from_activations(self, activations: Tensor) -> None:

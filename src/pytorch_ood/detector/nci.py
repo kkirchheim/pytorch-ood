@@ -7,6 +7,8 @@
     :exclude-members:
 """
 
+from typing import Optional
+
 import torch
 from torch import Tensor
 from torch.nn import Linear, Module
@@ -72,10 +74,11 @@ class NCI(FeaturesDetector):
         self.alpha = alpha
         self.global_mean = None
 
-    def fit_features(self, z: torch.Tensor, *args, **kwargs) -> Self:
+    def fit_features(self, z: torch.Tensor, y: Optional[torch.Tensor] = None) -> Self:
         """
         :param z: features :math:`h` of the fitting set, of shape :math:`N \\times D`, used to compute :math:`\\mu_g`.
-            Additional arguments (e.g. labels) are ignored.
+        :param y: labels of shape :math:`N`; only used to ignore OOD samples (labels :math:`< 0`).
+            If ``None``, all features are used.
         :return: self
         """
         device = self.device or z.device

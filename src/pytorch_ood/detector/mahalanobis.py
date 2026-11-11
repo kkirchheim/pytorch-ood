@@ -25,9 +25,6 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
-from ..utils import (
-    contains_unknown,
-)
 from ..utils.utils import _fit_gaussian, _squared_mahalanobis
 
 log = logging.getLogger(__name__)
@@ -118,7 +115,6 @@ class Mahalanobis(FeaturesDetector):
 
         # we assume here that all class 0 >= labels <= classes.max() exist
         assert len(classes) == classes.max().item() + 1
-        assert not contains_unknown(classes)
 
         # as the reference implementation (sklearn EmpiricalCovariance): divided by N, float64
         gaussian = _fit_gaussian(

@@ -14,8 +14,6 @@ import torch.nn
 from torch import Tensor
 from typing_extensions import Self
 
-from pytorch_ood.utils import is_known
-
 from ..api import (
     DetectorInfo,
     FeaturesDetector,
@@ -114,13 +112,8 @@ class DICE(FeaturesDetector):
         :return: the fitted detector
         :raises ValueError: if ``y`` contains no in-distribution samples
         """
-        known = is_known(y)
-
-        if not known.any():
-            raise ValueError("No ID data")
-
         device = self.device or z.device
-        z = z[known].detach().to(device).float()
+        z = z.detach().to(device).float()
         weight = self.weight.detach().to(device).float()
 
         self.mean_activation = z.mean(dim=0)

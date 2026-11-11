@@ -20,7 +20,6 @@ from ..api import (
     RequiresFittingException,
     Task,
 )
-from ..utils import is_known
 from ..utils.utils import _linalg_dtype
 
 
@@ -76,14 +75,10 @@ class GMM(FeaturesDetector):
         :raises ValueError: if no in-distribution sample is present, or a covariance matrix is not
             positive definite even with the regularization ``reg``
         """
-        known = is_known(labels)
-        if not known.any():
-            raise ValueError("No ID samples found.")
-
         device = self.device or z.device
         dtype = _linalg_dtype(device)
-        z = z[known].detach().to(device, dtype)
-        y = labels[known].to(device).long()
+        z = z.detach().to(device, dtype)
+        y = labels.to(device).long()
 
         classes = y.unique()
         n_total, d = z.shape

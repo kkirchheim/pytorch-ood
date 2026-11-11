@@ -161,19 +161,6 @@ class TestKLMatching(unittest.TestCase):
         scores = detector.predict_logits(test)
         torch.testing.assert_close(scores, self._paper_scores(test, self._paper_dists(logits)))
 
-    def test_ignores_ood_samples(self):
-        """OOD samples neither get a distribution nor change the ones of known classes."""
-        logits, labels = self._misclassified_logits()
-        ood_logits = torch.randn(50, 3) * 5
-        detector = KLMatching(None).fit_logits(
-            torch.cat([logits, ood_logits]),
-            torch.cat([labels, -torch.ones(50, dtype=torch.long)]),
-        )
-        reference = KLMatching(None).fit_logits(logits, labels)
-        self.assertEqual(sorted(detector.dists.keys()), sorted(reference.dists.keys()))
-        for k in reference.dists.keys():
-            torch.testing.assert_close(detector.dists[k], reference.dists[k])
-
     def test_mock_performance(self):
         """
         Train a model on well-separated Gaussians and verify AUROC > 0.95.
