@@ -94,7 +94,8 @@ class GradNorm(GradientDetector):
         temperature: float = 1.0,
     ):
         """
-        :param model: A pre-trained classification model :math:`f`.
+        :param model: A pre-trained classification model :math:`f`, a :class:`torch.nn.Module`,
+            since the score is a gradient with respect to its parameters.
         :param param_filter: Function indicating whether a named parameter should be included in
             the scoring, selecting the parameters :math:`w`. Gradients are only computed for these.
             If ``None``, all parameters are used.
@@ -102,6 +103,7 @@ class GradNorm(GradientDetector):
             once. Smaller values reduce peak memory. Must be at least 1. Only used on PyTorch >= 2.0.
         :param temperature: temperature :math:`T` of the softmax
         :raises ModelNotSetException: if ``model`` is ``None``
+        :raises TypeError: if ``model`` is not a :class:`torch.nn.Module`
         """
         # _predict_batched splits the input into chunks of at most micro_batch_size before calling vmap:
         # per-sample gradients require holding every sample's forward activations through the full network
@@ -110,6 +112,11 @@ class GradNorm(GradientDetector):
         # gradients). Chunking bounds peak memory independent of the caller's batch size.
         if model is None:
             raise ModelNotSetException("Model must be provided.")
+        if not isinstance(model, torch.nn.Module):
+            raise TypeError(
+                "GradNorm needs a torch.nn.Module, since it computes gradients with respect to "
+                f"the model's parameters; got {type(model).__name__}"
+            )
 
         def default_filter(x):
             return True

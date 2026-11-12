@@ -1,7 +1,7 @@
 """
 GradUncertainty and GradNorm compute gradients only for the parameters that ``param_filter``
 selects, independent of ``requires_grad``, and leave no gradients on the model. Both the batched and
-the sequential path refuse models in training mode.
+the sequential path refuse models in training mode. Both require the model to be a module.
 """
 
 from unittest import mock
@@ -75,6 +75,13 @@ class TestParamFilter:
             with pytest.raises(ModelModeException, match=r"model\.eval\(\)"):
                 cls(model)(torch.randn(2, 3, 32, 32))
         assert snapshot(model=model) == before  # raised before the first forward pass
+
+    @pytest.mark.parametrize("cls, module", DETECTORS)
+    def test_model_must_be_a_module(self, cls, module):
+        # the scores are gradients w.r.t. the model's parameters, so a plain callable cannot work
+        model = self.model
+        with pytest.raises(TypeError, match=r"torch\.nn\.Module"):
+            cls(lambda x: model(x))
 
     @pytest.mark.parametrize("cls, module", DETECTORS)
     @pytest.mark.parametrize("batched", (True, False))

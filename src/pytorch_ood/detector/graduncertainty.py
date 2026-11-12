@@ -90,13 +90,20 @@ class GradUncertainty(GradientDetector):
 
     def __init__(self, model: torch.nn.Module, param_filter: Callable[[str], bool] = None):
         """
-        :param model: A pre-trained classification model
+        :param model: A pre-trained classification model, a :class:`torch.nn.Module`, since the
+            score is a gradient with respect to its parameters
         :param param_filter: Function which indicates whether a named parameter should be included in the scoring.
             Gradients are only computed for these. If ``None``, all parameters are used.
         :raises ModelNotSetException: if ``model`` is ``None``
+        :raises TypeError: if ``model`` is not a :class:`torch.nn.Module`
         """
         if model is None:
             raise ModelNotSetException("Model must be provided.")
+        if not isinstance(model, torch.nn.Module):
+            raise TypeError(
+                "GradUncertainty needs a torch.nn.Module, since it computes gradients with respect "
+                f"to the model's parameters; got {type(model).__name__}"
+            )
 
         def default_filter(x):
             return True
