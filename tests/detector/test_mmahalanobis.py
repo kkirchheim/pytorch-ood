@@ -49,3 +49,34 @@ def test_feature_maps_are_averaged_spatially():
     expected = detector.predict_structured(means)
     torch.testing.assert_close(detector.predict_structured(maps), expected)
     torch.testing.assert_close(detector.predict(x), expected)
+
+
+def test_fit_from_a_shuffling_loader_pairs_features_with_their_labels():
+    """The features of every layer are paired with the labels of the same samples, so the order in
+    which a loader yields them does not matter: a shuffling loader that gives each pass over it
+    another order fits the same Gaussians as ``fit_structured`` on the spatial means of the layers
+    in dataset order. Each batch passes through the layers once."""
+    torch.manual_seed(0)
+    layers = [torch.nn.Conv2d(3, 4, 3), torch.nn.Conv2d(4, 5, 3), torch.nn.Conv2d(5, 6, 3)]
+    y = torch.arange(60) % 3
+    images = torch.randn(60, 3, 10, 10) + 2 * torch.randn(3, 3, 1, 1)[y]
+    data = TensorDataset(images, y)
+
+    with torch.no_grad():
+        maps = [layers[0](images)]
+        maps.append(layers[1](maps[0]))
+        maps.append(layers[2](maps[1]))
+    expected = MultiMahalanobis(layers).fit_structured([m.mean(dim=(2, 3)) for m in maps], y)
+
+    shuffling = DataLoader(
+        data, batch_size=8, shuffle=True, generator=torch.Generator().manual_seed(1)
+    )
+    forward_passes = []
+    handle = layers[0].register_forward_hook(lambda *_: forward_passes.append(1))
+    detector = MultiMahalanobis(layers).fit(shuffling)
+    handle.remove()
+
+    # summing in another order changes the statistics only by rounding errors
+    torch.testing.assert_close(detector.mu, expected.mu, rtol=1e-4, atol=1e-5)
+    torch.testing.assert_close(detector.cov, expected.cov, rtol=1e-4, atol=1e-5)
+    assert len(forward_passes) == len(shuffling)
