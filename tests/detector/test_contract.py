@@ -5,8 +5,10 @@ instance is needed, for each exported detector class.
 
 import copy
 import inspect
+import warnings
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Callable, Dict, Iterable, Optional, Tuple, Type
+from typing import Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Type, Union
 
 import pytest
 import torch
@@ -142,12 +144,22 @@ def _concatenated(batches: Iterable[Tuple[Tensor, Tensor]]) -> Tuple[Tensor, Ten
     return torch.cat(x), torch.cat(y)
 
 
-def _with_ood_rows(loader: DataLoader, generator: torch.Generator, n: int = 2) -> DataLoader:
-    """The same ID samples in the same order, with ``n`` OOD rows (label -1) in every batch."""
+#: several negative labels, so that a filter for one particular label does not pass
+OOD_LABELS = (-1, -5, -100)
+
+
+def _ood_labels(n: int, dtype: torch.dtype) -> Tensor:
+    return torch.tensor(OOD_LABELS, dtype=dtype)[torch.arange(n) % len(OOD_LABELS)]
+
+
+def _with_ood_rows(
+    loader: DataLoader, generator: torch.Generator, n: int = len(OOD_LABELS)
+) -> DataLoader:
+    """The same ID samples in the same order, with ``n`` OOD rows in every batch."""
     batches = [
         (
             torch.cat([x, 10 + torch.randn(n, *x.shape[1:], generator=generator)]),
-            torch.cat([y, torch.full((n,), -1, dtype=y.dtype)]),
+            torch.cat([y, _ood_labels(n, y.dtype)]),
         )
         for x, y in loader
     ]
@@ -437,13 +449,22 @@ def test_refit_equals_a_fresh_fit(case: DetectorCase, seed: torch.Generator):
     torch.testing.assert_close(detector(x), fresh.fit(loader)(x))
 
 
+@contextmanager
+def _no_ood_warning() -> Iterator[None]:
+    """Fails on a warning about OOD samples, e.g. for fit data with ID samples only."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message=".*OOD", category=UserWarning)
+        yield
+
+
 @pytest.mark.parametrize("case", _cases(_fits))
 def test_fit_ignores_ood_rows_in_the_loader(case: DetectorCase, seed: torch.Generator):
     detector = case.build()
     twin = copy.deepcopy(detector)
     loader = case.make_fit_loader()
 
-    detector.fit(loader)
+    with _no_ood_warning():
+        detector.fit(loader)
     with pytest.warns(UserWarning, match="OOD"):
         twin.fit(_with_ood_rows(loader, seed))
 
@@ -451,25 +472,57 @@ def test_fit_ignores_ood_rows_in_the_loader(case: DetectorCase, seed: torch.Gene
     torch.testing.assert_close(detector(x), twin(x))
 
 
-def _representations(detector: Detector, loader: DataLoader) -> Tuple[Tensor, Tensor]:
-    producer = getattr(detector, _produced(type(detector)).producer)
+#: the per-layer inputs of ``fit_structured`` for raw inputs, for structured detectors that have
+#: it (Gram fits only from a loader)
+STRUCTURED_REPRESENTATIONS: Dict[type, Callable[[Detector, Tensor], List[Tensor]]] = {
+    MultiMahalanobis: lambda detector, x: [
+        nn.Sequential(*detector.model[: i + 1])(x).mean(dim=(2, 3))
+        for i in range(len(detector.model))
+    ],
+}
+
+
+def _fits_on_representation(cls: type) -> bool:
+    return _fits(cls) and (_produced(cls) is not None or cls in STRUCTURED_REPRESENTATIONS)
+
+
+Representations = Union[Tensor, List[Tensor]]
+
+
+def _representations(detector: Detector, loader: DataLoader) -> Tuple[Representations, Tensor]:
+    """The arguments of ``fit_<kind>``, for all samples of ``loader``."""
+    produced = _produced(type(detector))
+    if produced:
+        producer = getattr(detector, produced.producer)
+        with torch.no_grad():
+            return _concatenated([(producer(x), y) for x, y in loader])
+    represent = STRUCTURED_REPRESENTATIONS[type(detector)]
     with torch.no_grad():
-        return _concatenated([(producer(x), y) for x, y in loader])
+        zs, y = zip(*[(represent(detector, x), y) for x, y in loader])
+    return [torch.cat(layer) for layer in zip(*zs)], torch.cat(y)
 
 
-@pytest.mark.parametrize("case", _cases(lambda cls: _produced(cls) and _fits(cls)))
+def _rows(z: Representations, index: Tensor) -> Representations:
+    return [t[index] for t in z] if isinstance(z, list) else z[index]
+
+
+def _fit_on_representation(detector: Detector) -> Callable[..., Detector]:
+    return getattr(detector, f"fit_{_representation(type(detector)).kind}")
+
+
+@pytest.mark.parametrize("case", _cases(_fits_on_representation))
 def test_fit_on_representation_drops_ood_rows_with_a_warning(
     case: DetectorCase, seed: torch.Generator
 ):
     detector = case.build()
     twin = copy.deepcopy(detector)
-    fit = f"fit_{_produced(type(detector)).kind}"
     z, y = _representations(detector, _with_ood_rows(case.make_fit_loader(), seed))
     known = y >= 0
 
-    getattr(detector, fit)(z[known], y[known])
+    with _no_ood_warning():
+        _fit_on_representation(detector)(_rows(z, known), y[known])
     with pytest.warns(UserWarning, match="OOD"):
-        getattr(twin, fit)(z, y)
+        _fit_on_representation(twin)(z, y)
 
     x = _inputs(case, seed)
     torch.testing.assert_close(detector(x), twin(x))
@@ -477,24 +530,28 @@ def test_fit_on_representation_drops_ood_rows_with_a_warning(
 
 def _only_ood(loader: DataLoader) -> DataLoader:
     x, y = _concatenated(loader)
-    return DataLoader(TensorDataset(x, torch.full_like(y, -1)), batch_size=loader.batch_size)
+    return DataLoader(TensorDataset(x, _ood_labels(len(y), y.dtype)), batch_size=loader.batch_size)
+
+
+#: the message of the ValueError for fit data without ID samples (``utils.utils._NO_ID_SAMPLES``)
+NO_ID_SAMPLES = "No ID samples to fit on"
 
 
 @pytest.mark.filterwarnings("ignore:.*OOD")
 @pytest.mark.parametrize("case", _cases(_fits))
 def test_fit_without_id_samples_raises(case: DetectorCase):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=NO_ID_SAMPLES):
         case.build().fit(_only_ood(case.make_fit_loader()))
 
 
 @pytest.mark.filterwarnings("ignore:.*OOD")
-@pytest.mark.parametrize("case", _cases(lambda cls: _produced(cls) and _fits(cls)))
+@pytest.mark.parametrize("case", _cases(_fits_on_representation))
 def test_fit_on_representation_without_id_samples_raises(case: DetectorCase):
     detector = case.build()
     z, y = _representations(detector, case.make_fit_loader())
 
-    with pytest.raises(ValueError):
-        getattr(detector, f"fit_{_produced(type(detector)).kind}")(z, torch.full_like(y, -1))
+    with pytest.raises(ValueError, match=NO_ID_SAMPLES):
+        _fit_on_representation(detector)(z, _ood_labels(len(y), y.dtype))
 
 
 @pytest.mark.parametrize(
