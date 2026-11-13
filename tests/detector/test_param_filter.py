@@ -71,6 +71,7 @@ class TestParamFilter:
             self.model.requires_grad_(False)
             try:
                 scores = detector(self.x)
+                assert not any(p.requires_grad for p in self.model.parameters())
             finally:
                 self.model.requires_grad_(True)
         torch.testing.assert_close(scores, expected)

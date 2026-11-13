@@ -64,6 +64,7 @@ from pytorch_ood.detector import (
 from tests.helpers import requires
 from tests.helpers.components import DETECTORS
 from tests.helpers.detectors import DETECTOR_CASES, DetectorCase
+from tests.helpers.snapshot import snapshot
 
 
 @dataclass(frozen=True)
@@ -106,13 +107,8 @@ with torch.random.fork_rng():
     _CLASSES: Dict[str, Type[Detector]] = {c.name: type(c.build()) for c in DETECTOR_CASES}
 
 
-def _cases(applies=lambda cls: True, marks: Optional[Dict[str, pytest.MarkDecorator]] = None):
-    marks = marks or {}
-    return [
-        pytest.param(c, id=c.name, marks=marks.get(c.name, ()))
-        for c in DETECTOR_CASES
-        if applies(_CLASSES[c.name])
-    ]
+def _cases(applies=lambda cls: True):
+    return [pytest.param(c, id=c.name) for c in DETECTOR_CASES if applies(_CLASSES[c.name])]
 
 
 def _fits(cls: type) -> bool:
@@ -487,44 +483,93 @@ def test_every_hyperparameter_candidate_gives_finite_scores(
 # --- side effects on the model ------------------------------------------------------------------
 
 
+def _state(model: nn.Module) -> Dict[str, object]:
+    """Everything reachable from the model, and torch's global module hooks."""
+    global_hooks = {
+        f"torch.{name}": registry
+        for name, registry in vars(nn.modules.module).items()
+        if name.startswith("_global") and isinstance(registry, dict)
+    }
+    return snapshot(model=model, **global_hooks)
+
+
+@pytest.mark.parametrize("gradients", [None, 7.0], ids=["no_gradients", "existing_gradients"])
 @pytest.mark.parametrize("case", _cases())
-def test_model_parameters_and_buffers_are_unchanged(case: DetectorCase, seed: torch.Generator):
+def test_model_is_unchanged(case: DetectorCase, gradients: Optional[float], seed: torch.Generator):
     model = case.model()
-    before = copy.deepcopy(model.state_dict())
+    for p in model.parameters():
+        p.grad = None if gradients is None else torch.full_like(p, gradients)
+    before = _state(model)
+
+    detector = _fitted(case, model)
+    assert _state(model) == before  # checked here too: predict could undo what fit left
+    detector(_inputs(case, seed))
+    assert _state(model) == before
+
+
+def _in_mode(model: nn.Module, mode: str) -> nn.Module:
+    """The ``mixed`` modes differ in the root, on which the mode handling of a detector may branch."""
+    model.train(mode in ("train", "mixed_under_train"))
+    if mode.startswith("mixed"):
+        for i, child in enumerate(model.children()):
+            child.train(i % 2 == 1)
+    return model
+
+
+def _modes(model: nn.Module) -> Dict[str, bool]:
+    return {n: m.training for n, m in model.named_modules()}
+
+
+@pytest.mark.parametrize("mode", ["eval", "train", "mixed_under_train", "mixed_under_eval"])
+@pytest.mark.parametrize("case", _cases())
+def test_model_mode_is_unchanged(
+    case: DetectorCase, mode: str, seed: torch.Generator, request: pytest.FixtureRequest
+):
+    if mode != "eval" and _CLASSES[case.name] in (GradNorm, GradUncertainty):
+        request.applymarker(
+            pytest.mark.xfail(strict=True, reason="vmap refuses dropout in training mode")
+        )
+    model = _in_mode(case.model(), mode)
+    before = _modes(model)
 
     _fitted(case, model)(_inputs(case, seed))
 
-    after = model.state_dict()
-    assert after.keys() == before.keys()
-    for key, value in before.items():
-        assert torch.equal(after[key], value), key
-
-
-@pytest.mark.parametrize(
-    "case",
-    _cases(
-        marks={
-            "MahalanobisODIN": pytest.mark.xfail(
-                strict=True, reason="leaves .grad on the encoder's parameters"
-            )
-        }
-    ),
-)
-def test_no_gradients_left_on_the_model(case: DetectorCase, seed: torch.Generator):
-    model = case.model()
-
-    _fitted(case, model)(_inputs(case, seed))
-
-    assert [n for n, p in model.named_parameters() if p.grad is not None] == []
+    assert _modes(model) == before
 
 
 @pytest.mark.parametrize("case", _cases())
-def test_model_stays_in_eval_mode(case: DetectorCase, seed: torch.Generator):
+def test_model_is_restored_when_the_forward_pass_fails(case: DetectorCase, seed: torch.Generator):
+    model = _in_mode(case.model(), "mixed_under_eval")
+    before = _state(model)
+    detector = _fitted(case, model)
+
+    def fail(*_):
+        raise RuntimeError("forward failed")
+
+    # on every module, since a detector may call only a part of the model (e.g. its encoder)
+    handles = [module.register_forward_hook(fail) for module in model.modules()]
+    with pytest.raises(RuntimeError, match="forward failed"):
+        detector(_inputs(case, seed))
+    for handle in handles:
+        handle.remove()
+
+    assert _state(model) == before
+
+
+@pytest.mark.parametrize("case", _cases())
+def test_frozen_model_gives_the_same_scores(case: DetectorCase, seed: torch.Generator):
     model = case.model()
+    frozen = copy.deepcopy(model).requires_grad_(False)
+    x = _inputs(case, seed)
 
-    _fitted(case, model)(_inputs(case, seed))
+    with torch.random.fork_rng():
+        torch.manual_seed(0)  # MCD samples dropout masks from the global RNG
+        expected = _fitted(case, model)(x)
+        torch.manual_seed(0)
+        scores = _fitted(case, frozen)(x)
 
-    assert [n for n, m in model.named_modules() if m.training] == []
+    assert not any(p.requires_grad for p in frozen.parameters())
+    torch.testing.assert_close(scores, expected)
 
 
 # --- taxonomy -----------------------------------------------------------------------------------
