@@ -7,8 +7,7 @@
     :exclude-members: fit
 """
 
-from contextlib import contextmanager
-from typing import Callable, Dict, List
+from typing import Callable, Dict
 
 import torch
 from torch import Tensor
@@ -16,6 +15,7 @@ from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, Task
+from ..utils.utils import _require_eval_mode, _requires_grad
 
 try:
     from torch.func import (
@@ -31,19 +31,6 @@ try:
     _TORCH_FUNC_AVAILABLE = True
 except ImportError:
     _TORCH_FUNC_AVAILABLE = False
-
-
-@contextmanager
-def _requires_grad(params: List[Tensor]):
-    """Temporarily enables gradients for ``params``, so that frozen parameters can be scored."""
-    flags = [p.requires_grad for p in params]
-    try:
-        for p in params:
-            p.requires_grad_(True)
-        yield
-    finally:
-        for p, flag in zip(params, flags):
-            p.requires_grad_(flag)
 
 
 def _loss_against_confounding_label(logits: Tensor) -> Tensor:
@@ -70,9 +57,8 @@ class GradUncertainty(GradientDetector):
      You can achieve this by setting ``param_filter``; gradients are only computed for the selected
      parameters. For an example, see the :doc:`GradUncertainty example </auto_examples/detectors/graduncertainty>`.
 
-    The model is not switched to evaluation mode, so layers such as batch normalization and dropout behave
-    according to ``model.training``; you should usually call ``model.eval()`` first. Gradients are computed per
-    sample, and :meth:`predict` must not be wrapped in ``torch.no_grad()``.
+    The model and all its submodules have to be in evaluation mode, so call ``model.eval()`` first. Gradients are
+    computed per sample, and :meth:`predict` must not be wrapped in ``torch.no_grad()``.
 
     .. note:: On PyTorch ≥ 2.0, per-sample gradients are computed with ``torch.func.vmap`` +
         ``torch.func.grad`` in a single batched forward+backward pass. On PyTorch 1.x the
@@ -104,13 +90,20 @@ class GradUncertainty(GradientDetector):
 
     def __init__(self, model: torch.nn.Module, param_filter: Callable[[str], bool] = None):
         """
-        :param model: A pre-trained classification model
+        :param model: A pre-trained classification model, a :class:`torch.nn.Module`, since the
+            score is a gradient with respect to its parameters
         :param param_filter: Function which indicates whether a named parameter should be included in the scoring.
             Gradients are only computed for these. If ``None``, all parameters are used.
         :raises ModelNotSetException: if ``model`` is ``None``
+        :raises TypeError: if ``model`` is not a :class:`torch.nn.Module`
         """
         if model is None:
             raise ModelNotSetException("Model must be provided.")
+        if not isinstance(model, torch.nn.Module):
+            raise TypeError(
+                "GradUncertainty needs a torch.nn.Module, since it computes gradients with respect "
+                f"to the model's parameters; got {type(model).__name__}"
+            )
 
         def default_filter(x):
             return True
@@ -129,9 +122,11 @@ class GradUncertainty(GradientDetector):
         :param x: input of shape :math:`B \\times \\ldots`, will be passed through the network
         :return: outlier scores of shape :math:`B`
         :raises ValueError: if ``param_filter`` selects no parameter
+        :raises ModelModeException: if the model or one of its submodules is in training mode
         """
         if self.model is None:
             raise ModelNotSetException()
+        _require_eval_mode(self.model, self)
 
         x = x.to(self.device)
 

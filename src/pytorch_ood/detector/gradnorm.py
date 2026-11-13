@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from typing_extensions import Self
 
 from ..api import DetectorInfo, GradientDetector, ModelNotSetException, Paper, Task
-from .graduncertainty import _requires_grad
+from ..utils.utils import _require_eval_mode, _requires_grad
 
 try:
     from torch.func import (
@@ -67,6 +67,8 @@ class GradNorm(GradientDetector):
         You can achieve this by setting ``param_filter``, e.g. ``lambda name: name == "fc.weight"``.
         Gradients are only computed for the selected parameters.
 
+    The model and all its submodules have to be in evaluation mode, so call ``model.eval()`` first.
+
     .. note:: On PyTorch ≥ 2.0, per-sample gradients are computed with ``torch.func.vmap`` +
         ``torch.func.grad`` in a single batched forward+backward pass. On PyTorch 1.x the
         original sequential loop over individual samples is used as a fallback.
@@ -92,7 +94,8 @@ class GradNorm(GradientDetector):
         temperature: float = 1.0,
     ):
         """
-        :param model: A pre-trained classification model :math:`f`.
+        :param model: A pre-trained classification model :math:`f`, a :class:`torch.nn.Module`,
+            since the score is a gradient with respect to its parameters.
         :param param_filter: Function indicating whether a named parameter should be included in
             the scoring, selecting the parameters :math:`w`. Gradients are only computed for these.
             If ``None``, all parameters are used.
@@ -100,6 +103,7 @@ class GradNorm(GradientDetector):
             once. Smaller values reduce peak memory. Must be at least 1. Only used on PyTorch >= 2.0.
         :param temperature: temperature :math:`T` of the softmax
         :raises ModelNotSetException: if ``model`` is ``None``
+        :raises TypeError: if ``model`` is not a :class:`torch.nn.Module`
         """
         # _predict_batched splits the input into chunks of at most micro_batch_size before calling vmap:
         # per-sample gradients require holding every sample's forward activations through the full network
@@ -108,6 +112,11 @@ class GradNorm(GradientDetector):
         # gradients). Chunking bounds peak memory independent of the caller's batch size.
         if model is None:
             raise ModelNotSetException("Model must be provided.")
+        if not isinstance(model, torch.nn.Module):
+            raise TypeError(
+                "GradNorm needs a torch.nn.Module, since it computes gradients with respect to "
+                f"the model's parameters; got {type(model).__name__}"
+            )
 
         def default_filter(x):
             return True
@@ -127,9 +136,11 @@ class GradNorm(GradientDetector):
         :param x: input tensor of shape :math:`B \\times \\ldots`, will be passed through the network
         :return: outlier scores of shape :math:`B`
         :raises ValueError: if ``param_filter`` selects no parameter
+        :raises ModelModeException: if the model or one of its submodules is in training mode
         """
         if self.model is None:
             raise ModelNotSetException()
+        _require_eval_mode(self.model, self)
 
         x = x.to(self.device)
 

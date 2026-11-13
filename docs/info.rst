@@ -74,6 +74,27 @@ data samples (also called *unknown* data), whether available during training or 
 assigned target values less than zero (:math:`< 0`).
 
 
+4) Model Mode is the User's Responsibility
+==========================================
+
+Detectors use a model in the training or evaluation mode it is given and do not switch it.
+Call ``model.eval()`` before fitting or scoring, unless you want the behavior of training mode:
+in training mode, layers such as batch normalization update their statistics with every forward pass,
+and dropout makes scores random.
+:meth:`Benchmark.evaluate <pytorch_ood.benchmark.Benchmark.evaluate>` warns if the model is in training mode.
+
+For a model in evaluation mode, fitting and scoring do not change its parameters, buffers, gradients or mode,
+apart from moving it to a device you ask for.
+The exception is :class:`MCD <pytorch_ood.detector.MCD>`, which switches dropout on because sampling with
+dropout is the method itself, and restores the mode of every module afterwards.
+Its documentation describes how it treats batch normalization.
+
+:class:`GradNorm <pytorch_ood.detector.GradNorm>` and
+:class:`GradUncertainty <pytorch_ood.detector.GradUncertainty>` cannot work with a model in training mode.
+They raise :class:`ModelModeException <pytorch_ood.api.ModelModeException>` if the model or one of its
+submodules is in training mode.
+
+
 Other design features
 ========================
 We aim to make usage user-friendly.

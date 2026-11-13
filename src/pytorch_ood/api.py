@@ -35,6 +35,13 @@ class ModelNotSetException(ValueError):
         super(ModelNotSetException, self).__init__(msg)
 
 
+class ModelModeException(ValueError):
+    """
+    Raised when a detector cannot use the model in its current training or evaluation mode.
+    Detectors do not change the mode of a model, so set it yourself, usually with ``model.eval()``.
+    """
+
+
 # -- Component metadata --------------------------------------------------------
 # Detectors, training objectives, datasets and benchmarks carry a class attribute
 # ``info`` with one of the records below. The documentation renders badges, links and

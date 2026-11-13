@@ -4,16 +4,31 @@ import logging
 import random
 import warnings
 from collections import defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, Iterator, KeysView, Optional, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    KeysView,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 from numpy import floating
 from torch import Tensor
+from torch.nn import Module
 from torch.utils.data import DataLoader
 from typing_extensions import Self
+
+from ..api import ModelModeException
 
 log = logging.getLogger(__name__)
 
@@ -60,6 +75,34 @@ def temperature_calibration(
     )
 
     return t
+
+
+@contextmanager
+def _requires_grad(params: List[Tensor]) -> Iterator[None]:
+    """Temporarily enables gradients for ``params``, so that frozen parameters can be scored."""
+    flags = [p.requires_grad for p in params]
+    try:
+        for p in params:
+            p.requires_grad_(True)
+        yield
+    finally:
+        for p, flag in zip(params, flags):
+            p.requires_grad_(flag)
+
+
+def _require_eval_mode(model: Module, detector: object) -> None:
+    """Raises :class:`ModelModeException` if ``model`` or one of its submodules is in training mode."""
+    training = [(name, module) for name, module in model.named_modules() if module.training]
+    if not training:
+        return
+    # name the layers rather than the containers that hold them
+    names = [name for name, module in training if not any(module.children())]
+    names = names or [name or "the model itself" for name, _ in training]
+    shown = ", ".join(names[:3]) + (f" and {len(names) - 3} more" if len(names) > 3 else "")
+    raise ModelModeException(
+        f"{type(detector).__name__} needs every module of the model in evaluation mode, call "
+        f"model.eval() first. In training mode: {shown}"
+    )
 
 
 def _check_fraction(name: str, value: float) -> float:

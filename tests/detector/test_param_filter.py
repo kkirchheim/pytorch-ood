@@ -1,6 +1,7 @@
 """
 GradUncertainty and GradNorm compute gradients only for the parameters that ``param_filter``
-selects, independent of ``requires_grad``, and leave no gradients on the model.
+selects, independent of ``requires_grad``, and leave no gradients on the model. Both the batched and
+the sequential path refuse models in training mode. Both require the model to be a module.
 """
 
 from unittest import mock
@@ -8,11 +9,13 @@ from unittest import mock
 import pytest
 import torch
 
+from pytorch_ood.api import ModelModeException
 from pytorch_ood.detector import GradNorm, GradUncertainty
 from pytorch_ood.detector import gradnorm as gradnorm_module
 from pytorch_ood.detector import graduncertainty as graduncertainty_module
 from pytorch_ood.model import WideResNet
 from tests.helpers import ClassificationModel
+from tests.helpers.snapshot import snapshot
 
 DETECTORS = ((GradUncertainty, graduncertainty_module), (GradNorm, gradnorm_module))
 
@@ -61,6 +64,24 @@ class TestParamFilter:
                 with mock.patch.object(module, "_TORCH_FUNC_AVAILABLE", False):
                     sequential = detector(x)
                 torch.testing.assert_close(batched, sequential)
+
+    @pytest.mark.parametrize("cls, module", DETECTORS)
+    @pytest.mark.parametrize("batched", (True, False))
+    def test_training_mode_raises(self, cls, module, batched):
+        # without the check, the sequential path would update the batch norm statistics silently
+        model = WideResNet(num_classes=10, depth=10, widen_factor=1).train()
+        before = snapshot(model=model)
+        with mock.patch.object(module, "_TORCH_FUNC_AVAILABLE", batched):
+            with pytest.raises(ModelModeException, match=r"model\.eval\(\)"):
+                cls(model)(torch.randn(2, 3, 32, 32))
+        assert snapshot(model=model) == before  # raised before the first forward pass
+
+    @pytest.mark.parametrize("cls, module", DETECTORS)
+    def test_model_must_be_a_module(self, cls, module):
+        # the scores are gradients w.r.t. the model's parameters, so a plain callable cannot work
+        model = self.model
+        with pytest.raises(TypeError, match=r"torch\.nn\.Module"):
+            cls(lambda x: model(x))
 
     @pytest.mark.parametrize("cls, module", DETECTORS)
     @pytest.mark.parametrize("batched", (True, False))

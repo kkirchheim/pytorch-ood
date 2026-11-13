@@ -12,7 +12,7 @@ def _linear_head(bias: torch.Tensor) -> torch.nn.Linear:
     with torch.no_grad():
         head.weight.zero_()
         head.bias.copy_(bias)
-    return head
+    return head.eval()
 
 
 def test_matches_closed_form():
@@ -21,7 +21,7 @@ def test_matches_closed_form():
     torch.manual_seed(0)
     x = torch.randn(4, 16)
     heads = {
-        "random": torch.nn.Linear(16, 5),
+        "random": torch.nn.Linear(16, 5).eval(),
         "uniform": _linear_head(torch.zeros(5)),
         "margin 20": _linear_head(torch.tensor([20.0, 0.0, 0.0, 0.0, 0.0])),
         # the other softmax values are below the 1e-12 clamp of binary cross-entropy
