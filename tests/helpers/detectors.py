@@ -4,10 +4,15 @@ One working instance of every detector, for tests that run over all of them.
 Each :class:`DetectorCase` creates a small model in ``eval()`` mode and wraps it in a detector, for
 inputs of ``input_shape`` per sample. Tests that check something for every detector parametrize
 over :data:`DETECTOR_CASES`.
+
+The builders are deterministic: models, fit data and other random parts are drawn with fixed seeds,
+so every run and every test order checks the same weights and data, and the global RNG is left as
+it was.
 """
 
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Callable, Optional, Tuple
+from typing import Callable, Iterator, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -58,6 +63,27 @@ from tests.helpers.model import ClassificationModel
 VECTOR = (10,)
 IMAGE = (3, 8, 8)
 
+#: seed of the toy models and of other random parts of a detector
+MODEL_SEED = 0
+#: seed of the default fit data; the test inputs draw from the ``seed`` fixture (seed 0), so this
+#: one differs and the inputs are not training samples
+FIT_SEED = 1
+
+
+def _generator(seed: int) -> torch.Generator:
+    return torch.Generator().manual_seed(seed)
+
+
+@contextmanager
+def _seeded(seed: int = MODEL_SEED) -> Iterator[None]:
+    """Seeds the global CPU RNG, which ``nn.Module`` initialization draws from, and restores its
+    state afterwards."""
+    with torch.random.fork_rng(devices=[]):
+        # not torch.manual_seed: it would also reseed CUDA, which fork_rng(devices=[]) does not
+        # restore
+        torch.random.default_generator.manual_seed(seed)
+        yield
+
 
 @dataclass(frozen=True)
 class DetectorCase:
@@ -82,10 +108,15 @@ class DetectorCase:
 
 
 def make_loader(
-    input_shape: Tuple[int, ...], n_samples: int = 24, batch_size: int = 6, n_classes: int = 3
+    input_shape: Tuple[int, ...],
+    n_samples: int = 24,
+    batch_size: int = 6,
+    n_classes: int = 3,
+    seed: int = FIT_SEED,
 ) -> DataLoader:
-    """Random in-distribution inputs with labels ``0 .. n_classes - 1``."""
-    x = torch.randn(n_samples, *input_shape)
+    """Random in-distribution inputs with labels ``0 .. n_classes - 1``, the same for the same
+    ``seed``."""
+    x = torch.randn(n_samples, *input_shape, generator=_generator(seed))
     y = torch.arange(n_samples) % n_classes
     return DataLoader(TensorDataset(x, y), batch_size=batch_size)
 
@@ -123,8 +154,9 @@ class TinyConvDetectorModel(nn.Module):
         return self.fc(self.features(x))
 
 
-def _classifier() -> ClassificationModel:
-    return ClassificationModel().eval()
+def _classifier(**kwargs) -> ClassificationModel:
+    with _seeded():
+        return ClassificationModel(**kwargs).eval()
 
 
 def _gradient_classifier() -> ClassificationModel:
@@ -136,13 +168,14 @@ def _gradient_classifier() -> ClassificationModel:
 
 
 def _conv() -> TinyConvDetectorModel:
-    return TinyConvDetectorModel().eval()
+    with _seeded():
+        return TinyConvDetectorModel().eval()
 
 
 def _she_classifier() -> ClassificationModel:
     # features are the first three inputs, logits equal the features: the stored class patterns
     # are known, so SHE has well-defined correctly classified training samples
-    model = ClassificationModel(num_inputs=10, n_hidden=3, num_outputs=3).eval()
+    model = _classifier(num_inputs=10, n_hidden=3, num_outputs=3)
     with torch.no_grad():
         model.layer1.weight.zero_()
         model.layer1.bias.zero_()
@@ -180,7 +213,9 @@ DETECTOR_CASES = [
         _classifier,
         lambda m: MCM(
             encoder=m.features,
-            text_embeddings=F.normalize(torch.randn(3, 10), dim=-1),
+            text_embeddings=F.normalize(
+                torch.randn(3, 10, generator=_generator(MODEL_SEED)), dim=-1
+            ),
             temperature=1.0,
         ),
         VECTOR,
@@ -199,7 +234,7 @@ DETECTOR_CASES = [
     DetectorCase(
         "ViM",
         # D = 16 is a candidate of hyperparameter_space, which covers d == D
-        lambda: ClassificationModel(n_hidden=16).eval(),
+        lambda: _classifier(n_hidden=16),
         lambda m: ViM(m.features, d=4, w=m.classifier.weight, b=m.classifier.bias),
         VECTOR,
     ),

@@ -64,7 +64,7 @@ from pytorch_ood.detector import (
 )
 from tests.helpers import requires
 from tests.helpers.components import DETECTORS
-from tests.helpers.detectors import DETECTOR_CASES, DetectorCase
+from tests.helpers.detectors import DETECTOR_CASES, FIT_SEED, DetectorCase
 from tests.helpers.snapshot import snapshot
 
 
@@ -102,10 +102,8 @@ def _name(cls: type) -> str:
     return cls.__name__
 
 
-# Detector classes per case, to select the cases a property applies to at collection time. The
-# builders draw random weights, which must not shift the global RNG for the tests that follow.
-with torch.random.fork_rng():
-    _CLASSES: Dict[str, Type[Detector]] = {c.name: type(c.build()) for c in DETECTOR_CASES}
+# Detector classes per case, to select the cases a property applies to at collection time
+_CLASSES: Dict[str, Type[Detector]] = {c.name: type(c.build()) for c in DETECTOR_CASES}
 
 
 def _cases(applies=lambda cls: True):
@@ -392,8 +390,8 @@ def test_refit_equals_a_fresh_fit(case: DetectorCase, seed: torch.Generator):
     # GridSearch refits one instance per candidate: nothing from an earlier fit may survive
     detector = case.build()
     fresh = copy.deepcopy(detector)
-    # different random data
-    earlier, loader = (case.make_fit_loader(n_samples=REFIT_SAMPLES) for _ in range(2))
+    earlier = case.make_fit_loader(n_samples=REFIT_SAMPLES, seed=FIT_SEED + 1)  # different data
+    loader = case.make_fit_loader(n_samples=REFIT_SAMPLES)
     x = _inputs(case, seed)
 
     detector.fit(earlier).fit(loader)
