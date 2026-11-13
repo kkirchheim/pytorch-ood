@@ -106,8 +106,13 @@ def _name(cls: type) -> str:
 _CLASSES: Dict[str, Type[Detector]] = {c.name: type(c.build()) for c in DETECTOR_CASES}
 
 
-def _cases(applies=lambda cls: True):
-    return [pytest.param(c, id=c.name) for c in DETECTOR_CASES if applies(_CLASSES[c.name])]
+def _cases(applies=lambda cls: True, marks: Optional[Dict[str, pytest.MarkDecorator]] = None):
+    marks = marks or {}
+    return [
+        pytest.param(c, id=c.name, marks=marks.get(c.name, ()))
+        for c in DETECTOR_CASES
+        if applies(_CLASSES[c.name])
+    ]
 
 
 def _fits(cls: type) -> bool:
@@ -252,6 +257,39 @@ def test_scores_on_a_representation_do_not_depend_on_the_memory_layout(
 
     _assert_same_scores_in_every_memory_layout(
         getattr(detector, f"predict_{representation.kind}"), z
+    )
+
+
+BATCH_DEPENDENT = {
+    "OpenMax": pytest.mark.xfail(
+        strict=True,
+        reason="OpenMax computes the distance to a class center only for classes that some sample "
+        "in the batch is predicted as, and uses 0 for the others among a sample's top alpha",
+    ),
+}
+
+
+@pytest.mark.parametrize("case", _cases(_deterministic, marks=BATCH_DEPENDENT))
+def test_scores_do_not_depend_on_the_other_samples_in_the_batch(
+    case: DetectorCase, seed: torch.Generator
+):
+    detector = _fitted(case)
+    x = _inputs(case, seed)
+    expected = detector(x)
+    # float32 matrix products round differently for other batch shapes (BLAS picks other kernels
+    # and summation orders). Distance-based scores are differences of terms around 20, so they are
+    # off by a few ulps of those terms, not of the score: up to 1.5e-5 for RMD over 50 input
+    # draws. A score that depends on the batch is off by far more.
+    tolerance = {"rtol": 1e-5, "atol": 1e-4}
+
+    for i in range(len(x)):
+        alone = detector(x[i : i + 1])
+        torch.testing.assert_close(
+            alone, expected[i : i + 1], **tolerance, msg=lambda m: f"sample {i} alone: {m}"
+        )
+    perm = torch.arange(len(x)).roll(1)  # every sample moves
+    torch.testing.assert_close(
+        detector(x[perm]), expected[perm], **tolerance, msg=lambda m: f"permuted: {m}"
     )
 
 
