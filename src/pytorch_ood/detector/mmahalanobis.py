@@ -23,8 +23,8 @@ from ..api import (
     StructuredDetector,
     Task,
 )
-from ..utils import extract_feature_avg
-from ..utils.utils import _fit_gaussian, _id_rows_for_fit, _squared_mahalanobis
+from ..utils import TensorBuffer
+from ..utils.utils import _fit_gaussian, _id_batches, _id_rows_for_fit, _squared_mahalanobis
 
 log = logging.getLogger(__name__)
 
@@ -127,16 +127,21 @@ class MultiMahalanobis(StructuredDetector):
 
         device = self._fit_device()
 
-        zs = []
+        # a single pass over the loader, so that the features of every layer are paired with the
+        # labels of the same samples, also if the loader shuffles
+        buffer = TensorBuffer()
+        with torch.no_grad():
+            for x, y in _id_batches(data_loader):
+                z = x.to(device)
+                for layer_idx, layer in enumerate(self.model):
+                    z = layer(z)
+                    buffer.append(layer_idx, z.mean(dim=(2, 3)).reshape(len(z), -1))
+                buffer.append("label", y)
 
-        for layer_idx in range(len(self.model)):
-            # NOTE: this could be done more efficiently
-            model = Sequential(*self.model[: layer_idx + 1])
-            log.debug(f"Extracting for layer {layer_idx}")
-            z, y = extract_feature_avg(data_loader, model, device)
-            log.debug(f"Extracted {z.shape} features for {y.shape[0]} samples.")
-
-            zs.append(z)
+        zs = [buffer.get(layer_idx) for layer_idx in range(len(self.model))]
+        y = buffer.get("label")
+        buffer.clear()  # the batches are not needed once concatenated
+        log.debug(f"Extracted features of {len(zs)} layers for {y.shape[0]} samples.")
 
         return self.fit_structured(zs, y)
 
