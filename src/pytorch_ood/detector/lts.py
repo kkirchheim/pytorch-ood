@@ -37,6 +37,10 @@ class LTS(FeaturesDetector):
     The logits :math:`f(x)` are multiplied by :math:`S(z)` and passed to ``detector``, which
     defaults to :class:`EnergyBased <pytorch_ood.detector.EnergyBased>`.
 
+    If no activation of a sample is positive, both sums are :math:`0` and the ratio is undefined
+    (the official code returns NaN). This implementation deviates and uses :math:`S(z) = 1` for such
+    samples, which leaves their logits unscaled.
+
     .. rubric:: Examples
 
     .. code-block:: python
@@ -99,15 +103,18 @@ class LTS(FeaturesDetector):
         """
         if z.ndim != 2:
             raise ValueError(f"Expected features of shape (B, D), got {tuple(z.shape)}")
-        # the paper does not mention the ReLU, the official code applies it; it only affects
-        # features that can be negative (e.g. transformers), the head still receives z
+        # Algorithm 1 of the paper omits the ReLU, Appendix C introduces it for architectures with
+        # signed features (ViT, Swin, MLP-Mixer), the official code always applies it; it only
+        # affects features that can be negative, the head still receives z
         z = z.relu()
         s1 = z.sum(dim=1)
         n = z.shape[1]
         # as in the official code (percentile = 1 - p); the guard avoids k = 0 for small D
         k = max(1, n - round(n * (1 - p)))
         s2 = z.topk(k, dim=1).values.sum(dim=1)
-        return (s1 / s2).square()
+        # without a positive activation, s1 = s2 = 0; the scale is neutral (1) instead of 0 / 0
+        empty = s2 == 0
+        return (s1 / s2.masked_fill(empty, 1)).masked_fill(empty, 1).square()
 
     @torch.no_grad()
     def predict_features(self, z: Tensor) -> Tensor:
