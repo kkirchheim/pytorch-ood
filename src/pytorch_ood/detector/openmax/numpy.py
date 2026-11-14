@@ -83,8 +83,8 @@ class OpenMax(object):
         :returns: revised activation vector
         """
         assert self.n_dims == x.shape[1]
-        labels = np.argmax(x, axis=1)
-        classes = np.unique(labels)
+        # all fitted classes, not only the predicted ones: the top-alpha classes of a sample are read below
+        classes = sorted(self.centers.keys())
         # distance of each point to each cluster center, this vectorized operation is several orders of magn. faster
         # then individual queries
         distances = np.zeros((x.shape[0], self.n_dims))
