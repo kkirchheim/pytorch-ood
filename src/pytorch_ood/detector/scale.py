@@ -55,7 +55,9 @@ def scale(x: Tensor, percentile: float = 0.65) -> Tensor:
     # sum over the surviving (top-k) activations per sample
     s2 = v.sum(dim=1)
 
-    scale = s1 / s2
+    # an all-zero sample has s1 = s2 = 0; dividing by 1 gives ratio 0, i.e. a factor of exp(0) = 1
+    empty = (s1 == 0) & (s2 == 0)
+    scale = s1 / s2.masked_fill(empty, 1)
     return x * torch.exp(scale[:, None, None, None])
 
 
@@ -77,6 +79,10 @@ class SCALE(FeatureMapsDetector):
     OOD detection, while scaling the *full* activations enhances it.
 
     The paper applies SCALE after the last average pooling layer.
+
+    If :math:`s_1 = s_2 = 0` (for example an all-zero feature map), the paper's ratio
+    :math:`s_1 / s_2` is undefined (the official code returns NaN). This implementation deviates and
+    takes the ratio as :math:`0`, so that the map is multiplied by :math:`\\exp(0) = 1`.
 
     .. rubric:: Examples
 
