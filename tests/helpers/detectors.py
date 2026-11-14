@@ -325,7 +325,7 @@ DETECTOR_CASES = [
             layers=[m.conv1, m.relu],
             m_bins=[10, 10],
             alpha=5.0,
-            o_star=2,
+            o_star=50,
         ),
         IMAGE,
     ),

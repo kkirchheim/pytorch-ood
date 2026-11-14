@@ -275,6 +275,7 @@ def test_scores_on_a_representation_do_not_depend_on_the_memory_layout(
 BATCH_DEPENDENT = {
     "OpenMax": pytest.mark.xfail(
         strict=True,
+        raises=AssertionError,
         reason="OpenMax computes the distance to a class center only for classes that some sample "
         "in the batch is predicted as, and uses 0 for the others among a sample's top alpha",
     ),
@@ -292,7 +293,11 @@ def test_scores_do_not_depend_on_the_other_samples_in_the_batch(
     # and summation orders). Distance-based scores are differences of terms around 20, so they are
     # off by a few ulps of those terms, not of the score: up to 1.5e-5 for RMD over 50 input
     # draws. A score that depends on the batch is off by far more.
-    tolerance = {"rtol": 1e-5, "atol": 1e-4}
+    # The tolerance is never wider than a small part of the spread of the scores: ODIN at
+    # T=1000 spreads its scores over about 1e-4. Constant scores could not show a dependence.
+    spread = (expected.max() - expected.min()).item()
+    assert spread > 0
+    tolerance = {"rtol": 1e-5, "atol": min(1e-4, 1e-2 * spread)}
 
     for i in range(len(x)):
         alone = detector(x[i : i + 1])
