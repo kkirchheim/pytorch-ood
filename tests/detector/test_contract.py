@@ -272,17 +272,7 @@ def test_scores_on_a_representation_do_not_depend_on_the_memory_layout(
     )
 
 
-BATCH_DEPENDENT = {
-    "OpenMax": pytest.mark.xfail(
-        strict=True,
-        raises=AssertionError,
-        reason="OpenMax computes the distance to a class center only for classes that some sample "
-        "in the batch is predicted as, and uses 0 for the others among a sample's top alpha",
-    ),
-}
-
-
-@pytest.mark.parametrize("case", _cases(_deterministic, marks=BATCH_DEPENDENT))
+@pytest.mark.parametrize("case", _cases(_deterministic))
 def test_scores_do_not_depend_on_the_other_samples_in_the_batch(
     case: DetectorCase, seed: torch.Generator
 ):
