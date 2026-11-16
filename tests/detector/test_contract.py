@@ -45,6 +45,7 @@ from pytorch_ood.detector import (
     VRA,
     EnergyBased,
     Entropy,
+    Forte,
     GradNorm,
     GradUncertainty,
     Gram,
@@ -272,7 +273,12 @@ def test_scores_on_a_representation_do_not_depend_on_the_memory_layout(
     )
 
 
-@pytest.mark.parametrize("case", _cases(_deterministic))
+def _scores_each_input_alone(cls: type) -> bool:
+    # a detector that declares batch_dependent scores the inputs of a call as one sample
+    return _deterministic(cls) and not cls.batch_dependent
+
+
+@pytest.mark.parametrize("case", _cases(_scores_each_input_alone))
 def test_scores_do_not_depend_on_the_other_samples_in_the_batch(
     case: DetectorCase, seed: torch.Generator
 ):
@@ -684,6 +690,7 @@ TAXONOMY: Dict[type, Tuple[type, bool]] = {
     # features
     DICE: (FeaturesDetector, True),
     fDBD: (FeaturesDetector, True),
+    Forte: (FeaturesDetector, True),
     GMM: (FeaturesDetector, True),
     KNN: (FeaturesDetector, True),
     LTS: (FeaturesDetector, False),
@@ -774,6 +781,7 @@ def test_predict_methods_keep_their_signature(cls: type, method: str):
 def test_detector_base_defaults():
     assert Detector.requires_fit is False
     assert Detector._fit_uses_ood is False
+    assert Detector.batch_dependent is False
     assert not any(hasattr(Detector, f"{p}_{kind}") for kind in KINDS for p in ("predict", "fit"))
 
 
@@ -850,6 +858,8 @@ def test_fit_uses_ood_passes_ood_rows_through():
 #: defaults that decide the published results of a method
 DEFAULTS = [
     (fDBD, "distance_as_normalizer", True),
+    (Forte, "k", 5),
+    (Forte, "method", "gmm"),
     (GradNorm, "temperature", 1.0),
     (KNN, "k", 50),
     (KNN, "normalize", True),

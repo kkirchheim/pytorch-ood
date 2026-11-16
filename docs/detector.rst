@@ -66,6 +66,7 @@ Feature-based
    detectors/pnml
    detectors/mcm
    detectors/lts
+   detectors/forte
 
 
 Gradient-based

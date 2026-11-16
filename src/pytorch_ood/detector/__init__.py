@@ -86,6 +86,7 @@ from .dice import DICE
 from .energy import EnergyBased
 from .entropy import Entropy
 from .fdbd import fDBD
+from .forte import Forte
 from .gen import GEN
 from .gmm import GMM
 from .gradnorm import GradNorm
@@ -123,6 +124,7 @@ __all__ = [
     "EnergyBased",
     "Entropy",
     "fDBD",
+    "Forte",
     "GEN",
     "GMM",
     "GradNorm",
