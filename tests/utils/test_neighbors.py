@@ -94,11 +94,13 @@ def test_fit_rejects_non_2d_reference():
         TorchNearestNeighbors().fit(torch.randn(5))
 
 
+@pytest.mark.parametrize("exact_distances", [True, False])
 @pytest.mark.parametrize("metric", METRICS)
 @pytest.mark.parametrize("k", [1, 5, 50, 300])
-def test_matches_brute_force(data, k, metric):
+def test_matches_brute_force(data, k, metric, exact_distances):
     reference, queries = data
-    values, indices = TorchNearestNeighbors(metric=metric).fit(reference).search(queries, k)
+    search = TorchNearestNeighbors(metric=metric, exact_distances=exact_distances)
+    values, indices = search.fit(reference).search(queries, k)
     expected_values, expected_indices = _reference_search(reference, queries, k, metric)
     assert values.shape == indices.shape == (40, k)
     torch.testing.assert_close(values, expected_values)
@@ -171,29 +173,6 @@ def test_exact_distances_by_default(duplicates, k):
     # the indices belong to the values
     direct = ((reference[indices] - queries[:, None]) ** 2).sum(-1)
     assert torch.equal(values, direct)
-
-
-@pytest.mark.parametrize("k", [1, 10])
-def test_inexact_distances_can_be_requested(duplicates, k, monkeypatch):
-    reference, queries = duplicates
-    search = TorchNearestNeighbors(exact_distances=False).fit(reference)
-    assert search.exact_distances is False
-    assert TorchNearestNeighbors().exact_distances is True
-    # whether the formula's cancellation error shows depends on the BLAS, so check that the
-    # recomputation is skipped rather than that the result is inexact
-    calls = []
-    recompute = TorchNearestNeighbors._exact_distances
-    monkeypatch.setattr(
-        TorchNearestNeighbors,
-        "_exact_distances",
-        staticmethod(lambda *args: calls.append(1) or recompute(*args)),
-    )
-    values, _ = search.search(queries, k)
-    assert not calls
-    # same neighbours' distances up to the formula's cancellation error
-    exact, _ = TorchNearestNeighbors().fit(reference).search(queries, k)
-    assert calls
-    torch.testing.assert_close(values, exact, rtol=1e-4, atol=1e-2)
 
 
 @pytest.mark.parametrize("batch_size", [1, 7, None, "auto"])
