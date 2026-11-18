@@ -207,7 +207,7 @@ DEGENERATE_REPRESENTATIONS = [
 
 @pytest.mark.parametrize("degenerate", DEGENERATE_REPRESENTATIONS)
 @pytest.mark.parametrize("case", _cases(_produced))
-def test_degenerate_representations_give_finite_scores(
+def test_scoring_degenerate_representations_gives_finite_scores(
     case: DetectorCase, degenerate: Callable[[Tensor], Tensor], seed: torch.Generator
 ):
     detector = _fitted(case)
