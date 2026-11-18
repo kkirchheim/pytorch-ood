@@ -37,9 +37,10 @@ class LTS(FeaturesDetector):
     The logits :math:`f(x)` are multiplied by :math:`S(z)` and passed to ``detector``, which
     defaults to :class:`EnergyBased <pytorch_ood.detector.EnergyBased>`.
 
-    If no activation of a sample is positive, both sums are :math:`0` and the ratio is undefined
-    (the official code returns NaN). This implementation deviates and uses :math:`S(z) = 1` for such
-    samples, which leaves their logits unscaled.
+    .. note::
+        If no activation of a sample is positive, both sums are :math:`0` and the ratio is
+        undefined. This implementation deviates and uses :math:`S(z) = 1` for such samples, which
+        leaves their logits unscaled.
 
     .. rubric:: Examples
 

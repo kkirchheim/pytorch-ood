@@ -80,9 +80,10 @@ class SCALE(FeatureMapsDetector):
 
     The paper applies SCALE after the last average pooling layer.
 
-    If :math:`s_1 = s_2 = 0` (for example an all-zero feature map), the paper's ratio
-    :math:`s_1 / s_2` is undefined (the official code returns NaN). This implementation deviates and
-    takes the ratio as :math:`0`, so that the map is multiplied by :math:`\\exp(0) = 1`.
+    .. note::
+        If :math:`s_1 = s_2 = 0` (for example an all-zero feature map), the paper's ratio
+        :math:`s_1 / s_2` is undefined. This implementation deviates and takes the ratio as
+        :math:`0`, so that the map is multiplied by :math:`\\exp(0) = 1`.
 
     .. rubric:: Examples
 
