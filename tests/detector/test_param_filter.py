@@ -16,6 +16,7 @@ from pytorch_ood.detector import graduncertainty as graduncertainty_module
 from pytorch_ood.model import WideResNet
 from tests.helpers import ClassificationModel
 from tests.helpers.snapshot import snapshot
+from tests.helpers.torch_features import requires_torch_func
 
 DETECTORS = ((GradUncertainty, graduncertainty_module), (GradNorm, gradnorm_module))
 
@@ -30,6 +31,7 @@ class TestParamFilter:
         self.model = ClassificationModel(num_inputs=10, n_hidden=16, num_outputs=5).eval()
         self.x = torch.randn(6, 10)
 
+    @requires_torch_func
     @pytest.mark.parametrize("cls, module", DETECTORS)
     def test_gradients_only_for_selected_parameters(self, cls, module):
         original = module._func_grad
@@ -84,7 +86,7 @@ class TestParamFilter:
             cls(lambda x: model(x))
 
     @pytest.mark.parametrize("cls, module", DETECTORS)
-    @pytest.mark.parametrize("batched", (True, False))
+    @pytest.mark.parametrize("batched", (pytest.param(True, marks=requires_torch_func), False))
     def test_independent_of_requires_grad(self, cls, module, batched):
         detector = cls(self.model, param_filter=_only_classifier_weight)
         with mock.patch.object(module, "_TORCH_FUNC_AVAILABLE", batched):

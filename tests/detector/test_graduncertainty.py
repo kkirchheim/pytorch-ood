@@ -1,9 +1,11 @@
 from unittest import mock
 
+import pytest
 import torch
 
 from pytorch_ood.detector import GradUncertainty
 from pytorch_ood.detector import graduncertainty as graduncertainty_module
+from tests.helpers.torch_features import requires_torch_func
 
 
 def _linear_head(bias: torch.Tensor) -> torch.nn.Linear:
@@ -15,7 +17,8 @@ def _linear_head(bias: torch.Tensor) -> torch.nn.Linear:
     return head.eval()
 
 
-def test_matches_closed_form():
+@pytest.mark.parametrize("batched", (pytest.param(True, marks=requires_torch_func), False))
+def test_matches_closed_form(batched):
     # for a linear layer, the loss gradient w.r.t. the logits is C * p - 1, so the squared
     # gradient norms are ||C * p - 1||^2 * ||x||^2 (weight) and ||C * p - 1||^2 (bias)
     torch.manual_seed(0)
@@ -30,7 +33,6 @@ def test_matches_closed_form():
     for name, head in heads.items():
         p = head(x).softmax(dim=1)
         expected = -((5 * p - 1) ** 2).sum(dim=1) * ((x**2).sum(dim=1) + 1)
-        for batched in (True, False):
-            with mock.patch.object(graduncertainty_module, "_TORCH_FUNC_AVAILABLE", batched):
-                scores = GradUncertainty(head)(x)
-            torch.testing.assert_close(scores, expected.detach())
+        with mock.patch.object(graduncertainty_module, "_TORCH_FUNC_AVAILABLE", batched):
+            scores = GradUncertainty(head)(x)
+        torch.testing.assert_close(scores, expected.detach())

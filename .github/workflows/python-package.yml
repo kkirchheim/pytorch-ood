@@ -24,6 +24,11 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        min-deps: [false]
+        include:
+          # oldest supported versions: install_requires floors from setup.cfg, pinned with ==
+          - python-version: "3.8"
+            min-deps: true
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,7 +44,15 @@ jobs:
           # reference implementation for the metric tests
           python -m pip install scikit-learn
           # install depedencies + optional dependencies used by the test suite
-          python -m pip install ".[all]"
+          if [ "${{ matrix.min-deps }}" = "true" ]; then
+            # turn every ">=" floor in install_requires into "==", so setup.cfg stays the only list
+            python -c "import configparser; c = configparser.ConfigParser(); c.read('setup.cfg'); print('\n'.join(r.replace('>=', '==') for r in c['options']['install_requires'].split('\n') if '>=' in r and not r.lstrip().startswith('#')))" > "$RUNNER_TEMP/min-constraints.txt"
+            cat "$RUNNER_TEMP/min-constraints.txt"
+            # torch < 2 has no CPU-only wheels on PyPI
+            python -m pip install -c "$RUNNER_TEMP/min-constraints.txt" --extra-index-url https://download.pytorch.org/whl/cpu ".[all]"
+          else
+            python -m pip install ".[all]"
+          fi
       - name: Lint with ruff
         run: ruff check .
       - name: Check formatting with ruff
@@ -51,7 +64,7 @@ jobs:
           coverage xml -i
           coverage html -i
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.11' && !matrix.min-deps
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage.xml
