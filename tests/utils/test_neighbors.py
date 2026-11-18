@@ -149,6 +149,71 @@ def test_float32_results_stay_float32(data):
     )
 
 
+@pytest.fixture
+def duplicates(seed):
+    """float32 features with many exact duplicates and large norms, where
+    ||q||^2 + ||r||^2 - 2 q.r loses precision"""
+    patterns = 10 * torch.randn(20, 64, generator=seed)
+    reference = patterns[torch.randint(0, 20, (300,), generator=seed)]
+    queries = torch.cat([reference[:100], 10 * torch.randn(20, 64, generator=seed)])
+    return reference, queries
+
+
+@pytest.mark.parametrize("k", [1, 10])
+def test_exact_distances_by_default(duplicates, k):
+    reference, queries = duplicates
+    values, indices = TorchNearestNeighbors().fit(reference).search(queries, k)
+    expected_values, _ = _reference_search(reference, queries, k)
+    assert values.dtype == torch.float32
+    # an exact duplicate of a reference sample is at distance 0
+    assert (values[:100, 0] == 0).all()
+    torch.testing.assert_close(values.double(), expected_values, rtol=1e-6, atol=1e-6)
+    # the indices belong to the values
+    direct = ((reference[indices] - queries[:, None]) ** 2).sum(-1)
+    assert torch.equal(values, direct)
+
+
+@pytest.mark.parametrize("k", [1, 10])
+def test_inexact_distances_can_be_requested(duplicates, k):
+    reference, queries = duplicates
+    search = TorchNearestNeighbors(exact_distances=False).fit(reference)
+    assert search.exact_distances is False
+    assert TorchNearestNeighbors().exact_distances is True
+    values, _ = search.search(queries, k)
+    # cancellation: some duplicates get a positive distance
+    assert (values[:100, 0] > 0).any()
+    # same neighbours' distances up to the formula's cancellation error, but not exact
+    exact, _ = TorchNearestNeighbors().fit(reference).search(queries, k)
+    torch.testing.assert_close(values, exact, rtol=1e-4, atol=1e-2)
+    assert not torch.equal(values, exact)
+
+
+@pytest.mark.parametrize("batch_size", [1, 7, None, "auto"])
+def test_exact_distances_sorted_and_independent_of_batch_size(duplicates, batch_size):
+    reference, queries = duplicates
+    expected = TorchNearestNeighbors(batch_size=None).fit(reference).search(queries, 10)
+    values, indices = (
+        TorchNearestNeighbors(batch_size=batch_size).fit(reference).search(queries, 10)
+    )
+    assert (values[:, 1:] >= values[:, :-1]).all()
+    direct = ((reference[indices] - queries[:, None]) ** 2).sum(-1)
+    assert torch.equal(values, direct)
+    # ties may order indices differently across block sizes, the values must not differ
+    assert torch.equal(values, expected[0])
+
+
+def test_inner_product_ignores_exact_distances(data):
+    reference, queries = data
+    results = [
+        TorchNearestNeighbors(metric="inner_product", exact_distances=flag)
+        .fit(reference)
+        .search(queries, 5)
+        for flag in (True, False)
+    ]
+    assert torch.equal(results[0][0], results[1][0])
+    assert torch.equal(results[0][1], results[1][1])
+
+
 def test_results_follow_query_dtype(data):
     reference, queries = data
     values, _ = TorchNearestNeighbors().fit(reference).search(queries.float(), 5)
