@@ -117,11 +117,9 @@ class TorchNearestNeighbors(NearestNeighborSearch):
     itself stays in memory (:math:`N \\times D` values on its device).
 
     Values are computed in the dtype of the reference set. In ``float32``, this formula loses
-    precision for very close neighbors, more so for samples with large norms, so the :math:`k`
-    neighbors it selects can be slightly off for near-ties. With ``exact_distances=True``
+    precision for very close neighbors. With ``exact_distances=True``
     (the default), the returned squared distances are recomputed from the differences
-    :math:`\\lVert q - r \\rVert_2^2` of the selected neighbors, so that they are accurate to
-    rounding in the dtype of the reference set (an exact duplicate has distance 0), and
+    :math:`\\lVert q - r \\rVert_2^2` of the selected neighbors and
     re-sorted. Use ``float64`` samples for a more precise neighbor selection.
 
     .. note::
