@@ -174,18 +174,26 @@ def test_exact_distances_by_default(duplicates, k):
 
 
 @pytest.mark.parametrize("k", [1, 10])
-def test_inexact_distances_can_be_requested(duplicates, k):
+def test_inexact_distances_can_be_requested(duplicates, k, monkeypatch):
     reference, queries = duplicates
     search = TorchNearestNeighbors(exact_distances=False).fit(reference)
     assert search.exact_distances is False
     assert TorchNearestNeighbors().exact_distances is True
+    # whether the formula's cancellation error shows depends on the BLAS, so check that the
+    # recomputation is skipped rather than that the result is inexact
+    calls = []
+    recompute = TorchNearestNeighbors._exact_distances
+    monkeypatch.setattr(
+        TorchNearestNeighbors,
+        "_exact_distances",
+        staticmethod(lambda *args: calls.append(1) or recompute(*args)),
+    )
     values, _ = search.search(queries, k)
-    # cancellation: some duplicates get a positive distance
-    assert (values[:100, 0] > 0).any()
-    # same neighbours' distances up to the formula's cancellation error, but not exact
+    assert not calls
+    # same neighbours' distances up to the formula's cancellation error
     exact, _ = TorchNearestNeighbors().fit(reference).search(queries, k)
+    assert calls
     torch.testing.assert_close(values, exact, rtol=1e-4, atol=1e-2)
-    assert not torch.equal(values, exact)
 
 
 @pytest.mark.parametrize("batch_size", [1, 7, None, "auto"])
