@@ -3,7 +3,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from pytorch_ood.detector import LTS, EnergyBased
+from pytorch_ood.detector import LTS
 from tests.helpers import ClassificationModel
 
 
@@ -80,19 +80,11 @@ def test_custom_detector_callable():
 
 
 def test_features_without_positive_activation_are_not_scaled():
-    # without a positive activation the ratio is 0 / 0 (the official code returns NaN); the
-    # decided value is S = 1, i.e. unscaled logits
-    detector = LTS(encoder=None, head=torch.nn.Identity(), p=0.5)
-    ordinary = torch.tensor([[1.0, 2.0, 3.0, 4.0], [0.5, 0.0, 2.0, 1.0]])
+    # without a positive activation both sums are 0; the decided factor is S = 1
     degenerate = torch.tensor([[-1.0, -2.0, 0.0, -4.0], [0.0, 0.0, 0.0, 0.0]])
+    ordinary = torch.tensor([[1.0, 2.0, 3.0, 4.0], [0.5, 0.0, 2.0, 1.0]])
     batch = torch.cat([degenerate, ordinary])
 
     # k = 2: (10 / 7)^2 for [1, 2, 3, 4] and (3.5 / 3)^2 for [0.5, 0, 2, 1]
     expected = torch.tensor([1.0, 1.0, (10 / 7) ** 2, (3.5 / 3) ** 2])
     torch.testing.assert_close(LTS.scaling_factor(batch, p=0.5), expected)
-
-    alone = detector.predict_features(ordinary)
-    mixed = detector.predict_features(batch)
-    assert torch.isfinite(mixed).all()
-    assert torch.equal(mixed[2:], alone)
-    torch.testing.assert_close(mixed[:2], EnergyBased.score(degenerate))

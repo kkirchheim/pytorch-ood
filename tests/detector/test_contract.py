@@ -196,6 +196,32 @@ def test_predict_equals_predict_on_representation(case: DetectorCase, seed: torc
     torch.testing.assert_close(detector(x), expected)
 
 
+#: representations on which scores must stay finite, e.g. where a ratio of sums would be 0 / 0
+DEGENERATE_REPRESENTATIONS = [
+    pytest.param(lambda z: torch.zeros_like(z), id="zeros"),
+    pytest.param(lambda z: -z.abs() - 1, id="negative"),
+    pytest.param(lambda z: torch.full_like(z, 3.0), id="constant"),
+    pytest.param(lambda z: z * 1e3, id="large"),
+]
+
+
+@pytest.mark.parametrize("degenerate", DEGENERATE_REPRESENTATIONS)
+@pytest.mark.parametrize("case", _cases(_produced))
+def test_degenerate_representations_give_finite_scores(
+    case: DetectorCase, degenerate: Callable[[Tensor], Tensor], seed: torch.Generator
+):
+    detector = _fitted(case)
+    representation = _produced(type(detector))
+    x = _inputs(case, seed)
+
+    with torch.no_grad():
+        z = degenerate(getattr(detector, representation.producer)(x))
+    scores = getattr(detector, f"predict_{representation.kind}")(z)
+
+    assert scores.shape == (len(x),)
+    assert torch.isfinite(scores).all()
+
+
 @pytest.mark.parametrize("case", _cases())
 def test_scores_are_not_differentiable(case: DetectorCase, seed: torch.Generator):
     assert not _fitted(case)(_inputs(case, seed)).requires_grad

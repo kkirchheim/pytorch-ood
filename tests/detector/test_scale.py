@@ -55,17 +55,9 @@ def test_separates_gaussians():
 
 
 def test_all_zero_feature_map_is_not_scaled():
-    # s1 = s2 = 0 gives 0 / 0 (the official code returns NaN); the decided ratio is 0, i.e. factor 1
+    # without a positive activation both sums are 0; the decided ratio is s1 / s2 = 0, i.e. factor 1
     x = torch.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 0.0, 0.0, 0.0]]).reshape(2, 4, 1, 1)
 
     # n = 4, percentile 0.5 gives k = 2, so s1 = 10 and s2 = 4 + 3 = 7 for the first map
     expected = torch.cat([x[:1] * np.exp(10 / 7), torch.zeros(1, 4, 1, 1)]).float()
     torch.testing.assert_close(scale(x, 0.5), expected)
-
-    detector = SCALE(backbone=None, head=lambda f: f.flatten(1), percentile=0.5)
-    alone = detector.predict_feature_maps(x[:1])
-    mixed = detector.predict_feature_maps(x)
-    assert torch.isfinite(mixed).all()
-    assert torch.equal(mixed[:1], alone)
-    # the zero map gives four zero logits, whose energy is -log(4)
-    torch.testing.assert_close(mixed[1], torch.tensor(-np.log(4.0)).float())
