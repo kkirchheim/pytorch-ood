@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from pytorch_ood.detector import SCALE
@@ -51,3 +52,12 @@ def test_separates_gaussians():
     metrics.update(s_out, -torch.ones(128).long())  # OOD labels < 0
     auroc = metrics.compute()["AUROC"]
     assert auroc > 0.6
+
+
+def test_all_zero_feature_map_is_not_scaled():
+    # without a positive activation both sums are 0; the decided ratio is s1 / s2 = 0, i.e. factor 1
+    x = torch.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 0.0, 0.0, 0.0]]).reshape(2, 4, 1, 1)
+
+    # n = 4, percentile 0.5 gives k = 2, so s1 = 10 and s2 = 4 + 3 = 7 for the first map
+    expected = torch.cat([x[:1] * np.exp(10 / 7), torch.zeros(1, 4, 1, 1)]).float()
+    torch.testing.assert_close(scale(x, 0.5), expected)

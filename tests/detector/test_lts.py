@@ -77,3 +77,14 @@ def test_custom_detector_callable():
     # k = 2, so S = (8 / 4)^2 = 4, and the detector receives the scaled logits
     torch.testing.assert_close(seen[0], 4 * z)
     assert scores.shape == (1,)
+
+
+def test_features_without_positive_activation_are_not_scaled():
+    # without a positive activation both sums are 0; the decided factor is S = 1
+    degenerate = torch.tensor([[-1.0, -2.0, 0.0, -4.0], [0.0, 0.0, 0.0, 0.0]])
+    ordinary = torch.tensor([[1.0, 2.0, 3.0, 4.0], [0.5, 0.0, 2.0, 1.0]])
+    batch = torch.cat([degenerate, ordinary])
+
+    # k = 2: (10 / 7)^2 for [1, 2, 3, 4] and (3.5 / 3)^2 for [0.5, 0, 2, 1]
+    expected = torch.tensor([1.0, 1.0, (10 / 7) ** 2, (3.5 / 3) ** 2])
+    torch.testing.assert_close(LTS.scaling_factor(batch, p=0.5), expected)
