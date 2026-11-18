@@ -39,6 +39,7 @@ from pytorch_ood.detector import (
     VRA,
     EnergyBased,
     Entropy,
+    Forte,
     GradNorm,
     GradUncertainty,
     Gram,
@@ -208,6 +209,7 @@ DETECTOR_CASES = [
     # features
     DetectorCase("KNN", _classifier, lambda m: KNN(m.features, k=3), VECTOR),
     DetectorCase("GMM", _classifier, lambda m: GMM(m.features), VECTOR),
+    DetectorCase("Forte", _classifier, lambda m: Forte(m.features), VECTOR),
     DetectorCase(
         "MCM",
         _classifier,

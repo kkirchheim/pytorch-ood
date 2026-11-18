@@ -279,6 +279,10 @@ class Detector(ABC):
 
     requires_fit = False  #: Whether ``fit(...)`` must be called before scoring.
 
+    #: Whether the score of an input depends on the other inputs that are scored in the same call.
+    #: Such a detector scores a set of inputs as a whole, so pass the whole set in one call.
+    batch_dependent = False
+
     hyperparameter_space: Dict[str, List] = {}
     """
     Search space for hyperparameter optimization, mapping each tunable hyperparameter
