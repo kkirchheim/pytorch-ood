@@ -130,8 +130,8 @@ class KNN(FeaturesDetector):
 
         # squared distances, nearest first; the k-th is the last column
         values, _ = self.search.search(self._prepare(z), self.k)
-        # the sqrt magnifies the search's float32 errors near 0: near-duplicates of fitted samples
-        # (e.g. k=1 on training data) score around 1e-3 instead of 0. The reference code scores
+        # the sqrt magnifies errors of the squared distances near 0; the default search returns
+        # exact distances, but an approximate search may not. The reference code scores
         # with the squared distance (faiss IndexFlatL2); the sqrt follows the paper and does not
         # change the ranking.
         return values[:, -1].sqrt()

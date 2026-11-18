@@ -116,9 +116,17 @@ class TorchNearestNeighbors(NearestNeighborSearch):
     block needs memory for a ``batch_size`` :math:`\\times N` matrix of values. The reference set
     itself stays in memory (:math:`N \\times D` values on its device).
 
-    Values are computed in the dtype of the reference set. In ``float32``, the distances of very
-    close neighbors lose relative precision, more so for samples with large norms; use
-    ``float64`` samples if that matters.
+    Values are computed in the dtype of the reference set. In ``float32``, this formula loses
+    precision for very close neighbors, more so for samples with large norms, so the :math:`k`
+    neighbors it selects can be slightly off for near-ties. With ``exact_distances=True``
+    (the default), the returned squared distances are recomputed from the differences
+    :math:`\\lVert q - r \\rVert_2^2` of the selected neighbors, so that they are accurate to
+    rounding in the dtype of the reference set (an exact duplicate has distance 0), and
+    re-sorted. Use ``float64`` samples for a more precise neighbor selection.
+
+    .. note::
+        Exact distances can make the search up to a few times slower for large :math:`k`;
+        ``exact_distances=False`` turns them off.
 
     .. rubric:: Examples
 
@@ -137,6 +145,7 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         device: Optional[Union[str, torch.device]] = None,
         batch_size: Union[int, Literal["auto"], None] = "auto",
         metric: Literal["sqeuclidean", "inner_product"] = "sqeuclidean",
+        exact_distances: bool = True,
     ):
         """
         :param device: device to keep the reference set on. If given, the reference set is
@@ -149,6 +158,10 @@ class TorchNearestNeighbors(NearestNeighborSearch):
             values.
         :param metric: ``"sqeuclidean"`` for squared Euclidean distances, ascending, or
             ``"inner_product"`` for inner products, descending
+        :param exact_distances: if ``True``, recompute the returned squared Euclidean distances
+            of the selected neighbors from the differences to the queries and sort them again,
+            instead of returning the values of the formula above. Has no effect for
+            ``"inner_product"``, which does not suffer from cancellation.
         :raises ValueError: if ``batch_size`` is not ``"auto"``, ``None`` or a positive integer,
             or ``metric`` is not one of the above
         """
@@ -170,6 +183,8 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         self.device = torch.device(device) if device is not None else None
         #: Number of queries per block: ``"auto"``, ``None`` (one block) or an integer.
         self.batch_size = batch_size
+        #: Whether squared Euclidean distances are recomputed exactly for the neighbors found.
+        self.exact_distances = exact_distances
         self._reference: Optional[Tensor] = None
 
     @property
@@ -247,6 +262,8 @@ class TorchNearestNeighbors(NearestNeighborSearch):
                 d2 = torch.addmm(squared_norms, block, reference.T, alpha=-2)
                 d2.add_(torch.einsum("bd,bd->b", block, block)[:, None]).clamp_(min=0)
                 v, i = d2.topk(k, dim=1, largest=False)
+                if self.exact_distances:
+                    v, i = self._exact_distances(block, reference, i)
             else:
                 v, i = (block @ reference.T).topk(k, dim=1)
             values_list.append(v)
@@ -265,6 +282,24 @@ class TorchNearestNeighbors(NearestNeighborSearch):
         if self.device is None and self._reference is not None:
             self._reference = self._reference.to(device)
         return self
+
+    @staticmethod
+    def _exact_distances(
+        block: Tensor, reference: Tensor, indices: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        """Squared distances of the selected neighbors by direct subtraction, sorted again."""
+        rows, k = indices.shape
+        if rows == 0:
+            return block.new_empty(0, k), indices
+        # the rows x k x D temporary is kept below the size of the rows x N distance block
+        step = max(1, min(rows, rows * reference.shape[0] // (k * reference.shape[1])))
+        values = []
+        for start in range(0, rows, step):
+            diff = reference[indices[start : start + step]]
+            diff.sub_(block[start : start + step, None, :])
+            values.append(diff.square_().sum(-1))
+        values, order = torch.cat(values).sort(dim=1)
+        return values, indices.gather(1, order)
 
     def _rows_per_block(self, n_queries: int, n: int, reference: Tensor) -> int:
         if self.batch_size is None:
