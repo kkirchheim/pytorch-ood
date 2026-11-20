@@ -24,6 +24,7 @@ REQUIRED: Dict[type, dict] = {
     img.FishyScapes: {"cs_root": ROOT},
     img.ImageNetC: {"subset": "blur"},
     img.MNISTC: {"subset": "all", "split": "test"},
+    img.Kaputt: {"split": "test"},
     img.MVTechAD: {"split": "test"},
     img.SegmentMeIfYouCan: {"subset": "RoadAnomaly21"},
     img.StreetHazards: {"subset": "test"},

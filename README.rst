@@ -389,6 +389,8 @@ The original workshop paper:
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 | Uniform Noise         | Dataset with samples drawn from a uniform distribution.                                                         |      |               |
 +-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
+| Kaputt                | Large-scale dataset for visual defect detection in retail logistics.                                            | 2025 | [#Kaputt]_    |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+------+---------------+
 
 
 
@@ -505,6 +507,8 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#FS] Blum, H. et al (2021) The Fishyscapes Benchmark: Measuring Blind Spots in Semantic Segmentation. IJCV.
 
 .. [#MVTech] Bergmann, P. et al (2021) The MVTec Anomaly Detection Dataset: A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection. IJCV
+
+.. [#Kaputt] Höfer, S. et al (2025) Kaputt: A Large-Scale Dataset for Visual Defect Detection. ICCV
 
 .. [#StreeHaz] Hendrycks, D., et al. (2022). Scaling out-of-distribution detection for real-world settings. ICML.
 
