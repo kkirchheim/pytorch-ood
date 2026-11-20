@@ -18,7 +18,7 @@ ignore = [
 # Optional dependencies (extras) must be imported inside the function that uses them, so that a
 # plain `pip install pytorch-ood` works; see the minimal-install CI job.
 [tool.ruff.lint.flake8-tidy-imports]
-banned-module-level-imports = ["sklearn", "gdown", "pandas", "segmentation_models_pytorch"]
+banned-module-level-imports = ["sklearn", "gdown", "pandas", "pyarrow", "segmentation_models_pytorch"]
 
 # `src.pytorch_ood` is a second copy of the package: exceptions and isinstance checks do not match
 # across the two. pytest's `pythonpath = src .` makes `import pytorch_ood` use this checkout.

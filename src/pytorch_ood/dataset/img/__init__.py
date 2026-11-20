@@ -11,6 +11,7 @@ from .imagelist import ImageListDataset
 from .imagenet import ImageNetA, ImageNetC, ImageNetO, ImageNetR
 from .imagenet200 import ImageNet200
 from .imagenet800 import ImageNet800
+from .kaputt import Kaputt
 from .mnistc import MNISTC
 from .mvtech import MVTechAD
 from .ninco import NINCO
@@ -48,6 +49,7 @@ __all__ = [
     "ImageNetR",
     "ImageNet200",
     "ImageNet800",
+    "Kaputt",
     "MNISTC",
     "MVTechAD",
     "NINCO",
