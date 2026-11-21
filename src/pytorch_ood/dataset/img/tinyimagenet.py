@@ -1,6 +1,7 @@
 import logging
 import os
 from os.path import exists, join
+from typing import Callable, Optional
 
 from PIL import Image
 from torchvision.datasets import VisionDataset
@@ -37,18 +38,18 @@ class TinyImageNet(VisionDataset):
 
     def __init__(
         self,
-        root,
-        subset="train",
-        download=False,
-        transform=None,
-        target_transform=None,
+        root: str,
+        subset: str = "train",
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        download: bool = False,
     ):
         """
         :param root: directory in which the data is stored, or looked up if it was downloaded before
         :param subset: can be one of ``train``, ``val`` and ``test``
-        :param download: download the data to ``root`` if it is not found there
         :param transform: function applied to the image (a :class:`PIL.Image.Image`)
         :param target_transform: function applied to the target
+        :param download: download the data to ``root`` if it is not found there
         :raises ValueError: if ``subset`` is invalid
         """
         if subset not in self.subsets:
