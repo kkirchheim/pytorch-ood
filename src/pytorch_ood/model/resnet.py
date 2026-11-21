@@ -12,6 +12,15 @@ from torch import Tensor
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 
 
+def _check_no_weights(weights: Optional[object]) -> None:
+    if weights is not None:
+        raise ValueError(
+            "ResNet18 and ResNet50 do not load weights. Use "
+            "pytorch_ood.model.load_model for the pre-trained models of the model registry, "
+            "or create the model and call load_state_dict for a torchvision checkpoint."
+        )
+
+
 class ResNet18(ResNet):
     """
     ``torchvision.models.resnet18``, extended with the representation interface
@@ -30,11 +39,12 @@ class ResNet18(ResNet):
     def __init__(self, num_classes: int = 1000, weights: Optional[object] = None, **kwargs):
         """
         :param num_classes: number of classes
-        :param weights: unused; accepted for interface compatibility with
-            ``torchvision.models.resnet18`` (weights are loaded separately by the
-            model registry)
+        :param weights: must be ``None``; kept so the signature matches
+            ``torchvision.models.resnet18``, but weights are not loaded here
         :param kwargs: further arguments forwarded to ``torchvision.models.ResNet``
+        :raises ValueError: if ``weights`` is not ``None``
         """
+        _check_no_weights(weights)
         super().__init__(block=BasicBlock, layers=[2, 2, 2, 2], num_classes=num_classes, **kwargs)
 
     def feature_maps(self, x: Tensor) -> Tensor:
@@ -88,11 +98,12 @@ class ResNet50(ResNet):
     def __init__(self, num_classes: int = 1000, weights: Optional[object] = None, **kwargs):
         """
         :param num_classes: number of classes
-        :param weights: unused; accepted for interface compatibility with
-            ``torchvision.models.resnet50`` (weights are loaded separately by the
-            model registry)
+        :param weights: must be ``None``; kept so the signature matches
+            ``torchvision.models.resnet50``, but weights are not loaded here
         :param kwargs: further arguments forwarded to ``torchvision.models.ResNet``
+        :raises ValueError: if ``weights`` is not ``None``
         """
+        _check_no_weights(weights)
         super().__init__(block=Bottleneck, layers=[3, 4, 6, 3], num_classes=num_classes, **kwargs)
 
     def feature_maps(self, x: Tensor) -> Tensor:
