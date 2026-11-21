@@ -31,7 +31,7 @@ class CIFAR100_ODIN(Benchmark):
     * Uniform noise
     * Gaussian noise
 
-    The entries of ``ood_names`` are ``TinyImageNetCrop``, ``TinyImageNetResize``, ``LSUNResize``, ``LSUNCrop``, ``Uniform``, ``Gaussian``.
+    The entries of ``ood_names`` are ``TinyImageNetCrop``, ``TinyImageNetResize``, ``LSUNResize``, ``LSUNCrop``, ``UniformNoise``, ``GaussianNoise``.
     """
 
     info = BenchmarkInfo(
@@ -69,24 +69,19 @@ class CIFAR100_ODIN(Benchmark):
                 size=(32, 32, 3),
                 transform=transform,
                 target_transform=ToUnknown(),
+                seed=123,
             ),
             GaussianNoise(
                 1000,
                 size=(32, 32, 3),
                 transform=transform,
                 target_transform=ToUnknown(),
+                seed=123,
             ),
         ]
 
         self.ood_names: List[str] = []  #: OOD Dataset names
-        self.ood_names = [
-            "TinyImageNetCrop",
-            "TinyImageNetResize",
-            "LSUNResize",
-            "LSUNCrop",
-            "Uniform",
-            "Gaussian",
-        ]
+        self.ood_names = [type(d).__name__ for d in self.test_oods]
 
     def train_set(self) -> Dataset:
         """
