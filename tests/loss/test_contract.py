@@ -91,20 +91,10 @@ def _has_reduction(cls: type) -> bool:
     return "reduction" in inspect.signature(cls.__init__).parameters
 
 
-DROPS_OOD_ROWS = pytest.mark.xfail(
-    strict=True, reason="reduction='none' returns only the ID rows, not one value per target"
-)
-NONE_SHAPE_BROKEN = {
-    loss.DeepSVDDLoss: DROPS_OOD_ROWS,
-    loss.LogitNorm: DROPS_OOD_ROWS,
-    loss.VirtualOutlierSynthesizingRegLoss: DROPS_OOD_ROWS,
-}
-
-
 # --- reductions ---------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("cls, task", _cases(_has_reduction, marks=NONE_SHAPE_BROKEN))
+@pytest.mark.parametrize("cls, task", _cases(_has_reduction))
 def test_none_gives_one_value_per_target(cls: type, task: Task):
     call = _call(cls, task, "none")
 

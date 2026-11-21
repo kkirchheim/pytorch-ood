@@ -288,21 +288,27 @@ class VirtualOutlierSynthesizingRegLoss(VOSRegLoss):
         :param logits: logits of shape :math:`B \\times C`
         :param features: penultimate features of shape :math:`B \\times D`
         :param y: labels of shape :math:`B`; samples with labels :math:`< 0` are discarded
-        :return: loss
+        :return: loss; if the reduction is ``none``, of shape :math:`B`, with the cross-entropy per sample
+            plus the regularizer, and zero for OOD samples
         :raises NotImplementedError: for segmentation inputs
         """
         if y.dim() != 1:
             raise NotImplementedError("Segmentation not implemented yet")
+        known = is_known(y)
+        zero = (logits.sum(dim=1) + features.sum(dim=1)) * 0.0
         y, logits, features = drop_unknown(y, logits, features)
         if len(y) == 0:
-            zero = (logits.sum(dim=1) + features.sum(dim=1)) * 0.0
             return zero if self.reduction in (None, "none") else zero.sum()
 
         regularization = self._regularization(logits, features, y)
         loss = self.nll(logits, y, reduction=self.reduction)
-        return apply_reduction(loss, self.reduction) + apply_reduction(
+        loss = apply_reduction(loss, self.reduction) + apply_reduction(
             self.alpha * regularization, self.reduction
         )
+        if self.reduction in (None, "none"):
+            # one value per target, zero for the OOD samples
+            return zero.masked_scatter(known, loss)
+        return loss
 
     def _regularization(self, prediction, features, target):
         """
