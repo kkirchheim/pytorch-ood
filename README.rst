@@ -286,6 +286,8 @@ The original workshop paper:
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | NCI                         | Neural Collapse Inspired OOD Detection                                                         | 2025 | [#Nci]_            |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
+| Forte                       | Typicality of per-point precision, recall, density and coverage in self-supervised features.   | 2025 | [#Forte]_          |
++-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 | GMM                         | Class-conditional Gaussian Mixture Model on penultimate-layer features.                        |      |                    |
 +-----------------------------+------------------------------------------------------------------------------------------------+------+--------------------+
 
@@ -555,6 +557,8 @@ The legal implications of using pre-trained models in commercial services are, t
 .. [#LOGNORM] Wei,  et al. (2022) Mitigating Neural Network Overconfidence with Logit Normalization. ICML.
 
 .. [#Nci] Liu,  et al. (2025) Detecting Out-of-distribution through the Lens of Neural Collapse. CVPR.
+
+.. [#Forte] Ganguly, D., et al. (2025) Forte: Finding Outliers with Representation Typicality Estimation. ICLR.
 
 .. [#NNGuide] Park, J., et al. (2023) Nearest Neighbor Guidance for Out-of-Distribution Detection. ICCV.
 
