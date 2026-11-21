@@ -6,6 +6,7 @@ import sys
 from types import SimpleNamespace
 from unittest import mock
 
+import numpy as np
 import pytest
 import torch
 from torch.utils.data import Dataset
@@ -72,3 +73,19 @@ def test_download_flag_reaches_every_dataset(suite: type, flag: bool, monkeypatc
     suite("root", lambda x: x, download=flag)
 
     assert seen and set(seen) == {flag}
+
+
+@pytest.mark.parametrize(
+    "suite", [benchmarks.CIFAR10_ODIN, benchmarks.CIFAR100_ODIN], ids=lambda s: s.__name__
+)
+def test_odin_noise_sets_are_seeded_and_named_alike(suite: type, monkeypatch):
+    module = sys.modules[suite.__module__]
+    for name, value in list(vars(module).items()):
+        if inspect.isclass(value) and issubclass(value, Dataset) and "Noise" not in name:
+            monkeypatch.setattr(module, name, mock.MagicMock())
+
+    first, second = suite("root", lambda x: x), suite("root", lambda x: x)
+
+    assert first.ood_names[-2:] == ["UniformNoise", "GaussianNoise"]
+    for a, b in zip(first.test_oods[-2:], second.test_oods[-2:]):
+        assert np.array_equal(np.asarray(a[0][0]), np.asarray(b[0][0]))
