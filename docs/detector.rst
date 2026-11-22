@@ -42,6 +42,7 @@ Logit-based methods are based on the observation that OOD inputs tend to yield d
    detectors/maxlogit
    detectors/openmax
    detectors/energy
+   detectors/jointenergy
    detectors/webo
 
 

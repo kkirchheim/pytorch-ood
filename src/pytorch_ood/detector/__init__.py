@@ -91,6 +91,7 @@ from .gmm import GMM
 from .gradnorm import GradNorm
 from .graduncertainty import GradUncertainty
 from .gram import Gram
+from .jointenergy import JointEnergy
 from .klmatching import KLMatching
 from .knn import KNN
 from .lts import LTS
@@ -128,6 +129,7 @@ __all__ = [
     "GradNorm",
     "GradUncertainty",
     "Gram",
+    "JointEnergy",
     "KLMatching",
     "KNN",
     "LTS",
