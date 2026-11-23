@@ -4,7 +4,7 @@ from torch.nn import Module
 from torch.nn.functional import cross_entropy
 
 from pytorch_ood.api import LossInfo, Paper, Representation, Task
-from pytorch_ood.utils import drop_unknown
+from pytorch_ood.utils import drop_unknown, is_known
 
 
 def logit_norm_loss(
@@ -17,15 +17,21 @@ def logit_norm_loss(
     :param logits: logits as predicted by the model, shape :math:`B \\times K`
     :param target: labels of shape :math:`B`
     :param t: temperature :math:`\\tau`
-    :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``
-    :return: the loss
+    :param reduction: reduction method, one of ``mean``, ``sum`` or ``none``; ``mean`` averages over
+        the ID samples
+    :return: the loss; of shape :math:`B` if the reduction is ``none``, zero for OOD samples
     """
-    target, logits = drop_unknown(target, logits)
+    known = is_known(target)
+    target, logits_id = drop_unknown(target, logits)
     if len(target) == 0 and reduction == "mean":
         return logits.sum() * 0.0
 
-    norm = torch.norm(logits, p=2, dim=1, keepdim=True) + 1e-7
-    adjusted = logits / (t * norm)
+    norm = torch.norm(logits_id, p=2, dim=1, keepdim=True) + 1e-7
+    adjusted = logits_id / (t * norm)
+    if reduction is None or reduction == "none":
+        # one value per target, zero for the OOD samples, as in pytorch_ood.loss.cross_entropy
+        loss = cross_entropy(adjusted, target, reduction="none")
+        return logits.new_zeros(known.shape).masked_scatter(known, loss)
     return cross_entropy(adjusted, target, reduction=reduction)
 
 
@@ -70,6 +76,6 @@ class LogitNorm(Module):
         """
         :param logits: logits as predicted by the model, shape :math:`B \\times K`
         :param target: labels of shape :math:`B`; labels :math:`< 0` are ignored
-        :return: the loss
+        :return: the loss; of shape :math:`B` if the reduction is ``none``, zero for OOD samples
         """
         return logit_norm_loss(logits, target, self.t, self.reduction)

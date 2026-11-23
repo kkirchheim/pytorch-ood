@@ -124,16 +124,22 @@ class DeepSVDDLoss(torch.nn.Module):
         :param x: features of shape :math:`B \\times D`
         :param y: target labels of shape :math:`B`; samples with labels :math:`< 0` are discarded.
             If not given, all samples are assumed to be ID.
-        :return: loss :math:`\\max\\{0, \\lVert x - \\mu \\rVert^2 - r^2\\}`; one entry per ID sample if the
-            reduction is ``none``
+        :return: loss :math:`\\max\\{0, \\lVert x - \\mu \\rVert^2 - r^2\\}`; of shape :math:`B` if the
+            reduction is ``none``, zero for OOD samples. ``mean`` averages over the ID samples.
         """
+        known = None
+        x_id = x
         if y is not None:
-            y, x = drop_unknown(y, x)
-        if len(x) == 0 and self.reduction == "mean":
+            known = is_known(y)
+            y, x_id = drop_unknown(y, x)
+        if len(x_id) == 0 and self.reduction == "mean":
             return x.sum() * 0.0
         # the reference soft-boundary objective is R^2 + 1/nu * mean(max(0, d - R^2)); for a fixed R,
         # R^2 is a constant and 1/nu only scales the loss, so both are omitted
-        loss = DeepSVDDLoss.svdd_loss(x, self.center, radius=self.radius)
+        loss = DeepSVDDLoss.svdd_loss(x_id, self.center, radius=self.radius)
+        if known is not None and self.reduction in (None, "none"):
+            # one value per target, zero for the OOD samples
+            return loss.new_zeros(known.shape).masked_scatter(known, loss)
         return apply_reduction(loss, self.reduction)
 
     @staticmethod
