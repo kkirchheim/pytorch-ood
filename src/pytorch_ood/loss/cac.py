@@ -115,14 +115,11 @@ class CACLoss(nn.Module):
 
         d_true = torch.gather(input=distances, dim=1, index=target.view(-1, 1)).view(-1)
         anchor_loss = d_true.mean()
-        non_target = torch.arange(
-            0, self.n_classes - 1, dtype=torch.long, device=distances.device
-        ).expand(distances.shape[0], self.n_classes - 1)
-        # required in newer versions of torch, before advances indexing
-        non_target = non_target.clone()
-        is_last_class = target == self.n_classes
-        non_target[is_last_class, target[is_last_class]] = self.n_classes - 1
-        d_other = torch.gather(distances, dim=1, index=non_target)
+        # distances to all classes except the true one, shape B x (C - 1)
+        is_other = torch.ones_like(distances, dtype=torch.bool).scatter(
+            1, target.view(-1, 1), False
+        )
+        d_other = distances[is_other].view(-1, self.n_classes - 1)
         # for numerical stability, we clamp the distance values
         tuplet_loss = (-d_other + d_true.unsqueeze(1)).clamp(max=50).exp()
         tuplet_loss = torch.log(1 + tuplet_loss.sum(dim=1)).mean()
