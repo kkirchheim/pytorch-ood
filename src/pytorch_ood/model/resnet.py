@@ -5,19 +5,19 @@ Pre-trained weights are available through the model registry, see
 :func:`load_model <pytorch_ood.model.load_model>`.
 """
 
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from torch import Tensor
+from torchvision.models import ResNet18_Weights, ResNet50_Weights, WeightsEnum
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
 
 
-def _check_no_weights(weights: Optional[object]) -> None:
-    if weights is not None:
+def _check_num_classes(weights: Optional[WeightsEnum], num_classes: int) -> None:
+    # torchvision overwrites num_classes from the weights and raises on a conflicting value
+    if weights is not None and num_classes != len(weights.meta["categories"]):
         raise ValueError(
-            "ResNet18 and ResNet50 do not load weights. Use "
-            "pytorch_ood.model.load_model for the pre-trained models of the model registry, "
-            "or create the model and call load_state_dict for a torchvision checkpoint."
+            f"{weights} has {len(weights.meta['categories'])} classes, got num_classes={num_classes}"
         )
 
 
@@ -36,16 +36,27 @@ class ResNet18(ResNet):
     :see Paper: `CVPR <https://arxiv.org/abs/1512.03385>`__
     """
 
-    def __init__(self, num_classes: int = 1000, weights: Optional[object] = None, **kwargs):
+    def __init__(
+        self,
+        num_classes: int = 1000,
+        weights: Optional[Union[ResNet18_Weights, str]] = None,
+        progress: bool = True,
+        **kwargs,
+    ):
         """
         :param num_classes: number of classes
-        :param weights: must be ``None``; kept so the signature matches
-            ``torchvision.models.resnet18``, but weights are not loaded here
+        :param weights: torchvision weights to load, as for ``torchvision.models.resnet18``:
+            a ``ResNet18_Weights`` member or its name (e.g. ``"DEFAULT"``). Downloaded to the
+            torch hub cache on first use. ``None`` gives a randomly initialized model.
+        :param progress: show a progress bar while downloading the weights
         :param kwargs: further arguments forwarded to ``torchvision.models.ResNet``
-        :raises ValueError: if ``weights`` is not ``None``
+        :raises ValueError: if ``num_classes`` differs from the number of classes of ``weights``
         """
-        _check_no_weights(weights)
+        weights = ResNet18_Weights.verify(weights)
+        _check_num_classes(weights, num_classes)
         super().__init__(block=BasicBlock, layers=[2, 2, 2, 2], num_classes=num_classes, **kwargs)
+        if weights is not None:
+            self.load_state_dict(weights.get_state_dict(progress=progress, check_hash=True))
 
     def feature_maps(self, x: Tensor) -> Tensor:
         """
@@ -95,16 +106,27 @@ class ResNet50(ResNet):
     :see Paper: `CVPR <https://arxiv.org/abs/1512.03385>`__
     """
 
-    def __init__(self, num_classes: int = 1000, weights: Optional[object] = None, **kwargs):
+    def __init__(
+        self,
+        num_classes: int = 1000,
+        weights: Optional[Union[ResNet50_Weights, str]] = None,
+        progress: bool = True,
+        **kwargs,
+    ):
         """
         :param num_classes: number of classes
-        :param weights: must be ``None``; kept so the signature matches
-            ``torchvision.models.resnet50``, but weights are not loaded here
+        :param weights: torchvision weights to load, as for ``torchvision.models.resnet50``:
+            a ``ResNet50_Weights`` member or its name (e.g. ``"DEFAULT"``). Downloaded to the
+            torch hub cache on first use. ``None`` gives a randomly initialized model.
+        :param progress: show a progress bar while downloading the weights
         :param kwargs: further arguments forwarded to ``torchvision.models.ResNet``
-        :raises ValueError: if ``weights`` is not ``None``
+        :raises ValueError: if ``num_classes`` differs from the number of classes of ``weights``
         """
-        _check_no_weights(weights)
+        weights = ResNet50_Weights.verify(weights)
+        _check_num_classes(weights, num_classes)
         super().__init__(block=Bottleneck, layers=[3, 4, 6, 3], num_classes=num_classes, **kwargs)
+        if weights is not None:
+            self.load_state_dict(weights.get_state_dict(progress=progress, check_hash=True))
 
     def feature_maps(self, x: Tensor) -> Tensor:
         """
