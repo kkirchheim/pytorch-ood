@@ -138,46 +138,45 @@ class InsertCOCO(Callable):
         Check if OOD should be added and add it with the given probability
 
         :param img: input image. It is modified in place if an object is inserted.
-        :param target: segmentation mask of shape :math:`H \\times W` with integer labels below 256
-            (it is cast to ``uint8``)
+        :param target: segmentation mask of shape :math:`H \\times W` with integer labels
         :return: tuple ``(img, target)``; the target is an ``int64`` tensor of shape
             :math:`H \\times W` in which the pixels of inserted objects are set to ``ood_mask_value``
+            and all other labels are unchanged
+
+        .. note::
+            The target is returned as an ``int64`` tensor also when no object is inserted.
+            An object that does not fit into the image is placed at its top left corner and
+            cropped.
         """
+        # int64 holds any label as well as a negative ood_mask_value
+        target = np.array(target, dtype=np.int64)
         if random.random() <= self.ood_rate:
-            target = Image.fromarray(np.array(target, dtype=np.uint8))
             img, target = self._add_ood(img, target)
-            target = torch.tensor(target, dtype=torch.int64)
 
-        return img, target
+        return img, torch.from_numpy(target)
 
-    def _add_ood(self, img: Image.Image, segm: Image.Image) -> Tuple[Image.Image, np.ndarray]:
+    def _add_ood(self, img: Image.Image, segm: np.ndarray) -> Tuple[Image.Image, np.ndarray]:
         """
         Add OOD objects to the image and manipulate the segmentation in the same way
 
         :param img: image
-        :param segm: segmentation
+        :param segm: segmentation of shape :math:`H \\times W`, modified in place
         :return: img, segm
         """
+        h, w = segm.shape
         for elem in range(self.ood_per_image):
             # insert one OOD object
-            w, h = segm.size
             rotated_ood_image, x_pos, y_pos = self._random_pos_and_scale(orig_img_dim=[h, w])
 
             # insert the clip image into the original one
             img.paste(rotated_ood_image, (x_pos, y_pos), rotated_ood_image)
-            rotated_ood_image_arr = np.asarray(rotated_ood_image)
-            segm_arr = np.asarray(segm, dtype=np.int8)
+            # pixels of the clip image that are not empty, cropped to the image
+            ood_pixels = np.asarray(rotated_ood_image).any(axis=-1)
+            ood_pixels = ood_pixels[: h - y_pos, : w - x_pos]
+            region = segm[y_pos : y_pos + ood_pixels.shape[0], x_pos : x_pos + ood_pixels.shape[1]]
+            region[ood_pixels] = self.ood_mask_value
 
-            for i in range(rotated_ood_image_arr.shape[0]):
-                for j in range(rotated_ood_image_arr.shape[1]):
-                    # if != png pixel is not empty
-                    if not np.array_equal(
-                        rotated_ood_image_arr[i, j],
-                        np.zeros(rotated_ood_image_arr.shape[2]),
-                    ):
-                        segm_arr[i + y_pos, j + x_pos] = self.ood_mask_value
-
-        return img, segm_arr
+        return img, segm
 
     def _random_pos_and_scale(self, orig_img_dim) -> tuple:
         """
@@ -200,12 +199,13 @@ class InsertCOCO(Callable):
         # rotate the clip image by the desired amount
         rotated_ood_image = resized_image.rotate(rotation)
 
-        # 10 pixel away from the edge
-        pos_range_x = [10, orig_img_dim[1] - new_width - 10]
-        pos_range_y = [10, orig_img_dim[0] - new_height - 10]
+        # 10 pixel away from the edge, if the image is large enough; objects that do not fit
+        # are placed at the top left corner and cropped
+        x_max = max(0, orig_img_dim[1] - new_width - 10)
+        y_max = max(0, orig_img_dim[0] - new_height - 10)
 
-        x_pixel = random.randint(pos_range_x[0], pos_range_x[1])
-        y_pixel = random.randint(pos_range_y[0], pos_range_y[1])
+        x_pixel = random.randint(min(10, x_max), x_max)
+        y_pixel = random.randint(min(10, y_max), y_max)
         # random flip
         if np.random.choice([0, 1]):
             rotated_ood_image = rotated_ood_image.transpose(Image.FLIP_LEFT_RIGHT)
@@ -324,14 +324,16 @@ def read_coco_annotations(annotations_file):
 
 def rle_decode(rle, img_shape):
     """
-    Decode RLE encoded mask into a binary mask.
+    Decode an uncompressed COCO RLE mask into a binary mask.
+
+    The counts are the lengths of alternating runs of 0s and 1s, starting with 0s, over the
+    pixels in column-major order.
 
     :param rle: Dictionary with 'counts' and 'size' for RLE encoding.
     :param img_shape: Tuple (height, width) of the image size.
-    :return: Binary mask as a numpy array. (np.ndarray)
+    :return: Binary mask with values 0 and 1 as a numpy array. (np.ndarray)
     """
     height, width = img_shape
-    mask = np.zeros(height * width, dtype=np.uint8)
 
     counts = rle["counts"]
     size = rle["size"]
@@ -342,21 +344,16 @@ def rle_decode(rle, img_shape):
         )
         raise ValueError("RLE size does not match the provided image dimensions.")
 
-    # Convert counts to a flat mask array
-    rle_array = np.array(counts, dtype=np.uint32)
-    positions = np.concatenate(
-        [
-            np.arange(start, start + length)
-            for start, length in zip(np.cumsum(rle_array[:-1]), rle_array[1:])
-        ]
-    )
-    # Ensure positions are integers
-    positions = positions.astype(int)
-    # print(positions)
-    mask[positions] = 1
-    mask = mask.reshape((height, width))
+    if isinstance(counts, str):
+        raise ValueError("Compressed RLE is not supported.")
+    counts = np.asarray(counts, dtype=np.int64)
+    if counts.sum() != height * width:
+        raise ValueError("RLE counts do not sum to the number of pixels.")
 
-    return mask
+    # even runs are 0s, odd runs are 1s
+    flat = np.repeat(np.arange(len(counts)) % 2, counts).astype(np.uint8)
+    # column-major order
+    return np.ascontiguousarray(flat.reshape((width, height)).T)
 
 
 def create_mask_from_segmentation(segmentation, image_size):
@@ -372,7 +369,6 @@ def create_mask_from_segmentation(segmentation, image_size):
         if "counts" in segmentation and "size" in segmentation:
             img_shape = (image_size[1], image_size[0])  # (height, width)
             mask = rle_decode(segmentation, img_shape)
-            mask = Image.fromarray(mask * 255)  # Convert binary mask to Image format
         else:
             raise ValueError("Unexpected RLE format.")
     else:
