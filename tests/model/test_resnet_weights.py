@@ -13,16 +13,18 @@ def test_weights_are_loaded(cls, weights_enum, monkeypatch):
     expected = cls().state_dict()
     requested = []
 
-    def get_state_dict(self, *args, **kwargs):
-        requested.append(self)
+    def load_state_dict_from_url(url, **kwargs):
+        requested.append((url, kwargs["check_hash"]))
         return expected
 
-    monkeypatch.setattr(weights_enum, "get_state_dict", get_state_dict)
+    monkeypatch.setattr(
+        "pytorch_ood.model.resnet.load_state_dict_from_url", load_state_dict_from_url
+    )
 
     torch.manual_seed(1)
     model = cls(weights="DEFAULT")
 
-    assert requested == [weights_enum.DEFAULT]
+    assert requested == [(weights_enum.DEFAULT.url, True)]
     for key, value in model.state_dict().items():
         assert torch.equal(value, expected[key]), key
 
