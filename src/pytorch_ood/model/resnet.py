@@ -5,11 +5,23 @@ Pre-trained weights are available through the model registry, see
 :func:`load_model <pytorch_ood.model.load_model>`.
 """
 
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from torch import Tensor
+from torch.hub import load_state_dict_from_url
+from torchvision.models import ResNet18_Weights, ResNet50_Weights
 from torchvision.models.resnet import BasicBlock, Bottleneck, ResNet
+
+
+def _check_num_classes(
+    weights: Optional[Union[ResNet18_Weights, ResNet50_Weights]], num_classes: int
+) -> None:
+    # torchvision overwrites num_classes from the weights and raises on a conflicting value
+    if weights is not None and num_classes != len(weights.meta["categories"]):
+        raise ValueError(
+            f"{weights} has {len(weights.meta['categories'])} classes, got num_classes={num_classes}"
+        )
 
 
 class ResNet18(ResNet):
@@ -27,15 +39,29 @@ class ResNet18(ResNet):
     :see Paper: `CVPR <https://arxiv.org/abs/1512.03385>`__
     """
 
-    def __init__(self, num_classes: int = 1000, weights: Optional[object] = None, **kwargs):
+    def __init__(
+        self,
+        num_classes: int = 1000,
+        weights: Optional[Union[ResNet18_Weights, str]] = None,
+        progress: bool = True,
+        **kwargs,
+    ):
         """
         :param num_classes: number of classes
-        :param weights: unused; accepted for interface compatibility with
-            ``torchvision.models.resnet18`` (weights are loaded separately by the
-            model registry)
+        :param weights: torchvision weights to load, as for ``torchvision.models.resnet18``:
+            a ``ResNet18_Weights`` member or its name (e.g. ``"DEFAULT"``). Downloaded to the
+            torch hub cache on first use. ``None`` gives a randomly initialized model.
+        :param progress: show a progress bar while downloading the weights
         :param kwargs: further arguments forwarded to ``torchvision.models.ResNet``
+        :raises ValueError: if ``num_classes`` differs from the number of classes of ``weights``
         """
+        weights = ResNet18_Weights.verify(weights)
+        _check_num_classes(weights, num_classes)
         super().__init__(block=BasicBlock, layers=[2, 2, 2, 2], num_classes=num_classes, **kwargs)
+        if weights is not None:
+            # not weights.get_state_dict: in torchvision 0.14 it takes no check_hash
+            state_dict = load_state_dict_from_url(weights.url, progress=progress, check_hash=True)
+            self.load_state_dict(state_dict)
 
     def feature_maps(self, x: Tensor) -> Tensor:
         """
@@ -85,15 +111,29 @@ class ResNet50(ResNet):
     :see Paper: `CVPR <https://arxiv.org/abs/1512.03385>`__
     """
 
-    def __init__(self, num_classes: int = 1000, weights: Optional[object] = None, **kwargs):
+    def __init__(
+        self,
+        num_classes: int = 1000,
+        weights: Optional[Union[ResNet50_Weights, str]] = None,
+        progress: bool = True,
+        **kwargs,
+    ):
         """
         :param num_classes: number of classes
-        :param weights: unused; accepted for interface compatibility with
-            ``torchvision.models.resnet50`` (weights are loaded separately by the
-            model registry)
+        :param weights: torchvision weights to load, as for ``torchvision.models.resnet50``:
+            a ``ResNet50_Weights`` member or its name (e.g. ``"DEFAULT"``). Downloaded to the
+            torch hub cache on first use. ``None`` gives a randomly initialized model.
+        :param progress: show a progress bar while downloading the weights
         :param kwargs: further arguments forwarded to ``torchvision.models.ResNet``
+        :raises ValueError: if ``num_classes`` differs from the number of classes of ``weights``
         """
+        weights = ResNet50_Weights.verify(weights)
+        _check_num_classes(weights, num_classes)
         super().__init__(block=Bottleneck, layers=[3, 4, 6, 3], num_classes=num_classes, **kwargs)
+        if weights is not None:
+            # not weights.get_state_dict: in torchvision 0.14 it takes no check_hash
+            state_dict = load_state_dict_from_url(weights.url, progress=progress, check_hash=True)
+            self.load_state_dict(state_dict)
 
     def feature_maps(self, x: Tensor) -> Tensor:
         """
