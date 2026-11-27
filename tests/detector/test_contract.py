@@ -48,6 +48,7 @@ from pytorch_ood.detector import (
     GradNorm,
     GradUncertainty,
     Gram,
+    JointEnergy,
     KLMatching,
     Mahalanobis,
     MahalanobisODIN,
@@ -700,6 +701,7 @@ TAXONOMY: Dict[type, Tuple[type, bool]] = {
     # logits
     EnergyBased: (LogitsDetector, False),
     Entropy: (LogitsDetector, False),
+    JointEnergy: (LogitsDetector, False),
     GEN: (LogitsDetector, False),
     KLMatching: (LogitsDetector, True),
     MaxLogit: (LogitsDetector, False),
